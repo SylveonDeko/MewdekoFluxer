@@ -7,6 +7,7 @@
   "vote_count_correct": "You have voted a total of {0} times!",
   "vote_count_typo": "You have votedd a total of {0} times!",
   "vote_message_set": "Vote message set.",
+  "vote_password_prompt": "Send the new vote password as your next message within 60 seconds. I will delete it right away.",
   "vote_password_set": "Vote password set.",
   "vote_role_add_failed": "Adding vote role failed for the following reason: {0}",
   "vote_role_added": "{0} added as a vote role.",
