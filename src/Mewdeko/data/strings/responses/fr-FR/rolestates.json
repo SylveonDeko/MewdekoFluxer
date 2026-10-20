@@ -12,7 +12,6 @@
   "role_states_no_state_to_delete": "Aucun état de rôle à supprimer !",
   "role_states_no_valid_roles": "{0} Aucun rôle valide spécifié !",
   "role_states_not_enabled": "{0} Les états de rôle ne sont pas activés et n'ont pas été configurés !",
-  "role_states_not_enabled_slash": "{0} Les états de rôle ne sont pas activés et n'ont pas été configurés !",
   "role_states_not_ignore_bots": "{0} Les états de rôle n'ignoreront pas les bots !",
   "role_states_remove_failed": "Suppression échouée car :\n{0}",
   "role_states_roles_added_to_deny": "{0} {1} rôles ajoutés à la liste de refus.",

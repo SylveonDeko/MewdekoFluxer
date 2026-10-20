@@ -107,7 +107,6 @@
   "rps_spock_scissors": "Spock smashes Scissors",
   "trivia_chain_invalid_category": "Ongeldig category! Available: general, science, history, sports, entertainment.",
   "trivia_chain_next_question": "Next question loading...",
-  "trivia_chain_not_your_button": "This is not je trivia game!",
   "trivia_chain_potential_win": "Potential Win: {0} {1}",
   "trivia_chain_transaction_completed": "Trivia Chain Completed",
   "trivia_chain_transaction_failed": "Trivia Chain Mislukt",

@@ -103,8 +103,6 @@
   "ticket_user_stats": "Ticket Statistics for {0}",
   "ticket_user_unblacklisted": "<@{0}> has been removed from the ticket blacklist.",
   "ticket_user_unblocked": "{0} has been unblocked from creating tickets",
-  "ticket_wizard_description": "Let's set up your ticket system in {0}!\n\n**Choose your setup method:**",
-  "ticket_wizard_title": "🎫 Ticket System Setup Wizard",
   "transcript_channel_removed": "Transcript channel removed",
   "transcript_channel_set": "Transcript channel set to {0}"
 }

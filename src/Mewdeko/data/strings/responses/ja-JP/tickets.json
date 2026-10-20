@@ -98,8 +98,6 @@
   "ticket_user_blocked": "{0}がチケット作成からブロックされました",
   "ticket_user_not_blocked": "ユーザーはチケット作成からブロックされていません",
   "ticket_user_unblocked": "{0}のチケット作成のブロックが解除されました",
-  "ticket_wizard_description": "{0}でチケットシステムをセットアップしましょう！\n\n**セットアップ方法を選択してください:**",
-  "ticket_wizard_title": "🎫 チケットシステムセットアップウィザード",
   "transcript_channel_removed": "トランスクリプトチャンネルを削除しました",
   "transcript_channel_set": "トランスクリプトチャンネルを{0}に設定しました",
   "ticket_blacklist_user_desc": "<@{0}>がチケット作成からブラックリストに登録されました。",

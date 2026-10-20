@@ -12,7 +12,6 @@
   "role_states_no_state_to_delete": "Nema stanja uloge za brisanje!",
   "role_states_no_valid_roles": "{0} Nema važećih navedenih uloga!",
   "role_states_not_enabled": "{0} Stanja uloga nisu omogućena i nisu konfigurisana!",
-  "role_states_not_enabled_slash": "{0} Stanja uloga nisu omogućena i nisu konfigurisana!",
   "role_states_not_ignore_bots": "{0} Stanja uloga neće ignorisati botove!",
   "role_states_remove_failed": "Uklanjanje neuspešno jer:\n{0}",
   "role_states_roles_added_to_deny": "{0} {1} uloge dodate na listu zabranjenih.",

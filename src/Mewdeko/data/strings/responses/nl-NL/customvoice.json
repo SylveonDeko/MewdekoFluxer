@@ -172,7 +172,6 @@
   "custom_voice_renamed": "Met succes renamed your Kanaal to **{0}**.",
   "custom_voice_transfer_error": "Mislukt naar transfer ownership naar {0}.",
   "custom_voice_transfer_no_users": "There zijn geen other Gebruikers in je Kanaal naar transfer ownership naar.",
-  "custom_voice_transfer_select_one": "Please select exactly one Gebruiker naar transfer ownership naar.",
   "custom_voice_transfer_success": "Met succes transferred ownership naar {0}.",
   "custom_voice_transfer_user_not_present": "de Gebruiker must be in je voice Kanaal naar transfer ownership.",
   "custom_voice_unlock_error": "Mislukt to unlock your Kanaal.",
@@ -181,7 +180,6 @@
   "custom_voice_user_deny_error": "Mislukt naar deny {0} van je Kanaal.",
   "custom_voice_user_kick_error": "Mislukt naar kick {0} van je Kanaal.",
   "custom_voice_user_kicked": "Met succes kicked {0} from your Kanaal.",
-  "custom_voice_user_management_select_one": "Please select exactly one Gebruiker management action.",
   "custom_voice_modal_user_limit_title": "Set Gebruiker Limit",
   "custom_voice_default_description": "This is je custom voice Kanaal. Use de buttons below naar manage it."
 }

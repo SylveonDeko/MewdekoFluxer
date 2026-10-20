@@ -98,8 +98,6 @@
   "ticket_user_blocked": "{0} je blokiran/a za kreiranje tiketa",
   "ticket_user_not_blocked": "Korisnik nije blokiran za kreiranje tiketa",
   "ticket_user_unblocked": "{0} je odblokiran/a za kreiranje tiketa",
-  "ticket_wizard_description": "Hajde da podesimo vaš sistem tiketa u {0}!\n\n**Izaberite metod podešavanja:**",
-  "ticket_wizard_title": "🎫 Čarobnjak za Podešavanje Sistema Tiketa",
   "transcript_channel_removed": "Kanal za transkript uklonjen",
   "transcript_channel_set": "Kanal za transkript postavljen na {0}",
   "ticket_blacklist_user_desc": "<@{0}> je blokiran/a za kreiranje tiketa.",

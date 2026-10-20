@@ -12,7 +12,6 @@
   "role_states_no_state_to_delete": "¡No hay Estado de Rol para eliminar!",
   "role_states_no_valid_roles": "¡{0} No se especificaron roles válidos!",
   "role_states_not_enabled": "¡{0} Los Estados de Rol no están habilitados y no han sido configurados!",
-  "role_states_not_enabled_slash": "¡{0} Los Estados de Rol no están habilitados y no han sido configurados!",
   "role_states_not_ignore_bots": "¡{0} Los Estados de Rol no ignorarán a los bots!",
   "role_states_remove_failed": "Fallo al eliminar porque:\n{0}",
   "role_states_roles_added_to_deny": "Roles {0} {1} añadidos a la lista de denegación.",

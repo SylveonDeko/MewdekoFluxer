@@ -103,8 +103,6 @@
   "ticket_user_blocked": "{0} heeft been blocked van creating tickets",
   "ticket_user_not_blocked": "Gebruiker is not blocked van creating tickets",
   "ticket_user_unblocked": "{0} heeft been unblocked van creating tickets",
-  "ticket_wizard_description": "Let's set up je ticket system in {0}!\n\n**Choose je setup method:**",
-  "ticket_wizard_title": "🎫 Ticket System Setup Wizard",
   "transcript_channel_set": "Transcript Kanaal set naar {0}",
   "ticket_user_stats": "Ticket Statistics voor {0}"
 }

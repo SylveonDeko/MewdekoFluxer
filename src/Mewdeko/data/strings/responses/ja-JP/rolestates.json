@@ -12,7 +12,6 @@
   "role_states_no_state_to_delete": "削除するロール状態がありません！",
   "role_states_no_valid_roles": "{0} 有効なロールが指定されていません！",
   "role_states_not_enabled": "{0} ロール状態は有効でなく、設定されていません！",
-  "role_states_not_enabled_slash": "{0} ロール状態は有効でなく、設定されていません！",
   "role_states_not_ignore_bots": "{0} ロール状態はBotを無視しなくなります！",
   "role_states_remove_failed": "削除に失敗しました。理由:\n{0}",
   "role_states_roles_added_to_deny": "{0} {1}件のロールを拒否リストに追加しました。",

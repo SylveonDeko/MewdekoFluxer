@@ -12,7 +12,6 @@
   "role_states_no_state_to_delete": "Kein Rollen-Status zum Löschen!",
   "role_states_no_valid_roles": "{0} Es sind keine gültigen Rollen angegeben!",
   "role_states_not_enabled": "{0} Rollen-Status ist nicht aktiviert und wurde nicht konfiguriert!",
-  "role_states_not_enabled_slash": "{0} Rollen-Status ist nicht aktiviert und wurde nicht konfiguriert!",
   "role_states_not_ignore_bots": "{0} Rollen-Status wird Bots nicht ignorieren!",
   "role_states_remove_failed": "Entfernen fehlgeschlagen, weil:\n{0}",
   "role_states_roles_added_to_deny": "{0} {1} Rollen zur Sperrliste hinzugefügt.",

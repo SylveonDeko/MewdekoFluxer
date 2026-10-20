@@ -198,7 +198,6 @@
   "trivia_chain_invalid_category": "无效的类别！可用：general、science、history、sports、entertainment。",
   "trivia_chain_multiplier": "倍数：x{0}",
   "trivia_chain_next_question": "正在加载下一题...",
-  "trivia_chain_not_your_button": "这不是您的问答游戏！",
   "trivia_chain_nothing_to_cash_out": "您没有可兑现的内容！",
   "trivia_chain_option": "{0}",
   "trivia_chain_potential_win": "潜在赢得：{0} {1}",

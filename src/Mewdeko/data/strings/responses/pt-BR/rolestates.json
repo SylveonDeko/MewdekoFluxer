@@ -12,7 +12,6 @@
   "role_states_no_state_to_delete": "Nenhum estado de cargo para deletar!",
   "role_states_no_valid_roles": "{0} Não há cargos válidos especificados!",
   "role_states_not_enabled": "{0} Os estados de cargo não estão ativados e não foram configurados!",
-  "role_states_not_enabled_slash": "{0} Os estados de cargo não estão ativados e não foram configurados!",
   "role_states_not_ignore_bots": "{0} Estados de cargo não ignorarão bots!",
   "role_states_remove_failed": "Remoção falhou porque:\n{0}",
   "role_states_roles_added_to_deny": "{0} {1} cargos adicionados à lista de negação.",

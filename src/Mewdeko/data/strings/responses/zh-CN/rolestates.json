@@ -12,7 +12,6 @@
   "role_states_no_state_to_delete": "没有可删除的身份组状态！",
   "role_states_no_valid_roles": "{0} 未指定任何有效的身份组！",
   "role_states_not_enabled": "{0} 身份组状态未启用且未配置！",
-  "role_states_not_enabled_slash": "{0} 身份组状态未启用且未配置！",
   "role_states_not_ignore_bots": "{0} 身份组状态将不会忽略机器人！",
   "role_states_remove_failed": "移除失败，原因：\n{0}",
   "role_states_roles_added_to_deny": "{0} 已将 {1} 个身份组添加到拒绝列表。",

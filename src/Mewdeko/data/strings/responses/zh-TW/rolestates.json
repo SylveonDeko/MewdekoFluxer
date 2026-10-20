@@ -12,7 +12,6 @@
   "role_states_no_state_to_delete": "No Role State to delete!",
   "role_states_no_valid_roles": "{0} There are no valid roles specified!",
   "role_states_not_enabled": "{0} Role States are not enabled and have not been configured!",
-  "role_states_not_enabled_slash": "{0} Role States are not enabled and have not been configured!",
   "role_states_not_ignore_bots": "{0} Role States will not ignore bots!",
   "role_states_remove_failed": "Remove failed because:\n{0}",
   "role_states_roles_added_to_deny": "{0} {1} roles added to deny list.",

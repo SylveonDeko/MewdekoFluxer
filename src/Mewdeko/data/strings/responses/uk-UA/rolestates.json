@@ -12,7 +12,6 @@
   "role_states_no_state_to_delete": "Немає Стану Ролі для видалення!",
   "role_states_no_valid_roles": "{0} Не вказано жодних дійсних ролей!",
   "role_states_not_enabled": "Стани Ролей {0} не ввімкнено та не налаштовано!",
-  "role_states_not_enabled_slash": "Стани Ролей {0} не ввімкнено та не налаштовано!",
   "role_states_not_ignore_bots": "Стани Ролей {0} не ігноруватимуть ботів!",
   "role_states_remove_failed": "Не вдалося видалити, оскільки:\n{0}",
   "role_states_roles_added_to_deny": "Ролі {0} {1} додано до списку заборони.",

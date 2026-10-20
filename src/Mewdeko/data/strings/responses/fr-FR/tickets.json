@@ -98,8 +98,6 @@
   "ticket_user_blocked": "{0} a été bloqué de la création de tickets",
   "ticket_user_not_blocked": "L'utilisateur n'est pas bloqué de la création de tickets",
   "ticket_user_unblocked": "{0} a été débloqué de la création de tickets",
-  "ticket_wizard_description": "Configurons votre système de tickets dans {0} !\n\n**Choisissez votre méthode de configuration :**",
-  "ticket_wizard_title": "🎫 Assistant de configuration du système de tickets",
   "transcript_channel_removed": "Salon de transcription supprimé",
   "transcript_channel_set": "Salon de transcription défini à {0}",
   "ticket_blacklist_user_desc": "<@{0}> a été mis en liste noire pour la création de tickets.",

@@ -98,8 +98,6 @@
   "ticket_user_blocked": "{0} 已被禁止创建工单",
   "ticket_user_not_blocked": "用户未被禁止创建工单",
   "ticket_user_unblocked": "{0} 已解除创建工单的禁止",
-  "ticket_wizard_description": "让我们在 {0} 中设置您的工单系统！\n\n**选择您的设置方式：**",
-  "ticket_wizard_title": "🎫 工单系统设置向导",
   "transcript_channel_removed": "记录频道已移除",
   "transcript_channel_set": "记录频道已设为 {0}",
   "ticket_blacklist_user_desc": "<@{0}> 已被列入工单黑名单。",

@@ -198,7 +198,6 @@
   "trivia_chain_invalid_category": "Ungültige Kategorie! Verfügbar: general, science, history, sports, entertainment.",
   "trivia_chain_multiplier": "Multiplikator: x{0}",
   "trivia_chain_next_question": "Nächste Frage wird geladen...",
-  "trivia_chain_not_your_button": "Dies ist nicht dein Trivia-Spiel!",
   "trivia_chain_nothing_to_cash_out": "Du hast nichts zum Auszahlen!",
   "trivia_chain_option": "{0}",
   "trivia_chain_potential_win": "Potenzieller Gewinn: {0} {1}",

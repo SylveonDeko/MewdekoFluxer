@@ -161,7 +161,6 @@
   "trivia_chain_invalid_category": "Недійсна категорія! Доступні: general, science, history, sports, entertainment.",
   "trivia_chain_multiplier": "Множник: x{0}",
   "trivia_chain_next_question": "Завантаження наступного запитання...",
-  "trivia_chain_not_your_button": "Це не ваша гра в вікторину!",
   "trivia_chain_nothing_to_cash_out": "Вам нічого знімати!",
   "trivia_chain_option": "{0}",
   "trivia_chain_potential_win": "Потенційний Виграш: {0} {1}",

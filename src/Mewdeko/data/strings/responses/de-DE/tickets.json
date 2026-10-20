@@ -98,8 +98,6 @@
   "ticket_user_blocked": "{0} wurde vom Erstellen von Tickets gesperrt",
   "ticket_user_not_blocked": "Benutzer ist nicht vom Erstellen von Tickets gesperrt",
   "ticket_user_unblocked": "{0} wurde vom Ticket-Erstell-Sperr aufgehoben",
-  "ticket_wizard_description": "Richten wir dein Ticket-System in {0} ein!\n\n**Wähle deine Einrichtungsmethode:**",
-  "ticket_wizard_title": "🎫 Ticket-System-Einrichtungsassistent",
   "transcript_channel_removed": "Abschrift-Kanal entfernt",
   "transcript_channel_set": "Abschrift-Kanal auf {0} gesetzt",
   "ticket_blacklist_user_desc": "<@{0}> wurde vom Erstellen von Tickets gesperrt.",

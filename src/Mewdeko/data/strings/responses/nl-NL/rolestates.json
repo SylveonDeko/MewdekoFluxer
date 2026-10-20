@@ -19,7 +19,6 @@
   "role_states_no_state_for_user": "There is geen Rol state voor {0}!",
   "role_states_no_valid_roles": "{0} There zijn geen valid Rollen specified!",
   "role_states_not_enabled": "{0} Rol States zijn not Ingeschakeld en hebben not been configured!",
-  "role_states_not_enabled_slash": "{0} Rol States zijn not Ingeschakeld en hebben not been configured!",
   "role_states_not_ignore_bots": "{0} Rol States zal not ignore bots!",
   "role_states_remove_failed": "Remove Mislukt because:\n{0}",
   "role_states_roles_added_to_deny": "{0} {1} Rollen Toegevoegd naar deny list.",

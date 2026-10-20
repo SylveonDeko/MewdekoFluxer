@@ -2,7 +2,6 @@
   "rolemenu_default_name": "Pick your roles",
   "rolemenu_default_description": "React below to pick your roles. Take your reaction off to give a role up.",
   "rolemenu_audit_reason": "Role menu: {0}",
-  "rolemenu_gone": "This menu no longer exists.",
   "rolemenu_paused": "This menu is paused right now.",
   "rolemenu_requires_role": "You need the {0} role to use this menu.",
   "rolemenu_added": "Added {0}.",
