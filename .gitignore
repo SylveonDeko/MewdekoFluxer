@@ -7,7 +7,7 @@ _site/
 api/
 
 src/Mewdeko/Command Errors*.txt
-bot.yml
+src/Mewdeko/data/bot.yml
 
 application.yml
 
@@ -39,8 +39,8 @@ ehthumbs.db
 
 # Folder config file
 Desktop.ini
-bot.yml
-xp.yml
+src/Mewdeko/data/bot.yml
+src/Mewdeko/data/xp.yml
 
 # Recycle Bin used on file shares
 $RECYCLE.BIN/
