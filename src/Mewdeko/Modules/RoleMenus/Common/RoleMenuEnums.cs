@@ -1,22 +1,6 @@
 namespace Mewdeko.Modules.RoleMenus.Common;
 
 /// <summary>
-///     How a role menu shows its options on the posted message.
-/// </summary>
-public enum RoleMenuStyle
-{
-    /// <summary>
-    ///     One dropdown listing every option.
-    /// </summary>
-    Dropdown = 0,
-
-    /// <summary>
-    ///     One button per option, in rows of five.
-    /// </summary>
-    Buttons = 1
-}
-
-/// <summary>
 ///     How many roles a member can pick from one menu.
 /// </summary>
 public enum RoleMenuMode
@@ -38,40 +22,14 @@ public enum RoleMenuMode
 public enum RoleMenuReplyMode
 {
     /// <summary>
-    ///     A private note lists the roles that were added and removed.
+    ///     A short note that deletes itself lists the roles that were added and removed.
     /// </summary>
-    Private = 0,
+    Note = 0,
 
     /// <summary>
     ///     No note unless something went wrong.
     /// </summary>
     Silent = 1
-}
-
-/// <summary>
-///     Button colors a menu option can use. Values match Discord's button styles.
-/// </summary>
-public enum RoleMenuButtonColor
-{
-    /// <summary>
-    ///     Discord's primary blurple button.
-    /// </summary>
-    Blurple = 1,
-
-    /// <summary>
-    ///     Discord's secondary grey button.
-    /// </summary>
-    Grey = 2,
-
-    /// <summary>
-    ///     Discord's green success button.
-    /// </summary>
-    Green = 3,
-
-    /// <summary>
-    ///     Discord's red danger button.
-    /// </summary>
-    Red = 4
 }
 
 /// <summary>
@@ -85,7 +43,7 @@ public enum RoleMenuStatus
     Live,
 
     /// <summary>
-    ///     The message is posted but its controls are greyed out.
+    ///     The message is posted but reactions on it are ignored.
     /// </summary>
     Paused,
 
@@ -217,7 +175,7 @@ public enum RoleMenuError
     InvalidOrder,
 
     /// <summary>
-    ///     Discord rejected the message.
+    ///     The message could not be posted.
     /// </summary>
     PostFailed,
 

@@ -23,16 +23,6 @@ public class RoleMenuDraft
     public string? Message { get; set; }
 
     /// <summary>
-    ///     Dropdown or buttons.
-    /// </summary>
-    public RoleMenuStyle Style { get; set; }
-
-    /// <summary>
-    ///     Dropdown hint text. Null means the default for the mode.
-    /// </summary>
-    public string? Placeholder { get; set; }
-
-    /// <summary>
     ///     Pick any or pick one.
     /// </summary>
     public RoleMenuMode Mode { get; set; }
@@ -79,8 +69,6 @@ public class RoleMenuDraft
             Name = menu.Name,
             ChannelId = menu.ChannelId,
             Message = menu.Message,
-            Style = (RoleMenuStyle)menu.Style,
-            Placeholder = menu.Placeholder,
             Mode = (RoleMenuMode)menu.Mode,
             MinRoles = menu.MinRoles,
             MaxRoles = menu.MaxRoles,
@@ -96,8 +84,7 @@ public class RoleMenuDraft
                     RoleId = x.RoleId,
                     Label = x.Label,
                     Emoji = x.Emoji,
-                    Description = x.Description,
-                    ButtonStyle = x.ButtonStyle
+                    Description = x.Description
                 })
                 .ToList()
         };
@@ -125,19 +112,15 @@ public class RoleMenuOptionDraft
     public string? Label { get; set; }
 
     /// <summary>
-    ///     Unicode emoji or custom emoji text, or null for none.
+    ///     Unicode emoji or custom emoji text. Null gets the next free number emoji.
     /// </summary>
     public string? Emoji { get; set; }
 
     /// <summary>
-    ///     Short text shown under the dropdown option and in the default message.
+    ///     Short text shown beside the option in the default message.
     /// </summary>
     public string? Description { get; set; }
 
-    /// <summary>
-    ///     Discord button style from 1 to 4. Ignored for dropdowns.
-    /// </summary>
-    public int ButtonStyle { get; set; } = 2;
 }
 
 /// <summary>
@@ -149,11 +132,6 @@ public class RoleMenuImportDraft
     ///     ID of the older setup to import.
     /// </summary>
     public int SourceId { get; set; }
-
-    /// <summary>
-    ///     Dropdown or buttons for the new menu.
-    /// </summary>
-    public RoleMenuStyle Style { get; set; }
 
     /// <summary>
     ///     Channel for the new menu. Null or zero means the older setup's channel.

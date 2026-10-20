@@ -41,16 +41,6 @@ public class RoleMenuResponse
     public string? Message { get; set; }
 
     /// <summary>
-    ///     0 dropdown, 1 buttons.
-    /// </summary>
-    public int Style { get; set; }
-
-    /// <summary>
-    ///     Dropdown hint text, or null for the default.
-    /// </summary>
-    public string? Placeholder { get; set; }
-
-    /// <summary>
     ///     0 pick any, 1 pick one.
     /// </summary>
     public int Mode { get; set; }
@@ -145,11 +135,6 @@ public class RoleMenuOptionResponse
     ///     Short description, or null.
     /// </summary>
     public string? Description { get; set; }
-
-    /// <summary>
-    ///     Button color: 1 blurple, 2 grey, 3 green, 4 red.
-    /// </summary>
-    public int ButtonStyle { get; set; }
 
     /// <summary>
     ///     0-based position.
@@ -317,11 +302,6 @@ public class RoleMenuLimitsLookup
     public int MaxOptions { get; set; }
 
     /// <summary>
-    ///     Buttons per row.
-    /// </summary>
-    public int ButtonsPerRow { get; set; }
-
-    /// <summary>
     ///     Longest menu name.
     /// </summary>
     public int NameLength { get; set; }
@@ -335,11 +315,6 @@ public class RoleMenuLimitsLookup
     ///     Longest option description.
     /// </summary>
     public int DescriptionLength { get; set; }
-
-    /// <summary>
-    ///     Longest dropdown placeholder.
-    /// </summary>
-    public int PlaceholderLength { get; set; }
 }
 
 /// <summary>

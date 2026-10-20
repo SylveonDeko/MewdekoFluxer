@@ -623,13 +623,12 @@ public class Mee6SettingsImporter(
             var options = message.Options
                 .Select(x => (Option: x, Role: x.Roles.FirstOrDefault(r => guild.GetRole(r) is not null)))
                 .Where(x => x.Role != 0)
-                .Take(25)
+                .Take(RoleMenuService.MaxOptions)
                 .Select(x => new RoleMenuOptionDraft
                 {
                     RoleId = x.Role,
                     Label = x.Option.Label,
-                    Emoji = EmojiText(x.Option),
-                    ButtonStyle = x.Option.ButtonStyle
+                    Emoji = EmojiText(x.Option)
                 })
                 .ToList();
             if (options.Count == 0)
@@ -643,7 +642,6 @@ public class Mee6SettingsImporter(
                 Name = message.Name,
                 ChannelId = message.ChannelId,
                 Message = string.IsNullOrWhiteSpace(message.Message) ? null : resolve(message.Message),
-                Style = RoleMenuStyle.Buttons,
                 Mode = message.Single ? RoleMenuMode.Exclusive : RoleMenuMode.Multi,
                 Options = options
             });

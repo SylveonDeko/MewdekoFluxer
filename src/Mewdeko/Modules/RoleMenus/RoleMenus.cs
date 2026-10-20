@@ -53,17 +53,16 @@ public class RoleMenus : MewdekoModuleBase<RoleMenuService>
     }
 
     /// <summary>
-    ///     Posts a new role menu with one option per role.
+    ///     Posts a new role menu with one option per role. Members react to get a role.
     /// </summary>
     /// <param name="channel">The channel to post in.</param>
-    /// <param name="style">Dropdown or buttons.</param>
     /// <param name="roles">The roles to offer.</param>
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageRoles)]
     [BotPerm(GuildPermission.ManageRoles)]
-    public async Task RoleMenuCreate(ITextChannel channel, RoleMenuStyle style, params IRole[] roles)
+    public async Task RoleMenuCreate(ITextChannel channel, params IRole[] roles)
     {
         if (roles.Length == 0)
         {
@@ -74,9 +73,8 @@ public class RoleMenus : MewdekoModuleBase<RoleMenuService>
         var draft = new RoleMenuDraft
         {
             ChannelId = channel.Id,
-            Style = style,
             Mode = RoleMenuMode.Multi,
-            ReplyMode = RoleMenuReplyMode.Private,
+            ReplyMode = RoleMenuReplyMode.Note,
             Options = roles
                 .DistinctBy(r => r.Id)
                 .Select(r => new RoleMenuOptionDraft
@@ -261,32 +259,6 @@ public class RoleMenus : MewdekoModuleBase<RoleMenuService>
     }
 
     /// <summary>
-    ///     Switches a menu between a dropdown and buttons.
-    /// </summary>
-    /// <param name="menuId">The menu ID.</param>
-    /// <param name="style">Dropdown or buttons.</param>
-    [Cmd]
-    [Aliases]
-    [RequireContext(ContextType.Guild)]
-    [UserPerm(GuildPermission.ManageRoles)]
-    [BotPerm(GuildPermission.ManageRoles)]
-    public async Task RoleMenuSetStyle(int menuId, RoleMenuStyle style)
-    {
-        var menu = await FindMenuAsync(menuId);
-        if (menu is null)
-            return;
-
-        var draft = RoleMenuDraft.From(menu);
-        draft.Style = style;
-
-        if (await SaveAsync(menu, draft) is not { } updated)
-            return;
-
-        await ConfirmAsync(Strings.RolemenuStyleSet(ctx.Guild.Id, updated.Name,
-            Service.StyleText(ctx.Guild.Id, (RoleMenuStyle)updated.Style)));
-    }
-
-    /// <summary>
     ///     Sets whether members pick one role or any number.
     /// </summary>
     /// <param name="menuId">The menu ID.</param>
@@ -377,10 +349,10 @@ public class RoleMenus : MewdekoModuleBase<RoleMenuService>
     }
 
     /// <summary>
-    ///     Chooses whether members get a private note after using a menu.
+    ///     Chooses whether members get a short note after using a menu.
     /// </summary>
     /// <param name="menuId">The menu ID.</param>
-    /// <param name="mode">Private or silent.</param>
+    /// <param name="mode">Note or silent.</param>
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
@@ -490,13 +462,12 @@ public class RoleMenus : MewdekoModuleBase<RoleMenuService>
     ///     Moves an older emoji role setup on a message into a new role menu.
     /// </summary>
     /// <param name="messageId">The ID of the message with the older setup.</param>
-    /// <param name="style">Dropdown or buttons.</param>
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageRoles)]
     [BotPerm(GuildPermission.ManageRoles)]
-    public async Task RoleMenuImport(ulong messageId, RoleMenuStyle style = RoleMenuStyle.Dropdown)
+    public async Task RoleMenuImport(ulong messageId)
     {
         var sources = await Service.GetImportSourcesAsync(ctx.Guild.Id);
         var source = sources.FirstOrDefault(x => x.MessageId == messageId);
@@ -509,7 +480,6 @@ public class RoleMenus : MewdekoModuleBase<RoleMenuService>
         var result = await Service.ImportAsync(ctx.Guild.Id, (IGuildUser)ctx.User, new RoleMenuImportDraft
         {
             SourceId = source.Id,
-            Style = style,
             CopyMessage = true,
             RetireOriginal = true
         });

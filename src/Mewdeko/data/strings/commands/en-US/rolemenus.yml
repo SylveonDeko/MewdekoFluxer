@@ -1,12 +1,12 @@
 rolemenus:
   args:
     - ''
-  desc: 'Lists every role menu in this server with its channel, type, number of options, and status.'
+  desc: 'Lists every role menu in this server with its channel, number of options, and status.'
   params: [ ]
 rolemenuinfo:
   args:
     - 3
-  desc: 'Shows everything about one role menu: channel, type, picking rules, required role, confirmation, and options.'
+  desc: 'Shows everything about one role menu: channel, picking rules, required role, confirmation, and options.'
   params:
     - desc: The menu ID from rolemenus.
       name: menuId
@@ -14,19 +14,15 @@ rolemenuinfo:
       type: int
 rolemenucreate:
   args:
-    - '#roles dropdown @He/Him @She/Her @They/Them'
-    - '#colors buttons @Red @Blue'
-  desc: 'Posts a new role menu in a channel with one option per role. Members pick from a dropdown or a row of buttons to get or drop those roles.'
+    - '#roles @He/Him @She/Her @They/Them'
+    - '#colors @Red @Blue'
+  desc: 'Posts a new role menu in a channel with one option per role. Each option gets a number emoji, and members react to get a role and take the reaction off to drop it.'
   params:
     - desc: The channel to post the menu in.
       name: channel
       optional: false
       type: ITextChannel
-    - desc: dropdown or buttons.
-      name: style
-      optional: false
-      type: RoleMenuStyle
-    - desc: One or more roles, up to 25.
+    - desc: One or more roles, up to 20.
       name: roles
       optional: false
       type: IRole[]
@@ -44,7 +40,7 @@ rolemenuadd:
       name: role
       optional: false
       type: IRole
-    - desc: An optional emoji followed by the name shown on the menu. Defaults to the role name.
+    - desc: An optional emoji followed by the name shown on the menu. Defaults to the next free number emoji and the role name.
       name: emojiAndLabel
       optional: true
       type: string
@@ -89,19 +85,6 @@ rolemenumessage:
       name: message
       optional: true
       type: string
-rolemenustyle:
-  args:
-    - '3 buttons'
-  desc: 'Switches a menu between a dropdown and buttons.'
-  params:
-    - desc: The menu ID.
-      name: menuId
-      optional: false
-      type: int
-    - desc: dropdown or buttons.
-      name: style
-      optional: false
-      type: RoleMenuStyle
 rolemenumode:
   args:
     - '3 exclusive'
@@ -150,22 +133,22 @@ rolemenurequire:
       type: IRole
 rolemenureply:
   args:
-    - '3 private'
+    - '3 note'
     - '3 silent'
-  desc: 'Chooses whether members get a private note listing the roles they gained and lost, or no note at all.'
+  desc: 'Chooses whether a short note that deletes itself lists the roles a member gained and lost after they react, or no note at all.'
   params:
     - desc: The menu ID.
       name: menuId
       optional: false
       type: int
-    - desc: private or silent.
+    - desc: note or silent.
       name: mode
       optional: false
       type: RoleMenuReplyMode
 rolemenupause:
   args:
     - '3'
-  desc: 'Pauses a menu, greying out its dropdown or buttons, or resumes it if it is paused.'
+  desc: 'Pauses a menu so reactions on it do nothing, or resumes it if it is paused.'
   params:
     - desc: The menu ID.
       name: menuId
@@ -197,14 +180,9 @@ rolemenudelete:
 rolemenuimport:
   args:
     - '1122334455667788990'
-    - '1122334455667788990 buttons'
   desc: 'Moves an older emoji role setup on a message into a new role menu in the same channel, then retires the old setup.'
   params:
     - desc: The ID of the message with the older setup.
       name: messageId
       optional: false
       type: ulong
-    - desc: dropdown or buttons. Defaults to dropdown.
-      name: style
-      optional: true
-      type: RoleMenuStyle

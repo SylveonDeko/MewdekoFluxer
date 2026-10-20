@@ -4139,9 +4139,6 @@ rolemenumessage:
   - rolemenumessage
   - rolemenumsg
   - rmenumsg
-rolemenusetstyle:
-  - rolemenustyle
-  - rmenustyle
 rolemenusetmode:
   - rolemenumode
   - rmenumode

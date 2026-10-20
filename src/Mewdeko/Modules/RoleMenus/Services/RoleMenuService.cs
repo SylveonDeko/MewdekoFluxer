@@ -26,14 +26,9 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     public const int MaxMenusPerGuild = 50;
 
     /// <summary>
-    ///     Most options one menu can have: one dropdown of 25, or 25 buttons in 5 rows.
+    ///     Most options one menu can have, one reaction each.
     /// </summary>
-    public const int MaxOptions = 25;
-
-    /// <summary>
-    ///     Buttons per row on a buttons menu.
-    /// </summary>
-    public const int ButtonsPerRow = 5;
+    public const int MaxOptions = 20;
 
     /// <summary>
     ///     Longest menu name.
@@ -49,11 +44,6 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     ///     Longest option description.
     /// </summary>
     public const int DescriptionLength = 100;
-
-    /// <summary>
-    ///     Longest dropdown placeholder.
-    /// </summary>
-    public const int PlaceholderLength = 150;
 
     /// <summary>
     ///     Longest plain text message.
@@ -111,6 +101,11 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     public const string ProblemCantReadHistory = "The bot can't read message history here";
 
     /// <summary>
+    ///     Channel problem text for channels the bot can't add reactions in.
+    /// </summary>
+    public const string ProblemCantReact = "The bot can't add reactions here";
+
+    /// <summary>
     ///     Analytics feature key.
     /// </summary>
     private const string FeatureKey = "role_menus";
@@ -129,6 +124,16 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     ///     How long the bot trusts its own record of a member's role change over the gateway cache.
     /// </summary>
     private static readonly TimeSpan RecentChangeWindow = TimeSpan.FromSeconds(15);
+
+    /// <summary>
+    ///     How long the bot remembers taking a reaction off a member.
+    /// </summary>
+    private static readonly TimeSpan BotRemovalWindow = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    ///     Seconds a note about a role change stays in the channel.
+    /// </summary>
+    private const int NoteSeconds = 10;
 
     /// <summary>
     ///     Serializer settings for copied messages: omit nulls.
@@ -216,6 +221,24 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     private readonly Func<SocketRole, Task> roleDeletedHandler;
 
     /// <summary>
+    ///     Handler for the ReactionAdded event, kept so it can be unsubscribed.
+    /// </summary>
+    private readonly Func<Cacheable<IUserMessage, ulong>, Cacheable<IMessageChannel, ulong>, SocketReaction, Task>
+        reactionAddedHandler;
+
+    /// <summary>
+    ///     Handler for the ReactionRemoved event, kept so it can be unsubscribed.
+    /// </summary>
+    private readonly Func<Cacheable<IUserMessage, ulong>, Cacheable<IMessageChannel, ulong>, SocketReaction, Task>
+        reactionRemovedHandler;
+
+    /// <summary>
+    ///     Reactions the bot took off a member itself, so removing them does not take the role away.
+    /// </summary>
+    private readonly ConcurrentDictionary<(ulong MessageId, ulong UserId, string Emoji), DateTime> botRemovedReactions =
+        new();
+
+    /// <summary>
     ///     Localized bot strings.
     /// </summary>
     private readonly GeneratedBotStrings strings;
@@ -263,11 +286,15 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
         messagesBulkDeletedHandler = OnMessagesBulkDeletedAsync;
         channelDestroyedHandler = OnChannelDestroyedAsync;
         roleDeletedHandler = OnRoleDeletedAsync;
+        reactionAddedHandler = OnReactionAddedAsync;
+        reactionRemovedHandler = OnReactionRemovedAsync;
 
         eventHandler.Subscribe("MessageDeleted", EventModuleName, messageDeletedHandler);
         eventHandler.Subscribe("MessagesBulkDeleted", EventModuleName, messagesBulkDeletedHandler);
         eventHandler.Subscribe("ChannelDestroyed", EventModuleName, channelDestroyedHandler);
         eventHandler.Subscribe("RoleDeleted", EventModuleName, roleDeletedHandler);
+        eventHandler.Subscribe("ReactionAdded", EventModuleName, reactionAddedHandler);
+        eventHandler.Subscribe("ReactionRemoved", EventModuleName, reactionRemovedHandler);
     }
 
     /// <summary>
@@ -287,6 +314,14 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
             }
 
             logger.LogInformation("Loaded {Count} role menus", all.Count);
+
+            foreach (var menu in all.Where(m => m.Options.Any(o => string.IsNullOrWhiteSpace(o.Emoji))))
+            {
+                var result = await UpdateAsync(menu.GuildId, menu.Id, null, RoleMenuDraft.From(menu));
+                if (!result.Success)
+                    logger.LogWarning("Role menu {MenuId} has options without a reaction emoji: {Error}", menu.Id,
+                        result.Error);
+            }
         }
         catch (Exception ex)
         {
@@ -304,6 +339,8 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
         eventHandler.Unsubscribe("MessagesBulkDeleted", EventModuleName, messagesBulkDeletedHandler);
         eventHandler.Unsubscribe("ChannelDestroyed", EventModuleName, channelDestroyedHandler);
         eventHandler.Unsubscribe("RoleDeleted", EventModuleName, roleDeletedHandler);
+        eventHandler.Unsubscribe("ReactionAdded", EventModuleName, reactionAddedHandler);
+        eventHandler.Unsubscribe("ReactionRemoved", EventModuleName, reactionRemovedHandler);
         return Task.CompletedTask;
     }
 
@@ -465,7 +502,9 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
             return ProblemCantSend;
         if (!perms.EmbedLinks)
             return ProblemCantEmbed;
-        return !perms.ReadMessageHistory ? ProblemCantReadHistory : null;
+        if (!perms.ReadMessageHistory)
+            return ProblemCantReadHistory;
+        return !perms.AddReactions ? ProblemCantReact : null;
     }
 
     /// <summary>
@@ -525,12 +564,10 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <returns>The error and detail, or None.</returns>
     private (RoleMenuError Error, string? Detail) ValidateDraft(SocketGuild guild, RoleMenuDraft draft)
     {
-        if (!Enum.IsDefined(draft.Style))
-            draft.Style = RoleMenuStyle.Dropdown;
         if (!Enum.IsDefined(draft.Mode))
             draft.Mode = RoleMenuMode.Multi;
         if (!Enum.IsDefined(draft.ReplyMode))
-            draft.ReplyMode = RoleMenuReplyMode.Private;
+            draft.ReplyMode = RoleMenuReplyMode.Note;
 
         var name = draft.Name?.Trim();
         if (string.IsNullOrEmpty(name))
@@ -551,13 +588,6 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
                 return (RoleMenuError.TextTooLong, "message");
         }
 
-        var placeholder = draft.Placeholder?.Trim();
-        if (string.IsNullOrEmpty(placeholder))
-            placeholder = null;
-        if (placeholder is { Length: > PlaceholderLength })
-            return (RoleMenuError.TextTooLong, "placeholder");
-        draft.Placeholder = placeholder;
-
         draft.Options ??= [];
         if (draft.Options.Count == 0)
             return (RoleMenuError.NoOptions, null);
@@ -565,6 +595,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
             return (RoleMenuError.TooManyOptions, null);
 
         var seen = new HashSet<ulong>();
+        var usedEmojis = new HashSet<string>();
         foreach (var option in draft.Options)
         {
             var role = guild.GetRole(option.RoleId);
@@ -586,9 +617,6 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
             if (description is { Length: > DescriptionLength })
                 return (RoleMenuError.TextTooLong, "description");
             option.Description = description;
-
-            if (option.ButtonStyle is < 1 or > 4)
-                option.ButtonStyle = 2;
 
             var emojiText = option.Emoji?.Trim();
             if (string.IsNullOrEmpty(emojiText))
@@ -613,6 +641,15 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
                 default:
                     return (RoleMenuError.InvalidEmoji, emojiText);
             }
+
+            if (!usedEmojis.Add(option.Emoji))
+                return (RoleMenuError.InvalidEmoji, emojiText);
+        }
+
+        foreach (var option in draft.Options.Where(o => o.Emoji is null))
+        {
+            option.Emoji = NumberEmojis.All.First(e => !usedEmojis.Contains(e));
+            usedEmojis.Add(option.Emoji);
         }
 
         (draft.MinRoles, draft.MaxRoles) = ClampLimits(draft.Mode, draft.MinRoles, draft.MaxRoles,
@@ -829,7 +866,6 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
                     existing.Label = source.Label!;
                     existing.Emoji = source.Emoji;
                     existing.Description = source.Description;
-                    existing.ButtonStyle = source.ButtonStyle;
                     existing.Position = i;
                     await db.UpdateAsync(existing);
                     options.Add(existing);
@@ -1175,17 +1211,15 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
             Name = import.Name,
             ChannelId = channelId,
             Message = message,
-            Style = import.Style,
             Mode = isExclusive ? RoleMenuMode.Exclusive : RoleMenuMode.Multi,
             MaxRoles = isExclusive ? 1 : 0,
-            ReplyMode = RoleMenuReplyMode.Private,
+            ReplyMode = RoleMenuReplyMode.Note,
             Enabled = true,
             Options = pairs.Select(x => new RoleMenuOptionDraft
             {
                 RoleId = x.RoleId,
                 Label = guild.GetRole(x.RoleId)!.Name.Trim().TrimTo(LabelLength, true),
-                Emoji = ResolveLegacyEmoji(guild, x.EmoteName),
-                ButtonStyle = 2
+                Emoji = ResolveLegacyEmoji(guild, x.EmoteName)
             }).ToList()
         };
 
@@ -1315,8 +1349,6 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
         menu.Name = draft.Name!;
         menu.ChannelId = draft.ChannelId;
         menu.Message = draft.Message;
-        menu.Style = (int)draft.Style;
-        menu.Placeholder = draft.Placeholder;
         menu.Mode = (int)draft.Mode;
         menu.MinRoles = draft.MinRoles;
         menu.MaxRoles = draft.MaxRoles;
@@ -1343,7 +1375,6 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
             Label = source.Label!,
             Emoji = source.Emoji,
             Description = source.Description,
-            ButtonStyle = source.ButtonStyle,
             Position = position,
             DateAdded = now
         };
@@ -1354,14 +1385,14 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     #region Messages
 
     /// <summary>
-    ///     Builds the text, embeds, and controls for a menu's message.
+    ///     Builds the text and embeds for a menu's message. A custom message gets the option list added as a last embed.
     /// </summary>
     /// <param name="guild">The guild.</param>
     /// <param name="channel">The channel the message lives in.</param>
     /// <param name="menu">The menu with its options sorted.</param>
-    /// <returns>Plain text, embeds, and controls.</returns>
-    public (string? Text, Discord.Embed[]? Embeds, MessageComponent Components) BuildMessage(SocketGuild guild,
-        ITextChannel channel, RoleMenu menu)
+    /// <returns>Plain text and embeds.</returns>
+    public (string? Text, Discord.Embed[]? Embeds) BuildMessage(SocketGuild guild, ITextChannel channel,
+        RoleMenu menu)
     {
         string? text;
         Discord.Embed[]? embeds;
@@ -1384,108 +1415,44 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
             }
 
             if (text is null && embeds is null)
-                embeds = [BuildDefaultEmbed(guild, menu)];
+                embeds = [BuildOptionsEmbed(guild, menu, true)];
+            else if (embeds is not { Length: >= 10 })
+                embeds = [.. embeds ?? [], BuildOptionsEmbed(guild, menu, false)];
         }
         else
         {
             text = null;
-            embeds = [BuildDefaultEmbed(guild, menu)];
+            embeds = [BuildOptionsEmbed(guild, menu, true)];
         }
 
-        return (text, embeds, BuildComponents(guild, menu));
+        return (text, embeds);
     }
 
     /// <summary>
-    ///     Builds the default message: the menu name and one line per option.
+    ///     Builds the option list: one line per option with its reaction emoji, and the menu name above it when asked.
     /// </summary>
     /// <param name="guild">The guild.</param>
     /// <param name="menu">The menu.</param>
+    /// <param name="withHeader">Whether to add the menu name and the intro line.</param>
     /// <returns>The embed.</returns>
-    private Discord.Embed BuildDefaultEmbed(SocketGuild guild, RoleMenu menu)
+    private Discord.Embed BuildOptionsEmbed(SocketGuild guild, RoleMenu menu, bool withHeader)
     {
-        var lines = menu.Options.Select(o =>
-            (o.Emoji is null ? "" : o.Emoji + " ") + "**" + o.Label + "**" +
-            (o.Description is null ? "" : ": " + o.Description));
-        var title = menu.Name.TrimTo(256);
-        var intro = strings.RolemenuDefaultDescription(guild.Id);
-        var description = (intro + "\n\n" + string.Join("\n", lines)).TrimTo(4096);
-        return new EmbedBuilder()
-            .WithOkColor()
-            .WithTitle(title)
-            .WithDescription(description)
-            .Build();
-    }
-
-    /// <summary>
-    ///     Builds a menu's dropdown or buttons.
-    /// </summary>
-    /// <param name="guild">The guild.</param>
-    /// <param name="menu">The menu with its options sorted.</param>
-    /// <returns>The controls.</returns>
-    private MessageComponent BuildComponents(SocketGuild guild, RoleMenu menu)
-    {
-        var builder = new ComponentBuilder();
-        var disabled = !menu.Enabled;
-        var options = menu.Options;
-        if (options.Count == 0)
-            return builder.Build();
-
-        if ((RoleMenuStyle)menu.Style == RoleMenuStyle.Buttons)
+        var lines = string.Join("\n", menu.Options.Select(o =>
+            o.Emoji + " **" + o.Label + "**" + (o.Description is null ? "" : ": " + o.Description)));
+        var builder = new EmbedBuilder().WithOkColor();
+        if (withHeader)
         {
-            for (var i = 0; i < options.Count; i++)
-            {
-                var option = options[i];
-                var button = new ButtonBuilder()
-                    .WithLabel(option.Label)
-                    .WithCustomId($"rolemenu:btn:{menu.Id}:{option.Id}")
-                    .WithStyle(ToButtonStyle(option.ButtonStyle))
-                    .WithDisabled(disabled);
-                if (ParseEmote(option.Emoji) is { } emote)
-                    button.WithEmote(emote);
-                builder.WithButton(button, i / ButtonsPerRow);
-            }
-
-            return builder.Build();
+            var intro = strings.RolemenuDefaultDescription(guild.Id);
+            builder.WithTitle(menu.Name.TrimTo(256)).WithDescription((intro + "\n\n" + lines).TrimTo(4096));
+        }
+        else
+        {
+            builder.WithDescription(lines.TrimTo(4096));
         }
 
-        var exclusive = (RoleMenuMode)menu.Mode == RoleMenuMode.Exclusive;
-        var placeholder = string.IsNullOrWhiteSpace(menu.Placeholder)
-            ? exclusive
-                ? strings.RolemenuDefaultPlaceholderOne(guild.Id)
-                : strings.RolemenuDefaultPlaceholderAny(guild.Id)
-            : menu.Placeholder;
-        var maxValues = exclusive
-            ? 1
-            : menu.MaxRoles == 0
-                ? options.Count
-                : Math.Min(menu.MaxRoles, options.Count);
-
-        var select = new SelectMenuBuilder()
-            .WithCustomId($"rolemenu:sel:{menu.Id}")
-            .WithPlaceholder(placeholder.TrimTo(PlaceholderLength, true))
-            .WithMinValues(1)
-            .WithMaxValues(Math.Max(maxValues, 1))
-            .WithDisabled(disabled);
-
-        foreach (var option in options)
-        {
-            select.AddOption(option.Label, option.Id.ToString(),
-                string.IsNullOrWhiteSpace(option.Description) ? null : option.Description,
-                ParseEmote(option.Emoji));
-        }
-
-        builder.WithSelectMenu(select, 0);
+        if (!menu.Enabled)
+            builder.WithFooter(strings.RolemenuPaused(guild.Id));
         return builder.Build();
-    }
-
-    /// <summary>
-    ///     Maps a stored button style to a Discord button style, never a link.
-    /// </summary>
-    /// <param name="style">The stored style.</param>
-    /// <returns>The Discord style.</returns>
-    private static ButtonStyle ToButtonStyle(int style)
-    {
-        return style is >= 1 and <= 4 ? (ButtonStyle)style : ButtonStyle.Secondary;
     }
 
     /// <summary>
@@ -1509,9 +1476,51 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <returns>The posted message.</returns>
     private async Task<IUserMessage> PostAsync(SocketGuild guild, ITextChannel channel, RoleMenu menu)
     {
-        var (text, embeds, components) = BuildMessage(guild, channel, menu);
-        return await channel.SendMessageAsync(text, embeds: embeds, components: components,
-            allowedMentions: AllowedMentions.None);
+        var (text, embeds) = BuildMessage(guild, channel, menu);
+        var message = await channel.SendMessageAsync(text, embeds: embeds, allowedMentions: AllowedMentions.None);
+        try
+        {
+            await SyncReactionsAsync(message, menu);
+        }
+        catch
+        {
+            await DeleteMessageQuietlyAsync(guild, channel.Id, message.Id);
+            throw;
+        }
+
+        return message;
+    }
+
+    /// <summary>
+    ///     Makes the reactions on a menu's message match its options: extra reactions go and missing ones are added.
+    /// </summary>
+    /// <param name="message">The menu's message.</param>
+    /// <param name="menu">The menu with its options sorted.</param>
+    /// <returns>A task that completes when the reactions match.</returns>
+    private async Task SyncReactionsAsync(IUserMessage message, RoleMenu menu)
+    {
+        var wanted = menu.Options.Select(o => ParseEmote(o.Emoji)).OfType<IEmote>().ToList();
+        var wantedKeys = wanted.Select(EmoteKey).ToHashSet();
+
+        foreach (var present in message.Reactions.Keys.Where(e => !wantedKeys.Contains(EmoteKey(e))).ToList())
+            await message.RemoveAllReactionsForEmoteAsync(present);
+
+        foreach (var emote in wanted)
+        {
+            if (message.Reactions.TryGetValue(emote, out var metadata) && metadata.IsMe)
+                continue;
+            await message.AddReactionAsync(emote);
+        }
+    }
+
+    /// <summary>
+    ///     Gets the text that identifies an emoji: the ID of a custom emoji, or the name of a unicode one.
+    /// </summary>
+    /// <param name="emote">The emoji.</param>
+    /// <returns>The identifying text.</returns>
+    private static string EmoteKey(IEmote emote)
+    {
+        return emote is Emote custom ? custom.Id.ToString() : emote.Name;
     }
 
     /// <summary>
@@ -1524,14 +1533,14 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <returns>A task that completes when the edit is done.</returns>
     private async Task ModifyAsync(SocketGuild guild, ITextChannel channel, IUserMessage message, RoleMenu menu)
     {
-        var (text, embeds, components) = BuildMessage(guild, channel, menu);
+        var (text, embeds) = BuildMessage(guild, channel, menu);
         await message.ModifyAsync(p =>
         {
             p.Content = text ?? "";
             p.Embeds = embeds ?? [];
-            p.Components = components;
             p.AllowedMentions = AllowedMentions.None;
         });
+        await SyncReactionsAsync(message, menu);
     }
 
     /// <summary>
@@ -1600,104 +1609,153 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
 
     #endregion
 
-    #region Interactions
+    #region Reactions
 
     /// <summary>
-    ///     Handles a click on a menu button.
+    ///     Gives a member the role of the option they reacted with.
     /// </summary>
-    /// <param name="component">The interaction.</param>
-    /// <param name="menuId">The menu ID from the button.</param>
-    /// <param name="optionId">The option ID from the button.</param>
-    /// <returns>A task that completes when the member has been answered.</returns>
-    public async Task HandleButtonAsync(SocketMessageComponent component, int menuId, int optionId)
+    /// <param name="message">The message that was reacted to.</param>
+    /// <param name="channel">The channel it is in.</param>
+    /// <param name="reaction">The reaction.</param>
+    /// <returns>A task that completes when the reaction has been handled.</returns>
+    private async Task OnReactionAddedAsync(Cacheable<IUserMessage, ulong> message,
+        Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
     {
-        if (component.User is not SocketGuildUser member)
-            return;
-        var guild = member.Guild;
-        if (guild is null)
-            return;
-
-        var menu = await GetMenuAsync(menuId);
-        if (menu is null || menu.GuildId != guild.Id)
+        try
         {
-            await component.RespondAsync(strings.RolemenuGone(guild.Id), ephemeral: true);
-            return;
+            await HandleReactionAsync(message, reaction, true);
         }
-
-        var blocked = AccessProblem(guild, member, menu);
-        if (blocked is not null)
+        catch (Exception ex)
         {
-            await component.RespondAsync(blocked, ephemeral: true, allowedMentions: AllowedMentions.None);
-            return;
+            logger.LogError(ex, "Role menu failed to handle a reaction on message {MessageId}", message.Id);
         }
-
-        var isPrivate = (RoleMenuReplyMode)menu.ReplyMode == RoleMenuReplyMode.Private;
-        if (isPrivate)
-            await component.DeferLoadingAsync(true);
-        else
-            await component.DeferAsync();
-
-        var option = menu.Options.FirstOrDefault(o => o.Id == optionId);
-        if (option is null)
-        {
-            await component.FollowupAsync(strings.RolemenuGone(guild.Id), ephemeral: true);
-            return;
-        }
-
-        var outcome = await ApplyAsync(menu, member, [option]);
-        await ReplyOutcomeAsync(component, guild.Id, isPrivate, outcome);
     }
 
     /// <summary>
-    ///     Handles a pick on a menu dropdown.
+    ///     Takes the role of an option from a member who removed their reaction.
     /// </summary>
-    /// <param name="component">The interaction.</param>
-    /// <param name="menuId">The menu ID from the dropdown.</param>
-    /// <returns>A task that completes when the member has been answered.</returns>
-    public async Task HandleSelectAsync(SocketMessageComponent component, int menuId)
+    /// <param name="message">The message the reaction was removed from.</param>
+    /// <param name="channel">The channel it is in.</param>
+    /// <param name="reaction">The reaction.</param>
+    /// <returns>A task that completes when the removal has been handled.</returns>
+    private async Task OnReactionRemovedAsync(Cacheable<IUserMessage, ulong> message,
+        Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
     {
-        if (component.User is not SocketGuildUser member)
-            return;
-        var guild = member.Guild;
-        if (guild is null)
+        try
+        {
+            await HandleReactionAsync(message, reaction, false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Role menu failed to handle a removed reaction on message {MessageId}", message.Id);
+        }
+    }
+
+    /// <summary>
+    ///     Applies a reaction on a menu message: adding grants the option's role and removing takes it away.
+    /// </summary>
+    /// <param name="cached">The message.</param>
+    /// <param name="reaction">The reaction.</param>
+    /// <param name="add">True when the reaction was added, false when it was removed.</param>
+    /// <returns>A task that completes when the roles have been updated.</returns>
+    private async Task HandleReactionAsync(Cacheable<IUserMessage, ulong> cached, SocketReaction reaction, bool add)
+    {
+        if (reaction.UserId == client.CurrentUser.Id || !messageIndex.TryGetValue(cached.Id, out var menuId))
             return;
 
         var menu = await GetMenuAsync(menuId);
-        if (menu is null || menu.GuildId != guild.Id)
+        var guild = menu is null ? null : client.GetGuild(menu.GuildId);
+        if (menu is null || guild is null)
+            return;
+
+        var member = guild.GetUser(reaction.UserId) ?? reaction.User.GetValueOrDefault() as SocketGuildUser;
+        if (member is null || member.IsBot)
+            return;
+
+        var option = menu.Options.FirstOrDefault(o =>
+            ParseEmote(o.Emoji) is { } emote && EmoteKey(emote) == EmoteKey(reaction.Emote));
+
+        if (!add)
         {
-            await component.RespondAsync(strings.RolemenuGone(guild.Id), ephemeral: true);
+            if (option is null || !menu.Enabled || TakeBotRemoval(cached.Id, member.Id, reaction.Emote))
+                return;
+
+            await SendNoteAsync(guild, menu, member, await ApplyAsync(menu, member, option, false));
             return;
         }
 
-        var components = BuildComponents(guild, menu);
-        await component.UpdateAsync(p => p.Components = components);
+        if (option is null)
+        {
+            await RemoveMemberReactionAsync(cached, reaction.Emote, member);
+            return;
+        }
 
         var blocked = AccessProblem(guild, member, menu);
         if (blocked is not null)
         {
-            await component.FollowupAsync(blocked, ephemeral: true, allowedMentions: AllowedMentions.None);
+            await RemoveMemberReactionAsync(cached, reaction.Emote, member);
+            await SendTextAsync(guild, menu, member, blocked);
             return;
         }
 
-        var picked = new List<RoleMenuOption>();
-        foreach (var value in component.Data.Values ?? [])
+        var outcome = await ApplyAsync(menu, member, option, true);
+        foreach (var other in menu.Options.Where(o => outcome.Removed.Contains(o.RoleId) && o.Id != option.Id))
         {
-            if (!int.TryParse(value, out var optionId))
-                continue;
-            var option = menu.Options.FirstOrDefault(o => o.Id == optionId);
-            if (option is not null && picked.All(p => p.Id != option.Id))
-                picked.Add(option);
+            if (ParseEmote(other.Emoji) is { } otherEmote)
+                await RemoveMemberReactionAsync(cached, otherEmote, member);
         }
 
-        if (picked.Count == 0)
+        if (!CurrentRoleIds(guild.Id, member).Contains(option.RoleId))
+            await RemoveMemberReactionAsync(cached, reaction.Emote, member);
+
+        await SendNoteAsync(guild, menu, member, outcome);
+    }
+
+    /// <summary>
+    ///     Takes a member's reaction off a menu message and remembers it, so the removal does not count as the
+    ///     member giving the role up.
+    /// </summary>
+    /// <param name="cached">The message.</param>
+    /// <param name="emote">The reaction to remove.</param>
+    /// <param name="member">The member whose reaction it is.</param>
+    /// <returns>A task that completes when the attempt is done.</returns>
+    private async Task RemoveMemberReactionAsync(Cacheable<IUserMessage, ulong> cached, IEmote emote, IUser member)
+    {
+        var key = (cached.Id, member.Id, EmoteKey(emote));
+        var now = DateTime.UtcNow;
+        botRemovedReactions[key] = now + BotRemovalWindow;
+        if (botRemovedReactions.Count > 1000)
         {
-            await component.FollowupAsync(strings.RolemenuGone(guild.Id), ephemeral: true);
-            return;
+            foreach (var (staleKey, expires) in botRemovedReactions)
+            {
+                if (expires < now)
+                    botRemovedReactions.TryRemove(staleKey, out _);
+            }
         }
 
-        var isPrivate = (RoleMenuReplyMode)menu.ReplyMode == RoleMenuReplyMode.Private;
-        var outcome = await ApplyAsync(menu, member, picked);
-        await ReplyOutcomeAsync(component, guild.Id, isPrivate, outcome);
+        try
+        {
+            var message = await cached.GetOrDownloadAsync();
+            await message.RemoveReactionAsync(emote, member);
+        }
+        catch (Exception ex)
+        {
+            botRemovedReactions.TryRemove(key, out _);
+            logger.LogDebug(ex, "Could not remove a reaction from role menu message {MessageId}", cached.Id);
+        }
+    }
+
+    /// <summary>
+    ///     Checks whether the bot itself took a reaction off, and forgets that it did.
+    /// </summary>
+    /// <param name="messageId">The message ID.</param>
+    /// <param name="userId">The member ID.</param>
+    /// <param name="emote">The removed reaction.</param>
+    /// <returns>True when the bot removed it just now.</returns>
+    private bool TakeBotRemoval(ulong messageId, ulong userId, IEmote emote)
+    {
+        return botRemovedReactions.TryRemove((messageId, userId, EmoteKey(emote)), out var expires) &&
+               expires >= DateTime.UtcNow;
     }
 
     /// <summary>
@@ -1720,21 +1778,48 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     }
 
     /// <summary>
-    ///     Sends the private note for an outcome when the menu or the outcome calls for one.
+    ///     Posts a short note about an outcome in the menu's channel when the menu or the outcome calls for one.
     /// </summary>
-    /// <param name="component">The interaction.</param>
-    /// <param name="guildId">The guild ID.</param>
-    /// <param name="isPrivate">Whether the menu uses private confirmations.</param>
+    /// <param name="guild">The guild.</param>
+    /// <param name="menu">The menu.</param>
+    /// <param name="member">The member.</param>
     /// <param name="outcome">The outcome.</param>
     /// <returns>A task that completes when the note is sent.</returns>
-    private async Task ReplyOutcomeAsync(SocketMessageComponent component, ulong guildId, bool isPrivate,
+    private async Task SendNoteAsync(SocketGuild guild, RoleMenu menu, SocketGuildUser member,
         RoleMenuOutcome outcome)
     {
-        if (!isPrivate && outcome.Notes.Count == 0 && !outcome.Failed)
+        var silent = (RoleMenuReplyMode)menu.ReplyMode == RoleMenuReplyMode.Silent;
+        var changed = outcome.Added.Count > 0 || outcome.Removed.Count > 0;
+        if (outcome.Notes.Count == 0 && !outcome.Failed && (silent || !changed))
             return;
 
-        var note = RenderOutcome(guildId, outcome);
-        await component.FollowupAsync(note, ephemeral: true, allowedMentions: AllowedMentions.None);
+        await SendTextAsync(guild, menu, member, RenderOutcome(guild.Id, outcome));
+    }
+
+    /// <summary>
+    ///     Posts a line addressed to a member in the menu's channel and deletes it a few seconds later.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="menu">The menu.</param>
+    /// <param name="member">The member.</param>
+    /// <param name="text">The text.</param>
+    /// <returns>A task that completes when the note is sent.</returns>
+    private async Task SendTextAsync(SocketGuild guild, RoleMenu menu, SocketGuildUser member, string text)
+    {
+        if (guild.GetTextChannel(menu.ChannelId) is not { } channel)
+            return;
+
+        try
+        {
+            var note = member.Mention + "\n" + text;
+            var sent = await channel.SendMessageAsync(note,
+                allowedMentions: new AllowedMentions(AllowedMentionTypes.Users));
+            sent.DeleteAfter(NoteSeconds);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Could not post a role menu note in {ChannelId}", menu.ChannelId);
+        }
     }
 
     /// <summary>
@@ -1751,8 +1836,6 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
         if (outcome.Removed.Count > 0)
             lines.Add(strings.RolemenuRemoved(guildId, RoleMentions(outcome.Removed)));
         lines.AddRange(outcome.Notes);
-        if (lines.Count == 0)
-            lines.Add(strings.RolemenuNoChange(guildId));
         return string.Join('\n', lines);
     }
 
@@ -1767,14 +1850,15 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     }
 
     /// <summary>
-    ///     Gives and takes roles for a member's pick, following the menu's mode and limits.
+    ///     Gives or takes the role of an option for a member, following the menu's mode and limits.
     /// </summary>
     /// <param name="menu">The menu.</param>
     /// <param name="member">The member.</param>
-    /// <param name="picked">The options picked, in pick order.</param>
+    /// <param name="picked">The option the member reacted with.</param>
+    /// <param name="add">True when the member added the reaction, false when they removed it.</param>
     /// <returns>What changed and any notes.</returns>
-    private async Task<RoleMenuOutcome> ApplyAsync(RoleMenu menu, SocketGuildUser member,
-        IReadOnlyList<RoleMenuOption> picked)
+    private async Task<RoleMenuOutcome> ApplyAsync(RoleMenu menu, SocketGuildUser member, RoleMenuOption picked,
+        bool add)
     {
         var guild = member.Guild;
         var outcome = new RoleMenuOutcome();
@@ -1803,72 +1887,48 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
                 .Where(o => current.Contains(o.RoleId) && guild.GetRole(o.RoleId) is not null)
                 .ToList();
 
-            var usable = new List<RoleMenuOption>();
-            foreach (var option in picked)
-            {
-                if (Usable(option))
-                    usable.Add(option);
-                else
-                    outcome.Notes.Add(strings.RolemenuRoleUnavailable(guild.Id, Display(option)));
-            }
-
             var toAdd = new List<ulong>();
             var toRemove = new List<ulong>();
+            var holds = current.Contains(picked.RoleId);
 
-            if ((RoleMenuMode)menu.Mode == RoleMenuMode.Exclusive)
+            if (!Usable(picked))
             {
-                var pick = usable.FirstOrDefault();
-                if (pick is not null)
+                outcome.Notes.Add(strings.RolemenuRoleUnavailable(guild.Id, Display(picked)));
+            }
+            else if ((RoleMenuMode)menu.Mode == RoleMenuMode.Exclusive)
+            {
+                if (add && !holds)
                 {
-                    if (current.Contains(pick.RoleId))
+                    toAdd.Add(picked.RoleId);
+                    foreach (var other in held.Where(h => h.RoleId != picked.RoleId))
                     {
-                        if (menu.MinRoles >= 1)
-                            outcome.Notes.Add(strings.RolemenuKeepOne(guild.Id));
+                        if (Usable(other))
+                            toRemove.Add(other.RoleId);
                         else
-                            toRemove.Add(pick.RoleId);
+                            outcome.Notes.Add(strings.RolemenuRoleUnavailable(guild.Id, Display(other)));
                     }
+                }
+                else if (!add && holds)
+                {
+                    if (menu.MinRoles >= 1)
+                        outcome.Notes.Add(strings.RolemenuKeepOne(guild.Id));
                     else
-                    {
-                        toAdd.Add(pick.RoleId);
-                        foreach (var other in held.Where(h => h.RoleId != pick.RoleId))
-                        {
-                            if (Usable(other))
-                                toRemove.Add(other.RoleId);
-                            else
-                                outcome.Notes.Add(strings.RolemenuRoleUnavailable(guild.Id, Display(other)));
-                        }
-                    }
+                        toRemove.Add(picked.RoleId);
                 }
             }
-            else
+            else if (add && !holds)
             {
-                toAdd = usable.Where(o => !current.Contains(o.RoleId)).Select(o => o.RoleId).ToList();
-                toRemove = usable.Where(o => current.Contains(o.RoleId)).Select(o => o.RoleId).ToList();
-
-                if (menu.MaxRoles > 0)
-                {
-                    var room = menu.MaxRoles - (held.Count - toRemove.Count);
-                    if (toAdd.Count > room)
-                    {
-                        var keep = Math.Max(room, 0);
-                        var refused = toAdd.Skip(keep).ToList();
-                        toAdd = toAdd.Take(keep).ToList();
-                        outcome.Notes.Add(strings.RolemenuMaxReached(guild.Id, menu.MaxRoles, RoleMentions(refused)));
-                    }
-                }
-
-                if (menu.MinRoles > 0 && held.Count - toRemove.Count + toAdd.Count < menu.MinRoles)
-                {
-                    var kept = new List<ulong>();
-                    while (toRemove.Count > 0 && held.Count - toRemove.Count + toAdd.Count < menu.MinRoles)
-                    {
-                        kept.Insert(0, toRemove[^1]);
-                        toRemove.RemoveAt(toRemove.Count - 1);
-                    }
-
-                    if (kept.Count > 0)
-                        outcome.Notes.Add(strings.RolemenuMinReached(guild.Id, menu.MinRoles, RoleMentions(kept)));
-                }
+                if (menu.MaxRoles > 0 && held.Count >= menu.MaxRoles)
+                    outcome.Notes.Add(strings.RolemenuMaxReached(guild.Id, menu.MaxRoles, RoleMentions([picked.RoleId])));
+                else
+                    toAdd.Add(picked.RoleId);
+            }
+            else if (!add && holds)
+            {
+                if (menu.MinRoles > 0 && held.Count <= menu.MinRoles)
+                    outcome.Notes.Add(strings.RolemenuMinReached(guild.Id, menu.MinRoles, RoleMentions([picked.RoleId])));
+                else
+                    toRemove.Add(picked.RoleId);
             }
 
             try
@@ -2257,19 +2317,6 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     }
 
     /// <summary>
-    ///     Gets the localized name of a style.
-    /// </summary>
-    /// <param name="guildId">The guild ID.</param>
-    /// <param name="style">The style.</param>
-    /// <returns>The text.</returns>
-    public string StyleText(ulong guildId, RoleMenuStyle style)
-    {
-        return style == RoleMenuStyle.Buttons
-            ? strings.RolemenuStyleButtons(guildId)
-            : strings.RolemenuStyleDropdown(guildId);
-    }
-
-    /// <summary>
     ///     Gets the localized name of a mode.
     /// </summary>
     /// <param name="guildId">The guild ID.</param>
@@ -2292,7 +2339,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     {
         return mode == RoleMenuReplyMode.Silent
             ? strings.RolemenuReplySilent(guildId)
-            : strings.RolemenuReplyPrivate(guildId);
+            : strings.RolemenuReplyNote(guildId);
     }
 
     /// <summary>
@@ -2350,8 +2397,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     public EmbedBuilder BuildListEmbed(SocketGuild guild, IReadOnlyList<RoleMenu> list)
     {
         var lines = list.Select(menu => strings.RolemenuListEntry(guild.Id, menu.Id, menu.Name,
-            MentionUtils.MentionChannel(menu.ChannelId), StyleText(guild.Id, (RoleMenuStyle)menu.Style),
-            menu.Options.Count, StatusText(guild.Id, GetStatus(guild, menu))));
+            MentionUtils.MentionChannel(menu.ChannelId), menu.Options.Count, StatusText(guild.Id, GetStatus(guild, menu))));
         var title = strings.RolemenuListTitle(guild.Id);
         var body = string.Join('\n', lines).TrimTo(4096);
         return new EmbedBuilder().WithOkColor().WithTitle(title).WithDescription(body);
@@ -2382,7 +2428,6 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
             .WithOkColor()
             .WithTitle(title)
             .AddField(strings.RolemenuInfoChannel(guildId), MentionUtils.MentionChannel(menu.ChannelId), true)
-            .AddField(strings.RolemenuInfoType(guildId), StyleText(guildId, (RoleMenuStyle)menu.Style), true)
             .AddField(strings.RolemenuInfoPicking(guildId), ModeText(guildId, (RoleMenuMode)menu.Mode), true)
             .AddField(strings.RolemenuInfoLimits(guildId),
                 strings.RolemenuInfoLimitsValue(guildId, menu.MinRoles, MaxText(guildId, menu.MaxRoles)), true)

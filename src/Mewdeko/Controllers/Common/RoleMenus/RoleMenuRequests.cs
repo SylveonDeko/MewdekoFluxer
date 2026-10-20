@@ -21,16 +21,6 @@ public class RoleMenuRequest
     public string? Message { get; set; }
 
     /// <summary>
-    ///     0 dropdown, 1 buttons.
-    /// </summary>
-    public int Style { get; set; }
-
-    /// <summary>
-    ///     Dropdown hint text. Null means the default for the mode.
-    /// </summary>
-    public string? Placeholder { get; set; }
-
-    /// <summary>
     ///     0 pick any, 1 pick one.
     /// </summary>
     public int Mode { get; set; }
@@ -87,19 +77,14 @@ public class RoleMenuOptionRequest
     public string? Label { get; set; }
 
     /// <summary>
-    ///     Unicode emoji or custom emoji text such as &lt;:name:id&gt;.
+    ///     Unicode emoji or custom emoji text such as &lt;:name:id&gt;. Blank gets the next free number emoji.
     /// </summary>
     public string? Emoji { get; set; }
 
     /// <summary>
-    ///     Short text under the dropdown option and in the default message.
+    ///     Short text shown beside the option in the default message.
     /// </summary>
     public string? Description { get; set; }
-
-    /// <summary>
-    ///     Button color: 1 blurple, 2 grey, 3 green, 4 red.
-    /// </summary>
-    public int ButtonStyle { get; set; } = 2;
 }
 
 /// <summary>
@@ -144,11 +129,6 @@ public class RoleMenuImportRequest
     ///     ID of the older setup, from the import sources list.
     /// </summary>
     public int SourceId { get; set; }
-
-    /// <summary>
-    ///     0 dropdown, 1 buttons.
-    /// </summary>
-    public int Style { get; set; }
 
     /// <summary>
     ///     Channel for the new menu. Null or 0 means the older setup's channel.

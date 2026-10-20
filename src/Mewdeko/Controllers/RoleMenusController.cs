@@ -389,11 +389,9 @@ public class RoleMenusController : Controller
             {
                 MaxMenus = RoleMenuService.MaxMenusPerGuild,
                 MaxOptions = RoleMenuService.MaxOptions,
-                ButtonsPerRow = RoleMenuService.ButtonsPerRow,
                 NameLength = RoleMenuService.NameLength,
                 LabelLength = RoleMenuService.LabelLength,
-                DescriptionLength = RoleMenuService.DescriptionLength,
-                PlaceholderLength = RoleMenuService.PlaceholderLength
+                DescriptionLength = RoleMenuService.DescriptionLength
             }
         });
     }
@@ -458,9 +456,6 @@ public class RoleMenusController : Controller
             var result = await service.ImportAsync(guildId, actor, new RoleMenuImportDraft
             {
                 SourceId = request.SourceId,
-                Style = Enum.IsDefined((RoleMenuStyle)request.Style)
-                    ? (RoleMenuStyle)request.Style
-                    : RoleMenuStyle.Dropdown,
                 ChannelId = request.ChannelId,
                 Name = request.Name,
                 CopyMessage = request.CopyMessage,
@@ -503,8 +498,6 @@ public class RoleMenusController : Controller
             Name = request.Name,
             ChannelId = request.ChannelId,
             Message = request.Message,
-            Style = (RoleMenuStyle)request.Style,
-            Placeholder = request.Placeholder,
             Mode = (RoleMenuMode)request.Mode,
             MinRoles = request.MinRoles,
             MaxRoles = request.MaxRoles,
@@ -518,7 +511,6 @@ public class RoleMenusController : Controller
                 Label = o.Label,
                 Emoji = o.Emoji,
                 Description = o.Description,
-                ButtonStyle = o.ButtonStyle
             }).ToList()
         };
     }
@@ -541,8 +533,6 @@ public class RoleMenusController : Controller
             MessageId = menu.MessageId,
             JumpUrl = RoleMenuService.GetJumpUrl(menu),
             Message = menu.Message,
-            Style = menu.Style,
-            Placeholder = menu.Placeholder,
             Mode = menu.Mode,
             MinRoles = menu.MinRoles,
             MaxRoles = menu.MaxRoles,
@@ -569,7 +559,6 @@ public class RoleMenusController : Controller
                         Label = o.Label,
                         Emoji = o.Emoji,
                         Description = o.Description,
-                        ButtonStyle = o.ButtonStyle,
                         Position = o.Position,
                         Problem = RoleMenuService.RoleProblemText(problem, botCanManageRoles)
                     };
