@@ -8,6 +8,7 @@ using Lavalink4NET;
 using Lavalink4NET.Rest.Entities.Tracks;
 using LinqToDB;
 using LinqToDB.Async;
+using Mewdeko.Services.Strings;
 
 namespace Mewdeko.Modules.Music.Services;
 
@@ -20,6 +21,8 @@ namespace Mewdeko.Modules.Music.Services;
 /// </summary>
 public partial class MusicLinkService : INService, IDisposable
 {
+    private const string Separator = " • ";
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
@@ -48,6 +51,7 @@ public partial class MusicLinkService : INService, IDisposable
     private readonly EventHandler handler;
     private readonly IHttpClientFactory httpFactory;
     private readonly ILogger<MusicLinkService> logger;
+    private readonly GeneratedBotStrings strings;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="MusicLinkService" /> class and subscribes to
@@ -60,14 +64,16 @@ public partial class MusicLinkService : INService, IDisposable
     ///     The Lavalink audio service, used to search Spotify/YouTube/YouTube Music (via the LavaSrc
     ///     plugin) directly when song.link has no match.
     /// </param>
+    /// <param name="strings">The localized string provider.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     public MusicLinkService(EventHandler handler, IDataConnectionFactory dbFactory, IHttpClientFactory httpFactory,
-        IAudioService audioService, ILogger<MusicLinkService> logger)
+        IAudioService audioService, GeneratedBotStrings strings, ILogger<MusicLinkService> logger)
     {
         this.handler = handler;
         this.dbFactory = dbFactory;
         this.httpFactory = httpFactory;
         this.audioService = audioService;
+        this.strings = strings;
         this.logger = logger;
 
         handler.Subscribe("MessageReceived", "MusicLinkService", OnMessageReceived);
@@ -162,11 +168,11 @@ public partial class MusicLinkService : INService, IDisposable
             if (links is null)
                 return;
 
-            var components = await BuildComponentsAsync(links).ConfigureAwait(false);
-            if (components is null)
+            var embed = await BuildEmbedAsync(links, channel.Guild.Id).ConfigureAwait(false);
+            if (embed is null)
                 return;
 
-            await channel.SendMessageAsync(components: components, flags: MessageFlags.ComponentsV2,
+            await channel.SendMessageAsync(embed: embed,
                     messageReference: new MessageReference(userMessage.Id), allowedMentions: AllowedMentions.None)
                 .ConfigureAwait(false);
         }
@@ -222,7 +228,7 @@ public partial class MusicLinkService : INService, IDisposable
         return await JsonSerializer.DeserializeAsync<OdesliResponse>(stream, JsonOptions).ConfigureAwait(false);
     }
 
-    private async Task<MessageComponent?> BuildComponentsAsync(OdesliResponse response)
+    private async Task<Discord.Embed?> BuildEmbedAsync(OdesliResponse response, ulong guildId)
     {
         if (response.EntitiesByUniqueId is null || response.EntitiesByUniqueId.Count == 0)
             return null;
@@ -259,61 +265,25 @@ public partial class MusicLinkService : INService, IDisposable
             await FillMissingLinkAsync(links, "youtube", query).ConfigureAwait(false);
         }
 
-        var containerComponents = new List<IMessageComponentBuilder>
-        {
-            new TextDisplayBuilder($"# {entity.Title ?? "Unknown Track"}")
-        };
+        var eb = new EmbedBuilder()
+            .WithOkColor()
+            .WithTitle(entity.Title ?? strings.Unknown(guildId));
 
         if (!string.IsNullOrWhiteSpace(entity.ArtistName))
-            containerComponents.Add(new TextDisplayBuilder($"-# {entity.ArtistName}"));
+            eb.WithAuthor(entity.ArtistName);
 
         if (!string.IsNullOrWhiteSpace(entity.ThumbnailUrl))
-        {
-            containerComponents.Add(new MediaGalleryBuilder()
-                .WithItems([
-                    new MediaGalleryItemProperties(new UnfurledMediaItemProperties
-                    {
-                        Url = entity.ThumbnailUrl
-                    })
-                ]));
-        }
+            eb.WithThumbnailUrl(entity.ThumbnailUrl);
 
-        if (links.Count > 0)
-        {
-            containerComponents.Add(new SeparatorBuilder());
+        var platformLinks = PlatformDisplayOrder
+            .Where(p => links.ContainsKey(p.Platform))
+            .Select(p => $"[{p.DisplayName}]({links[p.Platform]})")
+            .ToList();
 
-            ActionRowBuilder? currentRow = null;
-            var inRow = 0;
-            var rows = 0;
+        if (platformLinks.Count > 0)
+            eb.WithDescription(string.Join(Separator, platformLinks));
 
-            foreach (var (platform, displayName) in PlatformDisplayOrder)
-            {
-                if (!links.TryGetValue(platform, out var url))
-                    continue;
-
-                if (currentRow is null || inRow == 4)
-                {
-                    if (rows == 5)
-                        break;
-
-                    currentRow = new ActionRowBuilder();
-                    containerComponents.Add(currentRow);
-                    inRow = 0;
-                    rows++;
-                }
-
-                currentRow.WithButton(displayName, style: ButtonStyle.Link, url: url);
-                inRow++;
-            }
-        }
-
-        var mainContainer = new ContainerBuilder()
-            .WithComponents(containerComponents)
-            .WithAccentColor(Mewdeko.OkColor);
-
-        return new ComponentBuilderV2()
-            .AddComponent(mainContainer)
-            .Build();
+        return eb.Build();
     }
 
     private async Task FillMissingLinkAsync(Dictionary<string, string> links, string platform, string query)

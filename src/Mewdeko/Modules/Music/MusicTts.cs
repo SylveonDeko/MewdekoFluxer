@@ -635,46 +635,38 @@ public partial class Music
             var vcSetting = await player.GetTtsVcSettingAsync(player.VoiceChannelId);
             var userSetting = await player.GetTtsUserSettingAsync(ctx.User.Id);
 
-            var vcEnabled = vcSetting?.Enabled == true ? "Yes" : "No";
+            var guildId = ctx.Guild.Id;
+            var yes = Strings.TtsYes(guildId);
+            var no = Strings.TtsNo(guildId);
+            var vcEnabled = vcSetting?.Enabled == true ? yes : no;
             var linkedChannel = vcSetting?.LinkedTextChannelId.HasValue == true
                 ? $"<#{vcSetting.LinkedTextChannelId.Value}>"
-                : "None (VC text chat only)";
-            var announce = vcSetting?.AnnounceJoinLeave == true ? "Yes" : "No";
-            var autoJoin = vcSetting?.AutoJoin == true ? "Yes" : "No";
+                : Strings.TtsSettingsNoLinkedChannel(guildId);
+            var announce = vcSetting?.AnnounceJoinLeave == true ? yes : no;
+            var autoJoin = vcSetting?.AutoJoin == true ? yes : no;
             var joinFmt = vcSetting?.JoinFormat ?? TtsService.DefaultJoinFormat;
             var leaveFmt = vcSetting?.LeaveFormat ?? TtsService.DefaultLeaveFormat;
             var defaultVoice = string.IsNullOrWhiteSpace(settings.TtsDefaultVoice)
-                ? "System default"
+                ? Strings.TtsSystemDefault(guildId)
                 : settings.TtsDefaultVoice;
-            var yourVoice = string.IsNullOrWhiteSpace(userSetting.Voice) ? "Server default" : userSetting.Voice;
-            var roleText = settings.TtsRoleId.HasValue ? $"<@&{settings.TtsRoleId.Value}>" : "None (everyone)";
+            var yourVoice = string.IsNullOrWhiteSpace(userSetting.Voice)
+                ? Strings.TtsServerDefault(guildId)
+                : userSetting.Voice;
+            var roleText = settings.TtsRoleId.HasValue
+                ? $"<@&{settings.TtsRoleId.Value}>"
+                : Strings.TtsSettingsNoRole(guildId);
 
-            var components = new ComponentBuilderV2()
-                .WithContainer([
-                    new TextDisplayBuilder("# TTS Settings")
-                ], Mewdeko.OkColor)
-                .WithSeparator()
-                .WithContainer(new TextDisplayBuilder(
-                    $"**VC TTS Enabled:** {vcEnabled}\n" +
-                    $"**Linked Text Channel:** {linkedChannel}\n" +
-                    $"**Join/Leave Announce:** {announce}\n" +
-                    $"**Auto-Join:** {autoJoin}\n" +
-                    $"**Join Format:** {joinFmt}\n" +
-                    $"**Leave Format:** {leaveFmt}"))
-                .WithSeparator()
-                .WithContainer(new TextDisplayBuilder(
-                    $"**Volume:** {settings.TtsVolume}%\n" +
-                    $"**Speed:** {settings.TtsSpeed:F1}x\n" +
-                    $"**Default Voice:** {defaultVoice}\n" +
-                    $"**Your Voice:** {yourVoice}\n" +
-                    $"**Required Role:** {roleText}\n" +
-                    $"**Reply Context:** {(settings.TtsReplyContext ? "Yes" : "No")}\n" +
-                    $"**Attachment Narration:** {(settings.TtsAttachmentNarration ? "Yes" : "No")}\n" +
-                    $"**Consecutive Grouping:** {(settings.TtsConsecutiveGrouping ? "Yes" : "No")}\n" +
-                    $"**Max Queue Size:** {settings.TtsMaxQueueSize}"));
+            var eb = new EmbedBuilder()
+                .WithOkColor()
+                .WithTitle(Strings.TtsSettingsTitle(guildId))
+                .WithDescription(
+                    $"{Strings.TtsSettingsChannel(guildId, vcEnabled, linkedChannel, announce, joinFmt, leaveFmt, autoJoin)}\n\n" +
+                    Strings.TtsSettingsGuild(guildId, settings.TtsVolume, settings.TtsSpeed.ToString("F1"),
+                        defaultVoice, yourVoice, roleText, settings.TtsReplyContext ? yes : no,
+                        settings.TtsAttachmentNarration ? yes : no, settings.TtsConsecutiveGrouping ? yes : no,
+                        settings.TtsMaxQueueSize));
 
-            await ctx.Channel.SendMessageAsync(components: components.Build(),
-                flags: MessageFlags.ComponentsV2, allowedMentions: AllowedMentions.None);
+            await ctx.Channel.SendMessageAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None);
         }
 
         /// <summary>
@@ -699,15 +691,12 @@ public partial class Music
 
         private async Task SendErrorAsync(string message)
         {
-            var components = new ComponentBuilderV2()
-                .WithContainer([
-                    new TextDisplayBuilder($"# {Strings.MusicPlayerError(ctx.Guild.Id)}")
-                ], Mewdeko.ErrorColor)
-                .WithSeparator()
-                .WithContainer(new TextDisplayBuilder(message));
+            var eb = new EmbedBuilder()
+                .WithErrorColor()
+                .WithTitle(Strings.MusicPlayerError(ctx.Guild.Id))
+                .WithDescription(message);
 
-            await ctx.Channel.SendMessageAsync(components: components.Build(),
-                flags: MessageFlags.ComponentsV2, allowedMentions: AllowedMentions.None);
+            await ctx.Channel.SendMessageAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None);
         }
 
         private async ValueTask<(MewdekoPlayer, string?)> GetPlayerAsync(bool connectToVoiceChannel = true)

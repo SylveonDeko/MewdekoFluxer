@@ -71,44 +71,28 @@ public partial class Music
                 var track = recent.Content[0];
                 var isNowPlaying = track.IsNowPlaying ?? false;
 
-                var trackDisplay = new TextDisplayBuilder(Strings.LastfmNowPlayingTrack(ctx.Guild.Id, track.Name,
-                    track.Url?.ToString() ?? "", track.ArtistName));
+                var trackText = Strings.LastfmNowPlayingTrack(ctx.Guild.Id, track.Name,
+                    track.Url?.ToString() ?? "", track.ArtistName);
 
                 var imageUrl = track.Images?.Large?.ToString();
-                IMessageComponentBuilder trackComponent = trackDisplay;
-                if (!string.IsNullOrEmpty(imageUrl))
-                {
-                    trackComponent = new SectionBuilder()
-                        .WithComponents([trackDisplay])
-                        .WithAccessory(new ThumbnailBuilder()
-                            .WithMedia(new UnfurledMediaItemProperties
-                            {
-                                Url = imageUrl
-                            }));
-                }
 
                 var userInfo = await lastFmStats.GetUserInfoAsync(lastFmUser.Username);
                 var title = isNowPlaying
                     ? Strings.LastfmNowPlayingTitle(ctx.Guild.Id, user.DisplayName)
                     : Strings.LastfmLastPlayedTitle(ctx.Guild.Id, user.DisplayName);
 
-                var components = new ComponentBuilderV2()
-                    .WithContainer([
-                        new TextDisplayBuilder($"# {title}")
-                    ], Mewdeko.OkColor)
-                    .WithSeparator()
-                    .WithContainer(trackComponent);
+                var eb = new EmbedBuilder()
+                    .WithOkColor()
+                    .WithTitle(title)
+                    .WithDescription(userInfo.Success
+                        ? $"{trackText}\n\n{Strings.LastfmNowPlayingScrobbles(ctx.Guild.Id, userInfo.Content.Playcount.ToString("N0"))}"
+                        : trackText);
 
-                if (userInfo.Success)
-                {
-                    components.WithSeparator()
-                        .WithContainer(new TextDisplayBuilder(
-                            Strings.LastfmNowPlayingScrobbles(ctx.Guild.Id,
-                                userInfo.Content.Playcount.ToString("N0"))));
-                }
+                if (!string.IsNullOrEmpty(imageUrl))
+                    eb.WithThumbnailUrl(imageUrl);
 
-                await ctx.Channel.SendMessageAsync(components: components.Build(),
-                    flags: MessageFlags.ComponentsV2, allowedMentions: AllowedMentions.None).ConfigureAwait(false);
+                await ctx.Channel.SendMessageAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None)
+                    .ConfigureAwait(false);
                 return;
             }
         }
@@ -117,32 +101,18 @@ public partial class Music
         var spotify = user.Activities?.OfType<SpotifyGame>().FirstOrDefault();
         if (spotify is not null)
         {
-            var trackDisplay = new TextDisplayBuilder(Strings.LastfmNowPlayingTrack(ctx.Guild.Id, spotify.TrackTitle,
-                spotify.TrackUrl ?? "", string.Join(", ", spotify.Artists)));
+            var spotifyEmbed = new EmbedBuilder()
+                .WithOkColor()
+                .WithTitle(Strings.LastfmSpotifyStatusTitle(ctx.Guild.Id, user.DisplayName))
+                .WithDescription(
+                    $"{Strings.LastfmNowPlayingTrack(ctx.Guild.Id, spotify.TrackTitle, spotify.TrackUrl ?? "", string.Join(", ", spotify.Artists))}\n\n" +
+                    Strings.LastfmSpotifyStatusNote(ctx.Guild.Id, prefix));
 
-            IMessageComponentBuilder trackComponent = trackDisplay;
             if (!string.IsNullOrEmpty(spotify.AlbumArtUrl))
-            {
-                trackComponent = new SectionBuilder()
-                    .WithComponents([trackDisplay])
-                    .WithAccessory(new ThumbnailBuilder()
-                        .WithMedia(new UnfurledMediaItemProperties
-                        {
-                            Url = spotify.AlbumArtUrl
-                        }));
-            }
+                spotifyEmbed.WithThumbnailUrl(spotify.AlbumArtUrl);
 
-            var components = new ComponentBuilderV2()
-                .WithContainer([
-                    new TextDisplayBuilder($"# {Strings.LastfmSpotifyStatusTitle(ctx.Guild.Id, user.DisplayName)}")
-                ], Mewdeko.OkColor)
-                .WithSeparator()
-                .WithContainer(trackComponent)
-                .WithSeparator()
-                .WithContainer(new TextDisplayBuilder(Strings.LastfmSpotifyStatusNote(ctx.Guild.Id, prefix)));
-
-            await ctx.Channel.SendMessageAsync(components: components.Build(),
-                flags: MessageFlags.ComponentsV2, allowedMentions: AllowedMentions.None).ConfigureAwait(false);
+            await ctx.Channel.SendMessageAsync(embed: spotifyEmbed.Build(), allowedMentions: AllowedMentions.None)
+                .ConfigureAwait(false);
             return;
         }
 
@@ -350,17 +320,14 @@ public partial class Music
 
         var userPlaycount = await lastFmStats.GetArtistUserPlaycountAsync(info.Content.Name, username);
 
-        var components = new ComponentBuilderV2()
-            .WithContainer([
-                new TextDisplayBuilder($"# {Strings.LastfmArtistTitle(ctx.Guild.Id, info.Content.Name)}")
-            ], Mewdeko.OkColor)
-            .WithSeparator()
-            .WithContainer(new TextDisplayBuilder(
-                Strings.LastfmArtistInfo(ctx.Guild.Id, (info.Content.Stats?.Plays ?? 0).ToString("N0"),
-                    (info.Content.Stats?.Listeners ?? 0).ToString("N0"), username, userPlaycount.ToString("N0"))));
+        var eb = new EmbedBuilder()
+            .WithOkColor()
+            .WithTitle(Strings.LastfmArtistTitle(ctx.Guild.Id, info.Content.Name))
+            .WithDescription(Strings.LastfmArtistInfo(ctx.Guild.Id, (info.Content.Stats?.Plays ?? 0).ToString("N0"),
+                (info.Content.Stats?.Listeners ?? 0).ToString("N0"), username, userPlaycount.ToString("N0")));
 
-        await ctx.Channel.SendMessageAsync(components: components.Build(),
-            flags: MessageFlags.ComponentsV2, allowedMentions: AllowedMentions.None).ConfigureAwait(false);
+        await ctx.Channel.SendMessageAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None)
+            .ConfigureAwait(false);
     }
 
     /// <summary>
@@ -412,18 +379,15 @@ public partial class Music
             return;
         }
 
-        var components = new ComponentBuilderV2()
-            .WithContainer([
-                new TextDisplayBuilder($"# {Strings.LastfmAlbumTitle(ctx.Guild.Id, info.Content.Name)}")
-            ], Mewdeko.OkColor)
-            .WithSeparator()
-            .WithContainer(new TextDisplayBuilder(
-                Strings.LastfmAlbumInfo(ctx.Guild.Id, info.Content.ArtistName,
-                    (info.Content.PlayCount ?? 0).ToString("N0"), username,
-                    (info.Content.UserPlayCount ?? 0).ToString("N0"))));
+        var eb = new EmbedBuilder()
+            .WithOkColor()
+            .WithTitle(Strings.LastfmAlbumTitle(ctx.Guild.Id, info.Content.Name))
+            .WithDescription(Strings.LastfmAlbumInfo(ctx.Guild.Id, info.Content.ArtistName,
+                (info.Content.PlayCount ?? 0).ToString("N0"), username,
+                (info.Content.UserPlayCount ?? 0).ToString("N0")));
 
-        await ctx.Channel.SendMessageAsync(components: components.Build(),
-            flags: MessageFlags.ComponentsV2, allowedMentions: AllowedMentions.None).ConfigureAwait(false);
+        await ctx.Channel.SendMessageAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None)
+            .ConfigureAwait(false);
     }
 
     /// <summary>
@@ -461,15 +425,13 @@ public partial class Music
         var lines = ranked.Take(15).Select((r, i) =>
             Strings.LastfmWhoknowsEntry(ctx.Guild.Id, i + 1, r.Member.Member.Mention, r.Playcount.ToString("N0")));
 
-        var components = new ComponentBuilderV2()
-            .WithContainer([
-                new TextDisplayBuilder($"# {Strings.LastfmWhoknowsArtistTitle(ctx.Guild.Id, artist)}")
-            ], Mewdeko.OkColor)
-            .WithSeparator()
-            .WithContainer(new TextDisplayBuilder(string.Join('\n', lines)));
+        var eb = new EmbedBuilder()
+            .WithOkColor()
+            .WithTitle(Strings.LastfmWhoknowsArtistTitle(ctx.Guild.Id, artist))
+            .WithDescription(string.Join('\n', lines));
 
-        await ctx.Channel.SendMessageAsync(components: components.Build(),
-            flags: MessageFlags.ComponentsV2, allowedMentions: AllowedMentions.None).ConfigureAwait(false);
+        await ctx.Channel.SendMessageAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None)
+            .ConfigureAwait(false);
     }
 
     /// <summary>
@@ -509,15 +471,13 @@ public partial class Music
         var lines = ranked.Take(15).Select((r, i) =>
             Strings.LastfmWhoknowsEntry(ctx.Guild.Id, i + 1, r.Member.Member.Mention, r.Playcount.ToString("N0")));
 
-        var components = new ComponentBuilderV2()
-            .WithContainer([
-                new TextDisplayBuilder($"# {Strings.LastfmWhoknowsAlbumTitle(ctx.Guild.Id, album, artist)}")
-            ], Mewdeko.OkColor)
-            .WithSeparator()
-            .WithContainer(new TextDisplayBuilder(string.Join('\n', lines)));
+        var eb = new EmbedBuilder()
+            .WithOkColor()
+            .WithTitle(Strings.LastfmWhoknowsAlbumTitle(ctx.Guild.Id, album, artist))
+            .WithDescription(string.Join('\n', lines));
 
-        await ctx.Channel.SendMessageAsync(components: components.Build(),
-            flags: MessageFlags.ComponentsV2, allowedMentions: AllowedMentions.None).ConfigureAwait(false);
+        await ctx.Channel.SendMessageAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None)
+            .ConfigureAwait(false);
     }
 
     /// <summary>
@@ -557,15 +517,13 @@ public partial class Music
         var lines = ranked.Take(15).Select((r, i) =>
             Strings.LastfmWhoknowsEntry(ctx.Guild.Id, i + 1, r.Member.Member.Mention, r.Playcount.ToString("N0")));
 
-        var components = new ComponentBuilderV2()
-            .WithContainer([
-                new TextDisplayBuilder($"# {Strings.LastfmWhoknowsTrackTitle(ctx.Guild.Id, track, artist)}")
-            ], Mewdeko.OkColor)
-            .WithSeparator()
-            .WithContainer(new TextDisplayBuilder(string.Join('\n', lines)));
+        var eb = new EmbedBuilder()
+            .WithOkColor()
+            .WithTitle(Strings.LastfmWhoknowsTrackTitle(ctx.Guild.Id, track, artist))
+            .WithDescription(string.Join('\n', lines));
 
-        await ctx.Channel.SendMessageAsync(components: components.Build(),
-            flags: MessageFlags.ComponentsV2, allowedMentions: AllowedMentions.None).ConfigureAwait(false);
+        await ctx.Channel.SendMessageAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None)
+            .ConfigureAwait(false);
     }
 
     /// <summary>
@@ -608,15 +566,13 @@ public partial class Music
             : Strings.LastfmCrownOwnerSole(ctx.Guild.Id, winner.Member.Member.Mention,
                 winner.Playcount.ToString("N0"));
 
-        var components = new ComponentBuilderV2()
-            .WithContainer([
-                new TextDisplayBuilder($"# {Strings.LastfmCrownTitle(ctx.Guild.Id, artist)}")
-            ], Mewdeko.OkColor)
-            .WithSeparator()
-            .WithContainer(new TextDisplayBuilder(body));
+        var eb = new EmbedBuilder()
+            .WithOkColor()
+            .WithTitle(Strings.LastfmCrownTitle(ctx.Guild.Id, artist))
+            .WithDescription(body);
 
-        await ctx.Channel.SendMessageAsync(components: components.Build(),
-            flags: MessageFlags.ComponentsV2, allowedMentions: AllowedMentions.None).ConfigureAwait(false);
+        await ctx.Channel.SendMessageAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None)
+            .ConfigureAwait(false);
     }
 
     /// <summary>
@@ -656,21 +612,15 @@ public partial class Music
         var smallerSampleSize = Math.Min(namesA.Count, namesB.Count);
         var overlap = smallerSampleSize == 0 ? 0 : shared.Count / (double)smallerSampleSize;
 
-        var components = new ComponentBuilderV2()
-            .WithContainer([
-                new TextDisplayBuilder(
-                    $"# {Strings.LastfmTasteTitle(ctx.Guild.Id, ((IGuildUser)ctx.User).DisplayName, user.DisplayName)}")
-            ], Mewdeko.OkColor)
-            .WithSeparator()
-            .WithContainer(new TextDisplayBuilder(
-                Strings.LastfmTasteResult(ctx.Guild.Id, shared.Count, shared.Count == 1 ? "" : "s", user.DisplayName,
-                    sampleSize, overlap.ToString("P0"))))
-            .WithSeparator()
-            .WithContainer(new TextDisplayBuilder(
-                Strings.LastfmTasteArtists(ctx.Guild.Id, string.Join(", ", shared.Take(15)))));
+        var eb = new EmbedBuilder()
+            .WithOkColor()
+            .WithTitle(Strings.LastfmTasteTitle(ctx.Guild.Id, ((IGuildUser)ctx.User).DisplayName, user.DisplayName))
+            .WithDescription(
+                $"{Strings.LastfmTasteResult(ctx.Guild.Id, shared.Count, shared.Count == 1 ? "" : "s", user.DisplayName, sampleSize, overlap.ToString("P0"))}\n\n" +
+                Strings.LastfmTasteArtists(ctx.Guild.Id, string.Join(", ", shared.Take(15))));
 
-        await ctx.Channel.SendMessageAsync(components: components.Build(),
-            flags: MessageFlags.ComponentsV2, allowedMentions: AllowedMentions.None).ConfigureAwait(false);
+        await ctx.Channel.SendMessageAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None)
+            .ConfigureAwait(false);
     }
 
     /// <summary>
