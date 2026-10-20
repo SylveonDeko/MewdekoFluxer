@@ -5,6 +5,7 @@ using System.Threading;
 using Mewdeko.Database.Enums;
 using Mewdeko.Modules.Currency.Models;
 using Mewdeko.Services.Strings;
+using Embed = Discord.Embed;
 
 namespace Mewdeko.Modules.Currency.Services.Impl;
 
@@ -68,27 +69,16 @@ public class TriviaChainService(GeneratedBotStrings strings) : ITriviaChainServi
     /// <summary>
     ///     Processes a trivia answer and updates the game state.
     /// </summary>
-    /// <param name="ctx">The interaction context.</param>
+    /// <param name="userId">The player's user ID.</param>
+    /// <param name="guildId">The guild ID the game is played in.</param>
     /// <param name="answerIndex">The selected answer index.</param>
     /// <param name="chainState">The current trivia chain state.</param>
     /// <param name="currencyService">The currency service.</param>
     /// <returns>The result of processing the answer.</returns>
-    public async Task<TriviaAnswerResult> ProcessTriviaAnswerAsync(IInteractionContext ctx, string answerIndex,
+    public async Task<TriviaAnswerResult> ProcessTriviaAnswerAsync(ulong userId, ulong guildId, int answerIndex,
         TriviaChainState chainState, ICurrencyService currencyService)
     {
-        var guild = ctx.Guild;
-        var user = ctx.User;
-
-        if (!int.TryParse(answerIndex, out var selectedIndex) || selectedIndex < 0 ||
-            selectedIndex >= chainState.CurrentOptions.Length)
-        {
-            return new TriviaAnswerResult(
-                false, false, true, null,
-                strings.TriviaChainInvalidAnswer(guild.Id),
-                null, null);
-        }
-
-        var selectedAnswer = chainState.CurrentOptions[selectedIndex];
+        var selectedAnswer = chainState.CurrentOptions[answerIndex];
         var isCorrect = selectedAnswer.Equals(chainState.CorrectAnswer, StringComparison.OrdinalIgnoreCase);
 
         if (isCorrect)
@@ -99,51 +89,75 @@ public class TriviaChainService(GeneratedBotStrings strings) : ITriviaChainServi
 
             if (newChainLength == 5)
             {
-                // Game completed successfully
-                await currencyService.CreditAsync(user.Id, potentialWin,
-                    strings.TriviaChainTransactionCompleted(guild.Id), CurrencyCategory.GamePayout, guild.Id,
+                await currencyService.CreditAsync(userId, potentialWin,
+                    strings.TriviaChainTransactionCompleted(guildId), CurrencyCategory.GamePayout, guildId,
                     "triviachain");
 
+                var completedText = strings.TriviaChainCompleted(guildId, potentialWin,
+                    await currencyService.GetCurrencyEmote(guildId));
                 var completeEmbed = new EmbedBuilder()
-                    .WithTitle(strings.TriviaChainTitle(guild.Id))
-                    .WithDescription(strings.TriviaChainCompleted(guild.Id, potentialWin,
-                        await currencyService.GetCurrencyEmote(guild.Id)))
+                    .WithTitle(strings.TriviaChainTitle(guildId))
+                    .WithDescription(completedText)
                     .WithColor(Color.Gold);
 
-                TriviaChainStates.Remove(user.Id);
+                TriviaChainStates.Remove(userId);
 
-                return new TriviaAnswerResult(
-                    true, true, false, null,
-                    strings.TriviaChainCompleted(guild.Id, potentialWin,
-                        await currencyService.GetCurrencyEmote(guild.Id)),
-                    completeEmbed.Build(), null);
+                return new TriviaAnswerResult(true, true, false, null, completedText, completeEmbed.Build());
             }
 
-            // Continue to next question
+            var question = await GenerateTriviaQuestion(chainState.Category);
             var updatedState = chainState with
             {
-                ChainLength = newChainLength, CurrentMultiplier = newMultiplier, TotalWinnings = potentialWin
+                ChainLength = newChainLength,
+                CurrentMultiplier = newMultiplier,
+                TotalWinnings = potentialWin,
+                CurrentQuestion = question.question,
+                CurrentOptions = question.options,
+                CorrectAnswer = question.correctAnswer
             };
 
-            var nextQuestionResult = await PresentNextTriviaQuestion(ctx, updatedState, currencyService);
-            TriviaChainStates[user.Id] = nextQuestionResult.UpdatedState!;
+            TriviaChainStates[userId] = updatedState;
 
-            return nextQuestionResult;
+            return new TriviaAnswerResult(true, false, false, updatedState, string.Empty,
+                await BuildQuestionEmbedAsync(updatedState, currencyService));
         }
 
-
         var failEmbed = new EmbedBuilder()
-            .WithTitle(strings.TriviaChainTitle(guild.Id))
-            .WithDescription(strings.TriviaChainFailed(guild.Id, chainState.CorrectAnswer, chainState.BetAmount,
-                await currencyService.GetCurrencyEmote(guild.Id)))
+            .WithTitle(strings.TriviaChainTitle(guildId))
+            .WithDescription(
+                $"{strings.TriviaChainWrongAnswer(guildId, chainState.CorrectAnswer)}\n" +
+                strings.TriviaChainFailed(guildId, chainState.ChainLength + 1, chainState.BetAmount,
+                    await currencyService.GetCurrencyEmote(guildId)))
             .WithColor(Color.Red);
 
-        TriviaChainStates.Remove(user.Id);
+        TriviaChainStates.Remove(userId);
 
-        return new TriviaAnswerResult(
-            false, false, true, null,
-            strings.TriviaChainWrongAnswer(guild.Id, chainState.BetAmount),
-            failEmbed.Build(), null);
+        return new TriviaAnswerResult(false, false, true, null,
+            strings.TriviaChainWrongAnswer(guildId, chainState.CorrectAnswer), failEmbed.Build());
+    }
+
+    /// <summary>
+    ///     Pays out the winnings a player has built up and ends their game.
+    /// </summary>
+    /// <param name="chainState">The current trivia chain state.</param>
+    /// <param name="currencyService">The currency service.</param>
+    /// <returns>The result of cashing out.</returns>
+    public async Task<TriviaAnswerResult> CashOutAsync(TriviaChainState chainState, ICurrencyService currencyService)
+    {
+        TriviaChainStates.Remove(chainState.UserId);
+
+        await currencyService.CreditAsync(chainState.UserId, chainState.TotalWinnings,
+            strings.TriviaChainTransactionCashedOut(chainState.GuildId), CurrencyCategory.GamePayout,
+            chainState.GuildId, "triviachain");
+
+        var cashedOut = strings.TriviaChainCashedOut(chainState.GuildId, chainState.TotalWinnings,
+            await currencyService.GetCurrencyEmote(chainState.GuildId));
+        var embed = new EmbedBuilder()
+            .WithTitle(strings.TriviaChainTitle(chainState.GuildId))
+            .WithDescription(cashedOut)
+            .WithColor(Color.Gold);
+
+        return new TriviaAnswerResult(true, true, false, null, cashedOut, embed.Build());
     }
 
     /// <summary>
@@ -155,58 +169,37 @@ public class TriviaChainService(GeneratedBotStrings strings) : ITriviaChainServi
         TriviaChainStates.Remove(userId);
     }
 
-    private async Task<TriviaAnswerResult> PresentNextTriviaQuestion(IInteractionContext ctx,
-        TriviaChainState chainState, ICurrencyService currencyService)
+    /// <summary>
+    ///     Builds the embed that shows the current question, its numbered options and the stakes.
+    /// </summary>
+    /// <param name="chainState">The current trivia chain state.</param>
+    /// <param name="currencyService">The currency service.</param>
+    /// <returns>The question embed.</returns>
+    public async Task<Embed> BuildQuestionEmbedAsync(TriviaChainState chainState, ICurrencyService currencyService)
     {
-        var question = await GenerateTriviaQuestion(chainState.Category);
+        var guildId = chainState.GuildId;
+        var nextMultiplier = 1.0 + 0.5 * (chainState.ChainLength + 1);
+        var potentialWin = (long)(chainState.BetAmount * nextMultiplier);
+        var currencyEmote = await currencyService.GetCurrencyEmote(guildId);
 
-        var updatedState = chainState with
-        {
-            CurrentQuestion = question.question,
-            CurrentOptions = question.options,
-            CorrectAnswer = question.correctAnswer
-        };
+        var options = chainState.CurrentOptions
+            .Select((option, index) => $"{TriviaChainEmotes.Numbers[index]} {option}");
+        var answers = string.Join("\n", chainState.ChainLength > 0
+            ? options.Append($"{TriviaChainEmotes.CashOut} {strings.TriviaChainCashOut(guildId)}")
+            : options);
 
-        var newMultiplier = 1.0 + 0.5 * (chainState.ChainLength + 1);
-        var potentialWin = (long)(chainState.BetAmount * newMultiplier);
-
-        var eb = new EmbedBuilder()
-            .WithTitle(strings.TriviaChainTitle(ctx.Guild.Id))
+        return new EmbedBuilder()
+            .WithTitle(strings.TriviaChainTitle(guildId))
             .WithColor(Color.Blue)
-            .WithDescription(question.question)
-            .AddField(strings.TriviaChainQuestion(ctx.Guild.Id, chainState.ChainLength + 1, question.question), "_ _",
+            .WithDescription(chainState.CurrentQuestion)
+            .AddField(strings.TriviaChainQuestion(guildId, chainState.ChainLength + 1, chainState.CurrentQuestion),
+                "_ _", true)
+            .AddField(strings.TriviaChainMultiplier(guildId, $"{nextMultiplier:F1}x"), "_ _", true)
+            .AddField(strings.TriviaChainPotentialWin(guildId, potentialWin, currencyEmote), "_ _", true)
+            .AddField(strings.TriviaChainCurrentWinnings(guildId, chainState.TotalWinnings, currencyEmote), "_ _",
                 true)
-            .AddField(strings.TriviaChainMultiplier(ctx.Guild.Id, $"{newMultiplier:F1}x"), "_ _", true)
-            .AddField(
-                strings.TriviaChainPotentialWin(ctx.Guild.Id, potentialWin,
-                    await currencyService.GetCurrencyEmote(ctx.Guild.Id)), "_ _", true)
-            .AddField(
-                strings.TriviaChainCurrentWinnings(ctx.Guild.Id, chainState.TotalWinnings,
-                    await currencyService.GetCurrencyEmote(ctx.Guild.Id)), "_ _", true);
-
-        var selectMenuBuilder = new SelectMenuBuilder()
-            .WithPlaceholder(strings.TriviaChainChooseAnswer(ctx.Guild.Id))
-            .WithCustomId($"triviachain_answer_{ctx.User.Id}_{chainState.ChainLength}");
-
-        for (var i = 0; i < question.options.Length; i++)
-        {
-            selectMenuBuilder.AddOption(question.options[i], i.ToString(),
-                strings.TriviaChainOption(ctx.Guild.Id, i + 1));
-        }
-
-        var componentBuilder = new ComponentBuilder()
-            .WithSelectMenu(selectMenuBuilder);
-
-        if (chainState.ChainLength > 0)
-        {
-            componentBuilder.WithButton(strings.TriviaChainCashOut(ctx.Guild.Id),
-                $"triviachain_cashout_{ctx.User.Id}_{chainState.TotalWinnings}", ButtonStyle.Success);
-        }
-
-        return new TriviaAnswerResult(
-            true, false, false, updatedState,
-            strings.TriviaChainNextQuestion(ctx.Guild.Id),
-            eb.Build(), componentBuilder.Build());
+            .AddField(strings.TriviaChainChooseAnswer(guildId), answers)
+            .Build();
     }
 
     private static void CleanupExpiredStates(object? state)

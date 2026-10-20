@@ -10,14 +10,12 @@ namespace Mewdeko.Modules.Currency.Models;
 /// <param name="GameFailed">Whether the trivia chain game failed.</param>
 /// <param name="UpdatedState">The updated trivia chain state, if applicable.</param>
 /// <param name="ResultMessage">A message describing the result.</param>
-/// <param name="ResultEmbed">The embed to display for the result.</param>
-/// <param name="NextComponents">The components for the next interaction, if applicable.</param>
+/// <param name="ResultEmbed">The embed to display for the result, which is the next question while the game goes on.</param>
 public record TriviaAnswerResult(
     bool IsCorrect,
     bool GameCompleted,
     bool GameFailed,
     TriviaChainState? UpdatedState,
     string ResultMessage,
-    Embed? ResultEmbed,
-    MessageComponent? NextComponents
+    Embed? ResultEmbed
 );

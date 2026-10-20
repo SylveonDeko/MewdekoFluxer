@@ -1,4 +1,5 @@
 using Mewdeko.Common.Attributes.TextCommands;
+using Mewdeko.Modules.Currency.Models;
 using Mewdeko.Modules.Currency.Services;
 
 namespace Mewdeko.Modules.Currency;
@@ -12,6 +13,8 @@ public partial class Currency
     ///     The trivia chain service for managing trivia chain games.
     /// </summary>
     public ITriviaChainService TriviaChainService { get; set; }
+
+    private static readonly TimeSpan TriviaChainExpiry = TimeSpan.FromMinutes(10);
 
     /// <summary>
     ///     Play a trivia chain where you answer questions in succession for increasing rewards.
@@ -46,34 +49,47 @@ public partial class Currency
         var chainState =
             await TriviaChainService.StartTriviaChainAsync(ctx.User.Id, ctx.Guild.Id, betAmount, category.ToLower());
 
-        var currentMultiplier = chainState.CurrentMultiplier;
-        var potentialWin = (long)(betAmount * currentMultiplier);
+        var message = await ctx.Channel.SendMessageAsync(
+            embed: await TriviaChainService.BuildQuestionEmbedAsync(chainState, Service));
 
-        var eb = new EmbedBuilder()
-            .WithTitle(Strings.TriviaChainTitle(ctx.Guild.Id))
-            .WithColor(Color.Blue)
-            .WithDescription(chainState.CurrentQuestion)
-            .AddField(Strings.TriviaChainQuestion(ctx.Guild.Id, 1, chainState.CurrentQuestion), "_ _", true)
-            .AddField(Strings.TriviaChainMultiplier(ctx.Guild.Id, $"{currentMultiplier:F1}x"), "_ _", true)
-            .AddField(
-                Strings.TriviaChainPotentialWin(ctx.Guild.Id, potentialWin,
-                    await Service.GetCurrencyEmote(ctx.Guild.Id)), "_ _", true)
-            .AddField(Strings.TriviaChainCurrentWinnings(ctx.Guild.Id, 0, await Service.GetCurrencyEmote(ctx.Guild.Id)),
-                "_ _", true);
-
-        var selectMenuBuilder = new SelectMenuBuilder()
-            .WithPlaceholder(Strings.TriviaChainChooseAnswer(ctx.Guild.Id))
-            .WithCustomId($"triviachain_answer_{ctx.User.Id}_0");
-
-        for (var i = 0; i < chainState.CurrentOptions.Length; i++)
+        while (true)
         {
-            selectMenuBuilder.AddOption(chainState.CurrentOptions[i], i.ToString(),
-                Strings.TriviaChainOption(ctx.Guild.Id, i + 1));
+            var choices = TriviaChainEmotes.Numbers.Take(chainState.CurrentOptions.Length).Cast<IEmote>().ToList();
+            if (chainState.ChainLength > 0)
+                choices.Add(TriviaChainEmotes.CashOut);
+
+            var remaining = TriviaChainExpiry - (DateTime.UtcNow - chainState.CreatedAt);
+            var picked = remaining > TimeSpan.Zero
+                ? await Interactive.WaitForReactionAsync(message, ctx.User.Id, choices, remaining)
+                : null;
+
+            _ = message.RemoveAllReactionsAsync();
+
+            if (picked is null)
+            {
+                TriviaChainService.RemoveTriviaChainState(ctx.User.Id);
+                await ReplyAsync(Strings.TriviaChainExpired(ctx.Guild.Id));
+                return;
+            }
+
+            if (picked.Value == chainState.CurrentOptions.Length)
+            {
+                var cashOut = await TriviaChainService.CashOutAsync(chainState, Service);
+                await ctx.Channel.SendMessageAsync(embed: cashOut.ResultEmbed);
+                return;
+            }
+
+            var result = await TriviaChainService.ProcessTriviaAnswerAsync(ctx.User.Id, ctx.Guild.Id, picked.Value,
+                chainState, Service);
+
+            if (result.UpdatedState is null)
+            {
+                await ctx.Channel.SendMessageAsync(embed: result.ResultEmbed);
+                return;
+            }
+
+            chainState = result.UpdatedState;
+            message = await ctx.Channel.SendMessageAsync(embed: result.ResultEmbed);
         }
-
-        var componentBuilder = new ComponentBuilder()
-            .WithSelectMenu(selectMenuBuilder);
-
-        await ReplyAsync(embed: eb.Build(), components: componentBuilder.Build());
     }
 }

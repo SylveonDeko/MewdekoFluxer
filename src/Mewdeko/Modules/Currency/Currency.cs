@@ -1897,13 +1897,76 @@ public partial class Currency(
                 await Service.GetCurrencyEmote(ctx.Guild.Id)))
             .WithColor(Color.Orange);
 
-        var component = new ComponentBuilder()
-            .WithButton(Strings.DiceDuelAccept(ctx.Guild.Id), $"diceduel_accept_{ctx.User.Id}_{betAmount}",
-                ButtonStyle.Success)
-            .WithButton(Strings.DiceDuelDecline(ctx.Guild.Id), $"diceduel_decline_{ctx.User.Id}", ButtonStyle.Danger)
-            .Build();
+        var (_, answer) = await PromptReactionChoiceAsync(challengeEmbed, opponent.Id,
+            new ReactionChoice(InteractiveService.Yes, Strings.DiceDuelAccept(ctx.Guild.Id), "accept"),
+            new ReactionChoice(InteractiveService.No, Strings.DiceDuelDecline(ctx.Guild.Id), "decline"));
 
-        await ReplyAsync(embed: challengeEmbed.Build(), components: component);
+        switch (answer)
+        {
+            case "accept":
+                await ResolveDiceDuelAsync(opponent, betAmount);
+                break;
+            case "decline":
+                await ReplyAsync(Strings.DiceDuelDeclined(ctx.Guild.Id));
+                break;
+        }
+    }
+
+    private async Task ResolveDiceDuelAsync(IUser accepter, long betAmount)
+    {
+        var challenger = ctx.User;
+        var emote = await Service.GetCurrencyEmote(ctx.Guild.Id);
+
+        if (!await Service.TryDebitAsync(accepter.Id, betAmount, Strings.DiceDuelTransactionStake(ctx.Guild.Id),
+                CurrencyCategory.GameBet, ctx.Guild.Id, "diceduel"))
+        {
+            await ReplyAsync(Strings.DiceDuelInsufficientFundsAccept(ctx.Guild.Id, emote));
+            return;
+        }
+
+        if (!await Service.TryDebitAsync(challenger.Id, betAmount, Strings.DiceDuelTransactionStake(ctx.Guild.Id),
+                CurrencyCategory.GameBet, ctx.Guild.Id, "diceduel"))
+        {
+            await Service.CreditAsync(accepter.Id, betAmount, Strings.DiceDuelTransactionRefund(ctx.Guild.Id),
+                CurrencyCategory.GamePayout, ctx.Guild.Id, "diceduel");
+
+            await ReplyAsync(Strings.DiceDuelChallengerBroke(ctx.Guild.Id, emote));
+            return;
+        }
+
+        var challengerRoll = CurrencyRng.Next(1, 7);
+        var accepterRoll = CurrencyRng.Next(1, 7);
+
+        var eb = new EmbedBuilder()
+            .WithTitle(Strings.DiceDuelResultTitle(ctx.Guild.Id))
+            .WithColor(challengerRoll == accepterRoll ? Color.Gold : Color.Green);
+
+        if (challengerRoll == accepterRoll)
+        {
+            await Service.CreditAsync(challenger.Id, betAmount, Strings.DiceDuelTransactionRefund(ctx.Guild.Id),
+                CurrencyCategory.GamePayout, ctx.Guild.Id, "diceduel");
+            await Service.CreditAsync(accepter.Id, betAmount, Strings.DiceDuelTransactionRefund(ctx.Guild.Id),
+                CurrencyCategory.GamePayout, ctx.Guild.Id, "diceduel");
+
+            eb.WithDescription(Strings.DiceDuelTie(ctx.Guild.Id, challengerRoll.ToString()));
+        }
+        else
+        {
+            var challengerWon = challengerRoll > accepterRoll;
+            var winner = challengerWon ? challenger : accepter;
+            var loser = challengerWon ? accepter : challenger;
+            var winnerRoll = challengerWon ? challengerRoll : accepterRoll;
+            var loserRoll = challengerWon ? accepterRoll : challengerRoll;
+
+            await Service.CreditAsync(winner.Id, betAmount * 2, Strings.DiceDuelTransactionWon(ctx.Guild.Id),
+                CurrencyCategory.GamePayout, ctx.Guild.Id, "diceduel");
+
+            eb.WithDescription(challengerWon
+                ? Strings.DiceDuelChallengerWin(ctx.Guild.Id, winner.Mention, winnerRoll, loser.Mention, loserRoll)
+                : Strings.DiceDuelAccepterWin(ctx.Guild.Id, winner.Mention, winnerRoll, loser.Mention, loserRoll));
+        }
+
+        await ReplyAsync(embed: eb.Build());
     }
 
     /// <summary>
