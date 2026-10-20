@@ -18,7 +18,7 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
     : MewdekoModuleBase<CustomVoiceService>
 {
     /// <summary>
-    ///     Shows interactive controls for managing your custom voice channel.
+    ///     Shows your custom voice channel with the commands that manage it.
     /// </summary>
     [Cmd]
     [Aliases]
@@ -66,8 +66,6 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
             return;
         }
 
-        // Get server config to check permissions
-        var guildConfig = await Service.GetOrCreateConfigAsync(Context.Guild.Id);
         var users = await channel.GetUsersAsync().FlattenAsync();
         users = users.Where(x => x.VoiceChannel == channel);
 
@@ -103,164 +101,11 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
                 customChannel.KeepAlive
                     ? Strings.CustomVoiceConfigYes(Context.Guild.Id) ?? "Yes"
                     : Strings.CustomVoiceConfigNo(Context.Guild.Id) ?? "No", true)
-            .AddField(Strings.CustomVoiceControlsUsers(Context.Guild.Id) ?? "Users", userListValue);
+            .AddField(Strings.CustomVoiceControlsUsers(Context.Guild.Id) ?? "Users", userListValue)
+            .AddField(Strings.CustomVoiceControlsCommandsTitle(Context.Guild.Id),
+                await Service.GetControlsHelpAsync(Context.Guild));
 
-        // Create the components for quick actions
-        var components = new ComponentBuilder();
-
-        // Row 1: Basic controls
-        components.WithButton(
-            customId: $"voice:rename:{channel.Id}",
-            label: Strings.CustomVoiceControlsRenameButton(Context.Guild.Id),
-            style: ButtonStyle.Primary,
-            disabled: !guildConfig.AllowNameCustomization,
-            row: 0
-        );
-
-        components.WithButton(
-            customId: $"voice:limit:{channel.Id}",
-            label: Strings.CustomVoiceControlsLimitButton(Context.Guild.Id),
-            style: ButtonStyle.Primary,
-            disabled: !guildConfig.AllowUserLimitCustomization,
-            row: 0
-        );
-
-        components.WithButton(
-            customId: $"voice:bitrate:{channel.Id}",
-            label: Strings.CustomVoiceControlsBitrateButton(Context.Guild.Id),
-            style: ButtonStyle.Primary,
-            disabled: !guildConfig.AllowBitrateCustomization,
-            row: 0
-        );
-
-        // Row 2: Lock/Keep Alive toggles
-        components.WithButton(
-            customId: $"voice:{(customChannel.IsLocked ? "unlock" : "lock")}:{channel.Id}",
-            label: customChannel.IsLocked
-                ? Strings.CustomVoiceControlsUnlockButton(Context.Guild.Id)
-                : Strings.CustomVoiceControlsLockButton(Context.Guild.Id),
-            style: customChannel.IsLocked ? ButtonStyle.Success : ButtonStyle.Danger,
-            disabled: !guildConfig.AllowLocking,
-            row: 1
-        );
-
-        components.WithButton(
-            customId: $"voice:keepalive:{channel.Id}:{!customChannel.KeepAlive}",
-            label: customChannel.KeepAlive
-                ? Strings.CustomVoiceControlsDisableKeepAliveButton(Context.Guild.Id)
-                : Strings.CustomVoiceControlsEnableKeepAliveButton(Context.Guild.Id),
-            style: customChannel.KeepAlive ? ButtonStyle.Danger : ButtonStyle.Success,
-            row: 1
-        );
-
-        components.WithButton(
-            customId: $"voice:transfer:{channel.Id}",
-            label: Strings.CustomVoiceControlsTransferButton(Context.Guild.Id),
-            style: ButtonStyle.Secondary,
-            row: 1
-        );
-
-        // Row 3: User management dropdown
-        if (guildConfig.AllowUserManagement && (users.Count() > 1 || customChannel.IsLocked))
-        {
-            var userSelect = new SelectMenuBuilder()
-                .WithPlaceholder(Strings.CustomVoiceControlsManageUsersPlaceholder(Context.Guild.Id))
-                .WithCustomId($"voice:usermenu:{channel.Id}")
-                .WithMinValues(1)
-                .WithMaxValues(1);
-
-            // Add options for all users except the channel owner
-            foreach (var channelUser in users.Where(u => u.Id != customChannel.OwnerId))
-            {
-                userSelect.AddOption(
-                    Strings.CustomVoiceControlsKickOption(Context.Guild.Id, channelUser.Username),
-                    $"kick:{channelUser.Id}",
-                    Strings.CustomVoiceControlsKickDesc(Context.Guild.Id),
-                    new Emoji("👢")
-                );
-            }
-
-            // Add options for all users in the guild
-            foreach (var guildUser in await Context.Guild.GetUsersAsync())
-            {
-                // Skip users who are in the voice channel to avoid duplicate entries
-                if (users.Any(u => u.Id == guildUser.Id) || guildUser.Id == Context.Client.CurrentUser.Id)
-                    continue;
-
-                // Only add a reasonable number of users to avoid hitting Discord's limits
-                if (userSelect.Options.Count >= 20)
-                    break;
-
-                // Check if the user is allowed or denied
-                var isAllowed = false;
-                var isDenied = false;
-
-                // Parse allowed/denied users from JSON
-                if (!string.IsNullOrEmpty(customChannel.AllowedUsersJson))
-                {
-                    try
-                    {
-                        var allowedUsers = JsonSerializer.Deserialize<List<ulong>>(customChannel.AllowedUsersJson);
-                        isAllowed = allowedUsers?.Contains(guildUser.Id) == true;
-                    }
-                    catch { }
-                }
-
-                if (!string.IsNullOrEmpty(customChannel.DeniedUsersJson))
-                {
-                    try
-                    {
-                        var deniedUsers = JsonSerializer.Deserialize<List<ulong>>(customChannel.DeniedUsersJson);
-                        isDenied = deniedUsers?.Contains(guildUser.Id) == true;
-                    }
-                    catch { }
-                }
-
-                // Add allow/deny options
-                if (isAllowed)
-                {
-                    userSelect.AddOption(
-                        Strings.CustomVoiceControlsRemoveAllowOption(Context.Guild.Id, guildUser.Username),
-                        $"unallow:{guildUser.Id}",
-                        Strings.CustomVoiceControlsRemoveAllowDesc(Context.Guild.Id),
-                        new Emoji("❌")
-                    );
-                }
-                else if (isDenied)
-                {
-                    userSelect.AddOption(
-                        Strings.CustomVoiceControlsRemoveDenyOption(Context.Guild.Id, guildUser.Username),
-                        $"undeny:{guildUser.Id}",
-                        Strings.CustomVoiceControlsRemoveDenyDesc(Context.Guild.Id),
-                        new Emoji("✅")
-                    );
-                }
-                else
-                {
-                    userSelect.AddOption(
-                        Strings.CustomVoiceControlsAllowOption(Context.Guild.Id, guildUser.Username),
-                        $"allow:{guildUser.Id}",
-                        Strings.CustomVoiceControlsAllowDesc(Context.Guild.Id),
-                        new Emoji("✅")
-                    );
-
-                    userSelect.AddOption(
-                        Strings.CustomVoiceControlsDenyOption(Context.Guild.Id, guildUser.Username),
-                        $"deny:{guildUser.Id}",
-                        Strings.CustomVoiceControlsDenyDesc(Context.Guild.Id),
-                        new Emoji("❌")
-                    );
-                }
-            }
-
-            // Only add the select menu if there are options
-            if (userSelect.Options.Count > 0)
-            {
-                components.WithSelectMenu(userSelect, 2);
-            }
-        }
-
-        await ReplyAsync(embed: embed.Build(), components: components.Build());
+        await ReplyAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -1217,6 +1062,98 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
         {
             await ReplyErrorAsync(Strings.CustomVoiceTransferError(Context.Guild.Id, target.Mention));
         }
+    }
+
+    /// <summary>
+    ///     Disconnects a user from your voice channel without banning them from it.
+    /// </summary>
+    /// <param name="target">The user to disconnect.</param>
+    [Cmd]
+    [Aliases]
+    [RequireContext(ContextType.Guild)]
+    public async Task VoiceKick(IGuildUser target)
+    {
+        var customChannel = await GetManagedChannelAsync();
+        if (customChannel == null)
+            return;
+
+        if (customChannel.OwnerId == target.Id)
+        {
+            await ReplyErrorAsync(Strings.CustomVoiceCantKickOwner(Context.Guild.Id));
+            return;
+        }
+
+        if (target.VoiceChannel?.Id != customChannel.ChannelId)
+        {
+            await ReplyErrorAsync(Strings.CustomVoiceKickNotPresent(Context.Guild.Id));
+            return;
+        }
+
+        try
+        {
+            await target.ModifyAsync(props => props.Channel = null);
+        }
+        catch (Exception)
+        {
+            await ReplyErrorAsync(Strings.CustomVoiceUserKickError(Context.Guild.Id, target.Mention));
+            return;
+        }
+
+        await ReplyConfirmAsync(Strings.CustomVoiceUserKicked(Context.Guild.Id, target.Mention));
+    }
+
+    /// <summary>
+    ///     Deletes your custom voice channel after asking for confirmation.
+    /// </summary>
+    [Cmd]
+    [Aliases]
+    [RequireContext(ContextType.Guild)]
+    public async Task VoiceDelete()
+    {
+        var customChannel = await GetManagedChannelAsync();
+        if (customChannel == null)
+            return;
+
+        if (!await PromptUserConfirmAsync(Strings.CustomVoiceDeleteConfirm(Context.Guild.Id), Context.User.Id))
+        {
+            await ReplyErrorAsync(Strings.CustomVoiceDeleteCancelled(Context.Guild.Id));
+            return;
+        }
+
+        if (!await Service.DeleteVoiceChannelAsync(Context.Guild.Id, customChannel.ChannelId))
+        {
+            await ReplyErrorAsync(Strings.CustomVoiceDeleteError(Context.Guild.Id));
+            return;
+        }
+
+        await ReplyConfirmAsync(Strings.CustomVoiceDeleted(Context.Guild.Id));
+    }
+
+    private async Task<CustomVoiceChannel?> GetManagedChannelAsync()
+    {
+        var user = (IGuildUser)Context.User;
+        if (user.VoiceChannel == null)
+        {
+            await ReplyErrorAsync(Strings.CustomVoiceNotInChannel(Context.Guild.Id));
+            return null;
+        }
+
+        var customChannel = await Service.GetChannelAsync(Context.Guild.Id, user.VoiceChannel.Id);
+        if (customChannel == null)
+        {
+            await ReplyErrorAsync(Strings.CustomVoiceNotCustomChannel(Context.Guild.Id));
+            return null;
+        }
+
+        if (customChannel.OwnerId == user.Id)
+            return customChannel;
+
+        var config = await Service.GetOrCreateConfigAsync(Context.Guild.Id);
+        if (config.CustomVoiceAdminRoleId.HasValue && user.RoleIds.Contains(config.CustomVoiceAdminRoleId.Value))
+            return customChannel;
+
+        await ReplyErrorAsync(Strings.CustomVoiceNotOwner(Context.Guild.Id));
+        return null;
     }
 
     /// <summary>

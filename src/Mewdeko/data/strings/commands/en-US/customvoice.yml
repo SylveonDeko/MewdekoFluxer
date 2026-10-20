@@ -159,7 +159,12 @@ voiceconfig:
 voicecontrols:
   args:
     - ''
-  desc: 'Shows interactive controls for managing your custom voice channel.'
+  desc: 'Shows your custom voice channel with the commands that manage it.'
+  params: [ ]
+voicedelete:
+  args:
+    - ''
+  desc: 'Deletes your custom voice channel after asking for confirmation.'
   params: [ ]
 voicedeny:
   args:
@@ -167,6 +172,15 @@ voicedeny:
   desc: 'Denies a specific user from joining your voice channel.'
   params:
     - desc: 'Denies a specific user from joining your voice channel.'
+      name: target
+      optional: false
+      type: IGuildUser
+voicekick:
+  args:
+    - '@user'
+  desc: 'Disconnects a user from your voice channel without banning them from it.'
+  params:
+    - desc: The user to disconnect.
       name: target
       optional: false
       type: IGuildUser

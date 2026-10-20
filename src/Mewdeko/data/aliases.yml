@@ -3460,6 +3460,16 @@ voicedeny:
   - denyuser
   - vdeny
   - removeuser
+voicedelete:
+  - voicedelete
+  - vcdelete
+  - deletevoice
+  - vdelete
+voicekick:
+  - voicekick
+  - vckick
+  - kickvoice
+  - vkick
 voicekeepalive:
   - voicekeepalive
   - vckeepalive

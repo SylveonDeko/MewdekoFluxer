@@ -20,6 +20,7 @@ public class CustomVoiceService : INService, IUnloadableService
     private readonly ConcurrentDictionary<ulong, Timer> emptyChannelTimers = new();
     private readonly ConcurrentDictionary<ulong, DateTime> emptyChannels = new();
     private readonly EventHandler eventHandler;
+    private readonly GuildSettingsService guildSettings;
     private readonly SemaphoreSlim @lock = new(1, 1);
     private readonly ILogger<CustomVoiceService> logger;
     private readonly GeneratedBotStrings strings;
@@ -34,13 +35,16 @@ public class CustomVoiceService : INService, IUnloadableService
     /// <param name="strings">The localized strings service.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     /// <param name="collector">The analytics collector.</param>
+    /// <param name="guildSettings">The guild settings service, used for the command prefix.</param>
     public CustomVoiceService(
         IDataConnectionFactory dbFactory,
         DiscordShardedClient client,
         EventHandler eventHandler,
-        GeneratedBotStrings strings, ILogger<CustomVoiceService> logger, IAnalyticsCollector collector)
+        GeneratedBotStrings strings, ILogger<CustomVoiceService> logger, IAnalyticsCollector collector,
+        GuildSettingsService guildSettings)
     {
         this.collector = collector;
+        this.guildSettings = guildSettings;
         this.dbFactory = dbFactory;
         this.client = client;
         this.eventHandler = eventHandler;
@@ -749,16 +753,17 @@ public class CustomVoiceService : INService, IUnloadableService
                     }
                 }
 
-                // Send a welcome message with control buttons to the text channel
+                // Send a welcome message listing the control commands to the text channel
                 var embed = new EmbedBuilder()
                     .WithOkColor()
                     .WithTitle(strings.CustomVoiceDefaultControlsTitle(voiceChannel.Guild.Id))
                     .WithDescription(strings.CustomVoiceDescription(voiceChannel.Guild.Id) ??
                                      strings.CustomVoiceDefaultDescription(voiceChannel.Guild.Id))
+                    .AddField(strings.CustomVoiceControlsCommandsTitle(voiceChannel.Guild.Id),
+                        await GetControlsHelpAsync(voiceChannel.Guild))
                     .Build();
 
-                var components = BuildVoiceControlButtons(voiceChannel.Id, customChannel, config);
-                await textChannel.SendMessageAsync(embed: embed, components: components.Build());
+                await textChannel.SendMessageAsync(embed: embed);
             }
         }
         catch (Exception ex)
@@ -1452,88 +1457,13 @@ public class CustomVoiceService : INService, IUnloadableService
     }
 
     /// <summary>
-    ///     Builds the interactive control buttons for a voice channel.
+    ///     Builds the text listing the commands that manage a custom voice channel, using the guild's prefix.
     /// </summary>
-    private ComponentBuilder BuildVoiceControlButtons(ulong channelId, CustomVoiceChannel customChannel,
-        CustomVoiceConfig config)
+    /// <param name="guild">The guild the commands will be used in.</param>
+    /// <returns>The localized command list.</returns>
+    public async Task<string> GetControlsHelpAsync(IGuild guild)
     {
-        var components = new ComponentBuilder();
-
-        // Row 1: Basic controls
-        components.WithButton(
-            customId: $"voice:rename:{channelId}",
-            label: "Rename",
-            style: ButtonStyle.Primary,
-            disabled: !config.AllowNameCustomization,
-            emote: new Emoji("✏️"),
-            row: 0
-        );
-
-        components.WithButton(
-            customId: $"voice:limit:{channelId}",
-            label: "User Limit",
-            style: ButtonStyle.Primary,
-            disabled: !config.AllowUserLimitCustomization,
-            emote: new Emoji("👥"),
-            row: 0
-        );
-
-        components.WithButton(
-            customId: $"voice:bitrate:{channelId}",
-            label: "Bitrate",
-            style: ButtonStyle.Primary,
-            disabled: !config.AllowBitrateCustomization,
-            emote: new Emoji("🔊"),
-            row: 0
-        );
-
-        // Row 2: Lock/Keep Alive/Transfer/Delete toggles
-        components.WithButton(
-            customId: $"voice:{(customChannel.IsLocked ? "unlock" : "lock")}:{channelId}",
-            label: customChannel.IsLocked ? "Unlock" : "Lock",
-            style: customChannel.IsLocked ? ButtonStyle.Success : ButtonStyle.Danger,
-            disabled: !config.AllowLocking,
-            emote: new Emoji(customChannel.IsLocked ? "🔓" : "🔒"),
-            row: 1
-        );
-
-        components.WithButton(
-            customId: $"voice:keepalive:{channelId}:{!customChannel.KeepAlive}",
-            label: customChannel.KeepAlive ? "Disable Keep Alive" : "Enable Keep Alive",
-            style: customChannel.KeepAlive ? ButtonStyle.Danger : ButtonStyle.Success,
-            emote: new Emoji("⏱️"),
-            row: 1
-        );
-
-        components.WithButton(
-            customId: $"voice:transfer:{channelId}",
-            label: "Transfer",
-            style: ButtonStyle.Secondary,
-            emote: new Emoji("👑"),
-            row: 1
-        );
-
-        components.WithButton(
-            customId: $"voice:delete:{channelId}",
-            label: "Delete",
-            style: ButtonStyle.Danger,
-            emote: new Emoji("🗑️"),
-            row: 1
-        );
-
-        // Row 3: User Management button
-        if (config.AllowUserManagement)
-        {
-            components.WithButton(
-                customId: $"voice:manage:{channelId}",
-                label: "Manage Users",
-                style: ButtonStyle.Secondary,
-                emote: new Emoji("⚙️"),
-                row: 2
-            );
-        }
-
-        return components;
+        return strings.CustomVoiceControlsCommands(guild.Id, await guildSettings.GetPrefix(guild));
     }
 
     /// <summary>
