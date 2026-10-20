@@ -327,24 +327,21 @@ public class Patreon(IBotCredentials creds, PatreonApiClient patreonApiClient, I
 
             var embed = new EmbedBuilder()
                 .WithTitle(Strings.PatreonOauthTitle(ctx.Guild.Id))
-                .WithDescription(Strings.PatreonAuthDescription(ctx.Guild.Id))
+                .WithDescription($"{Strings.PatreonAuthDescription(ctx.Guild.Id)}\n\n{Strings.PatreonAuthLink(ctx.Guild.Id, authUrl)}")
                 .WithColor(0xF96854)
                 .AddField("⚠️ Important Requirements",
                     "• You must be the **owner** of a Patreon campaign\n" +
                     "• This will give the bot access to your supporter data\n" +
                     "• You can revoke access anytime from your Patreon settings")
                 .AddField("📋 Setup Process",
-                    "1. Click the \"Authorize with Patreon\" button below\n" +
+                    "1. Open the \"Authorize with Patreon\" link above\n" +
                     "2. Sign in to Patreon if prompted\n" +
                     "3. Review and approve the requested permissions\n" +
                     "4. You'll be redirected back automatically\n" +
                     "5. Your supporters will be synced automatically")
                 .WithFooter(Strings.PatreonSetupFooter(ctx.Guild.Id));
 
-            var component = new ComponentBuilder()
-                .WithButton("Authorize with Patreon", style: ButtonStyle.Link, url: authUrl, emote: new Emoji("🔗"));
-
-            await ReplyAsync(embed: embed.Build(), components: component.Build()).ConfigureAwait(false);
+            await ReplyAsync(embed: embed.Build()).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
