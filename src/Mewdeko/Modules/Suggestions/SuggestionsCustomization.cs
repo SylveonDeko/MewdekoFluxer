@@ -7,84 +7,6 @@ namespace Mewdeko.Modules.Suggestions;
 public partial class Suggestions
 {
     /// <summary>
-    ///     Defines the color options for suggestion buttons.
-    /// </summary>
-    public enum ButtonType
-    {
-        /// <summary>
-        ///     Blurple-colored button.
-        /// </summary>
-        Blurple = 1,
-
-        /// <summary>
-        ///     Blue-colored button.
-        /// </summary>
-        Blue = 1,
-
-        /// <summary>
-        ///     Grey-colored button.
-        /// </summary>
-        Grey = 2,
-
-        /// <summary>
-        ///     Grey-colored button.
-        /// </summary>
-        Gray = 2,
-
-        /// <summary>
-        ///     Green-colored button.
-        /// </summary>
-        Green = 3,
-
-        /// <summary>
-        ///     Red-colored button.
-        /// </summary>
-        Red = 4
-    }
-
-    /// <summary>
-    ///     Sets the threshold for reposting suggestions.
-    /// </summary>
-    public enum RepostThreshold
-    {
-        /// <summary>
-        ///     Reposting suggestions is disabled.
-        /// </summary>
-        Disabled = 0,
-
-        /// <summary>
-        ///     Suggestions can be reposted after five denials.
-        /// </summary>
-        Five = 5,
-
-        /// <summary>
-        ///     Suggestions can be reposted after ten denials.
-        /// </summary>
-        Ten = 10,
-
-        /// <summary>
-        ///     Suggestions can be reposted after fifteen denials.
-        /// </summary>
-        Fifteen = 15
-    }
-
-    /// <summary>
-    ///     Specifies the mode for emotes used in suggestions.
-    /// </summary>
-    public enum SuggestEmoteModeEnum
-    {
-        /// <summary>
-        ///     Emotes are used as reactions to suggestions.
-        /// </summary>
-        Reactions = 0,
-
-        /// <summary>
-        ///     Emotes are displayed as buttons for interaction with suggestions.
-        /// </summary>
-        Buttons = 1
-    }
-
-    /// <summary>
     ///     Defines the type of threads used for suggestions.
     /// </summary>
     public enum SuggestThreadType
@@ -159,68 +81,6 @@ public partial class Suggestions
 
             await Service.SetMinLength(ctx.Guild, length).ConfigureAwait(false);
             await ctx.Channel.SendConfirmAsync(Strings.MinLengthSet(ctx.Guild.Id, length)).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        ///     Sets the mode for suggestion emotes, either as reactions or buttons.
-        /// </summary>
-        /// <param name="mode">The mode to use for suggestion emotes.</param>
-        /// <remarks>
-        ///     Configures how users can interact with suggestions, through traditional reactions or interactive buttons.
-        ///     Requires Administrator permissions.
-        /// </remarks>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.Administrator)]
-        public async Task SuggestMotesMode(SuggestEmoteModeEnum mode)
-        {
-            await Service.SetEmoteMode(ctx.Guild, (int)mode).ConfigureAwait(false);
-            await ctx.Channel.SendConfirmAsync(Strings.EmoteModeSet(ctx.Guild.Id, mode)).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        ///     Sets the color of the suggestion button.
-        /// </summary>
-        /// <param name="type">The color type for the suggestion button.</param>
-        /// <remarks>
-        ///     Changes the appearance of the suggestion button to the selected color. Affects all suggestion messages moving
-        ///     forward.
-        ///     Requires Administrator permissions.
-        /// </remarks>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.Administrator)]
-        public async Task SuggestButtonColor(ButtonType type)
-        {
-            await Service.SetSuggestButtonColor(ctx.Guild, (int)type).ConfigureAwait(false);
-            await ctx.Channel.SendConfirmAsync(Strings.SuggestButtonColorSet(ctx.Guild.Id, type.ToString()))
-                .ConfigureAwait(false);
-            await Service.UpdateSuggestionButtonMessage(ctx.Guild, await Service.GetSuggestButtonMessage(ctx.Guild))
-                .ConfigureAwait(false);
-        }
-
-        /// <summary>
-        ///     Sets the color of specific emote buttons on suggestions.
-        /// </summary>
-        /// <param name="num">The button number to change.</param>
-        /// <param name="type">The color type to apply to the button.</param>
-        /// <remarks>
-        ///     Allows customization of individual button colors on the suggestion messages, enhancing visual distinction.
-        ///     Requires Administrator permissions.
-        /// </remarks>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.Administrator)]
-        public async Task SuggestMoteColor(int num, ButtonType type)
-        {
-            await Service.SetButtonType(ctx.Guild, num, (int)type).ConfigureAwait(false);
-            await ctx.Channel.SendConfirmAsync(Strings.SuggestButtonTypeSet(ctx.Guild.Id, num, type))
-                .ConfigureAwait(false);
-            await Service.UpdateSuggestionButtonMessage(ctx.Guild, await Service.GetSuggestButtonMessage(ctx.Guild))
-                .ConfigureAwait(false);
         }
 
         /// <summary>
@@ -400,7 +260,8 @@ public partial class Suggestions
         /// </summary>
         /// <param name="type">The type of thread to use for new suggestions.</param>
         /// <remarks>
-        ///     Allows selection between no threads, public threads, or private threads for suggestion discussions.
+        ///     Chooses between no threads, public threads, or private threads. A thread is opened automatically for every new
+        ///     suggestion.
         /// </remarks>
         [Cmd]
         [Aliases]
@@ -411,130 +272,6 @@ public partial class Suggestions
             await Service.SetSuggestThreadsType(ctx.Guild, (int)type).ConfigureAwait(false);
             await ctx.Channel.SendConfirmAsync(Strings.SuggestionThreadsTypeSet(ctx.Guild.Id, type))
                 .ConfigureAwait(false);
-        }
-
-        /// <summary>
-        ///     Sets the suggestion button channel.
-        /// </summary>
-        /// <param name="channel">The channel to set as the suggestion button channel.</param>
-        /// <remarks>
-        ///     Specifies a channel where the suggestion button will be updated or created. Requires Administrator permissions.
-        /// </remarks>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.Administrator)]
-        public async Task SuggestButtonChannel(ITextChannel channel)
-        {
-            await Service.SetSuggestButtonChannel(ctx.Guild, channel.Id).ConfigureAwait(false);
-            await Service
-                .UpdateSuggestionButtonMessage(ctx.Guild, await Service.GetSuggestButtonMessage(ctx.Guild), true)
-                .ConfigureAwait(false);
-            await ctx.Channel.SendConfirmAsync(Strings.SuggestButtonChannelSet(ctx.Guild.Id, channel.Mention))
-                .ConfigureAwait(false);
-        }
-
-        /// <summary>
-        ///     Sets or updates the suggest button message.
-        /// </summary>
-        /// <param name="toSet">The message to set for the suggest button. Use "-" to reset to default.</param>
-        /// <remarks>
-        ///     Customizes the message associated with the suggest button. Providing "-" will reset the message to its default
-        ///     appearance.
-        ///     Requires Administrator permissions.
-        /// </remarks>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.Administrator)]
-        public async Task SuggestButtonMessage([Remainder] string? toSet)
-        {
-            if (toSet == "-")
-            {
-                await ctx.Channel.SendConfirmAsync(Strings.SuggestButtonDefault(ctx.Guild.Id))
-                    .ConfigureAwait(false);
-                await Service.SetSuggestButtonMessage(ctx.Guild, "-").ConfigureAwait(false);
-                await Service.UpdateSuggestionButtonMessage(ctx.Guild, toSet).ConfigureAwait(false);
-            }
-            else
-            {
-                await ctx.Channel.SendConfirmAsync(Strings.SuggestButtonCustom(ctx.Guild.Id))
-                    .ConfigureAwait(false);
-                await Service.SetSuggestButtonMessage(ctx.Guild, toSet).ConfigureAwait(false);
-                await Service.UpdateSuggestionButtonMessage(ctx.Guild, toSet).ConfigureAwait(false);
-            }
-        }
-
-        /// <summary>
-        ///     Sets the label for the suggest button.
-        /// </summary>
-        /// <param name="toSet">The label text for the suggest button. Use "-" to reset to default.</param>
-        /// <remarks>
-        ///     Customizes the text label of the suggest button. Providing "-" will reset the label to its default text.
-        ///     Requires Administrator permissions. Max length is 80 characters.
-        /// </remarks>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.Administrator)]
-        public async Task SuggestButtonLabel([Remainder] string toSet)
-        {
-            if (toSet.Length > 80)
-            {
-                await ctx.Channel.SendErrorAsync(Strings.LabelMaxLength(ctx.Guild.Id), Config)
-                    .ConfigureAwait(false);
-                return;
-            }
-
-            if (toSet is "-" or "disabled")
-            {
-                await ctx.Channel.SendConfirmAsync(Strings.SuggestButtonLabelDefault(ctx.Guild.Id))
-                    .ConfigureAwait(false);
-                await Service.SetSuggestButtonLabel(ctx.Guild, "-").ConfigureAwait(false);
-                await Service.UpdateSuggestionButtonMessage(ctx.Guild, await Service.GetSuggestButtonMessage(ctx.Guild))
-                    .ConfigureAwait(false);
-            }
-            else
-            {
-                await ctx.Channel.SendConfirmAsync(Strings.SuccessfullySetSuggestButtonLabel(ctx.Guild.Id, toSet))
-                    .ConfigureAwait(false);
-                await Service.SetSuggestButtonLabel(ctx.Guild, toSet).ConfigureAwait(false);
-                await Service.UpdateSuggestionButtonMessage(ctx.Guild, await Service.GetSuggestButtonMessage(ctx.Guild))
-                    .ConfigureAwait(false);
-            }
-        }
-
-        /// <summary>
-        ///     Sets the emote for the suggest button.
-        /// </summary>
-        /// <param name="emote">The emote to use for the suggest button. If null, resets to default.</param>
-        /// <remarks>
-        ///     Customizes the emote displayed on the suggest button. Providing null will reset the emote to its default.
-        ///     Requires Administrator permissions.
-        /// </remarks>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.Administrator)]
-        public async Task SuggestButtonEmote(IEmote? emote = null)
-        {
-            if (emote is null)
-            {
-                await ctx.Channel.SendConfirmAsync(Strings.SuggestButtonEmoteDefault(ctx.Guild.Id))
-                    .ConfigureAwait(false);
-                await Service.SetSuggestButtonEmote(ctx.Guild, "-").ConfigureAwait(false);
-                await Service.UpdateSuggestionButtonMessage(ctx.Guild, await Service.GetSuggestButtonMessage(ctx.Guild))
-                    .ConfigureAwait(false);
-            }
-            else
-            {
-                await ctx.Channel
-                    .SendConfirmAsync(Strings.SuccessfullySetSuggestButtonLabel(ctx.Guild.Id, emote.ToString()))
-                    .ConfigureAwait(false);
-                await Service.SetSuggestButtonEmote(ctx.Guild, emote.ToString()).ConfigureAwait(false);
-                await Service.UpdateSuggestionButtonMessage(ctx.Guild, await Service.GetSuggestButtonMessage(ctx.Guild))
-                    .ConfigureAwait(false);
-            }
         }
 
         /// <summary>

@@ -62,27 +62,13 @@ public partial class Suggestions : MewdekoModuleBase<SuggestionsService>
         }
 
         var emoteCount = new List<string>();
-        var emotes = await Service.GetEmotes(ctx.Guild.Id);
         var count = 0;
-        if (emotes is not null and not "disable ")
+        foreach (var voteEmote in await Service.GetVoteEmotes(ctx.Guild.Id))
         {
-            foreach (var i in emotes.Split(","))
-            {
-                emoteCount.Add(
-                    $"{i.ToIEmote()} `{await Service.GetCurrentCount(suggest.MessageId, ++count).ConfigureAwait(false)}`");
-            }
-        }
-        else
-        {
-            emoteCount.Add($"👍 `{await Service.GetCurrentCount(suggest.MessageId, 1).ConfigureAwait(false)}`");
-            emoteCount.Add($"👎 `{await Service.GetCurrentCount(suggest.MessageId, 2).ConfigureAwait(false)}`");
+            emoteCount.Add(
+                $"{voteEmote} `{await Service.GetCurrentCount(suggest.MessageId, ++count).ConfigureAwait(false)}`");
         }
 
-        var components = new ComponentBuilder()
-            .WithButton("Accept", $"accept:{suggest.SuggestionId}")
-            .WithButton("Deny", $"deny:{suggest.SuggestionId}")
-            .WithButton("Consider", $"consider:{suggest.SuggestionId}")
-            .WithButton("Implement", $"implement:{suggest.SuggestionId}");
         var eb = new EmbedBuilder()
             .WithOkColor()
             .AddField("Suggestion",
@@ -93,7 +79,7 @@ public partial class Suggestions : MewdekoModuleBase<SuggestionsService>
                 suggest.StateChangeUser == 0 ? "Nobody" : $"<@{suggest.StateChangeUser}> `{suggest.StateChangeUser}`")
             .AddField("State Change Count", suggest.StateChangeCount)
             .AddField("Emote Count", string.Join("\n", emoteCount));
-        await ctx.Channel.SendMessageAsync(embed: eb.Build(), components: components.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
     }
 
 

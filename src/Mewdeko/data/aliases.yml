@@ -2939,16 +2939,6 @@ sudo:
 suggest:
   - suggest
   - suggestion
-suggestbuttonchannel:
-  - suggestbuttonchannel
-suggestbuttoncolor:
-  - suggestbuttoncolor
-suggestbuttonemote:
-  - suggestbuttonemote
-suggestbuttonlabel:
-  - suggestbuttonlabel
-suggestbuttonmessage:
-  - suggestbuttonmessage
 suggestclear:
   - suggestclear
   - suggestreset
@@ -2960,14 +2950,10 @@ suggestinfo:
 suggestmessage:
   - suggestmessage
   - suggestmsg
-suggestmotecolor:
-  - suggestmotecolor
 suggestmotes:
   - suggestmotes
   - smotes
   - suggestemotes
-suggestmotesmode:
-  - suggestmotesmode
 suggestthreadstype:
   - suggestthreadstype
   - suggestthreads

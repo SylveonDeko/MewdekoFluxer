@@ -58,7 +58,6 @@ public class SuggestionsService : INService
     private readonly GuildSettingsService guildSettings;
     private readonly ILogger<SuggestionsService> logger;
     private readonly PermissionService perms;
-    private readonly List<ulong> repostChecking;
     private readonly List<ulong> spamCheck;
     private readonly GeneratedBotStrings strings;
 
@@ -89,7 +88,6 @@ public class SuggestionsService : INService
         this.config = config;
         this.strings = strings;
         this.logger = logger;
-        repostChecking = [];
         spamCheck = [];
         adminserv = aserv;
         this.client = client;
@@ -97,248 +95,88 @@ public class SuggestionsService : INService
         eventHandler.Subscribe("MessageReceived", "SuggestService", MessageRecieved);
         eventHandler.Subscribe("ReactionAdded", "SuggestService", UpdateCountOnReact);
         eventHandler.Subscribe("ReactionRemoved", "SuggestService", UpdateCountOnRemoveReact);
-        eventHandler.Subscribe("MessageReceived", "SuggestService", RepostButton);
         this.dbFactory = dbFactory;
     }
 
-    private async Task RepostButton(SocketMessage arg)
+    private Task UpdateCountOnReact(Cacheable<IUserMessage, ulong> message,
+        Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
     {
-        IEnumerable<IMessage> messages;
-        if (arg.Channel is not ITextChannel channel)
-            return;
-
-        var buttonChannel = await GetSuggestButtonChannel(channel.Guild);
-        if (buttonChannel != channel.Id)
-            return;
-
-        if (await GetSuggestButtonRepost(channel.Guild) == 0)
-            return;
-        if (repostChecking.Contains(channel.Id))
-            return;
-        repostChecking.Add(channel.Id);
-        var buttonId = await GetSuggestButtonMessageId(channel.Guild);
-        if (await GetSuggestButtonRepost(channel.Guild) is 0)
-        {
-            repostChecking.Remove(channel.Id);
-            return;
-        }
-
-        try
-        {
-            messages = await channel
-                .GetMessagesAsync(arg, Direction.Before, await GetSuggestButtonRepost(channel.Guild)).FlattenAsync()
-                .ConfigureAwait(false);
-        }
-        catch (HttpException)
-        {
-            repostChecking.Remove(channel.Id);
-            return;
-        }
-
-        if (messages.Select(x => x.Id).Contains(buttonId))
-        {
-            repostChecking.Remove(channel.Id);
-            return;
-        }
-
-        if (buttonId != 0)
-        {
-            try
-            {
-                await channel.DeleteMessageAsync(buttonId).ConfigureAwait(false);
-            }
-            catch (HttpException)
-            {
-                logger.LogError($"Button Repost will not work because of missing permissions in guild {channel.Guild}");
-                repostChecking.Remove(channel.Id);
-                return;
-            }
-        }
-
-        var message = await GetSuggestButtonMessage(channel.Guild);
-        if (string.IsNullOrWhiteSpace(message) || message is "disabled" or "-")
-        {
-            var eb = new EmbedBuilder().WithOkColor().WithDescription(strings.MakeSuggestionPrompt(channel.Guild.Id));
-            var toAdd = await channel
-                .SendMessageAsync(embed: eb.Build(), components: (await GetSuggestButton(channel.Guild)).Build())
-                .ConfigureAwait(false);
-            await SetSuggestionButtonId(channel.Guild, toAdd.Id).ConfigureAwait(false);
-            repostChecking.Remove(channel.Id);
-            return;
-        }
-
-        if (SmartEmbed.TryParse(await GetSuggestButtonMessage(channel.Guild), channel.GuildId, out var embed,
-                out var plainText))
-        {
-            try
-            {
-                var toadd = await channel.SendMessageAsync(plainText, embeds: embed,
-                    components: (await GetSuggestButton(channel.Guild)).Build()).ConfigureAwait(false);
-                await SetSuggestionButtonId(channel.Guild, toadd.Id).ConfigureAwait(false);
-                repostChecking.Remove(channel.Id);
-            }
-            catch (NullReferenceException)
-            {
-                repostChecking.Remove(channel.Id);
-            }
-        }
-        else
-        {
-            try
-            {
-                var toadd = await channel.SendMessageAsync(await GetSuggestButtonMessage(channel.Guild),
-                        components: (await GetSuggestButton(channel.Guild)).Build())
-                    .ConfigureAwait(false);
-                await SetSuggestionButtonId(channel.Guild, toadd.Id).ConfigureAwait(false);
-                repostChecking.Remove(channel.Id);
-            }
-            catch (NullReferenceException)
-            {
-                repostChecking.Remove(channel.Id);
-            }
-        }
-
-        repostChecking.Remove(channel.Id);
+        return RefreshVoteCountAsync(message, channel, reaction, true);
     }
 
-    private async Task UpdateCountOnReact(Cacheable<IUserMessage, ulong> arg1, Cacheable<IMessageChannel, ulong> arg2,
-        SocketReaction arg3)
+    private Task UpdateCountOnRemoveReact(Cacheable<IUserMessage, ulong> message,
+        Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
     {
-        if (await arg2.GetOrDownloadAsync().ConfigureAwait(false) is not ITextChannel channel)
+        return RefreshVoteCountAsync(message, channel, reaction, false);
+    }
+
+    private async Task RefreshVoteCountAsync(Cacheable<IUserMessage, ulong> cached,
+        Cacheable<IMessageChannel, ulong> cachedChannel, SocketReaction reaction, bool added)
+    {
+        if (await cachedChannel.GetOrDownloadAsync().ConfigureAwait(false) is not ITextChannel channel)
             return;
         if (channel.Id != await GetSuggestionChannel(channel.Guild.Id))
             return;
 
-        await using var dbContext = await dbFactory.CreateConnectionAsync();
-
-        await using var _ = dbContext.ConfigureAwait(false);
-        var maybeSuggest =
-            dbContext.Suggestions.FirstOrDefault(x => x.GuildId == channel.GuildId && x.MessageId == arg1.Id);
-        if (maybeSuggest is null)
+        var index = (await GetVoteEmotes(channel.GuildId)).FindIndex(e => Equals(e, reaction.Emote));
+        if (index < 0)
             return;
-        var message = await arg1.GetOrDownloadAsync().ConfigureAwait(false);
+
+        await using var dbContext = await dbFactory.CreateConnectionAsync();
+        var suggestion = await dbContext.Suggestions
+            .FirstOrDefaultAsync(x => x.GuildId == channel.GuildId && x.MessageId == cached.Id);
+        if (suggestion is null)
+            return;
+
+        var message = await cached.GetOrDownloadAsync().ConfigureAwait(false);
         if (message is null)
             return;
-        var tup = new Emoji("\uD83D\uDC4D");
-        var tdown = new Emoji("\uD83D\uDC4E");
-        var toSplit = await GetEmotes(channel.GuildId);
-        if (toSplit is "disabled" or "-" or null)
+
+        var count = (await message.GetReactionUsersAsync(reaction.Emote, 500).FlattenAsync().ConfigureAwait(false))
+            .Count(x => !x.IsBot);
+        switch (index)
         {
-            if (Equals(arg3.Emote, tup))
-            {
-                maybeSuggest.EmoteCount1 =
-                    (await message.GetReactionUsersAsync(arg3.Emote, 500).FlattenAsync().ConfigureAwait(false))
-                    .Count(x => !x.IsBot);
-                await dbContext.UpdateAsync(maybeSuggest);
-            }
-            else if (Equals(arg3.Emote, tdown))
-            {
-                maybeSuggest.EmoteCount2 =
-                    (await message.GetReactionUsersAsync(arg3.Emote, 500).FlattenAsync().ConfigureAwait(false))
-                    .Count(x => !x.IsBot);
-                await dbContext.UpdateAsync(maybeSuggest);
-            }
-            else
-            {
-                return;
-            }
+            case 0:
+                suggestion.EmoteCount1 = count;
+                break;
+            case 1:
+                suggestion.EmoteCount2 = count;
+                break;
+            case 2:
+                suggestion.EmoteCount3 = count;
+                break;
+            case 3:
+                suggestion.EmoteCount4 = count;
+                break;
+            default:
+                suggestion.EmoteCount5 = count;
+                break;
         }
 
-        var emotes = toSplit.Split(",");
-        if (Equals(arg3.Emote, emotes[0].ToIEmote()))
-            maybeSuggest.EmoteCount1 =
-                (await message.GetReactionUsersAsync(arg3.Emote, 500).FlattenAsync().ConfigureAwait(false)).Count(x =>
-                    !x.IsBot);
-        else if (Equals(arg3.Emote, emotes[1].ToIEmote()))
-            maybeSuggest.EmoteCount2 =
-                (await message.GetReactionUsersAsync(arg3.Emote, 500).FlattenAsync().ConfigureAwait(false)).Count(x =>
-                    !x.IsBot);
-        else if (Equals(arg3.Emote, emotes[2].ToIEmote()))
-            maybeSuggest.EmoteCount3 =
-                (await message.GetReactionUsersAsync(arg3.Emote, 500).FlattenAsync().ConfigureAwait(false)).Count(x =>
-                    !x.IsBot);
-        else if (Equals(arg3.Emote, emotes[3].ToIEmote()))
-            maybeSuggest.EmoteCount4 =
-                (await message.GetReactionUsersAsync(arg3.Emote, 500).FlattenAsync().ConfigureAwait(false)).Count(x =>
-                    !x.IsBot);
-        else if (Equals(arg3.Emote, emotes[4].ToIEmote()))
-            maybeSuggest.EmoteCount5 =
-                (await message.GetReactionUsersAsync(arg3.Emote, 500).FlattenAsync().ConfigureAwait(false)).Count(x =>
-                    !x.IsBot);
-        else
-            return;
-
-        await dbContext.UpdateAsync(maybeSuggest);
-        collector.Feature("suggestion_vote", channel.GuildId);
+        await dbContext.UpdateAsync(suggestion);
+        if (added)
+            collector.Feature("suggestion_vote", channel.GuildId);
     }
 
-    private async Task UpdateCountOnRemoveReact(Cacheable<IUserMessage, ulong> arg1,
-        Cacheable<IMessageChannel, ulong> arg2, SocketReaction arg3)
+    /// <summary>
+    ///     Gets the emotes members react with to vote on a suggestion: the server's custom emotes, or thumbs up and
+    ///     thumbs down when none are set.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <returns>Up to five emotes, in the order their counts are stored.</returns>
+    public async Task<List<IEmote>> GetVoteEmotes(ulong guildId)
     {
-        if (await arg2.GetOrDownloadAsync().ConfigureAwait(false) is not ITextChannel channel)
-            return;
-        if (channel.Id != await GetSuggestionChannel(channel.Guild.Id))
-            return;
+        var setting = await GetEmotes(guildId);
+        if (string.IsNullOrWhiteSpace(setting) || setting.StartsWith("disable", StringComparison.OrdinalIgnoreCase) ||
+            setting == "-")
+            return [new Emoji("👍"), new Emoji("👎")];
 
-        await using var dbContext = await dbFactory.CreateConnectionAsync();
-
-        var maybeSuggest =
-            dbContext.Suggestions.FirstOrDefault(x => x.GuildId == channel.GuildId && x.MessageId == arg1.Id);
-        if (maybeSuggest is null)
-            return;
-        var message = await arg1.GetOrDownloadAsync().ConfigureAwait(false);
-        if (message is null)
-            return;
-        var tup = new Emoji("\uD83D\uDC4D");
-        var tdown = new Emoji("\uD83D\uDC4E");
-        var toSplit = await GetEmotes(channel.GuildId);
-        if (toSplit is "disabled" or "-" or null)
-        {
-            if (Equals(arg3.Emote, tup))
-            {
-                maybeSuggest.EmoteCount1 =
-                    (await message.GetReactionUsersAsync(arg3.Emote, 500).FlattenAsync().ConfigureAwait(false))
-                    .Count(x => !x.IsBot);
-                await dbContext.UpdateAsync(maybeSuggest);
-            }
-            else if (Equals(arg3.Emote, tdown))
-            {
-                maybeSuggest.EmoteCount2 =
-                    (await message.GetReactionUsersAsync(arg3.Emote, 500).FlattenAsync().ConfigureAwait(false))
-                    .Count(x => !x.IsBot);
-                await dbContext.UpdateAsync(maybeSuggest);
-            }
-            else
-            {
-                return;
-            }
-        }
-
-        var emotes = toSplit.Split(",");
-        if (Equals(arg3.Emote, emotes[0].ToIEmote()))
-            maybeSuggest.EmoteCount1 =
-                (await message.GetReactionUsersAsync(arg3.Emote, 500).FlattenAsync().ConfigureAwait(false)).Count(x =>
-                    !x.IsBot);
-        else if (Equals(arg3.Emote, emotes[1].ToIEmote()))
-            maybeSuggest.EmoteCount2 =
-                (await message.GetReactionUsersAsync(arg3.Emote, 500).FlattenAsync().ConfigureAwait(false)).Count(x =>
-                    !x.IsBot);
-        else if (Equals(arg3.Emote, emotes[2].ToIEmote()))
-            maybeSuggest.EmoteCount3 =
-                (await message.GetReactionUsersAsync(arg3.Emote, 500).FlattenAsync().ConfigureAwait(false)).Count(x =>
-                    !x.IsBot);
-        else if (Equals(arg3.Emote, emotes[3].ToIEmote()))
-            maybeSuggest.EmoteCount4 =
-                (await message.GetReactionUsersAsync(arg3.Emote, 500).FlattenAsync().ConfigureAwait(false)).Count(x =>
-                    !x.IsBot);
-        else if (Equals(arg3.Emote, emotes[4].ToIEmote()))
-            maybeSuggest.EmoteCount5 =
-                (await message.GetReactionUsersAsync(arg3.Emote, 500).FlattenAsync().ConfigureAwait(false)).Count(x =>
-                    !x.IsBot);
-        else
-            return;
-
-        await dbContext.UpdateAsync(maybeSuggest);
+        return setting
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(e => e.TryToIEmote(out var emote) ? emote : null)
+            .OfType<IEmote>()
+            .Take(5)
+            .ToList();
     }
 
     private async Task MessageRecieved(SocketMessage msg)
@@ -486,39 +324,6 @@ public class SuggestionsService : INService
     }
 
     /// <summary>
-    ///     Sets the button style for suggestion interaction buttons within the guild.
-    /// </summary>
-    /// <param name="guild">The guild where the setting is to be applied.</param>
-    /// <param name="buttonId">The identifier for the specific button to modify.</param>
-    /// <param name="color">The color code to set for the button.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task SetButtonType(IGuild guild, int buttonId, int color)
-    {
-        await using var dbContext = await dbFactory.CreateConnectionAsync();
-        var gc = await guildSettings.GetGuildConfig(guild.Id);
-        switch (buttonId)
-        {
-            case 1:
-                gc.Emote1Style = color;
-                break;
-            case 2:
-                gc.Emote2Style = color;
-                break;
-            case 3:
-                gc.Emote3Style = color;
-                break;
-            case 4:
-                gc.Emote4Style = color;
-                break;
-            case 5:
-                gc.Emote5Style = color;
-                break;
-        }
-
-        await guildSettings.UpdateGuildConfig(guild.Id, gc);
-    }
-
-    /// <summary>
     ///     Gets the message and channel IDs for a reposted suggestion, based on its current state.
     /// </summary>
     /// <param name="suggestions">The suggestions model containing the current state.</param>
@@ -548,37 +353,6 @@ public class SuggestionsService : INService
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         var gc = await guildSettings.GetGuildConfig(guild.Id);
         gc.SuggestEmotes = parsedEmotes;
-        await guildSettings.UpdateGuildConfig(guild.Id, gc);
-    }
-
-    /// <summary>
-    ///     Sets the color for the suggestion button in the guild.
-    /// </summary>
-    /// <param name="guild">The guild to configure.</param>
-    /// <param name="colorNum">The color number to set for the suggestion button.</param>
-    /// <returns>A task that represents the asynchronous operation of setting the button color.</returns>
-    public async Task SetSuggestButtonColor(IGuild guild, int colorNum)
-    {
-        await using var dbContext = await dbFactory.CreateConnectionAsync();
-        var gc = await guildSettings.GetGuildConfig(guild.Id);
-        gc.SuggestButtonColor = colorNum;
-
-        await guildSettings.UpdateGuildConfig(guild.Id, gc);
-    }
-
-    /// <summary>
-    ///     Assigns a message ID to the suggestion button for a guild.
-    /// </summary>
-    /// <param name="guild">The guild to configure.</param>
-    /// <param name="messageId">The message ID to associate with the suggestion button.</param>
-    /// <returns>A task that represents the asynchronous operation of updating the button message ID.</returns>
-    public async Task SetSuggestionButtonId(IGuild guild, ulong messageId)
-    {
-        await using var dbContext = await dbFactory.CreateConnectionAsync();
-
-        var gc = await guildSettings.GetGuildConfig(guild.Id);
-        gc.SuggestButtonMessageId = messageId;
-
         await guildSettings.UpdateGuildConfig(guild.Id, gc);
     }
 
@@ -628,30 +402,6 @@ public class SuggestionsService : INService
     }
 
     /// <summary>
-    ///     Generates a ComponentBuilder for the suggestion button with custom settings from the guild.
-    /// </summary>
-    /// <param name="guild">The guild to retrieve settings from.</param>
-    /// <returns>A ComponentBuilder for creating interactive components.</returns>
-    public async Task<ComponentBuilder> GetSuggestButton(IGuild guild)
-    {
-        string buttonLabel;
-        IEmote buttonEmote;
-        var builder = new ComponentBuilder();
-        if (string.IsNullOrWhiteSpace(await GetSuggestButtonName(guild)) ||
-            await GetSuggestButtonName(guild) is "disabled" or "-")
-            buttonLabel = "Suggest Here!";
-        else
-            buttonLabel = await GetSuggestButtonName(guild);
-        if (string.IsNullOrWhiteSpace(await GetSuggestButtonEmote(guild)) ||
-            await GetSuggestButtonEmote(guild) is "disabled" or "-")
-            buttonEmote = null;
-        else
-            buttonEmote = (await GetSuggestButtonEmote(guild)).ToIEmote();
-        builder.WithButton(buttonLabel, "suggestbutton", await GetSuggestButtonColor(guild), buttonEmote);
-        return builder;
-    }
-
-    /// <summary>
     ///     Resets the suggestion counter and removes all suggestions in the guild.
     /// </summary>
     /// <param name="guild">The guild where the reset will occur.</param>
@@ -662,135 +412,6 @@ public class SuggestionsService : INService
         await dbContext.Suggestions.Where(x => x.GuildId == guild.Id).DeleteAsync().ConfigureAwait(false);
         var gc = await guildSettings.GetGuildConfig(guild.Id);
         gc.Sugnum = 1;
-        await guildSettings.UpdateGuildConfig(guild.Id, gc);
-    }
-
-    /// <summary>
-    ///     Updates the message content or embed of the suggestion button in a guild. It allows bypassing the channel check and
-    ///     directly updating or creating a new message if the original message is not found.
-    /// </summary>
-    /// <param name="guild">The guild to update the suggestion button message in.</param>
-    /// <param name="code">The new content or embed code for the suggestion button message.</param>
-    /// <param name="bypasschannelcheck">Determines whether to bypass the check for the suggestion button channel setting.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task UpdateSuggestionButtonMessage(IGuild guild, string? code, bool bypasschannelcheck = false)
-    {
-        var toGet = await GetSuggestButtonChannel(guild);
-        if (toGet is 0 && !bypasschannelcheck)
-            return;
-        var channel = await guild.GetTextChannelAsync(toGet).ConfigureAwait(false);
-        if (channel is null)
-            return;
-        var messageId = await GetSuggestButtonMessageId(guild);
-        try
-        {
-            if (messageId is 0)
-                messageId = 999;
-            var message = await channel.GetMessageAsync(messageId).ConfigureAwait(false);
-            if (message is null)
-            {
-                if (SmartEmbed.TryParse(code, channel.GuildId, out var embed, out var plainText))
-                {
-                    var toadd = await channel.SendMessageAsync(plainText, embeds: embed,
-                        components: (await GetSuggestButton(channel.Guild)).Build()).ConfigureAwait(false);
-                    await SetSuggestionButtonId(channel.Guild, toadd.Id).ConfigureAwait(false);
-                    return;
-                }
-
-                if (code is "-")
-                {
-                    var eb = new EmbedBuilder().WithOkColor()
-                        .WithDescription(strings.MakeSuggestionPrompt(channel.Guild.Id));
-                    var toadd = await channel.SendMessageAsync(plainText, embed: eb.Build(),
-                        components: (await GetSuggestButton(channel.Guild)).Build()).ConfigureAwait(false);
-                    await SetSuggestionButtonId(channel.Guild, toadd.Id).ConfigureAwait(false);
-                    return;
-                }
-                else
-                {
-                    var toadd = await channel
-                        .SendMessageAsync(code, components: (await GetSuggestButton(channel.Guild)).Build())
-                        .ConfigureAwait(false);
-                    await SetSuggestionButtonId(channel.Guild, toadd.Id).ConfigureAwait(false);
-                    return;
-                }
-            }
-
-            if (code is "-")
-            {
-                var eb = new EmbedBuilder().WithOkColor()
-                    .WithDescription(strings.MakeSuggestionPrompt(channel.Guild.Id));
-                try
-                {
-                    await ((IUserMessage)message).ModifyAsync(async x =>
-                    {
-                        x.Embed = eb.Build();
-                        x.Content = null;
-                        x.Components = (await GetSuggestButton(channel.Guild)).Build();
-                    }).ConfigureAwait(false);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    throw;
-                }
-            }
-            else
-            {
-                if (SmartEmbed.TryParse(code, channel.GuildId, out var embed, out var plainText))
-                {
-                    await ((IUserMessage)message).ModifyAsync(async x =>
-                    {
-                        x.Embeds = embed;
-                        x.Content = plainText;
-                        x.Components = (await GetSuggestButton(channel.Guild)).Build();
-                    }).ConfigureAwait(false);
-                }
-                else
-                {
-                    await ((IUserMessage)message).ModifyAsync(async x =>
-                    {
-                        x.Content = code;
-                        x.Embed = null;
-                        x.Components = (await GetSuggestButton(channel.Guild)).Build();
-                    }).ConfigureAwait(false);
-                }
-            }
-        }
-        catch (HttpException)
-        {
-            // ignored
-        }
-    }
-
-    /// <summary>
-    ///     Sets a new message for the suggestion button in a guild. This could be an instruction or information related to
-    ///     making suggestions.
-    /// </summary>
-    /// <param name="guild">The guild to set the suggestion button message in.</param>
-    /// <param name="message">The new message for the suggestion button.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task SetSuggestButtonMessage(IGuild guild, string? message)
-    {
-        await using var dbContext = await dbFactory.CreateConnectionAsync();
-        var gc = await guildSettings.GetGuildConfig(guild.Id);
-        gc.SuggestButtonMessage = message;
-
-        await guildSettings.UpdateGuildConfig(guild.Id, gc);
-    }
-
-    /// <summary>
-    ///     Sets the label for the suggestion button in a guild. This label is displayed on the button itself.
-    /// </summary>
-    /// <param name="guild">The guild to set the suggestion button label in.</param>
-    /// <param name="message">The new label for the suggestion button.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task SetSuggestButtonLabel(IGuild guild, string message)
-    {
-        await using var dbContext = await dbFactory.CreateConnectionAsync();
-        var gc = await guildSettings.GetGuildConfig(guild.Id);
-        gc.SuggestButtonName = message;
-
         await guildSettings.UpdateGuildConfig(guild.Id, gc);
     }
 
@@ -994,21 +615,6 @@ public class SuggestionsService : INService
     }
 
     /// <summary>
-    ///     Sets the emote mode for suggestions within a guild.
-    /// </summary>
-    /// <param name="guild">The guild to set the emote mode for.</param>
-    /// <param name="mode">The emote mode to set.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task SetEmoteMode(IGuild guild, int mode)
-    {
-        await using var dbContext = await dbFactory.CreateConnectionAsync();
-        var gc = await guildSettings.GetGuildConfig(guild.Id);
-        gc.EmoteMode = mode;
-
-        await guildSettings.UpdateGuildConfig(guild.Id, gc);
-    }
-
-    /// <summary>
     ///     Sets the channel to be used for accepted suggestions within a guild.
     /// </summary>
     /// <param name="guild">The guild to set the accept channel for.</param>
@@ -1069,100 +675,6 @@ public class SuggestionsService : INService
     }
 
     /// <summary>
-    ///     Sets the channel to be used for the suggestion button within a guild.
-    /// </summary>
-    /// <param name="guild">The guild to set the suggestion button channel for.</param>
-    /// <param name="channelId">The channel ID for the suggestion button.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task SetSuggestButtonChannel(IGuild guild, ulong channelId)
-    {
-        await using var dbContext = await dbFactory.CreateConnectionAsync();
-        var gc = await guildSettings.GetGuildConfig(guild.Id);
-        gc.SuggestButtonChannel = channelId;
-
-        await guildSettings.UpdateGuildConfig(guild.Id, gc);
-    }
-
-    /// <summary>
-    ///     Sets the emote to be used on the suggestion button within a guild.
-    /// </summary>
-    /// <param name="guild">The guild to set the suggestion button emote for.</param>
-    /// <param name="emote">The emote for the suggestion button.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task SetSuggestButtonEmote(IGuild guild, string emote)
-    {
-        await using var dbContext = await dbFactory.CreateConnectionAsync();
-        var gc = await guildSettings.GetGuildConfig(guild.Id);
-        gc.SuggestButtonEmote = emote;
-
-        await guildSettings.UpdateGuildConfig(guild.Id, gc);
-    }
-
-    /// <summary>
-    ///     Updates the emote count for a suggestion based on user interactions.
-    /// </summary>
-    /// <param name="messageId">The message ID of the suggestion.</param>
-    /// <param name="emoteNumber">The emote number being updated.</param>
-    /// <param name="negative">Indicates whether to decrement (true) or increment (false) the count.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task UpdateEmoteCount(ulong messageId, int emoteNumber, bool negative = false)
-    {
-        await using var dbContext = await dbFactory.CreateConnectionAsync();
-
-        var suggest = dbContext.Suggestions.FirstOrDefault(x => x.MessageId == messageId);
-        await dbContext.DeleteAsync(suggest);
-
-        switch (negative)
-        {
-            case false:
-                switch (emoteNumber)
-                {
-                    case 1:
-                        ++suggest.EmoteCount1;
-                        break;
-                    case 2:
-                        ++suggest.EmoteCount2;
-                        break;
-                    case 3:
-                        ++suggest.EmoteCount3;
-                        break;
-                    case 4:
-                        ++suggest.EmoteCount4;
-                        break;
-                    case 5:
-                        ++suggest.EmoteCount5;
-                        break;
-                }
-
-                break;
-            default:
-                switch (emoteNumber)
-                {
-                    case 1:
-                        --suggest.EmoteCount1;
-                        break;
-                    case 2:
-                        --suggest.EmoteCount2;
-                        break;
-                    case 3:
-                        --suggest.EmoteCount3;
-                        break;
-                    case 4:
-                        --suggest.EmoteCount4;
-                        break;
-                    case 5:
-                        --suggest.EmoteCount5;
-                        break;
-                }
-
-                break;
-        }
-
-        await dbContext.InsertAsync(suggest);
-        collector.Feature("suggestion_vote", suggest.GuildId);
-    }
-
-    /// <summary>
     ///     Retrieves the current count of reactions for a specific emote on a suggestion.
     /// </summary>
     /// <param name="messageId">The message ID of the suggestion.</param>
@@ -1182,25 +694,6 @@ public class SuggestionsService : INService
             5 => toupdate.EmoteCount5,
             _ => 0
         };
-    }
-
-    /// <summary>
-    ///     Retrieves the specific emote used for suggestions within a guild.
-    /// </summary>
-    /// <param name="guild">The guild to retrieve the emote for.</param>
-    /// <param name="num">The number identifying the specific emote.</param>
-    /// <returns>The emote used for suggestions in the guild.</returns>
-    public async Task<IEmote> GetSuggestMote(IGuild guild, int num)
-    {
-        var tup = new Emoji("\uD83D\uDC4D");
-        var tdown = new Emoji("\uD83D\uDC4E");
-        var emotes = (await guildSettings.GetGuildConfig(guild.Id)).SuggestEmotes;
-        if (emotes is null or "disabled")
-        {
-            return num == 1 ? tup : tdown;
-        }
-
-        return emotes.Split(",")[num - 1].ToIEmote();
     }
 
     /// <summary>
@@ -1271,16 +764,6 @@ public class SuggestionsService : INService
     public async Task<int> GetThreadType(IGuild guild)
     {
         return (await guildSettings.GetGuildConfig(guild.Id)).SuggestionThreadType;
-    }
-
-    /// <summary>
-    ///     Retrieves the emote mode for suggestions in a guild.
-    /// </summary>
-    /// <param name="guild">The guild from which to retrieve the emote mode.</param>
-    /// <returns>The emote mode for suggestions.</returns>
-    public async Task<int> GetEmoteMode(IGuild guild)
-    {
-        return (await guildSettings.GetGuildConfig(guild.Id)).EmoteMode;
     }
 
     /// <summary>
@@ -1361,95 +844,6 @@ public class SuggestionsService : INService
     public async Task<bool> GetArchiveOnImplement(IGuild guild)
     {
         return (await guildSettings.GetGuildConfig(guild.Id)).ArchiveOnImplement;
-    }
-
-    /// <summary>
-    ///     Retrieves the name of the suggest button in a guild.
-    /// </summary>
-    /// <param name="guild">The guild from which to retrieve the suggest button name.</param>
-    /// <returns>The name of the suggest button.</returns>
-    public async Task<string> GetSuggestButtonName(IGuild guild)
-    {
-        return (await guildSettings.GetGuildConfig(guild.Id)).SuggestButtonName;
-    }
-
-    /// <summary>
-    ///     Retrieves the channel ID where the suggest button is located in a guild.
-    /// </summary>
-    /// <param name="guild">The guild from which to retrieve the suggest button channel ID.</param>
-    /// <returns>The suggest button channel ID.</returns>
-    public async Task<ulong> GetSuggestButtonChannel(IGuild guild)
-    {
-        return (await guildSettings.GetGuildConfig(guild.Id)).SuggestButtonChannel;
-    }
-
-    /// <summary>
-    ///     Retrieves the custom emote for the suggest button in a guild.
-    /// </summary>
-    /// <param name="guild">The guild from which to retrieve the suggest button emote.</param>
-    /// <returns>The custom emote for the suggest button; otherwise, null if not set.</returns>
-    public async Task<string> GetSuggestButtonEmote(IGuild guild)
-    {
-        return (await guildSettings.GetGuildConfig(guild.Id)).SuggestButtonEmote;
-    }
-
-    /// <summary>
-    ///     Retrieves the custom message for the suggest button in a guild.
-    /// </summary>
-    /// <param name="guild">The guild from which to retrieve the suggest button message.</param>
-    /// <returns>The custom message for the suggest button if set; otherwise, null.</returns>
-    public async Task<string>? GetSuggestButtonMessage(IGuild guild)
-    {
-        return (await guildSettings.GetGuildConfig(guild.Id)).SuggestButtonMessage;
-    }
-
-    /// <summary>
-    ///     Retrieves the repost threshold for the suggest button in a guild.
-    /// </summary>
-    /// <param name="guild">The guild from which to retrieve the suggest button repost threshold.</param>
-    /// <returns>The repost threshold for the suggest button.</returns>
-    public async Task<int> GetSuggestButtonRepost(IGuild guild)
-    {
-        return (await guildSettings.GetGuildConfig(guild.Id)).SuggestButtonRepostThreshold;
-    }
-
-    /// <summary>
-    ///     Retrieves the message ID of the suggest button in a guild.
-    /// </summary>
-    /// <param name="guild">The guild from which to retrieve the suggest button message ID.</param>
-    /// <returns>The suggest button message ID.</returns>
-    public async Task<ulong> GetSuggestButtonMessageId(IGuild guild)
-    {
-        return (await guildSettings.GetGuildConfig(guild.Id)).SuggestButtonMessageId;
-    }
-
-    /// <summary>
-    ///     Retrieves the color of a suggest button in a guild.
-    /// </summary>
-    /// <param name="guild">The guild from which to retrieve the suggest button color.</param>
-    /// <returns>The color of the suggest button.</returns>
-    public async Task<ButtonStyle> GetSuggestButtonColor(IGuild guild)
-    {
-        return (ButtonStyle)(await guildSettings.GetGuildConfig(guild.Id)).SuggestButtonColor;
-    }
-
-    /// <summary>
-    ///     Retrieves the style of a specific button based on its ID in a guild.
-    /// </summary>
-    /// <param name="guild">The guild from which to retrieve the button style.</param>
-    /// <param name="id">The ID of the button to retrieve the style for.</param>
-    /// <returns>The button style.</returns>
-    public async Task<ButtonStyle> GetButtonStyle(IGuild guild, int id)
-    {
-        return id switch
-        {
-            1 => (ButtonStyle)(await guildSettings.GetGuildConfig(guild.Id)).Emote1Style,
-            2 => (ButtonStyle)(await guildSettings.GetGuildConfig(guild.Id)).Emote2Style,
-            3 => (ButtonStyle)(await guildSettings.GetGuildConfig(guild.Id)).Emote3Style,
-            4 => (ButtonStyle)(await guildSettings.GetGuildConfig(guild.Id)).Emote4Style,
-            5 => (ButtonStyle)(await guildSettings.GetGuildConfig(guild.Id)).Emote5Style,
-            _ => ButtonStyle.Secondary
-        };
     }
 
     /// <summary>
@@ -1763,8 +1157,8 @@ public class SuggestionsService : INService
     }
 
     /// <summary>
-    ///     Submits a suggestion in a guild, handling the creation of suggestion messages with reactions or buttons
-    ///     based on configuration, and potentially starting a thread for discussion.
+    ///     Submits a suggestion in a guild: posts the suggestion message, adds the voting reactions and, when the
+    ///     server uses threads for suggestions, opens a discussion thread for it.
     /// </summary>
     /// <param name="guild">The guild where the suggestion is submitted.</param>
     /// <param name="user">The user submitting the suggestion.</param>
@@ -1790,128 +1184,71 @@ public class SuggestionsService : INService
             return;
         }
 
-        var tup = new Emoji("\uD83D\uDC4D");
-        var tdown = new Emoji("\uD83D\uDC4E");
-        var emotes = new List<Emote>();
-        var em = await GetEmotes(guild.Id);
-        if (em is not null and not "disable")
+        var suggestionChannel = await guild.GetTextChannelAsync(await GetSuggestionChannel(guild.Id))
+            .ConfigureAwait(false);
+        var sugnum1 = await GetSNum(guild.Id);
+        var customMessage = await GetSuggestionMessage(guild) is not ("-" or "");
+        IUserMessage posted;
+        if (!customMessage)
         {
-            var te = em.Split(",");
-            emotes.AddRange(te.Select(Emote.Parse));
-        }
-
-        var builder = new ComponentBuilder();
-        IEmote[] reacts =
-        [
-            tup, tdown
-        ];
-        if (await GetEmoteMode(guild) == 1)
-        {
-            var count = 0;
-            if (em is null or "disabled")
-            {
-                foreach (var i in reacts)
-                {
-                    builder.WithButton("0", $"emotebutton:{count + 1}", emote: i,
-                        style: await GetButtonStyle(guild, ++count));
-                }
-            }
-            else
-            {
-                foreach (var i in emotes)
-                {
-                    builder.WithButton("0", $"emotebutton:{count + 1}", emote: i,
-                        style: await GetButtonStyle(guild, ++count));
-                }
-            }
-        }
-
-        var snum = await GetSNum(guild.Id);
-        if (await GetThreadType(guild) == 1)
-        {
-            builder.WithButton("Join/Create Public Discussion", $"publicsuggestthread:{snum}",
-                ButtonStyle.Secondary, row: 1);
-        }
-
-        if (await GetThreadType(guild) == 2)
-        {
-            builder.WithButton("Join/Create Private Discussion", $"privatesuggestthread:{snum}",
-                ButtonStyle.Secondary, row: 1);
-        }
-
-        if (await GetSuggestionMessage(guild) is "-" or "")
-        {
-            var sugnum1 = await GetSNum(guild.Id);
-            var t = await (await guild.GetTextChannelAsync(await GetSuggestionChannel(guild.Id)).ConfigureAwait(false))
-                .SendMessageAsync(
-                    embed: new EmbedBuilder().WithAuthor(user)
-                        .WithTitle(strings.SuggestionNumber(channel.Guild.Id, sugnum1))
-                        .WithDescription(suggestion).WithOkColor().Build()).ConfigureAwait(false);
-            if (await GetEmoteMode(guild) == 0)
-            {
-                if (em is null or "disabled")
-                {
-                    foreach (var i in reacts)
-                        await t.AddReactionAsync(i).ConfigureAwait(false);
-                }
-                else
-                {
-                    foreach (var ei in emotes)
-                        await t.AddReactionAsync(ei).ConfigureAwait(false);
-                }
-            }
-
-            await Sugnum(guild, sugnum1 + 1).ConfigureAwait(false);
-            await Suggest(guild, sugnum1, t.Id, user.Id, suggestion).ConfigureAwait(false);
+            posted = await suggestionChannel.SendMessageAsync(
+                embed: new EmbedBuilder().WithAuthor(user)
+                    .WithTitle(strings.SuggestionNumber(channel.Guild.Id, sugnum1))
+                    .WithDescription(suggestion).WithOkColor().Build()).ConfigureAwait(false);
         }
         else
         {
-            var sugnum1 = await GetSNum(guild.Id);
             var replacer = new ReplacementBuilder().WithServer(client, guild as SocketGuild)
                 .WithOverride("%suggest.user%", user.ToString)
                 .WithOverride("%suggest.message%", () => suggestion.SanitizeMentions(true))
                 .WithOverride("%suggest.number%", () => sugnum1.ToString())
                 .WithOverride("%suggest.user.name%", () => user.Username)
                 .WithOverride("%suggest.user.avatar%", () => user.RealAvatarUrl().ToString()).Build();
-            var ebe = SmartEmbed.TryParse(replacer.Replace(await GetSuggestionMessage(guild)), guild.Id, out var embed,
-                out var plainText);
-            var chan = await guild.GetTextChannelAsync(await GetSuggestionChannel(guild.Id)).ConfigureAwait(false);
-            IUserMessage msg;
-            if (!ebe)
+            var rendered = replacer.Replace(await GetSuggestionMessage(guild));
+            posted = SmartEmbed.TryParse(rendered, guild.Id, out var embed, out var plainText)
+                ? await suggestionChannel.SendMessageAsync(plainText, embeds: embed).ConfigureAwait(false)
+                : await suggestionChannel.SendMessageAsync(rendered).ConfigureAwait(false);
+        }
+
+        foreach (var voteEmote in await GetVoteEmotes(guild.Id))
+            await posted.AddReactionAsync(voteEmote).ConfigureAwait(false);
+
+        await Sugnum(guild, sugnum1 + 1).ConfigureAwait(false);
+        await Suggest(guild, sugnum1, posted.Id, user.Id, suggestion).ConfigureAwait(false);
+        await CreateSuggestionThread(guild, user, posted, sugnum1).ConfigureAwait(false);
+
+        if (customMessage)
+            await channel.SendConfirmAsync(strings.SuggestionSent(guild.Id)).ConfigureAwait(false);
+    }
+
+    private async Task CreateSuggestionThread(IGuild guild, IGuildUser user, IUserMessage message, ulong number)
+    {
+        var threadType = await GetThreadType(guild);
+        if (threadType is not (1 or 2) || message.Channel is not ITextChannel channel)
+            return;
+
+        try
+        {
+            var name = strings.SuggestionThreadName(guild.Id, number);
+            IThreadChannel thread;
+            if (threadType == 1)
             {
-                if (await GetEmoteMode(guild) == 1)
-                    msg = await chan.SendMessageAsync(replacer.Replace(await GetSuggestionMessage(guild))).ConfigureAwait(false);
-                else
-                    msg = await chan.SendMessageAsync(replacer.Replace(await GetSuggestionMessage(guild)))
-                        .ConfigureAwait(false);
+                thread = await channel.CreateThreadAsync(name, ThreadType.PublicThread,
+                    ThreadArchiveDuration.OneWeek, message).ConfigureAwait(false);
             }
             else
             {
-                if (await GetEmoteMode(guild) == 1)
-                    msg = await chan.SendMessageAsync(plainText, embeds: embed)
-                        .ConfigureAwait(false);
-                else
-                    msg = await chan.SendMessageAsync(plainText, embeds: embed).ConfigureAwait(false);
+                thread = await channel.CreateThreadAsync(name, ThreadType.PrivateThread,
+                    ThreadArchiveDuration.OneWeek, invitable: false).ConfigureAwait(false);
+                await thread.AddUserAsync(user).ConfigureAwait(false);
             }
 
-            if (await GetEmoteMode(guild) == 0)
-            {
-                if (em is null or "disabled" or "-")
-                {
-                    foreach (var i in reacts)
-                        await msg.AddReactionAsync(i).ConfigureAwait(false);
-                }
-                else
-                {
-                    foreach (var ei in emotes)
-                        await msg.AddReactionAsync(ei).ConfigureAwait(false);
-                }
-            }
-
-            await Sugnum(guild, sugnum1 + 1).ConfigureAwait(false);
-            await Suggest(guild, sugnum1, msg.Id, user.Id, suggestion).ConfigureAwait(false);
-
-            await channel.SendConfirmAsync(strings.SuggestionSent(guild.Id)).ConfigureAwait(false);
+            await AddThreadChannel(message.Id, thread.Id).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not open a discussion thread for suggestion {Number} in {GuildId}", number,
+                guild.Id);
         }
     }
 
@@ -2008,48 +1345,6 @@ public class SuggestionsService : INService
     }
 
     /// <summary>
-    ///     Determines the emote chosen by a user for a specific suggestion, useful for tallying reactions or votes.
-    /// </summary>
-    /// <param name="messageId">The message ID of the suggestion being voted on.</param>
-    /// <param name="userId">The user ID of the voter.</param>
-    /// <returns>The ID of the emote chosen by the user, or 0 if no vote was found.</returns>
-    public async Task<int> GetPickedEmote(ulong messageId, ulong userId)
-    {
-        await using var dbContext = await dbFactory.CreateConnectionAsync();
-
-        var toreturn = dbContext.SuggestVotes.FirstOrDefault(x => x.UserId == userId && x.MessageId == messageId);
-        return toreturn?.EmotePicked ?? 0;
-    }
-
-    /// <summary>
-    ///     Updates the emote picked by a user for a specific suggestion message. If the user has not previously
-    ///     picked an emote for this message, a new vote record is created. Otherwise, the existing vote is updated.
-    /// </summary>
-    /// <param name="messageId">The ID of the message the vote is associated with.</param>
-    /// <param name="userId">The ID of the user casting or changing their vote.</param>
-    /// <param name="emotePicked">The ID of the emote picked by the user.</param>
-    /// <returns>A Task representing the asynchronous operation of updating or adding the vote.</returns>
-    public async Task UpdatePickedEmote(ulong messageId, ulong userId, int emotePicked)
-    {
-        await using var dbContext = await dbFactory.CreateConnectionAsync();
-
-        var tocheck = dbContext.SuggestVotes.FirstOrDefault(x => x.MessageId == messageId && x.UserId == userId);
-        if (tocheck is null)
-        {
-            var toadd = new SuggestVote
-            {
-                EmotePicked = emotePicked, MessageId = messageId, UserId = userId
-            };
-            await dbContext.InsertAsync(toadd);
-        }
-        else
-        {
-            tocheck.EmotePicked = emotePicked;
-            await dbContext.UpdateAsync(tocheck);
-        }
-    }
-
-    /// <summary>
     ///     Adds a new thread channel association with a suggestion message. This is used to track thread channels
     ///     that are created for discussing specific suggestions.
     /// </summary>
@@ -2087,7 +1382,6 @@ public class SuggestionsService : INService
         eventHandler.Unsubscribe("MessageReceived", "SuggestService", MessageRecieved);
         eventHandler.Unsubscribe("ReactionAdded", "SuggestService", UpdateCountOnReact);
         eventHandler.Unsubscribe("ReactionRemoved", "SuggestService", UpdateCountOnRemoveReact);
-        eventHandler.Unsubscribe("MessageReceived", "SuggestService", RepostButton);
         return Task.CompletedTask;
     }
 }
