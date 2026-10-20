@@ -4,7 +4,6 @@ using LinqToDB.Async;
 using Mewdeko.Common.DiscordImplementations;
 using Mewdeko.Modules.Permissions.Common;
 using Mewdeko.Modules.Permissions.Services;
-using Mewdeko.Services.Settings;
 using Mewdeko.Services.strings;
 using Mewdeko.Services.Strings;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,7 +15,6 @@ namespace Mewdeko.Modules.Utility.Services;
 /// </summary>
 public class VerboseErrorsService : INService, IUnloadableService
 {
-    private readonly BotConfigService botConfigService;
     private readonly CommandHandler ch;
     private readonly IDataConnectionFactory dbFactory;
     private readonly GuildSettingsService guildSettings;
@@ -33,18 +31,16 @@ public class VerboseErrorsService : INService, IUnloadableService
     /// <param name="strings">The bot strings service.</param>
     /// <param name="guildSettings">The guild settings service.</param>
     /// <param name="services">The service provider.</param>
-    /// <param name="botConfigService">The bot configuration service.</param>
     /// <param name="bot">The bot instance.</param>
     /// <param name="strings1">The strings1 parameter.</param>
     public VerboseErrorsService(IDataConnectionFactory dbFactory, CommandHandler ch,
         IBotStrings strings,
         GuildSettingsService guildSettings,
-        IServiceProvider services, BotConfigService botConfigService, Mewdeko bot, GeneratedBotStrings strings1)
+        IServiceProvider services, Mewdeko bot, GeneratedBotStrings strings1)
     {
         this.strings = strings;
         this.guildSettings = guildSettings;
         this.services = services;
-        this.botConfigService = botConfigService;
         Strings = strings1;
         this.dbFactory = dbFactory;
         this.ch = ch;
@@ -94,12 +90,7 @@ public class VerboseErrorsService : INService, IUnloadableService
                 .WithFooter($"Run {await guildSettings.GetPrefix(channel.Guild)}ve to disable these prompts.")
                 .WithErrorColor();
 
-            if (!botConfigService.Data.ShowInviteButton)
-                await channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
-            else
-                await channel.SendMessageAsync(embed: embed.Build(), components: new ComponentBuilder()
-                    .WithButton("Support Server", style: ButtonStyle.Link,
-                        url: botConfigService.Data.SupportServer).Build()).ConfigureAwait(false);
+            await channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
         }
         catch
         {

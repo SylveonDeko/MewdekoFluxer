@@ -166,10 +166,15 @@ public partial class Utility
         [UserPerm(GuildPermission.Administrator)]
         public async Task AiKey()
         {
-            var component = new ComponentBuilder()
-                .WithButton(Strings.AiKeyClickToSet(ctx.Guild.Id), "setaikey")
-                .Build();
-            await ctx.Channel.SendMessageAsync(Strings.EmptyResponse(ctx.Guild.Id), components: component);
+            await ctx.Channel.SendConfirmAsync(Strings.AiKeyPrompt(ctx.Guild.Id)).ConfigureAwait(false);
+            var apiKey = await NextMessageAsync(ctx.Channel.Id, ctx.User.Id).ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(apiKey))
+                return;
+
+            var config = await Service.GetOrCreateConfig(ctx.Guild.Id);
+            config.ApiKey = apiKey.Trim();
+            await Service.UpdateConfig(config);
+            await ctx.Channel.SendConfirmAsync(Strings.AiApiKeyUpdated(ctx.Guild.Id, config.Provider));
         }
 
         /// <summary>

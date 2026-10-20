@@ -7,7 +7,7 @@
   "ai_custom_embed_set": "Custom embed template set.",
   "ai_error_occurred": "Error: {0}",
   "ai_invalid_model": "Invalid model '{0}' for {1}",
-  "ai_key_click_to_set": "Click to securely set your AI API key",
+  "ai_key_prompt": "Send your AI API key as your next message within 60 seconds. I will delete it right away.",
   "ai_model_changed": "AI model set to {0}",
   "ai_model_list": "Available {0} models:\n{1}",
   "ai_no_api_key": "No API key set for {0}. Please set one using aikey",

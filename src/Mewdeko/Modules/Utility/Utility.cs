@@ -438,15 +438,7 @@ public partial class Utility(
 
         if (msg.ReferenceMessage is not null)
             em.AddField("Replied To", msg.ReferenceMessage);
-        await ctx.Channel.SendMessageAsync(embed: em.Build(),
-            components: config.Data.ShowInviteButton
-                ? new ComponentBuilder()
-                    .WithButton(style: ButtonStyle.Link,
-                        url:
-                        "https://discord.com/oauth2/authorize?client_id=752236274261426212&permissions=8&response_type=code&redirect_uri=https%3A%2F%2Fmewdeko.tech&scope=bot%20applications.commands",
-                        label: "Invite Me!",
-                        emote: "<a:HaneMeow:968564817784877066>".ToIEmote()).Build()
-                : null).ConfigureAwait(false);
+        await ctx.Channel.SendMessageAsync(embed: em.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -993,15 +985,7 @@ public partial class Utility(
         if (msg.ReferenceMessage is not null)
             em.AddField("Replied To", msg.ReferenceMessage);
 
-        await ctx.Channel.SendMessageAsync(embed: em.Build(),
-            components: config.Data.ShowInviteButton
-                ? new ComponentBuilder()
-                    .WithButton(style: ButtonStyle.Link,
-                        url:
-                        "https://discord.com/oauth2/authorize?client_id=752236274261426212&permissions=8&response_type=code&redirect_uri=https%3A%2F%2Fmewdeko.tech&scope=bot%20applications.commands",
-                        label: "Invite Me!",
-                        emote: "<a:HaneMeow:968564817784877066>".ToIEmote()).Build()
-                : null).ConfigureAwait(false);
+        await ctx.Channel.SendMessageAsync(embed: em.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1078,15 +1062,7 @@ public partial class Utility(
         if (msg.ReferenceMessage is not null)
             em.AddField("Replied To", msg.ReferenceMessage);
 
-        await ctx.Channel.SendMessageAsync(embed: em.Build(),
-            components: config.Data.ShowInviteButton
-                ? new ComponentBuilder()
-                    .WithButton(style: ButtonStyle.Link,
-                        url:
-                        "https://discord.com/oauth2/authorize?client_id=752236274261426212&permissions=8&response_type=code&redirect_uri=https%3A%2F%2Fmewdeko.tech&scope=bot%20applications.commands",
-                        label: "Invite Me!",
-                        emote: "<a:HaneMeow:968564817784877066>".ToIEmote()).Build()
-                : null).ConfigureAwait(false);
+        await ctx.Channel.SendMessageAsync(embed: em.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1139,15 +1115,7 @@ public partial class Utility(
             if (msg.ReferenceMessage is not null)
                 em.AddField("Replied To", msg.ReferenceMessage);
 
-            await ctx.Channel.SendMessageAsync(embed: em.Build(),
-                components: config.Data.ShowInviteButton
-                    ? new ComponentBuilder()
-                        .WithButton(style: ButtonStyle.Link,
-                            url:
-                            "https://discord.com/oauth2/authorize?client_id=752236274261426212&permissions=8&response_type=code&redirect_uri=https%3A%2F%2Fmewdeko.tech&scope=bot%20applications.commands",
-                            label: "Invite Me!",
-                            emote: "<a:HaneMeow:968564817784877066>".ToIEmote()).Build()
-                    : null).ConfigureAwait(false);
+            await ctx.Channel.SendMessageAsync(embed: em.Build()).ConfigureAwait(false);
         }
     }
 
@@ -1199,15 +1167,7 @@ public partial class Utility(
         if (msg.ReferenceMessage is not null)
             em.AddField("Replied To", msg.ReferenceMessage);
 
-        await ctx.Channel.SendMessageAsync(embed: em.Build(),
-            components: config.Data.ShowInviteButton
-                ? new ComponentBuilder()
-                    .WithButton(style: ButtonStyle.Link,
-                        url:
-                        "https://discord.com/oauth2/authorize?client_id=752236274261426212&permissions=8&response_type=code&redirect_uri=https%3A%2F%2Fmewdeko.tech&scope=bot%20applications.commands",
-                        label: "Invite Me!",
-                        emote: "<a:HaneMeow:968564817784877066>".ToIEmote()).Build()
-                : null).ConfigureAwait(false);
+        await ctx.Channel.SendMessageAsync(embed: em.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1260,15 +1220,7 @@ public partial class Utility(
             if (msg.ReferenceMessage is not null)
                 em.AddField("Replied To", msg.ReferenceMessage);
 
-            await ctx.Channel.SendMessageAsync(embed: em.Build(),
-                components: config.Data.ShowInviteButton
-                    ? new ComponentBuilder()
-                        .WithButton(style: ButtonStyle.Link,
-                            url:
-                            "https://discord.com/oauth2/authorize?client_id=752236274261426212&permissions=8&response_type=code&redirect_uri=https%3A%2F%2Fmewdeko.tech&scope=bot%20applications.commands",
-                            label: "Invite Me!",
-                            emote: "<a:HaneMeow:968564817784877066>".ToIEmote()).Build()
-                    : null).ConfigureAwait(false);
+            await ctx.Channel.SendMessageAsync(embed: em.Build()).ConfigureAwait(false);
         }
     }
 
@@ -1323,15 +1275,7 @@ public partial class Utility(
                 em.AddField("Replied To", msg.ReferenceMessage);
 
 
-            await ctx.Channel.SendMessageAsync(embed: em.Build(),
-                components: config.Data.ShowInviteButton
-                    ? new ComponentBuilder()
-                        .WithButton(style: ButtonStyle.Link,
-                            url:
-                            "https://discord.com/oauth2/authorize?client_id=752236274261426212&permissions=8&response_type=code&redirect_uri=https%3A%2F%2Fmewdeko.tech&scope=bot%20applications.commands",
-                            label: "Invite Me!",
-                            emote: "<a:HaneMeow:968564817784877066>".ToIEmote()).Build()
-                    : null).ConfigureAwait(false);
+            await ctx.Channel.SendMessageAsync(embed: em.Build()).ConfigureAwait(false);
         }
     }
 
@@ -1387,15 +1331,7 @@ public partial class Utility(
                 em.AddField("Replied To", msg.ReferenceMessage);
 
 
-            await ctx.Channel.SendMessageAsync(embed: em.Build(),
-                components: config.Data.ShowInviteButton
-                    ? new ComponentBuilder()
-                        .WithButton(style: ButtonStyle.Link,
-                            url:
-                            "https://discord.com/oauth2/authorize?client_id=752236274261426212&permissions=8&response_type=code&redirect_uri=https%3A%2F%2Fmewdeko.tech&scope=bot%20applications.commands",
-                            label: "Invite Me!",
-                            emote: "<a:HaneMeow:968564817784877066>".ToIEmote()).Build()
-                    : null).ConfigureAwait(false);
+            await ctx.Channel.SendMessageAsync(embed: em.Build()).ConfigureAwait(false);
         }
     }
 
