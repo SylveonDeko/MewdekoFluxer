@@ -1,6 +1,5 @@
 ﻿using Discord.Commands;
-using Fergun.Interactive;
-using Fergun.Interactive.Pagination;
+using Mewdeko.Common.Interactive;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.StatusRoles.Services;
 using Mewdeko.Services.Settings;
@@ -418,9 +417,8 @@ public class StatusRoles(BotConfigService bss, InteractiveService interactivity)
         var paginator = new LazyPaginatorBuilder()
             .AddUser(ctx.User)
             .WithPageFactory(PageFactory)
-            .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+            .WithFooter(PaginatorFooter.PageNumber)
             .WithMaxPageIndex(statusRoles.Count() - 1)
-            .WithDefaultEmotes()
             .WithActionOnCancellation(ActionOnStop.DeleteMessage)
             .Build();
 

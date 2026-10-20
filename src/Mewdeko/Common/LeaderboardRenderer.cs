@@ -1,5 +1,4 @@
-using Fergun.Interactive;
-using Fergun.Interactive.Pagination;
+using Mewdeko.Common.Interactive;
 using Mewdeko.Modules.Currency.Services;
 using Mewdeko.Modules.Xp.Services;
 using Mewdeko.Services.Strings;
@@ -81,9 +80,8 @@ public static class LeaderboardRenderer
         var paginator = new LazyPaginatorBuilder()
             .AddUser(user)
             .WithPageFactory(BuildPage)
-            .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+            .WithFooter(PaginatorFooter.PageNumber)
             .WithMaxPageIndex(maxPageIndex)
-            .WithDefaultEmotes()
             .WithActionOnCancellation(ActionOnStop.DeleteMessage)
             .Build();
 
@@ -138,9 +136,8 @@ public static class LeaderboardRenderer
         var paginator = new LazyPaginatorBuilder()
             .AddUser(user)
             .WithPageFactory(BuildPage)
-            .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+            .WithFooter(PaginatorFooter.PageNumber)
             .WithMaxPageIndex(Math.Max(0, (holders.Count - 1) / 10))
-            .WithDefaultEmotes()
             .WithActionOnCancellation(ActionOnStop.DeleteMessage)
             .Build();
 

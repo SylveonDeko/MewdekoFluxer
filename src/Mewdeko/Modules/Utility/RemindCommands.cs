@@ -1,6 +1,5 @@
 ﻿using Discord.Commands;
-using Fergun.Interactive;
-using Fergun.Interactive.Pagination;
+using Mewdeko.Common.Interactive;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Utility.Services;
 
@@ -130,9 +129,8 @@ public partial class Utility
             var paginator = new LazyPaginatorBuilder()
                 .AddUser(ctx.User)
                 .WithPageFactory(PageFactory)
-                .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+                .WithFooter(PaginatorFooter.PageNumber)
                 .WithMaxPageIndex(reminders.Count / 10)
-                .WithDefaultEmotes()
                 .WithActionOnCancellation(ActionOnStop.DeleteMessage)
                 .Build();
 

@@ -1,8 +1,7 @@
 using System.IO;
 using System.Text;
 using Discord.Commands;
-using Fergun.Interactive;
-using Fergun.Interactive.Pagination;
+using Mewdeko.Common.Interactive;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.ServerStats.Common;
 using Mewdeko.Modules.ServerStats.Services;
@@ -279,9 +278,8 @@ public class ServerStats(InteractiveService interactivity, ServerStatsSettingsSe
         var paginator = new LazyPaginatorBuilder()
             .AddUser(ctx.User)
             .WithPageFactory(PageFactory)
-            .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+            .WithFooter(PaginatorFooter.PageNumber)
             .WithMaxPageIndex((entries.Count - 1) / 10)
-            .WithDefaultEmotes()
             .WithActionOnCancellation(ActionOnStop.DeleteMessage)
             .Build();
 

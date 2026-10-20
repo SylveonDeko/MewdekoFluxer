@@ -1,5 +1,4 @@
-using Fergun.Interactive;
-using Fergun.Interactive.Pagination;
+using Mewdeko.Common.Interactive;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.RoleStates.Services;
 using Mewdeko.Services.Settings;
@@ -222,9 +221,8 @@ public class RoleStates(BotConfigService bss, InteractiveService interactivity, 
             var paginator = new LazyPaginatorBuilder()
                 .AddUser(ctx.User)
                 .WithPageFactory(PageFactory)
-                .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+                .WithFooter(PaginatorFooter.PageNumber)
                 .WithMaxPageIndex((userRoleStates.Count - 1) / 3)
-                .WithDefaultEmotes()
                 .WithActionOnCancellation(ActionOnStop.DeleteMessage)
                 .Build();
 

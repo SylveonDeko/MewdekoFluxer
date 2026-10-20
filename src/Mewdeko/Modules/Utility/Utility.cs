@@ -5,8 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using Discord.Commands;
-using Fergun.Interactive;
-using Fergun.Interactive.Pagination;
+using Mewdeko.Common.Interactive;
 using Humanizer;
 using LinqToDB.Async;
 using Mewdeko.Common.Attributes.TextCommands;
@@ -153,7 +152,6 @@ public partial class Utility(
                 : (rolesWithPerms.Count - 1) / 6)
             .WithPageFactory(PageFactory)
             .WithFooter(PaginatorFooter.PageNumber)
-            .WithDefaultEmotes()
             .Build();
 
         await serv.SendPaginatorAsync(paginator, ctx.Channel, TimeSpan.FromMinutes(5));
@@ -339,9 +337,8 @@ public partial class Utility(
         var paginator = new LazyPaginatorBuilder()
             .AddUser(ctx.User)
             .WithPageFactory(PageFactory)
-            .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+            .WithFooter(PaginatorFooter.PageNumber)
             .WithMaxPageIndex(emotes.Length / 10)
-            .WithDefaultEmotes()
             .WithActionOnCancellation(ActionOnStop.DeleteMessage)
             .Build();
 
@@ -485,9 +482,8 @@ public partial class Utility(
             var paginator = new LazyPaginatorBuilder()
                 .AddUser(ctx.User)
                 .WithPageFactory(PageFactory)
-                .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+                .WithFooter(PaginatorFooter.PageNumber)
                 .WithMaxPageIndex(msg.Count() - 1)
-                .WithDefaultEmotes()
                 .WithActionOnCancellation(ActionOnStop.DeleteMessage)
                 .Build();
 
@@ -548,9 +544,8 @@ public partial class Utility(
             var paginator = new LazyPaginatorBuilder()
                 .AddUser(ctx.User)
                 .WithPageFactory(PageFactory)
-                .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+                .WithFooter(PaginatorFooter.PageNumber)
                 .WithMaxPageIndex(msg.Count() - 1)
-                .WithDefaultEmotes()
                 .WithActionOnCancellation(ActionOnStop.DeleteMessage)
                 .Build();
 
@@ -611,9 +606,8 @@ public partial class Utility(
             var paginator = new LazyPaginatorBuilder()
                 .AddUser(ctx.User)
                 .WithPageFactory(PageFactory)
-                .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+                .WithFooter(PaginatorFooter.PageNumber)
                 .WithMaxPageIndex(msg.Count() - 1)
-                .WithDefaultEmotes()
                 .WithActionOnCancellation(ActionOnStop.DeleteMessage)
                 .Build();
 
@@ -675,9 +669,8 @@ public partial class Utility(
             var paginator = new LazyPaginatorBuilder()
                 .AddUser(ctx.User)
                 .WithPageFactory(PageFactory)
-                .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+                .WithFooter(PaginatorFooter.PageNumber)
                 .WithMaxPageIndex(msg.Count() - 1)
-                .WithDefaultEmotes()
                 .WithActionOnCancellation(ActionOnStop.DeleteMessage)
                 .Build();
 
@@ -737,9 +730,8 @@ public partial class Utility(
             var paginator = new LazyPaginatorBuilder()
                 .AddUser(ctx.User)
                 .WithPageFactory(PageFactory)
-                .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+                .WithFooter(PaginatorFooter.PageNumber)
                 .WithMaxPageIndex(msg.Count() - 1)
-                .WithDefaultEmotes()
                 .WithActionOnCancellation(ActionOnStop.DeleteMessage)
                 .Build();
 
@@ -800,9 +792,8 @@ public partial class Utility(
             var paginator = new LazyPaginatorBuilder()
                 .AddUser(ctx.User)
                 .WithPageFactory(PageFactory)
-                .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+                .WithFooter(PaginatorFooter.PageNumber)
                 .WithMaxPageIndex(msg.Count() - 1)
-                .WithDefaultEmotes()
                 .WithActionOnCancellation(ActionOnStop.DeleteMessage)
                 .Build();
 
@@ -863,9 +854,8 @@ public partial class Utility(
             var paginator = new LazyPaginatorBuilder()
                 .AddUser(ctx.User)
                 .WithPageFactory(PageFactory)
-                .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+                .WithFooter(PaginatorFooter.PageNumber)
                 .WithMaxPageIndex(msg.Count() - 1)
-                .WithDefaultEmotes()
                 .WithActionOnCancellation(ActionOnStop.DeleteMessage)
                 .Build();
 
@@ -927,9 +917,8 @@ public partial class Utility(
             var paginator = new LazyPaginatorBuilder()
                 .AddUser(ctx.User)
                 .WithPageFactory(PageFactory)
-                .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+                .WithFooter(PaginatorFooter.PageNumber)
                 .WithMaxPageIndex(msg.Count() - 1)
-                .WithDefaultEmotes()
                 .WithActionOnCancellation(ActionOnStop.DeleteMessage)
                 .Build();
 
@@ -1449,9 +1438,8 @@ public partial class Utility(
             var paginator = new LazyPaginatorBuilder()
                 .AddUser(ctx.User)
                 .WithPageFactory(PageFactory)
-                .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+                .WithFooter(PaginatorFooter.PageNumber)
                 .WithMaxPageIndex(arr.Length / 20)
-                .WithDefaultEmotes()
                 .WithActionOnCancellation(ActionOnStop.DeleteMessage)
                 .Build();
 
@@ -1504,9 +1492,8 @@ public partial class Utility(
         var paginator = new LazyPaginatorBuilder()
             .AddUser(ctx.User)
             .WithPageFactory(PageFactory)
-            .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+            .WithFooter(PaginatorFooter.PageNumber)
             .WithMaxPageIndex(roleUsers.Length / 20)
-            .WithDefaultEmotes()
             .WithActionOnCancellation(ActionOnStop.DeleteMessage)
             .Build();
 
@@ -1547,9 +1534,8 @@ public partial class Utility(
         var paginator = new LazyPaginatorBuilder()
             .AddUser(ctx.User)
             .WithPageFactory(PageFactory)
-            .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+            .WithFooter(PaginatorFooter.PageNumber)
             .WithMaxPageIndex(roleUsers.Length / 20)
-            .WithDefaultEmotes()
             .WithActionOnCancellation(ActionOnStop.DeleteMessage)
             .Build();
 
@@ -1643,10 +1629,8 @@ public partial class Utility(
                 var paginator = new LazyPaginatorBuilder()
                     .AddUser(ctx.User)
                     .WithPageFactory(PageFactory)
-                    .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+                    .WithFooter(PaginatorFooter.PageNumber)
                     .WithMaxPageIndex(roles.Count() / 10)
-                    .WithDefaultCanceledPage()
-                    .WithDefaultEmotes()
                     .WithActionOnCancellation(ActionOnStop.DeleteMessage)
                     .Build();
                 await serv.SendPaginatorAsync(paginator, ctx.Channel, TimeSpan.FromMinutes(60));
@@ -1675,10 +1659,8 @@ public partial class Utility(
                 var paginator = new LazyPaginatorBuilder()
                     .AddUser(ctx.User)
                     .WithPageFactory(PageFactory)
-                    .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+                    .WithFooter(PaginatorFooter.PageNumber)
                     .WithMaxPageIndex(roles.Count() / 10)
-                    .WithDefaultCanceledPage()
-                    .WithDefaultEmotes()
                     .WithActionOnCancellation(ActionOnStop.DeleteMessage)
                     .Build();
                 await serv.SendPaginatorAsync(paginator, ctx.Channel, TimeSpan.FromMinutes(60));
@@ -1985,10 +1967,8 @@ public partial class Utility(
         var paginator = new LazyPaginatorBuilder()
             .AddUser(ctx.User)
             .WithPageFactory(PageFactory)
-            .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+            .WithFooter(PaginatorFooter.PageNumber)
             .WithMaxPageIndex(result.Results.Count / 10)
-            .WithDefaultCanceledPage()
-            .WithDefaultEmotes()
             .WithActionOnCancellation(ActionOnStop.DeleteMessage)
             .Build();
 

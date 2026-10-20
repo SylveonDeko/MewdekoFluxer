@@ -3,8 +3,7 @@ using System.Text.Json;
 using System.Threading;
 using DataModel;
 using Discord.Commands;
-using Fergun.Interactive;
-using Fergun.Interactive.Pagination;
+using Mewdeko.Common.Interactive;
 using Lavalink4NET;
 using Lavalink4NET.DiscordNet;
 using Lavalink4NET.Players;
@@ -1083,130 +1082,45 @@ public partial class Music(
         const int tracksPerPage = 5;
         var totalPages = Math.Max(1, (int)Math.Ceiling((double)orderedQueue.Count / tracksPerPage));
 
-        var paginator = new ComponentPaginatorBuilder()
+        var paginator = new LazyPaginatorBuilder()
             .AddUser(ctx.User)
             .WithPageFactory(GeneratePage)
-            .WithPageCount(totalPages)
+            .WithMaxPageIndex(totalPages - 1)
+            .WithFooter(PaginatorFooter.PageNumber)
             .WithActionOnCancellation(ActionOnStop.DeleteMessage)
             .WithActionOnTimeout(ActionOnStop.DisableInput)
             .Build();
 
         await interactiveService.SendPaginatorAsync(paginator, ctx.Channel, TimeSpan.FromMinutes(10));
 
-        IPage GeneratePage(IComponentPaginator p)
+        PageBuilder GeneratePage(int page)
         {
-            var startIndex = p.CurrentPageIndex * tracksPerPage;
+            var startIndex = page * tracksPerPage;
             var tracksOnPage = orderedQueue.Skip(startIndex).Take(tracksPerPage).ToList();
 
-            var containerComponents = new List<IMessageComponentBuilder>();
+            var pageBuilder = new PageBuilder()
+                .WithOkColor()
+                .WithTitle(Strings.MusicQueueTitle(ctx.Guild.Id, queue.Count));
 
-            // Add title
-            containerComponents.Add(new TextDisplayBuilder()
-                .WithContent($"# {Strings.MusicQueueTitle(ctx.Guild.Id, queue.Count)}"));
-
-            containerComponents.Add(new SeparatorBuilder());
-
-            // Add currently playing track if it's on this page or it's the first page
-            if (currentTrack != null &&
-                (p.CurrentPageIndex == 0 || tracksOnPage.Any(t => t.Index == currentTrack.Index)))
+            if (currentTrack != null && (page == 0 || tracksOnPage.Any(t => t.Index == currentTrack.Index)))
             {
-                var nowPlayingSection = new SectionBuilder()
-                    .WithComponents([
-                        new TextDisplayBuilder($"**Now Playing**\n" +
-                                               $"**{currentTrack.Index}. [{currentTrack.Track.Title}]({currentTrack.Track.Uri})**\n" +
-                                               $"`{currentTrack.Track.Duration} | {currentTrack.Requester.Username} | {currentTrack.Track.Provider}`")
-                    ]);
+                pageBuilder.AddField(Strings.NowPlaying(ctx.Guild.Id),
+                    $"**{currentTrack.Index}. [{currentTrack.Track.Title}]({currentTrack.Track.Uri})**\n" +
+                    $"`{currentTrack.Track.Duration} | {currentTrack.Requester.Username} | {currentTrack.Track.Provider}`");
 
                 if (currentTrack.Track.ArtworkUri != null)
-                {
-                    var thumbnailBuilder = new ThumbnailBuilder()
-                        .WithMedia(new UnfurledMediaItemProperties
-                        {
-                            Url = currentTrack.Track.ArtworkUri.ToString()
-                        });
-                    nowPlayingSection.WithAccessory(thumbnailBuilder);
-                }
-
-                containerComponents.Add(nowPlayingSection);
-                containerComponents.Add(new SeparatorBuilder());
+                    pageBuilder.WithThumbnailUrl(currentTrack.Track.ArtworkUri.ToString());
             }
 
-            // Add tracks for this page
             var upcomingTracks = tracksOnPage.Where(t => t.Index != currentTrack?.Index).ToList();
-            if (upcomingTracks.Any())
+            if (upcomingTracks.Count > 0)
             {
-                containerComponents.Add(new TextDisplayBuilder().WithContent("**Upcoming Tracks**"));
-
-                foreach (var track in upcomingTracks)
-                {
-                    var trackSection = new SectionBuilder()
-                        .WithComponents([
-                            new TextDisplayBuilder($"{track.Index}. [{track.Track.Title}]({track.Track.Uri})\n" +
-                                                   $"`{track.Track.Duration} | {track.Requester.Username} | {track.Track.Provider}`")
-                        ]);
-
-                    if (track.Track.ArtworkUri != null)
-                    {
-                        var thumbnailBuilder = new ThumbnailBuilder()
-                            .WithMedia(new UnfurledMediaItemProperties
-                            {
-                                Url = track.Track.ArtworkUri.ToString()
-                            });
-                        trackSection.WithAccessory(thumbnailBuilder);
-                    }
-
-                    containerComponents.Add(trackSection);
-
-                    if (track != upcomingTracks.Last())
-                        containerComponents.Add(new SeparatorBuilder());
-                }
+                pageBuilder.AddField(Strings.MusicQueueUpcoming(ctx.Guild.Id), string.Join("\n\n", upcomingTracks.Select(track =>
+                    $"{track.Index}. [{track.Track.Title}]({track.Track.Uri})\n" +
+                    $"`{track.Track.Duration} | {track.Requester.Username} | {track.Track.Provider}`")));
             }
 
-            containerComponents.Add(new SeparatorBuilder());
-
-            // Create select menu with current page tracks
-            if (tracksOnPage.Any())
-            {
-                var selectOptions = tracksOnPage.Select(track =>
-                    new SelectMenuOptionBuilder()
-                        .WithLabel(
-                            $"{track.Index}. {(track.Track.Title.Length > 80 ? track.Track.Title[..77] + "..." : track.Track.Title)}")
-                        .WithValue($"music_track_info:{track.Index}")
-                        .WithDescription(Strings.MusicTrackInfo(Context.Guild.Id, track.Track.Duration,
-                            track.Requester.Username))
-                ).ToList();
-
-                var selectMenuRow = new ActionRowBuilder()
-                    .WithSelectMenu("music_track_select", selectOptions, "Select a track for options...",
-                        disabled: p.ShouldDisable());
-
-                containerComponents.Add(selectMenuRow);
-            }
-
-            // Create navigation row
-            var navigationRow = new ActionRowBuilder()
-                .AddPreviousButton(p, style: ButtonStyle.Secondary)
-                .AddNextButton(p, style: ButtonStyle.Secondary)
-                .AddStopButton(p);
-
-            containerComponents.Add(navigationRow);
-
-            // Add footer
-            containerComponents.Add(new TextDisplayBuilder()
-                .WithContent($"Page {p.CurrentPageIndex + 1}/{p.PageCount} • {queue.Count} tracks in queue"));
-
-            // Create the main container
-            var mainContainer = new ContainerBuilder()
-                .WithComponents(containerComponents)
-                .WithAccentColor(Mewdeko.OkColor);
-
-            var componentsV2 = new ComponentBuilderV2()
-                .AddComponent(mainContainer);
-
-            return new PageBuilder()
-                .WithComponents(componentsV2.Build())
-                .WithAllowedMentions(AllowedMentions.None)
-                .Build();
+            return pageBuilder;
         }
     }
 

@@ -1,6 +1,5 @@
 ﻿using Discord.Commands;
-using Fergun.Interactive;
-using Fergun.Interactive.Pagination;
+using Mewdeko.Common.Interactive;
 using Humanizer;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;
@@ -311,9 +310,8 @@ public class Vote(InteractiveService interactivity) : MewdekoModuleBase<VoteServ
         var paginator = new LazyPaginatorBuilder()
             .AddUser(ctx.User)
             .WithPageFactory(PageFactory)
-            .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+            .WithFooter(PaginatorFooter.PageNumber)
             .WithMaxPageIndex(voteList.Count / 12)
-            .WithDefaultEmotes()
             .WithActionOnCancellation(ActionOnStop.DeleteMessage)
             .Build();
 

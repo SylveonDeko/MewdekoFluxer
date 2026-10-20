@@ -2,7 +2,7 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using Discord.Commands;
-using Fergun.Interactive;
+using Mewdeko.Common.Interactive;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.JsonSettings;
 using Mewdeko.Modules.Help.Services;
@@ -141,12 +141,10 @@ public class Help(
     [Aliases]
     public async Task Modules()
     {
-        var embed = await Service.GetHelpEmbed(false, ctx.Guild ?? null, ctx.Channel, ctx.User);
+        var embed = await Service.GetHelpEmbed(true, ctx.Guild ?? null, ctx.Channel, ctx.User);
         try
         {
-            await ctx.Channel
-                .SendMessageAsync(embed: embed.Build(),
-                    components: Service.GetHelpComponents(ctx.Guild, ctx.User).Build()).ConfigureAwait(false);
+            await ctx.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
         }
         catch (Exception e)
         {
@@ -198,18 +196,29 @@ public class Help(
             return;
         }
 
-        if (filter is null)
+        string? section = null;
+        switch (filter)
         {
-            var overview = Service.GetModuleOverview(resolved.Name, ctx.Guild);
-            if (overview is not null)
-            {
-                await ctx.Channel.SendMessageAsync(embed: overview.Value.Embed.Build(),
-                    components: overview.Value.Components.Build()).ConfigureAwait(false);
-                return;
-            }
+            case null:
+                var overview = await Service.GetModuleOverview(resolved.Name, ctx.Guild);
+                if (overview is not null)
+                {
+                    await ctx.Channel.SendMessageAsync(embed: overview.Build()).ConfigureAwait(false);
+                    return;
+                }
+
+                break;
+            case var all when all.Equals("all", StringComparison.OrdinalIgnoreCase):
+                filter = null;
+                break;
+            default:
+                section = Service.ResolveSection(resolved.Name, filter);
+                if (section is not null)
+                    filter = null;
+                break;
         }
 
-        var builder = await Service.BuildCommandPaginator(resolved.Name, null, filter, ctx.Guild, ctx.User);
+        var builder = await Service.BuildCommandPaginator(resolved.Name, section, filter, ctx.Guild, ctx.User);
         if (builder is null)
         {
             await ReplyErrorAsync(Strings.HelpSearchNoResults(ctx.Guild.Id, resolved.Name, filter ?? ""))
@@ -251,8 +260,8 @@ public class Help(
             return;
         }
 
-        var (embed, comp) = await Service.GetCommandHelp(com, ctx.Guild, (ctx.User as IGuildUser)!);
-        await channel.SendMessageAsync(embed: embed.Build(), components: comp.Build()).ConfigureAwait(false);
+        var embed = await Service.GetCommandHelp(com, ctx.Guild);
+        await channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
     }
 
 

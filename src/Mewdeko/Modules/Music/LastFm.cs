@@ -1,8 +1,7 @@
 using System.IO;
 using System.Net.Http;
 using Discord.Commands;
-using Fergun.Interactive;
-using Fergun.Interactive.Pagination;
+using Mewdeko.Common.Interactive;
 using IF.Lastfm.Core.Api.Enums;
 using Mewdeko.Common.Attributes.TextCommands;
 using SkiaSharp;
@@ -176,10 +175,11 @@ public partial class Music
         const int perPage = 10;
         var totalPages = Math.Max(1, (int)Math.Ceiling(tracks.Count / (double)perPage));
 
-        var paginator = new ComponentPaginatorBuilder()
+        var paginator = new LazyPaginatorBuilder()
             .AddUser(ctx.User)
             .WithPageFactory(GeneratePage)
-            .WithPageCount(totalPages)
+            .WithMaxPageIndex(totalPages - 1)
+            .WithFooter(PaginatorFooter.PageNumber)
             .WithActionOnCancellation(ActionOnStop.DeleteMessage)
             .WithActionOnTimeout(ActionOnStop.DisableInput)
             .Build();
@@ -187,30 +187,17 @@ public partial class Music
         await interactiveService.SendPaginatorAsync(paginator, ctx.Channel, TimeSpan.FromMinutes(5));
         return;
 
-        IPage GeneratePage(IComponentPaginator p)
+        PageBuilder GeneratePage(int page)
         {
-            var pageTracks = tracks.Skip(p.CurrentPageIndex * perPage).Take(perPage).ToList();
+            var pageTracks = tracks.Skip(page * perPage).Take(perPage).ToList();
             var lines = pageTracks.Select((t, i) => Strings.LastfmRecentEntry(ctx.Guild.Id,
-                p.CurrentPageIndex * perPage + i + 1, t.Name, t.Url?.ToString() ?? "", t.ArtistName,
+                page * perPage + i + 1, t.Name, t.Url?.ToString() ?? "", t.ArtistName,
                 t.IsNowPlaying ?? false ? Strings.LastfmNowPlayingTag(ctx.Guild.Id) : ""));
 
-            var container = new ContainerBuilder()
-                .WithComponents([
-                    new TextDisplayBuilder($"# {Strings.LastfmRecentTitle(ctx.Guild.Id, username)}"),
-                    new SeparatorBuilder(),
-                    new TextDisplayBuilder(string.Join('\n', lines)),
-                    new SeparatorBuilder(),
-                    new TextDisplayBuilder($"Page {p.CurrentPageIndex + 1}/{p.PageCount}"),
-                    new ActionRowBuilder()
-                        .AddPreviousButton(p, style: ButtonStyle.Secondary)
-                        .AddNextButton(p, style: ButtonStyle.Secondary)
-                        .AddStopButton(p)
-                ])
-                .WithAccentColor(Mewdeko.OkColor);
-
             return new PageBuilder()
-                .WithComponents(new ComponentBuilderV2().AddComponent(container).Build())
-                .Build();
+                .WithOkColor()
+                .WithTitle(Strings.LastfmRecentTitle(ctx.Guild.Id, username))
+                .WithDescription(string.Join('\n', lines));
         }
     }
 
@@ -317,10 +304,11 @@ public partial class Music
         const int perPage = 10;
         var totalPages = Math.Max(1, (int)Math.Ceiling(lines.Count / (double)perPage));
 
-        var paginator = new ComponentPaginatorBuilder()
+        var paginator = new LazyPaginatorBuilder()
             .AddUser(ctx.User)
             .WithPageFactory(GeneratePage)
-            .WithPageCount(totalPages)
+            .WithMaxPageIndex(totalPages - 1)
+            .WithFooter(PaginatorFooter.PageNumber)
             .WithActionOnCancellation(ActionOnStop.DeleteMessage)
             .WithActionOnTimeout(ActionOnStop.DisableInput)
             .Build();
@@ -328,27 +316,12 @@ public partial class Music
         await interactiveService.SendPaginatorAsync(paginator, ctx.Channel, TimeSpan.FromMinutes(5));
         return;
 
-        IPage GeneratePage(IComponentPaginator p)
+        PageBuilder GeneratePage(int page)
         {
-            var pageLines = lines.Skip(p.CurrentPageIndex * perPage).Take(perPage);
-
-            var container = new ContainerBuilder()
-                .WithComponents([
-                    new TextDisplayBuilder($"# {title}"),
-                    new SeparatorBuilder(),
-                    new TextDisplayBuilder(string.Join('\n', pageLines)),
-                    new SeparatorBuilder(),
-                    new TextDisplayBuilder($"Page {p.CurrentPageIndex + 1}/{p.PageCount}"),
-                    new ActionRowBuilder()
-                        .AddPreviousButton(p, style: ButtonStyle.Secondary)
-                        .AddNextButton(p, style: ButtonStyle.Secondary)
-                        .AddStopButton(p)
-                ])
-                .WithAccentColor(Mewdeko.OkColor);
-
             return new PageBuilder()
-                .WithComponents(new ComponentBuilderV2().AddComponent(container).Build())
-                .Build();
+                .WithOkColor()
+                .WithTitle(title)
+                .WithDescription(string.Join('\n', lines.Skip(page * perPage).Take(perPage)));
         }
     }
 

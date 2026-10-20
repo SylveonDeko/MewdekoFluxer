@@ -1,8 +1,7 @@
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using Discord.Commands;
-using Fergun.Interactive;
-using Fergun.Interactive.Pagination;
+using Mewdeko.Common.Interactive;
 using Humanizer;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;
@@ -15,7 +14,7 @@ namespace Mewdeko.Modules.Administration;
 /// <summary>
 ///     Class for the Administration Module.
 /// </summary>
-/// <param name="serv">The interactivity service by Fergun.Interactive</param>
+/// <param name="serv">The service that runs reaction paginators</param>
 /// <param name="logger">The logger instance for structured logging.</param>
 /// <param name="guildSettings">Guild settings service for prefix lookups.</param>
 /// <param name="banPrune">The service resolving how many days of messages a ban purges.</param>
@@ -369,10 +368,8 @@ public partial class Administration(
                 var paginator = new LazyPaginatorBuilder()
                     .AddUser(ctx.User)
                     .WithPageFactory(PageFactory)
-                    .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+                    .WithFooter(PaginatorFooter.PageNumber)
                     .WithMaxPageIndex(users.Count / 20)
-                    .WithDefaultCanceledPage()
-                    .WithDefaultEmotes()
                     .WithActionOnCancellation(ActionOnStop.DeleteMessage).Build();
                 await serv.SendPaginatorAsync(paginator, Context.Channel, TimeSpan.FromMinutes(60))
                     .ConfigureAwait(false);
@@ -460,8 +457,8 @@ public partial class Administration(
             if (option is not null && option.Equals("-p", StringComparison.OrdinalIgnoreCase))
             {
                 var paginator = new LazyPaginatorBuilder().AddUser(ctx.User).WithPageFactory(PageFactory)
-                    .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
-                    .WithMaxPageIndex(users.Count() / 20).WithDefaultCanceledPage().WithDefaultEmotes()
+                    .WithFooter(PaginatorFooter.PageNumber)
+                    .WithMaxPageIndex(users.Count() / 20)
                     .WithActionOnCancellation(ActionOnStop.DeleteMessage).Build();
                 await serv.SendPaginatorAsync(paginator, Context.Channel, TimeSpan.FromMinutes(60))
                     .ConfigureAwait(false);
@@ -547,10 +544,8 @@ public partial class Administration(
             var paginator = new LazyPaginatorBuilder()
                 .AddUser(ctx.User)
                 .WithPageFactory(PageFactory)
-                .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+                .WithFooter(PaginatorFooter.PageNumber)
                 .WithMaxPageIndex(guildUsers.Length / 20)
-                .WithDefaultCanceledPage()
-                .WithDefaultEmotes()
                 .WithActionOnCancellation(ActionOnStop.DeleteMessage)
                 .Build();
             await serv.SendPaginatorAsync(paginator, Context.Channel, TimeSpan.FromMinutes(60)).ConfigureAwait(false);

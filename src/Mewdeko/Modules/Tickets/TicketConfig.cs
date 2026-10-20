@@ -1,8 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Discord.Commands;
-using Fergun.Interactive;
-using Fergun.Interactive.Pagination;
+using Mewdeko.Common.Interactive;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Tickets.Common;
 using Mewdeko.Modules.Tickets.Services;
@@ -59,9 +58,8 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
             var paginator = new LazyPaginatorBuilder()
                 .AddUser(ctx.User)
                 .WithPageFactory(PageFactory)
-                .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+                .WithFooter(PaginatorFooter.PageNumber)
                 .WithMaxPageIndex(panels.Count / 5)
-                .WithDefaultEmotes()
                 .Build();
 
             await interactivity.SendPaginatorAsync(paginator, Context.Channel,
@@ -1037,9 +1035,8 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                 var paginator = new LazyPaginatorBuilder()
                     .AddUser(ctx.User)
                     .WithPageFactory(PageFactory)
-                    .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+                    .WithFooter(PaginatorFooter.PageNumber)
                     .WithMaxPageIndex(panels.Count / 5)
-                    .WithDefaultEmotes()
                     .WithActionOnCancellation(ActionOnStop.DeleteMessage)
                     .Build();
 

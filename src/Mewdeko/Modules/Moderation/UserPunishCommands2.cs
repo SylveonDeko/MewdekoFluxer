@@ -1,7 +1,6 @@
 using DataModel;
 using Discord.Commands;
-using Fergun.Interactive;
-using Fergun.Interactive.Pagination;
+using Mewdeko.Common.Interactive;
 using Humanizer;
 using LinqToDB.Async;
 using Mewdeko.Common.Attributes.TextCommands;
@@ -19,7 +18,7 @@ public partial class Moderation
     ///     Module for managing mini warnings.
     /// </summary>
     /// <param name="dbFactory">The db provider</param>
-    /// <param name="serv">Fergun.Interactive paginator builder</param>
+    /// <param name="serv">The service that runs reaction paginators</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     [Group]
     public class UserPunishCommands2(
@@ -309,9 +308,8 @@ public partial class Moderation
             var paginator = new LazyPaginatorBuilder()
                 .AddUser(ctx.User)
                 .WithPageFactory(PageFactory)
-                .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+                .WithFooter(PaginatorFooter.PageNumber)
                 .WithMaxPageIndex(warnings.Length / 15)
-                .WithDefaultEmotes()
                 .WithActionOnCancellation(ActionOnStop.DeleteMessage)
                 .Build();
 

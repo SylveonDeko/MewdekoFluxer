@@ -2,8 +2,7 @@ using System.Net.Http;
 using System.Text.Json;
 using DataModel;
 using Discord.Commands;
-using Fergun.Interactive;
-using Fergun.Interactive.Pagination;
+using Mewdeko.Common.Interactive;
 using Lavalink4NET;
 using Lavalink4NET.DiscordNet;
 using Lavalink4NET.Players;
@@ -399,57 +398,27 @@ public partial class Music
             const int voicesPerPage = 15;
             var totalPages = Math.Max(1, (int)Math.Ceiling((double)results.Count / voicesPerPage));
 
-            var paginator = new ComponentPaginatorBuilder()
+            var paginator = new LazyPaginatorBuilder()
                 .AddUser(ctx.User)
                 .WithPageFactory(GeneratePage)
-                .WithPageCount(totalPages)
+                .WithMaxPageIndex(totalPages - 1)
+                .WithFooter(PaginatorFooter.PageNumber)
                 .WithActionOnCancellation(ActionOnStop.DeleteMessage)
                 .WithActionOnTimeout(ActionOnStop.DisableInput)
                 .Build();
 
             await interactiveService.SendPaginatorAsync(paginator, ctx.Channel, TimeSpan.FromMinutes(5));
 
-            IPage GeneratePage(IComponentPaginator p)
+            PageBuilder GeneratePage(int page)
             {
-                var startIndex = p.CurrentPageIndex * voicesPerPage;
-                var voicesOnPage = results.Skip(startIndex).Take(voicesPerPage).ToList();
-
-                var containerComponents = new List<IMessageComponentBuilder>();
-
-                containerComponents.Add(new TextDisplayBuilder()
-                    .WithContent($"# TTS Voices matching \"{search}\" ({results.Count} total)"));
-
-                containerComponents.Add(new SeparatorBuilder());
-
-                var lines = voicesOnPage.Select((v, i) =>
-                    $"`{startIndex + i + 1}.` **{v.Name}** — {v.Gender}, {v.Language?.Name} ({v.Source})");
-
-                containerComponents.Add(new TextDisplayBuilder()
-                    .WithContent(string.Join("\n", lines)));
-
-                containerComponents.Add(new SeparatorBuilder());
-
-                var navigationRow = new ActionRowBuilder()
-                    .AddPreviousButton(p, style: ButtonStyle.Secondary)
-                    .AddNextButton(p, style: ButtonStyle.Secondary)
-                    .AddStopButton(p);
-
-                containerComponents.Add(navigationRow);
-
-                containerComponents.Add(new TextDisplayBuilder()
-                    .WithContent($"Page {p.CurrentPageIndex + 1}/{p.PageCount}"));
-
-                var mainContainer = new ContainerBuilder()
-                    .WithComponents(containerComponents)
-                    .WithAccentColor(Mewdeko.OkColor);
-
-                var componentsV2 = new ComponentBuilderV2()
-                    .AddComponent(mainContainer);
+                var startIndex = page * voicesPerPage;
+                var lines = results.Skip(startIndex).Take(voicesPerPage).Select((v, i) =>
+                    Strings.TtsVoicesEntry(ctx.Guild.Id, startIndex + i + 1, v.Name, v.Gender, v.Language?.Name, v.Source));
 
                 return new PageBuilder()
-                    .WithComponents(componentsV2.Build())
-                    .WithAllowedMentions(AllowedMentions.None)
-                    .Build();
+                    .WithOkColor()
+                    .WithTitle(Strings.TtsVoicesTitle(ctx.Guild.Id, search, results.Count))
+                    .WithDescription(string.Join("\n", lines));
             }
         }
 
@@ -500,57 +469,27 @@ public partial class Music
             const int usersPerPage = 10;
             var totalPages = Math.Max(1, (int)Math.Ceiling((double)blockedUsers.Count / usersPerPage));
 
-            var paginator = new ComponentPaginatorBuilder()
+            var paginator = new LazyPaginatorBuilder()
                 .AddUser(ctx.User)
                 .WithPageFactory(GeneratePage)
-                .WithPageCount(totalPages)
+                .WithMaxPageIndex(totalPages - 1)
+                .WithFooter(PaginatorFooter.PageNumber)
                 .WithActionOnCancellation(ActionOnStop.DeleteMessage)
                 .WithActionOnTimeout(ActionOnStop.DisableInput)
                 .Build();
 
             await interactiveService.SendPaginatorAsync(paginator, ctx.Channel, TimeSpan.FromMinutes(5));
 
-            IPage GeneratePage(IComponentPaginator p)
+            PageBuilder GeneratePage(int page)
             {
-                var startIndex = p.CurrentPageIndex * usersPerPage;
-                var usersOnPage = blockedUsers.Skip(startIndex).Take(usersPerPage).ToList();
-
-                var containerComponents = new List<IMessageComponentBuilder>();
-
-                containerComponents.Add(new TextDisplayBuilder()
-                    .WithContent($"# TTS Blocked Users ({blockedUsers.Count} total)"));
-
-                containerComponents.Add(new SeparatorBuilder());
-
-                var lines = usersOnPage.Select((x, i) =>
+                var startIndex = page * usersPerPage;
+                var lines = blockedUsers.Skip(startIndex).Take(usersPerPage).Select((x, i) =>
                     $"`{startIndex + i + 1}.` <@{x.UserId}>");
 
-                containerComponents.Add(new TextDisplayBuilder()
-                    .WithContent(string.Join("\n", lines)));
-
-                containerComponents.Add(new SeparatorBuilder());
-
-                var navigationRow = new ActionRowBuilder()
-                    .AddPreviousButton(p, style: ButtonStyle.Secondary)
-                    .AddNextButton(p, style: ButtonStyle.Secondary)
-                    .AddStopButton(p);
-
-                containerComponents.Add(navigationRow);
-
-                containerComponents.Add(new TextDisplayBuilder()
-                    .WithContent($"Page {p.CurrentPageIndex + 1}/{p.PageCount}"));
-
-                var mainContainer = new ContainerBuilder()
-                    .WithComponents(containerComponents)
-                    .WithAccentColor(Mewdeko.OkColor);
-
-                var componentsV2 = new ComponentBuilderV2()
-                    .AddComponent(mainContainer);
-
                 return new PageBuilder()
-                    .WithComponents(componentsV2.Build())
-                    .WithAllowedMentions(AllowedMentions.None)
-                    .Build();
+                    .WithOkColor()
+                    .WithTitle(Strings.TtsBlockListTitle(ctx.Guild.Id, blockedUsers.Count))
+                    .WithDescription(string.Join("\n", lines));
             }
         }
 

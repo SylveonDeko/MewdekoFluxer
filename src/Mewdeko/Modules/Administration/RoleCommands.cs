@@ -2,8 +2,7 @@ using System.Net;
 using DataModel;
 using Discord.Commands;
 using Discord.Net;
-using Fergun.Interactive;
-using Fergun.Interactive.Pagination;
+using Mewdeko.Common.Interactive;
 using Humanizer;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;
@@ -263,9 +262,8 @@ public partial class Administration
                 var paginator = new LazyPaginatorBuilder()
                     .AddUser(ctx.User)
                     .WithPageFactory(PageFactory)
-                    .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+                    .WithFooter(PaginatorFooter.PageNumber)
                     .WithMaxPageIndex(rrs.Count - 1)
-                    .WithDefaultEmotes()
                     .WithActionOnCancellation(ActionOnStop.DeleteMessage)
                     .Build();
 

@@ -74,7 +74,6 @@
     <PackageReference Include="CodeHollow.FeedReader" Version="1.2.6"/>
     <PackageReference Include="CommandLineParser" Version="2.9.1"/>
     <PackageReference Include="CoreCLR-NCalc" Version="3.1.253"/>
-    <PackageReference Include="Fergun.Interactive" Version="1.9.2"/>
     <PackageReference Include="Figgle" Version="0.6.6"/>
     <PackageReference Include="Genius.NET" Version="4.0.1"/>
     <PackageReference Include="GScraper" Version="1.2.2"/>

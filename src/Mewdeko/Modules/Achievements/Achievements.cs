@@ -1,6 +1,5 @@
 using Discord.Commands;
-using Fergun.Interactive;
-using Fergun.Interactive.Pagination;
+using Mewdeko.Common.Interactive;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Achievements.Common;
 using Mewdeko.Modules.Achievements.Services;
@@ -949,7 +948,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
     {
         if (pages.Count == 1)
         {
-            await ctx.Channel.SendMessageAsync(embed: pages[0].GetEmbedBuilder().Build());
+            await ctx.Channel.SendMessageAsync(embed: pages[0].BuildEmbed());
             return;
         }
 
@@ -957,7 +956,6 @@ public class Achievements(AchievementViewService views, InteractiveService inter
             .AddUser(ctx.User)
             .WithPages(pages)
             .WithFooter(PaginatorFooter.None)
-            .WithDefaultEmotes()
             .WithActionOnCancellation(ActionOnStop.DeleteMessage)
             .Build();
         await interactive.SendPaginatorAsync(paginator, ctx.Channel, TimeSpan.FromMinutes(30));

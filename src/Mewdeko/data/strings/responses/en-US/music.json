@@ -71,6 +71,7 @@
   "music_queue_shuffled": "Queue has been shuffled!",
   "music_queue_title": "Queue - {0} tracks",
   "music_queue_too_short": "Not enough tracks in queue to shuffle (need at least 2).",
+  "music_queue_upcoming": "Upcoming Tracks",
   "music_reconnected": "Reconnected to voice channel and resumed playback at position ",
   "music_repeat_type": "Repeat type set to {0}",
   "music_resume": "Player has been resumed.",

@@ -6,8 +6,7 @@ using AngleSharp;
 using AngleSharp.Html.Dom;
 using Anilist4Net;
 using Discord.Commands;
-using Fergun.Interactive;
-using Fergun.Interactive.Pagination;
+using Mewdeko.Common.Interactive;
 using JikanDotNet;
 using MartineApiNet;
 using Mewdeko.Common.Attributes.TextCommands;
@@ -465,10 +464,8 @@ public partial class Searches
             var paginator = new LazyPaginatorBuilder()
                 .AddUser(ctx.User)
                 .WithPageFactory(PageFactory)
-                .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+                .WithFooter(PaginatorFooter.PageNumber)
                 .WithMaxPageIndex(result.Data.Count - 1)
-                .WithDefaultCanceledPage()
-                .WithDefaultEmotes()
                 .WithActionOnCancellation(ActionOnStop.DeleteMessage)
                 .Build();
             await service.SendPaginatorAsync(paginator, Context.Channel, TimeSpan.FromMinutes(60))
@@ -556,10 +553,8 @@ public partial class Searches
             var paginator = new LazyPaginatorBuilder()
                 .AddUser(ctx.User)
                 .WithPageFactory(PageFactory)
-                .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+                .WithFooter(PaginatorFooter.PageNumber)
                 .WithMaxPageIndex(result.Data.Count - 1)
-                .WithDefaultCanceledPage()
-                .WithDefaultEmotes()
                 .WithActionOnCancellation(ActionOnStop.DeleteMessage)
                 .Build();
             await msg.DeleteAsync().ConfigureAwait(false);

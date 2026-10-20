@@ -1,6 +1,5 @@
 using Discord.Commands;
-using Fergun.Interactive;
-using Fergun.Interactive.Pagination;
+using Mewdeko.Common.Interactive;
 using Humanizer;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;
@@ -344,7 +343,6 @@ public partial class Counting(
         var paginator = new StaticPaginatorBuilder()
             .WithUsers(ctx.User)
             .WithPages(pages)
-            .WithDefaultEmotes()
             .WithActionOnCancellation(ActionOnStop.DeleteMessage)
             .WithActionOnTimeout(ActionOnStop.DeleteMessage)
             .Build();

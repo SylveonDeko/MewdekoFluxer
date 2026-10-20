@@ -2,8 +2,7 @@ using System.Net.Http;
 using System.Text.Json;
 using DataModel;
 using Discord.Commands;
-using Fergun.Interactive;
-using Fergun.Interactive.Pagination;
+using Mewdeko.Common.Interactive;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;
 using Mewdeko.Modules.Chat_Triggers.Common;
@@ -191,8 +190,8 @@ public class ChatTriggers(
         var chatTriggers = await Service.GetChatTriggersFor(ctx.Guild?.Id);
 
         var paginator = new LazyPaginatorBuilder().AddUser(ctx.User).WithPageFactory(PageFactory)
-            .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
-            .WithMaxPageIndex(chatTriggers.Length / 20).WithDefaultEmotes()
+            .WithFooter(PaginatorFooter.PageNumber)
+            .WithMaxPageIndex(chatTriggers.Length / 20)
             .WithActionOnCancellation(ActionOnStop.DeleteMessage).Build();
 
         await serv.SendPaginatorAsync(paginator, Context.Channel, TimeSpan.FromMinutes(60))
@@ -241,8 +240,8 @@ public class ChatTriggers(
             var ordered = chatTriggers.GroupBy(cr => cr.Trigger).OrderBy(cr => cr.Key).ToList();
 
             var paginator = new LazyPaginatorBuilder().AddUser(ctx.User).WithPageFactory(PageFactory)
-                .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
-                .WithMaxPageIndex(chatTriggers.Length / 20).WithDefaultEmotes()
+                .WithFooter(PaginatorFooter.PageNumber)
+                .WithMaxPageIndex(chatTriggers.Length / 20)
                 .WithActionOnCancellation(ActionOnStop.DeleteMessage).Build();
 
             await serv.SendPaginatorAsync(paginator, Context.Channel, TimeSpan.FromMinutes(60))

@@ -4,8 +4,7 @@ using CommandLine;
 using Discord.Commands;
 using Discord.Net;
 using Discord.Rest;
-using Fergun.Interactive;
-using Fergun.Interactive.Pagination;
+using Mewdeko.Common.Interactive;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.ModuleBehaviors;
 using Mewdeko.Modules.Administration.Services;
@@ -209,44 +208,6 @@ public class HelpService : INService, IReadyExecutor
     }
 
     /// <summary>
-    ///     Builds the category select menu shown on the landing help menu.
-    /// </summary>
-    /// <param name="guild">The guild the help menu was executed in, may be null if in dm</param>
-    /// <param name="user">The user that executed the help menu</param>
-    /// <param name="descriptions">Whether the module lists per category are expanded</param>
-    /// <returns>A <see cref="ComponentBuilder" /> instance with the bots categories in it</returns>
-    public ComponentBuilder GetHelpComponents(IGuild? guild, IUser user, bool descriptions = true)
-    {
-        var guildId = guild?.Id ?? 0;
-        var compBuilder = new ComponentBuilder();
-        var selMenu = new SelectMenuBuilder()
-            .WithCustomId("helpcat")
-            .WithPlaceholder(genStrings.HelpSelectCategory(guildId));
-
-        foreach (var category in GetPopulatedCategories())
-        {
-            var modules = GetModulesInCategory(category);
-            selMenu.Options.Add(new SelectMenuOptionBuilder()
-                .WithLabel(GetCategoryName(category, guildId))
-                .WithDescription(genStrings.HelpCategoryCounts(guildId, modules.Count,
-                    modules.Sum(CountVisibleCommands)))
-                .WithValue(category));
-        }
-
-        compBuilder.WithSelectMenu(selMenu);
-
-        compBuilder.WithButton(genStrings.ToggleDescriptions(guildId),
-            $"toggle-descriptions:{descriptions},{user.Id}");
-        compBuilder.WithButton(genStrings.InviteMe(guildId), style: ButtonStyle.Link,
-            url:
-            "https://discord.com/oauth2/authorize?client_id=752236274261426212&scope=bot&permissions=66186303&scope=bot%20applications.commands");
-        compBuilder.WithButton(genStrings.Donatetext(guildId), style: ButtonStyle.Link,
-            url: "https://ko-fi.com/mewdeko");
-        return compBuilder;
-    }
-
-
-    /// <summary>
     ///     Builds the landing help embed listing the command categories.
     /// </summary>
     /// <param name="description">Whether each category is expanded into its module list</param>
@@ -296,71 +257,19 @@ public class HelpService : INService, IReadyExecutor
     }
 
     /// <summary>
-    ///     Builds the embed and components listing every module inside a category.
-    /// </summary>
-    /// <param name="category">The category key</param>
-    /// <param name="guild">The guild where the help menu was executed</param>
-    /// <param name="channel">The channel where the help menu was executed</param>
-    /// <param name="user">The user who executed the help menu</param>
-    /// <returns>A tuple containing an <see cref="EmbedBuilder" /> and <see cref="ComponentBuilder" /></returns>
-    public async Task<(EmbedBuilder Embed, ComponentBuilder Components)> GetCategoryEmbed(string category,
-        IGuild? guild, IMessageChannel channel, IUser user)
-    {
-        var guildId = guild?.Id ?? 0;
-        var modules = GetModulesInCategory(category);
-        var embed = new EmbedBuilder()
-            .WithOkColor()
-            .WithTitle(GetCategoryName(category, guildId))
-            .WithDescription(genStrings.HelpCategoryCounts(guildId, modules.Count,
-                modules.Sum(CountVisibleCommands)));
-
-        // A stale component from before a restart can name a category that no longer has modules, and Discord
-        // rejects a select menu with zero options, so fall back to the back button on its own.
-        if (modules.Count == 0)
-        {
-            return (embed.WithDescription(genStrings.ModuleNotFoundOrCantExec(guildId)),
-                new ComponentBuilder().WithButton(genStrings.HelpBack(guildId), "helpback:categories",
-                    ButtonStyle.Secondary));
-        }
-
-        var selMenu = new SelectMenuBuilder()
-            .WithCustomId($"helpmodule:{category}")
-            .WithPlaceholder(genStrings.HelpSelectModule(guildId));
-
-        foreach (var module in modules)
-        {
-            var count = CountVisibleCommands(module);
-            embed.AddField($"{await CheckEnabled(guild?.Id, channel, user, module.Name)} {module.Name}",
-                $">>> {GetModuleDescription(module.Name, guild) ?? genStrings.HelpCommandCount(guildId, count)}", true);
-            selMenu.Options.Add(new SelectMenuOptionBuilder()
-                .WithLabel(module.Name)
-                .WithDescription(genStrings.HelpCommandCount(guildId, count))
-                .WithValue(module.Name.ToLowerInvariant()));
-        }
-
-        var components = new ComponentBuilder()
-            .WithSelectMenu(selMenu)
-            .WithButton(genStrings.HelpBack(guildId), "helpback:categories", ButtonStyle.Secondary);
-
-        return (embed, components);
-    }
-
-    /// <summary>
-    ///     Builds the section index for a module, letting users jump straight to a submodule instead of paging
-    ///     through every command. Returns null when the module is small enough to list directly.
+    ///     Builds the section index for a module, listing its submodules so users can open one by name instead of
+    ///     paging through every command. Returns null when the module is small enough to list directly.
     /// </summary>
     /// <param name="moduleName">The top level module name</param>
     /// <param name="guild">The guild where the help menu was executed</param>
-    /// <returns>
-    ///     A tuple containing an <see cref="EmbedBuilder" /> and <see cref="ComponentBuilder" />, or null if the
-    ///     module should be listed directly
-    /// </returns>
-    public (EmbedBuilder Embed, ComponentBuilder Components)? GetModuleOverview(string moduleName, IGuild? guild)
+    /// <returns>The section index embed, or null if the module should be listed directly</returns>
+    public async Task<EmbedBuilder?> GetModuleOverview(string moduleName, IGuild? guild)
     {
         var guildId = guild?.Id ?? 0;
         if (!HasSectionIndex(moduleName))
             return null;
 
+        var prefix = await guildSettings.GetPrefix(guild);
         var commands = GetModuleCommands(moduleName);
         var sections = GroupBySubmodule(commands);
 
@@ -368,43 +277,39 @@ public class HelpService : INService, IReadyExecutor
             .WithOkColor()
             .WithTitle(moduleName)
             .WithDescription(genStrings.HelpModuleOverview(guildId,
-                GetModuleDescription(moduleName, guild) ?? genStrings.HelpCommandCount(guildId, commands.Count)));
-
-        var selMenu = new SelectMenuBuilder()
-            .WithCustomId($"helpsection:{moduleName.ToLowerInvariant()}")
-            .WithPlaceholder(genStrings.HelpSelectSection(guildId));
+                GetModuleDescription(moduleName, guild) ?? genStrings.HelpCommandCount(guildId, commands.Count),
+                prefix, moduleName.ToLowerInvariant()));
 
         foreach (var section in sections.Take(25))
-        {
             embed.AddField(section.Name, genStrings.HelpCommandCount(guildId, section.Commands.Count), true);
-            selMenu.Options.Add(new SelectMenuOptionBuilder()
-                .WithLabel(section.Name)
-                .WithDescription(genStrings.HelpCommandCount(guildId, section.Commands.Count))
-                .WithValue(section.Name.ToLowerInvariant()));
-        }
 
-        var components = new ComponentBuilder()
-            .WithSelectMenu(selMenu)
-            .WithButton(genStrings.HelpAllCommands(guildId), $"helpall:{moduleName.ToLowerInvariant()}")
-            .WithButton(genStrings.HelpSearchButton(guildId), $"helpsearch:{moduleName.ToLowerInvariant()}",
-                ButtonStyle.Secondary)
-            .WithButton(genStrings.HelpBack(guildId), $"helpback:modules:{GetCategoryFor(moduleName)}",
-                ButtonStyle.Secondary);
+        return embed;
+    }
 
-        return (embed, components);
+    /// <summary>
+    ///     Finds the submodule of a module whose name matches the input.
+    /// </summary>
+    /// <param name="moduleName">The top level module name</param>
+    /// <param name="input">The section name the user typed</param>
+    /// <returns>The matching section name, or null when none matches</returns>
+    public string? ResolveSection(string moduleName, string input)
+    {
+        return GroupBySubmodule(GetModuleCommands(moduleName))
+            .Select(s => s.Name)
+            .FirstOrDefault(n => n.Equals(input.Trim(), StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
     ///     Builds the paginator listing the commands of a module, optionally narrowed to a single section or
-    ///     filtered by a search term. Shared by the text and slash help entry points.
+    ///     filtered by a search term.
     /// </summary>
     /// <param name="moduleName">The top level module name</param>
     /// <param name="section">The submodule to restrict the listing to, or null for every command</param>
     /// <param name="filter">A search term matched against command aliases and descriptions, or null</param>
     /// <param name="guild">The guild where the help menu was executed</param>
     /// <param name="user">The user allowed to control the paginator</param>
-    /// <returns>A configured <see cref="ComponentPaginatorBuilder" />, or null when nothing matched</returns>
-    public async Task<ComponentPaginatorBuilder?> BuildCommandPaginator(string moduleName, string? section,
+    /// <returns>A configured <see cref="LazyPaginatorBuilder" />, or null when nothing matched</returns>
+    public async Task<LazyPaginatorBuilder?> BuildCommandPaginator(string moduleName, string? section,
         string? filter, IGuild? guild, IUser user)
     {
         var guildId = guild?.Id ?? 0;
@@ -437,29 +342,19 @@ public class HelpService : INService, IReadyExecutor
             ? string.IsNullOrWhiteSpace(section) ? moduleName : $"{moduleName} - {section}"
             : genStrings.HelpSearchResults(guildId, filter, moduleName);
 
-        // Going back has to land somewhere useful: modules with a section index return to it, the rest return to
-        // their category's module list.
-        var backId = HasSectionIndex(moduleName)
-            ? $"helpoverview:{moduleName.ToLowerInvariant()}"
-            : $"helpback:modules:{GetCategoryFor(moduleName)}";
-
-        return new ComponentPaginatorBuilder()
+        return new LazyPaginatorBuilder()
             .AddUser(user)
-            .WithPageCount(totalPages)
+            .WithMaxPageIndex(totalPages - 1)
             .WithPageFactory(PageFactory)
-            .WithActionOnCancellation(ActionOnStop.DeleteMessage)
-            // Back replaces the message with a nav embed while this paginator is still running, so a later timeout
-            // must not touch the message. Stop is safe because Back has already removed the stop button by then.
-            .WithActionOnTimeout(ActionOnStop.None);
+            .WithFooter(PaginatorFooter.PageNumber)
+            .WithActionOnCancellation(ActionOnStop.DeleteMessage);
 
-        IPage PageFactory(IComponentPaginator paginator)
+        PageBuilder PageFactory(int page)
         {
-            var page = paginator.CurrentPageIndex;
             var pageBuilder = new PageBuilder()
                 .WithOkColor()
                 .WithTitle(header)
-                .WithDescription(genStrings.HelpModuleListHint(guildId, prefix))
-                .WithFooter(genStrings.HelpPageOf(guildId, page + 1, totalPages));
+                .WithDescription(genStrings.HelpModuleListHint(guildId, prefix));
 
             var skipped = 0;
             var taken = 0;
@@ -484,16 +379,7 @@ public class HelpService : INService, IReadyExecutor
                     entries.Select(c => FormatCommandListEntry(c, prefix, guildId)));
             }
 
-            var components = new ComponentBuilder()
-                .AddFirstButton(paginator, emote: new Emoji("⏮"))
-                .AddPreviousButton(paginator, emote: new Emoji("◀"))
-                .AddJumpButton(paginator, emote: new Emoji("🔢"))
-                .AddNextButton(paginator, emote: new Emoji("▶"))
-                .AddLastButton(paginator, emote: new Emoji("⏭"))
-                .WithButton(genStrings.HelpBack(guildId), backId, ButtonStyle.Secondary, row: 1)
-                .AddStopButton(paginator, emote: new Emoji("🗑"), row: 1);
-
-            return pageBuilder.WithComponents(components.Build()).Build();
+            return pageBuilder;
         }
     }
 
@@ -783,14 +669,12 @@ public class HelpService : INService, IReadyExecutor
     /// </summary>
     /// <param name="com">The command in question</param>
     /// <param name="guild">The guild where this was executed</param>
-    /// <param name="user">The user who executed the command</param>
-    /// <returns>A tuple containing a <see cref="EmbedBuilder" /> and <see cref="ComponentBuilder" /></returns>
-    public async Task<(EmbedBuilder, ComponentBuilder)> GetCommandHelp(CommandInfo com, IGuild? guild, IGuildUser user)
+    /// <returns>The command help embed</returns>
+    public async Task<EmbedBuilder> GetCommandHelp(CommandInfo com, IGuild? guild)
     {
         var actualUrl = GenerateDocumentationUrl(com);
         if (com.Attributes.Any(x => x is HelpDisabled))
-            return (new EmbedBuilder().WithDescription(genStrings.HelpDisabled(guild?.Id ?? 0)),
-                new ComponentBuilder());
+            return new EmbedBuilder().WithDescription(genStrings.HelpDisabled(guild?.Id ?? 0));
 
         var prefix = await guildSettings.GetPrefix(guild);
 
@@ -815,13 +699,6 @@ public class HelpService : INService, IReadyExecutor
             em.AddField("Documentation", $"[Click here]({actualUrl})");
         if (attribute?.Seconds > 0)
             em.AddField("Cooldown", $"{attribute.Seconds} seconds");
-
-        var cb = new ComponentBuilder()
-            .WithButton(genStrings.HelpRunCmd(guild?.Id ?? 0), $"runcmd.{com.Aliases[0]}", ButtonStyle.Success);
-
-        if (user.GuildPermissions.Administrator)
-            cb.WithButton(genStrings.HelpPermenuLink(guild.Id), $"permenu_update.{com.Aliases[0]}", ButtonStyle
-                .Primary, Emote.Parse("<:IconPrivacySettings:845090111976636446>"));
 
         // Get command strings from YAML documentation
         var commandStrings = strings.GetCommandStrings(com.Name, guild?.Id);
@@ -889,20 +766,12 @@ public class HelpService : INService, IReadyExecutor
 
         var opt = ((MewdekoOptionsAttribute)com.Attributes.FirstOrDefault(x => x is MewdekoOptionsAttribute))
             ?.OptionType;
-        if (opt == null) return (em, cb);
+        if (opt == null) return em;
         var hs = GetCommandOptionHelp(opt);
         if (!string.IsNullOrWhiteSpace(hs))
             em.AddField(genStrings.Options(guild.Id), hs);
 
-        if (bss.Data.ShowInviteButton)
-            cb.WithButton(style: ButtonStyle.Link,
-                    url:
-                    "https://discord.com/oauth2/authorize?client_id=752236274261426212&permissions=8&response_type=code&redirect_uri=https%3A%2F%2Fmewdeko.tech&scope=bot%20applications.commands",
-                    label: "Invite Me!",
-                    emote: "<a:HaneMeow:968564817784877066>".ToIEmote())
-                .WithButton("Support Us!", style: ButtonStyle.Link, url: "https://ko-fi.com/Mewdeko");
-
-        return (em, cb);
+        return em;
     }
 
     private static string GetCommandOptionHelp(Type opt)

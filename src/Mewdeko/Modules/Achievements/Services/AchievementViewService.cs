@@ -1,8 +1,7 @@
 using System.IO;
 using System.Text;
 using DataModel;
-using Fergun.Interactive;
-using Fergun.Interactive.Pagination;
+using Mewdeko.Common.Interactive;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Modules.Achievements.Common;
@@ -341,7 +340,6 @@ public sealed class AchievementViewService : INService
             })
             .WithFooter(PaginatorFooter.None)
             .WithMaxPageIndex(Math.Max(0, (total - 1) / size))
-            .WithDefaultEmotes()
             .WithActionOnCancellation(ActionOnStop.DeleteMessage)
             .Build();
     }

@@ -907,6 +907,7 @@
   "overloads": "Overloads",
   "page": "page {0}",
   "page_num": "Page {0}",
+  "page_of": "Page {0}/{1}",
   "page_suffix": "Page {0}",
   "panels_list_error": "An error occurred while listing panels.",
   "parameters": "Parameters",

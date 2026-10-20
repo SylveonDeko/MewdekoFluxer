@@ -1,7 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 using Discord.Commands;
-using Fergun.Interactive;
-using Fergun.Interactive.Pagination;
+using Mewdeko.Common.Interactive;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;
 using Mewdeko.Modules.Giveaways.Services;
@@ -14,7 +13,7 @@ namespace Mewdeko.Modules.Giveaways;
 /// </summary>
 /// <param name="dbFactory">DB Provider for the bot.</param>
 /// <param name="servs">The service provider</param>
-/// <param name="interactiveService">Fergun.Interactive service for pagination</param>
+/// <param name="interactiveService">The service that runs reaction paginators</param>
 /// <param name="guildSettings">Guild configs.</param>
 public partial class Giveaways(
     IDataConnectionFactory dbFactory,
@@ -636,9 +635,8 @@ public partial class Giveaways(
         var paginator = new LazyPaginatorBuilder()
             .AddUser(ctx.User)
             .WithPageFactory(PageFactory)
-            .WithFooter(PaginatorFooter.PageNumber | PaginatorFooter.Users)
+            .WithFooter(PaginatorFooter.PageNumber)
             .WithMaxPageIndex(gways.Count() / 5)
-            .WithDefaultEmotes()
             .WithActionOnCancellation(ActionOnStop.DeleteMessage)
             .Build();
 
