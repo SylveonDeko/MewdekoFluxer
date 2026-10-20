@@ -152,6 +152,7 @@
   "poll_template_delete_no_permission": "You don't have permission to delete this template.",
   "poll_template_delete_retry": "Failed to delete template. Please try again.",
   "poll_template_delete_success": "Template **{0}** has been deleted.",
+  "poll_template_input_required": "Give the template as `name;question;option1;option2` with at least two options.",
   "poll_template_invalid": "Template has invalid configuration.",
   "poll_template_max_options": "A template cannot have more than 20 options.",
   "poll_template_min_options": "A template must have at least 2 options.",

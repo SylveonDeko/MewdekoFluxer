@@ -337,5 +337,97 @@ public partial class CoprMonitoring
                 await ctx.Channel.SendConfirmAsync(Strings.CoprDefaultMessageUpdated(ctx.Guild.Id));
             }
         }
+
+        /// <summary>
+        ///     Sets the notification template for any build status, including the ones without their own command.
+        /// </summary>
+        /// <param name="ownerProject">The COPR project in format owner/project.</param>
+        /// <param name="kind">The build status the template applies to, or default.</param>
+        /// <param name="message">The message or embed code. Use "-" to reset to default.</param>
+        /// <example>.coprtemplate linux4switch/l4s waiting %copr.emote% %copr.package% is waiting</example>
+        /// <example>.coprtemplate linux4switch/l4s forked -</example>
+        [Cmd]
+        [Aliases]
+        [RequireContext(ContextType.Guild)]
+        [UserPerm(GuildPermission.Administrator)]
+        public async Task CoprTemplate(string ownerProject, CoprTemplateKind kind, [Remainder] string message)
+        {
+            var parts = ownerProject.Split('/');
+            if (parts.Length != 2)
+            {
+                await ctx.Channel.SendErrorAsync(Strings.CoprInvalidFormat(ctx.Guild.Id), Config);
+                return;
+            }
+
+            var success = kind == CoprTemplateKind.Default
+                ? await Service.SetDefaultMessage(ctx.Guild.Id, parts[0], parts[1], message)
+                : await Service.SetStatusMessage(ctx.Guild.Id, parts[0], parts[1], (CoprBuildStatus)(int)kind,
+                    message);
+
+            if (!success)
+            {
+                await ctx.Channel.SendErrorAsync(Strings.CoprMonitorNotfound(ctx.Guild.Id, parts[0], parts[1]), Config);
+                return;
+            }
+
+            await ctx.Channel.SendConfirmAsync(message == "-"
+                ? Strings.CoprTemplateReset(ctx.Guild.Id, kind.ToString())
+                : Strings.CoprTemplateUpdated(ctx.Guild.Id, kind.ToString()));
+        }
+
+        /// <summary>
+        ///     Shows the stored notification template for a build status.
+        /// </summary>
+        /// <param name="ownerProject">The COPR project in format owner/project.</param>
+        /// <param name="kind">The build status to show the template for, or default.</param>
+        /// <example>.coprtemplateshow linux4switch/l4s failed</example>
+        [Cmd]
+        [Aliases]
+        [RequireContext(ContextType.Guild)]
+        [UserPerm(GuildPermission.Administrator)]
+        public async Task CoprTemplateShow(string ownerProject, CoprTemplateKind kind)
+        {
+            var parts = ownerProject.Split('/');
+            if (parts.Length != 2)
+            {
+                await ctx.Channel.SendErrorAsync(Strings.CoprInvalidFormat(ctx.Guild.Id), Config);
+                return;
+            }
+
+            var monitor = await Service.GetMonitor(ctx.Guild.Id, parts[0], parts[1]);
+            if (monitor == null)
+            {
+                await ctx.Channel.SendErrorAsync(Strings.CoprMonitorNotfound(ctx.Guild.Id, parts[0], parts[1]), Config);
+                return;
+            }
+
+            var template = kind switch
+            {
+                CoprTemplateKind.Failed => monitor.FailedMessage,
+                CoprTemplateKind.Succeeded => monitor.SucceededMessage,
+                CoprTemplateKind.Canceled => monitor.CanceledMessage,
+                CoprTemplateKind.Running => monitor.RunningMessage,
+                CoprTemplateKind.Pending => monitor.PendingMessage,
+                CoprTemplateKind.Skipped => monitor.SkippedMessage,
+                CoprTemplateKind.Starting => monitor.StartingMessage,
+                CoprTemplateKind.Importing => monitor.ImportingMessage,
+                CoprTemplateKind.Forked => monitor.ForkedMessage,
+                CoprTemplateKind.Waiting => monitor.WaitingMessage,
+                _ => monitor.DefaultMessage
+            };
+
+            if (string.IsNullOrWhiteSpace(template) || template == "-")
+            {
+                await ctx.Channel.SendConfirmAsync(Strings.CoprTemplateNone(ctx.Guild.Id, kind.ToString()));
+                return;
+            }
+
+            var embed = new EmbedBuilder()
+                .WithOkColor()
+                .WithTitle(Strings.CoprTemplateShowTitle(ctx.Guild.Id, parts[0], parts[1], kind.ToString()))
+                .WithDescription(Format.Code(template.TrimTo(4000), string.Empty));
+
+            await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        }
     }
 }

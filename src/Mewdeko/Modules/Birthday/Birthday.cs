@@ -343,5 +343,28 @@ public class Birthday : MewdekoModuleBase<BirthdayService>
         }
     }
 
+    /// <summary>
+    ///     Resets the birthday configuration to defaults.
+    /// </summary>
+    [Cmd]
+    [Aliases]
+    [RequireContext(ContextType.Guild)]
+    [UserPerm(GuildPermission.Administrator)]
+    public async Task BirthdayConfigReset()
+    {
+        await Service.UpdateBirthdayConfigAsync(ctx.Guild.Id, config =>
+        {
+            config.BirthdayChannelId = null;
+            config.BirthdayRoleId = null;
+            config.BirthdayMessage = null;
+            config.BirthdayPingRoleId = null;
+            config.BirthdayReminderDays = 0;
+            config.DefaultTimezone = "UTC";
+            config.EnabledFeatures = 0;
+        });
+
+        await ctx.Channel.SendConfirmAsync(Strings.BirthdayConfigReset(ctx.Guild.Id));
+    }
+
     #endregion
 }

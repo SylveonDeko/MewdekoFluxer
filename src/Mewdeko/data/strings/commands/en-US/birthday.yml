@@ -19,6 +19,11 @@ birthdayconfig:
     - ''
   desc: 'Views the current birthday configuration.'
   params: [ ]
+birthdayconfigreset:
+  args:
+    - ''
+  desc: 'Resets the birthday configuration to defaults.'
+  params: [ ]
 birthdaylist:
   args:
     - days

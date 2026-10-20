@@ -8,7 +8,9 @@ namespace Mewdeko.Modules.Confessions;
 ///     Module for managing confessions.
 /// </summary>
 /// <param name="guildSettings">The guild settings service</param>
-public class Confessions(GuildSettingsService guildSettings) : MewdekoModuleBase<ConfessionService>
+/// <param name="credentials">The bot credentials holding the confession report channel</param>
+public class Confessions(GuildSettingsService guildSettings, IBotCredentials credentials)
+    : MewdekoModuleBase<ConfessionService>
 {
     /// <summary>
     ///     Allows users to confess anonymously.
@@ -163,5 +165,44 @@ public class Confessions(GuildSettingsService guildSettings) : MewdekoModuleBase
             await Service.ToggleUserBlacklistAsync(ctx.Guild.Id, user.Id).ConfigureAwait(false);
             await ConfirmAsync(Strings.ConfessionsBlacklistedRemoved(ctx.Guild.Id, user.Mention));
         }
+    }
+
+    /// <summary>
+    ///     Reports a server for misuse of confessions.
+    /// </summary>
+    /// <param name="serverId">The ID of the server abusing confessions.</param>
+    /// <param name="how">How they are abusing confessions, with image links if possible.</param>
+    /// <example>.confessreport 1234567890 They are abusing confessions.</example>
+    [Cmd]
+    [Aliases]
+    public async Task ConfessReport(ulong serverId, [Remainder] string how)
+    {
+        var guildId = ctx.Guild?.Id;
+        var reportedGuild = await ((DiscordShardedClient)ctx.Client).Rest.GetGuildAsync(serverId).ConfigureAwait(false);
+        if (reportedGuild is null)
+        {
+            await ctx.Channel.SendErrorAsync(Strings.ConfessionsInvalidId(guildId), Config).ConfigureAwait(false);
+            return;
+        }
+
+        var channel =
+            await ((DiscordShardedClient)ctx.Client).Rest.GetChannelAsync(credentials.ConfessionReportChannelId)
+                .ConfigureAwait(false) as ITextChannel;
+        var eb = new EmbedBuilder().WithErrorColor().WithTitle(Strings.ConfessionsReportReceived(guildId))
+            .AddField(Strings.ConfessionsReport(guildId), how)
+            .AddField(Strings.ConfessionsReportUser(guildId), $"{ctx.User} | {ctx.User.Id}")
+            .AddField(Strings.ConfessionsServerId(guildId), serverId);
+        try
+        {
+            var invites = await reportedGuild.GetInvitesAsync().ConfigureAwait(false);
+            eb.AddField(Strings.ConfessionsServerInvite(guildId), invites.FirstOrDefault().Url);
+        }
+        catch
+        {
+            eb.AddField(Strings.ConfessionsServerInvite(guildId), Strings.ConfessionsMissingInvite(guildId));
+        }
+
+        await channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendErrorAsync(Strings.ConfessionsReportSent(guildId), Config).ConfigureAwait(false);
     }
 }

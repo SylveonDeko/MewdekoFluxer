@@ -166,3 +166,33 @@ coprdefaultmessage:
       name: message
       optional: false
       type: string
+coprtemplate:
+  args:
+    - 'ownerProject kind text'
+  desc: 'Sets the notification template for any build status, including starting, importing, forked and waiting which have no command of their own.'
+  params:
+    - desc: The COPR project in format owner/project.
+      name: ownerProject
+      optional: false
+      type: string
+    - desc: The build status the template applies to, or default.
+      name: kind
+      optional: false
+      type: CoprTemplateKind
+    - desc: The message or embed code. Use "-" to reset to default.
+      name: message
+      optional: false
+      type: string
+coprtemplateshow:
+  args:
+    - 'ownerProject kind'
+  desc: 'Shows the stored notification template for a build status.'
+  params:
+    - desc: The COPR project in format owner/project.
+      name: ownerProject
+      optional: false
+      type: string
+    - desc: The build status to show the template for, or default.
+      name: kind
+      optional: false
+      type: CoprTemplateKind

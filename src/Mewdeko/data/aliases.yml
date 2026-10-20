@@ -4358,3 +4358,28 @@ importmee6settings:
   - importmee6settings
 importundo:
   - importundo
+birthdayconfigreset:
+  - birthdayconfigreset
+  - bdaycfgreset
+clearserverrecover:
+  - clearserverrecover
+  - clearrecovery
+confessreport:
+  - confessreport
+  - reportconfessions
+coprtemplate:
+  - coprtemplate
+coprtemplateshow:
+  - coprtemplateshow
+polllist:
+  - polllist
+  - activepolls
+polltemplatecreate:
+  - polltemplatecreate
+  - ptcreate
+polltemplatedelete:
+  - polltemplatedelete
+  - ptdelete
+serverrecover:
+  - serverrecover
+  - serverrecovery

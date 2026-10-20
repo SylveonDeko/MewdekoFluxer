@@ -48,6 +48,11 @@ antipattern_PunishmentAction_IRole:
       name: role
       optional: false
       type: IRole
+clearserverrecover:
+  args:
+    - ''
+  desc: 'Clears the stored server recovery setup after asking for confirmation.'
+  params: [ ]
 patternadd:
   args:
     - '<pattern> [name] [checkUsername] [checkDisplayName]'
@@ -4427,6 +4432,11 @@ sargn_int_=_2:
       name: name
       optional: true
       type: string
+serverrecover:
+  args:
+    - ''
+  desc: 'Starts the server recovery setup for the owner, or recovers admin access with the recovery key and a 2FA code. Everything secret is exchanged in your DMs.'
+  params: [ ]
 setguildavatar:
   args:
     - text

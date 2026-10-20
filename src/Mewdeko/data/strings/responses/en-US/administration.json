@@ -212,6 +212,7 @@
   "self_assign_rem": "{0} has been removed from the list of self-assignable roles.",
   "self_assign_remove": "You no longer have {0} role.",
   "self_assign_success": "You now have {0} role.",
+  "server_recover_key_prompt": "Reply here with your recovery key.",
   "slowmode_disabled": "Slowmode disabled in {0}.",
   "slowmode_enabled_one_minute": "Slowmode enabled in {0} for 1 Minute.",
   "slowmode_max": "The max Discord allows for slowmode is 6 hours! Please try again with a lower value.",

@@ -176,3 +176,64 @@ public static class CoprExtensions
         };
     }
 }
+
+/// <summary>
+///     The notification template kinds a COPR monitor supports: one per build status plus the default fallback.
+/// </summary>
+public enum CoprTemplateKind
+{
+    /// <summary>
+    ///     Template used when a build fails.
+    /// </summary>
+    Failed = 0,
+
+    /// <summary>
+    ///     Template used when a build succeeds.
+    /// </summary>
+    Succeeded = 1,
+
+    /// <summary>
+    ///     Template used when a build is canceled.
+    /// </summary>
+    Canceled = 2,
+
+    /// <summary>
+    ///     Template used when a build is running.
+    /// </summary>
+    Running = 3,
+
+    /// <summary>
+    ///     Template used when a build is pending.
+    /// </summary>
+    Pending = 4,
+
+    /// <summary>
+    ///     Template used when a build is skipped.
+    /// </summary>
+    Skipped = 5,
+
+    /// <summary>
+    ///     Template used when a build is starting.
+    /// </summary>
+    Starting = 6,
+
+    /// <summary>
+    ///     Template used when a build is importing sources.
+    /// </summary>
+    Importing = 7,
+
+    /// <summary>
+    ///     Template used when a build is forked.
+    /// </summary>
+    Forked = 8,
+
+    /// <summary>
+    ///     Template used when a build is waiting.
+    /// </summary>
+    Waiting = 9,
+
+    /// <summary>
+    ///     Fallback template used for statuses without a specific template.
+    /// </summary>
+    Default = 100
+}

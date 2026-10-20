@@ -357,6 +357,11 @@ polldelete:
       name: pollId
       optional: false
       type: int
+polllist:
+  args:
+    - ''
+  desc: 'Lists the polls that are still open in the server.'
+  params: [ ]
 pollm:
   args:
     - input
@@ -381,6 +386,24 @@ polltemplate:
   desc: 'Creates a poll from a template.'
   params:
     - desc: The name of the template to use.
+      name: templateName
+      optional: false
+      type: string
+polltemplatecreate:
+  args:
+    - name;question;option1;option2
+  desc: 'Saves a reusable poll template from a name, a question and at least two options separated by semicolons.'
+  params:
+    - desc: 'The template in the format name;question;option1;option2.'
+      name: input
+      optional: false
+      type: string
+polltemplatedelete:
+  args:
+    - templateName
+  desc: 'Deletes a poll template.'
+  params:
+    - desc: The name of the template to delete.
       name: templateName
       optional: false
       type: string

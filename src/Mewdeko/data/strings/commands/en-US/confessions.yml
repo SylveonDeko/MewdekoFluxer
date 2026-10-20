@@ -146,6 +146,19 @@ confesslogchannel:
       name: channel
       optional: true
       type: ITextChannel
+confessreport:
+  args:
+    - 'serverId text'
+  desc: 'Reports a server for misuse of confessions.'
+  params:
+    - desc: 'The ID of the server abusing confessions.'
+      name: serverId
+      optional: false
+      type: ulong
+    - desc: 'How they are abusing confessions, with image links if possible.'
+      name: how
+      optional: false
+      type: string
 confessunblacklist:
   args:
     - user

@@ -297,6 +297,154 @@ public class PollCommands : MewdekoModuleBase<PollService>
         }
     }
 
+    /// <summary>
+    /// Lists the polls that are still open in the guild.
+    /// </summary>
+    [Cmd, Aliases]
+    [RequireContext(ContextType.Guild)]
+    public async Task PollList()
+    {
+        try
+        {
+            var polls = await Service.GetActivePollsAsync(ctx.Guild.Id);
+            if (polls.Count == 0)
+            {
+                await ErrorAsync(Strings.PollListNoActive(ctx.Guild.Id));
+                return;
+            }
+
+            var embed = new EmbedBuilder()
+                .WithTitle(Strings.PollActiveTitle(ctx.Guild.Id))
+                .WithOkColor()
+                .WithDescription(Strings.PollActivePollsFound(ctx.Guild.Id, polls.Count));
+
+            foreach (var poll in polls.Take(10))
+            {
+                var channel = await ctx.Guild.GetTextChannelAsync(poll.ChannelId);
+                var stats = await Service.GetPollStatsAsync(poll.Id);
+                var createdAt = ((DateTimeOffset)poll.CreatedAt).ToUnixTimeSeconds();
+
+                embed.AddField(poll.Question.TrimTo(50),
+                    $"{Strings.PollListChannelField(ctx.Guild.Id)} {channel?.Mention ?? $"<#{poll.ChannelId}>"}\n" +
+                    $"{Strings.PollListVotesField(ctx.Guild.Id)} {stats?.TotalVotes ?? 0}\n" +
+                    $"{Strings.PollListCreatedField(ctx.Guild.Id)} <t:{createdAt}:R>\n" +
+                    $"{Strings.PollListIdField(ctx.Guild.Id)} {poll.Id}",
+                    true);
+            }
+
+            if (polls.Count > 10)
+                embed.WithFooter(Strings.PollShowingActive(ctx.Guild.Id, polls.Count));
+
+            await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to list active polls in guild {GuildId}", ctx.Guild.Id);
+            await ErrorAsync(Strings.PollListRetry(ctx.Guild.Id));
+        }
+    }
+
+    /// <summary>
+    /// Saves a reusable poll template.
+    /// </summary>
+    /// <param name="input">The template in format: "name;question;option1;option2;..."</param>
+    [Cmd, Aliases]
+    [RequireContext(ContextType.Guild)]
+    [UserPerm(GuildPermission.ManageMessages)]
+    public async Task PollTemplateCreate([Remainder] string input)
+    {
+        var parts = input.Split(';');
+        if (parts.Length < 3 || string.IsNullOrWhiteSpace(parts[0]) || string.IsNullOrWhiteSpace(parts[1]))
+        {
+            await ErrorAsync(Strings.PollTemplateInputRequired(ctx.Guild.Id));
+            return;
+        }
+
+        var options = parts.Skip(2)
+            .Select(p => p.Trim())
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Select(p => new PollOptionData
+            {
+                Text = p
+            })
+            .ToList();
+
+        switch (options.Count)
+        {
+            case < 2:
+                await ErrorAsync(Strings.PollTemplateMinOptions(ctx.Guild.Id));
+                return;
+            case > PollMessageService.MaxOptions:
+                await ErrorAsync(Strings.PollTemplateMaxOptions(ctx.Guild.Id));
+                return;
+        }
+
+        try
+        {
+            var template = await templateService.CreateTemplateAsync(ctx.Guild.Id, ctx.User.Id, parts[0].Trim(),
+                parts[1].Trim(), options, DefaultSettings());
+
+            var embed = new EmbedBuilder()
+                .WithTitle(Strings.PollTemplateCreatedTitle(ctx.Guild.Id))
+                .WithOkColor()
+                .WithDescription(Strings.PollTemplateCreatedDesc(ctx.Guild.Id, template.Name))
+                .AddField(Strings.PollFieldQuestion(ctx.Guild.Id), template.Question)
+                .AddField(Strings.PollFieldOptions(ctx.Guild.Id), string.Join(", ", options.Select(o => o.Text)));
+
+            await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        }
+        catch (InvalidOperationException ex)
+        {
+            await ErrorAsync(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to create template '{TemplateName}' in guild {GuildId}", parts[0].Trim(),
+                ctx.Guild.Id);
+            await ErrorAsync(Strings.PollTemplateCreateRetry(ctx.Guild.Id));
+        }
+    }
+
+    /// <summary>
+    /// Deletes a poll template.
+    /// </summary>
+    /// <param name="templateName">The name of the template to delete.</param>
+    [Cmd, Aliases]
+    [RequireContext(ContextType.Guild)]
+    [UserPerm(GuildPermission.ManageMessages)]
+    public async Task PollTemplateDelete([Remainder] string templateName)
+    {
+        try
+        {
+            var template = await templateService.GetTemplateByNameAsync(ctx.Guild.Id, templateName);
+            if (template == null)
+            {
+                await ErrorAsync(Strings.PollTemplateNotFound(ctx.Guild.Id));
+                return;
+            }
+
+            if (template.CreatorId != ctx.User.Id && !((IGuildUser)ctx.User).GuildPermissions.ManageMessages)
+            {
+                await ErrorAsync(Strings.PollTemplateDeleteNoPermission(ctx.Guild.Id));
+                return;
+            }
+
+            if (!await templateService.DeleteTemplateAsync(template.Id, ctx.User.Id))
+            {
+                await ErrorAsync(Strings.PollDeleteFailed(ctx.Guild.Id));
+                return;
+            }
+
+            await ConfirmAsync(Strings.PollTemplateDeleteSuccess(ctx.Guild.Id, templateName));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to delete template '{TemplateName}' in guild {GuildId}", templateName,
+                ctx.Guild.Id);
+            await ErrorAsync(Strings.PollTemplateDeleteRetry(ctx.Guild.Id));
+        }
+    }
+
     private static PollSettings DefaultSettings()
     {
         return new PollSettings
