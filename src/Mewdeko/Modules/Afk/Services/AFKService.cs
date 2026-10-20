@@ -705,11 +705,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
                             .WithOkColor()
                             .Build();
 
-                        var components = config.Data.ShowInviteButton
-                            ? new ComponentBuilder().WithButton(style: ButtonStyle.Link, url: config.Data.SupportServer,
-                                label: "Invite Me!", emote: config.Data.SuccessEmote.ToIEmote()).Build()
-                            : null;
-                        var sentMsg = await msg.Channel.SendMessageAsync(embed: embed, components: components);
+                        var sentMsg = await msg.Channel.SendMessageAsync(embed: embed);
                         if (afkDeleteTime > 0) sentMsg.DeleteAfter(afkDeleteTime);
                     }
                     else

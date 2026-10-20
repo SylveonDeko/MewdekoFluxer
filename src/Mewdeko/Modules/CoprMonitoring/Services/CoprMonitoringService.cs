@@ -869,13 +869,8 @@ public class CoprMonitoringService : INService, IReadyExecutor, IDisposable
             .WithTimestamp(DateTimeOffset.UtcNow)
             .Build();
 
-        var components = config.Data.ShowInviteButton
-            ? new ComponentBuilder()
-                .WithButton(style: ButtonStyle.Link, url: buildUrl, label: "View Build")
-                .Build()
-            : null;
 
-        await channel.SendMessageAsync(embed: embed, components: components);
+        await channel.SendMessageAsync(embed: embed);
     }
 
     /// <summary>

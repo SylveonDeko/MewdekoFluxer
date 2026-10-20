@@ -233,15 +233,11 @@ public class HighlightsService : INService, IReadyExecutor, IUnloadableService
                             $"[{x.Content?.TrimTo(100)}]({message.GetJumpLink()}){(x == message ? "***" : "")}" +
                             $" {(x.Embeds?.Count >= 1 || x.Attachments?.Count >= 1 ? " [has embed]" : "")}")));
 
-                var cb = new ComponentBuilder()
-                    .WithButton("Jump to message", style: ButtonStyle.Link,
-                        emote: Emote.Parse("<:MessageLink:778925231506587668>"), url: message.GetJumpLink());
-
                 try
                 {
                     await user.SendMessageAsync(
                         $"In {Format.Bold(channel.Guild.Name)} {channel.Mention} you were mentioned with highlight word {i.Word}",
-                        embed: eb.Build(), components: cb.Build()).ConfigureAwait(false);
+                        embed: eb.Build()).ConfigureAwait(false);
                     usersDMd.Add(user.Id);
                     collector.Feature("highlight", channel.GuildId);
                 }
