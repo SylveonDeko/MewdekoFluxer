@@ -152,7 +152,7 @@ public partial class Utility
                 else if (pingReply.Status == IPStatus.NoResources)
                 {
                     await ctx.Channel.SendErrorAsync(
-                        "There is insufficent network resources to complete this request. (How the fuck did you stumble on this???)",
+                        Strings.PingNoResources(ctx.Guild.Id),
                         Config);
                     typing.Dispose();
                     break;
@@ -160,7 +160,7 @@ public partial class Utility
                 else if (pingReply.Status == IPStatus.BadOption)
                 {
                     await ctx.Channel.SendErrorAsync(
-                        "Ping failed due to a bad option. (Again, how the fuck did you stumble on this???)", Config);
+                        Strings.PingBadOption(ctx.Guild.Id), Config);
                     typing.Dispose();
                     break;
                 }

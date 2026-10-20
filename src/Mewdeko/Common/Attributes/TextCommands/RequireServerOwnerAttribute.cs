@@ -1,4 +1,6 @@
 ﻿using Discord.Commands;
+using Mewdeko.Services.Strings;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Mewdeko.Common.Attributes.TextCommands;
 
@@ -14,7 +16,8 @@ public class RequireServerOwnerAttribute : PreconditionAttribute
         if (context.User is IGuildUser guildUser)
             return Task.FromResult(guildUser.Guild.OwnerId == context.User.Id
                 ? PreconditionResult.FromSuccess()
-                : PreconditionResult.FromError("This command can only be used by the server owner."));
+                : PreconditionResult.FromError(services.GetRequiredService<GeneratedBotStrings>()
+                    .ServerOwnerOnly(guildUser.Guild.Id)));
 
         return Task.FromResult(PreconditionResult.FromError("This command can only be used in a guild."));
     }

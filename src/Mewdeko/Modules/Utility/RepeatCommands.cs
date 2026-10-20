@@ -924,7 +924,7 @@ public partial class Utility
                         var verb = actionLower == "add"
                             ? Strings.StickyForumTagsAdded(ctx.Guild.Id)
                             : Strings.StickyForumTagsRemoved(ctx.Guild.Id);
-                        await ReplyConfirmAsync($"{verb} {tagIds.Count} {typeLower} tag(s) for sticky #{index}")
+                        await ReplyConfirmAsync(Strings.StickyForumTagsApplied(ctx.Guild.Id, verb, tagIds.Count, typeLower, index))
                             .ConfigureAwait(false);
                     }
                     else

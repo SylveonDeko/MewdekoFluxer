@@ -461,8 +461,8 @@ public partial class Moderation : MewdekoModule
                     .WithThumbnailUrl(user.RealAvatarUrl().ToString())
                     .WithTitle(Strings.WarnedBy(ctx.Guild.Id, ctx.User))
                     .WithCurrentTimestamp()
-                    .WithDescription(
-                        $"Username: {user.Username}#{user.Discriminator}\nID of Warned User: {user.Id}\nWarn Number: {warnings}\nPunishment: {punishaction} {punishtime}\n\nReason: {reason}\n\n[Click Here For Context](https://discord.com/channels/{ctx.Message.GetJumpUrl()})"));
+                    .WithDescription(Strings.WarnLogDescription(ctx.Guild.Id, user.Username, user.Discriminator,
+                        user.Id, warnings, punishaction, punishtime, reason, ctx.Message.GetJumpUrl())));
             }
         }
 

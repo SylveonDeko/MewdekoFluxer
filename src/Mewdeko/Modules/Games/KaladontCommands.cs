@@ -213,7 +213,7 @@ public partial class Games
             }
             else
             {
-                await ReplyErrorAsync("No Kaladont game is running in this channel.").ConfigureAwait(false);
+                await ReplyErrorAsync(Strings.KaladontNotRunning(ctx.Guild.Id)).ConfigureAwait(false);
             }
         }
 

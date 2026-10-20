@@ -370,10 +370,10 @@ public partial class Utility(
     public async Task Invite()
     {
         var eb = new EmbedBuilder()
-            .AddField("Invite Link",
+            .AddField(Strings.InviteFieldInvite(ctx.Guild?.Id ?? 0),
                 "[Invite Link](https://discord.com/oauth2/authorize?client_id=752236274261426212&scope=bot&permissions=66186303)")
-            .AddField("Website/Docs", "https://mewdeko.tech")
-            .AddField("Support Server", config.Data.SupportServer)
+            .AddField(Strings.InviteFieldWebsite(ctx.Guild?.Id ?? 0), "https://mewdeko.tech")
+            .AddField(Strings.InviteFieldSupport(ctx.Guild?.Id ?? 0), config.Data.SupportServer)
             .WithOkColor();
         await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
     }
@@ -1871,9 +1871,8 @@ public partial class Utility(
 
             await ctx.Channel
                 .SendConfirmAsync(
-                    $"Bot Ping {(int)sw.Elapsed.TotalMilliseconds}ms" +
-                    $"\nBot Latency {((DiscordShardedClient)ctx.Client).Latency}ms" +
-                    $"\nRedis Ping {redisPing.Nanoseconds}ns")
+                    Strings.PingResult(ctx.Guild.Id, (int)sw.Elapsed.TotalMilliseconds,
+                        ((DiscordShardedClient)ctx.Client).Latency, redisPing.Nanoseconds))
                 .ConfigureAwait(false);
         }
         finally

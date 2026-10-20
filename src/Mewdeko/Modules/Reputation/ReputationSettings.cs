@@ -525,7 +525,7 @@ public partial class Reputation
             if (target.ToLower() == "all")
             {
                 var confirmed = await PromptUserConfirmAsync(
-                    "Are you sure you want to reset ALL reputation data for this server? This cannot be undone!",
+                    Strings.RepResetAllConfirm(ctx.Guild.Id),
                     ctx.User.Id);
                 if (!confirmed)
                 {

@@ -40,7 +40,7 @@ public partial class Searches
             }
             catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
             {
-                await ReplyAsync("Seems like that Pokémon wasn't found. Please try again with a different query!")
+                await ReplyAsync(Strings.PokemonNotFound(ctx.Guild?.Id ?? 0))
                     .ConfigureAwait(false);
                 return;
             }

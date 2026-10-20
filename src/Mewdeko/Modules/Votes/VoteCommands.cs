@@ -114,7 +114,7 @@ public class Vote(InteractiveService interactivity) : MewdekoModuleBase<VoteServ
             if (!added.Item1)
             {
                 await ctx.Channel.SendErrorAsync(
-                    $"Adding vote role failed for the following reason:\n{Format.Code(added.Item2)}", Config);
+                    Strings.VoteRoleAddFailed(ctx.Guild.Id, Format.Code(added.Item2)), Config);
             }
             else
             {
@@ -128,7 +128,7 @@ public class Vote(InteractiveService interactivity) : MewdekoModuleBase<VoteServ
             if (!added.Item1)
             {
                 await ctx.Channel.SendErrorAsync(
-                    $"Adding vote role failed for the following reason:\n{Format.Code(added.Item2)}", Config);
+                    Strings.VoteRoleAddFailed(ctx.Guild.Id, Format.Code(added.Item2)), Config);
             }
             else
             {
