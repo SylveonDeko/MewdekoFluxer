@@ -248,12 +248,12 @@ public class TwitchCommands : MewdekoModuleBase<TwitchService>
     public async Task TwitchLinks()
     {
         var links = await Service.GetAllLinksAsync(ctx.Guild.Id).ConfigureAwait(false);
-        var description = links.Count == 0
-            ? Strings.TwitchLinksEmpty(ctx.Guild.Id)
-            : string.Join("\n", links.Select(l =>
-                Strings.TwitchLinkEntry(ctx.Guild.Id, $"<@{l.DiscordUserId}>", l.TwitchUsername)));
+        List<string> lines = links.Count == 0
+            ? [Strings.TwitchLinksEmpty(ctx.Guild.Id)]
+            : links.Select(l =>
+                Strings.TwitchLinkEntry(ctx.Guild.Id, $"<@{l.DiscordUserId}>", l.TwitchUsername)).ToList();
 
-        await SendListAsync(Strings.TwitchLinksTitle(ctx.Guild.Id), description).ConfigureAwait(false);
+        await SendListAsync(Strings.TwitchLinksTitle(ctx.Guild.Id), lines).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -316,14 +316,14 @@ public class TwitchCommands : MewdekoModuleBase<TwitchService>
     public async Task TwitchCommandList()
     {
         var commands = await Service.GetCustomCommandsAsync(ctx.Guild.Id).ConfigureAwait(false);
-        var description = commands.Count == 0
-            ? Strings.TwitchCommandsEmpty(ctx.Guild.Id)
-            : string.Join("\n", commands.Select(c =>
+        List<string> lines = commands.Count == 0
+            ? [Strings.TwitchCommandsEmpty(ctx.Guild.Id)]
+            : commands.Select(c =>
                 Strings.TwitchCommandEntry(ctx.Guild.Id, c.Name,
                     ((TwitchCommandPermission)c.PermissionLevel).ToString(),
-                    c.CooldownSeconds, c.UseCount)));
+                    c.CooldownSeconds, c.UseCount)).ToList();
 
-        await SendListAsync(Strings.TwitchCommandsTitle(ctx.Guild.Id), description).ConfigureAwait(false);
+        await SendListAsync(Strings.TwitchCommandsTitle(ctx.Guild.Id), lines).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -350,11 +350,11 @@ public class TwitchCommands : MewdekoModuleBase<TwitchService>
     public async Task TwitchCounterList()
     {
         var counters = await Service.GetCountersAsync(ctx.Guild.Id).ConfigureAwait(false);
-        var description = counters.Count == 0
-            ? Strings.TwitchCountersEmpty(ctx.Guild.Id)
-            : string.Join("\n", counters.Select(c => Strings.TwitchCounterEntry(ctx.Guild.Id, c.Name, c.Value)));
+        List<string> lines = counters.Count == 0
+            ? [Strings.TwitchCountersEmpty(ctx.Guild.Id)]
+            : counters.Select(c => Strings.TwitchCounterEntry(ctx.Guild.Id, c.Name, c.Value)).ToList();
 
-        await SendListAsync(Strings.TwitchCountersTitle(ctx.Guild.Id), description).ConfigureAwait(false);
+        await SendListAsync(Strings.TwitchCountersTitle(ctx.Guild.Id), lines).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -456,14 +456,14 @@ public class TwitchCommands : MewdekoModuleBase<TwitchService>
     public async Task TwitchTimerList()
     {
         var timers = await Service.GetTimersAsync(ctx.Guild.Id).ConfigureAwait(false);
-        var description = timers.Count == 0
-            ? Strings.TwitchTimersEmpty(ctx.Guild.Id)
-            : string.Join("\n", timers.Select(t => Strings.TwitchTimerEntry(ctx.Guild.Id, t.Name, t.IntervalMinutes,
+        List<string> lines = timers.Count == 0
+            ? [Strings.TwitchTimersEmpty(ctx.Guild.Id)]
+            : timers.Select(t => Strings.TwitchTimerEntry(ctx.Guild.Id, t.Name, t.IntervalMinutes,
                 t.MinChatMessages,
                 t.OnlineOnly ? Strings.TwitchTimerOnlineOnly(ctx.Guild.Id) : Strings.TwitchTimerAlways(ctx.Guild.Id),
-                t.Enabled ? Strings.TwitchTimerEnabled(ctx.Guild.Id) : Strings.TwitchTimerDisabled(ctx.Guild.Id))));
+                t.Enabled ? Strings.TwitchTimerEnabled(ctx.Guild.Id) : Strings.TwitchTimerDisabled(ctx.Guild.Id))).ToList();
 
-        await SendListAsync(Strings.TwitchTimersTitle(ctx.Guild.Id), description).ConfigureAwait(false);
+        await SendListAsync(Strings.TwitchTimersTitle(ctx.Guild.Id), lines).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -677,13 +677,13 @@ public class TwitchCommands : MewdekoModuleBase<TwitchService>
     public async Task TwitchRoleSyncList()
     {
         var mappings = await Service.GetRoleSyncMappingsAsync(ctx.Guild.Id).ConfigureAwait(false);
-        var description = mappings.Count == 0
-            ? Strings.TwitchRolesyncEmpty(ctx.Guild.Id)
-            : string.Join("\n", mappings.Select(m =>
+        List<string> lines = mappings.Count == 0
+            ? [Strings.TwitchRolesyncEmpty(ctx.Guild.Id)]
+            : mappings.Select(m =>
                 Strings.TwitchRolesyncEntry(ctx.Guild.Id, ((TwitchPermissionLevel)m.PermissionLevel).ToString(),
-                    $"<@&{m.RoleId}>")));
+                    $"<@&{m.RoleId}>")).ToList();
 
-        await SendListAsync(Strings.TwitchRolesyncTitle(ctx.Guild.Id), description).ConfigureAwait(false);
+        await SendListAsync(Strings.TwitchRolesyncTitle(ctx.Guild.Id), lines).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -729,13 +729,13 @@ public class TwitchCommands : MewdekoModuleBase<TwitchService>
     public async Task TwitchRedemptionList()
     {
         var actions = await Service.GetRedemptionActionsAsync(ctx.Guild.Id).ConfigureAwait(false);
-        var description = actions.Count == 0
-            ? Strings.TwitchRedemptionsEmpty(ctx.Guild.Id)
-            : string.Join("\n", actions.Select(a => Strings.TwitchRedemptionEntry(ctx.Guild.Id, a.RewardTitle,
+        List<string> lines = actions.Count == 0
+            ? [Strings.TwitchRedemptionsEmpty(ctx.Guild.Id)]
+            : actions.Select(a => Strings.TwitchRedemptionEntry(ctx.Guild.Id, a.RewardTitle,
                 a.DiscordChannelId.HasValue ? $"<#{a.DiscordChannelId.Value}>" : "-",
-                string.IsNullOrWhiteSpace(a.TwitchResponse) ? "-" : Strings.Yes(ctx.Guild.Id))));
+                string.IsNullOrWhiteSpace(a.TwitchResponse) ? "-" : Strings.Yes(ctx.Guild.Id))).ToList();
 
-        await SendListAsync(Strings.TwitchRedemptionsTitle(ctx.Guild.Id), description).ConfigureAwait(false);
+        await SendListAsync(Strings.TwitchRedemptionsTitle(ctx.Guild.Id), lines).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -777,12 +777,12 @@ public class TwitchCommands : MewdekoModuleBase<TwitchService>
     public async Task TwitchRaidTargetList()
     {
         var targets = await Service.GetRaidTargetsAsync(ctx.Guild.Id).ConfigureAwait(false);
-        var description = targets.Count == 0
-            ? Strings.TwitchRaidtargetsEmpty(ctx.Guild.Id)
-            : string.Join("\n", targets.Select(t => Strings.TwitchRaidtargetEntry(ctx.Guild.Id, t.TwitchLogin,
-                string.IsNullOrWhiteSpace(t.Note) ? "-" : t.Note)));
+        List<string> lines = targets.Count == 0
+            ? [Strings.TwitchRaidtargetsEmpty(ctx.Guild.Id)]
+            : targets.Select(t => Strings.TwitchRaidtargetEntry(ctx.Guild.Id, t.TwitchLogin,
+                string.IsNullOrWhiteSpace(t.Note) ? "-" : t.Note)).ToList();
 
-        await SendListAsync(Strings.TwitchRaidtargetsTitle(ctx.Guild.Id), description).ConfigureAwait(false);
+        await SendListAsync(Strings.TwitchRaidtargetsTitle(ctx.Guild.Id), lines).ConfigureAwait(false);
     }
 
     private async Task SetTimerStateAsync(string name, bool enabled)
@@ -801,9 +801,29 @@ public class TwitchCommands : MewdekoModuleBase<TwitchService>
             await ErrorAsync(failure ?? Strings.TwitchNotSet(ctx.Guild.Id)).ConfigureAwait(false);
     }
 
-    private async Task SendListAsync(string title, string description)
+    private async Task SendListAsync(string title, List<string> lines)
     {
-        var embed = new EmbedBuilder().WithOkColor().WithTitle(title).WithDescription(description);
-        await ctx.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+        const int perPage = 10;
+        var totalPages = Math.Max(1, (int)Math.Ceiling(lines.Count / (double)perPage));
+
+        var paginator = new LazyPaginatorBuilder()
+            .AddUser(ctx.User)
+            .WithPageFactory(GeneratePage)
+            .WithMaxPageIndex(totalPages - 1)
+            .WithFooter(PaginatorFooter.PageNumber)
+            .WithActionOnCancellation(ActionOnStop.DeleteMessage)
+            .WithActionOnTimeout(ActionOnStop.DisableInput)
+            .Build();
+
+        await Interactive.SendPaginatorAsync(paginator, ctx.Channel, TimeSpan.FromMinutes(5)).ConfigureAwait(false);
+        return;
+
+        PageBuilder GeneratePage(int page)
+        {
+            return new PageBuilder()
+                .WithOkColor()
+                .WithTitle(title)
+                .WithDescription(string.Join('\n', lines.Skip(page * perPage).Take(perPage)));
+        }
     }
 }
