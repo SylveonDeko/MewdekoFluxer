@@ -456,7 +456,6 @@ public class TicketController : Controller
                 panel,
                 request.Label,
                 request.Emoji,
-                request.Style,
                 request.OpenMessageJson,
                 request.ModalJson,
                 request.ChannelFormat,
@@ -471,14 +470,13 @@ public class TicketController : Controller
                 request.DefaultPriority);
 
             if (button == null)
-                return BadRequest("This panel has no room for another component. Discord allows 25 per message.");
+                return BadRequest("This panel has no room for another ticket type. A panel holds at most 20 reactions.");
 
             return Ok(new
             {
                 button.Id,
                 button.Label,
                 button.CustomId,
-                button.Style,
                 button.Emoji
             });
         }
@@ -516,7 +514,6 @@ public class TicketController : Controller
             {
                 button.Id,
                 button.Label,
-                button.Style,
                 button.Emoji,
                 button.CustomId,
                 button.ChannelNameFormat,
@@ -575,7 +572,6 @@ public class TicketController : Controller
 
             if (request.Label != null) settings["label"] = request.Label;
             if (request.Emoji != null) settings["emoji"] = request.Emoji;
-            if (request.Style.HasValue) settings["style"] = (int)request.Style.Value;
             if (request.CategoryId.HasValue)
                 settings["categoryId"] = request.CategoryId.Value == 0 ? null : request.CategoryId.Value;
             if (request.ArchiveCategoryId.HasValue)
@@ -739,7 +735,7 @@ public class TicketController : Controller
                 request.FirstOptionEmoji);
 
             if (menu == null)
-                return BadRequest("This panel has no room for a select menu. A menu takes 5 of the 25 component slots Discord allows.");
+                return BadRequest("This panel has no room for a select menu. A panel holds at most 20 reactions.");
 
             return Ok(new
             {

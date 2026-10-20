@@ -255,10 +255,10 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
             var embed = new EmbedBuilder()
                 .WithTitle(Strings.SelectMenuSetup(ctx.Guild.Id))
                 .WithDescription(Strings.TicketInfoPrompt(ctx.Guild.Id))
-                .AddField("1. Placeholder", "The text shown when no option is selected")
-                .AddField("2. First Option Label", "The text shown for the first option")
+                .AddField("1. Placeholder", "The heading shown above this group of options on the panel")
+                .AddField("2. First Option Label", "The name shown beside the first option reaction")
                 .AddField("3. First Option Description", "Optional description for the first option")
-                .AddField("4. First Option Emoji", "Optional emoji for the first option")
+                .AddField("4. First Option Emoji", "Optional emoji members react with, numbered if skipped")
                 .WithFooter("Type your response for #1 (Placeholder)")
                 .WithOkColor();
 
@@ -304,6 +304,12 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                     label,
                     description,
                     emoji);
+
+                if (menu == null)
+                {
+                    await ctx.Channel.SendErrorAsync(Strings.TicketPanelFull(ctx.Guild.Id), Config);
+                    return;
+                }
 
                 var confirmEmbed = new EmbedBuilder()
                     .WithTitle(Strings.SelectMenuCreated(ctx.Guild.Id))
@@ -352,12 +358,18 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
 
             try
             {
-                await Service.AddSelectOptionAsync(
+                var option = await Service.AddSelectOptionAsync(
                     menu,
                     label,
-                    $"option_{Guid.NewGuid():N}", // Generate unique value
+                    $"option_{Guid.NewGuid():N}",
                     description,
                     emoji);
+
+                if (option == null)
+                {
+                    await ctx.Channel.SendErrorAsync(Strings.TicketPanelFull(ctx.Guild.Id), Config);
+                    return;
+                }
 
                 var embed = new EmbedBuilder()
                     .WithTitle(Strings.OptionAdded(ctx.Guild.Id))
@@ -533,7 +545,7 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
             if (panel.PanelButtons?.Any() == true)
             {
                 var buttonInfo = string.Join("\n", panel.PanelButtons.Select(b =>
-                    $"• {b.Label} (ID: {b.Id}) - Style: {b.Style}"));
+                    $"• {b.Label} (ID: {b.Id})"));
                 embed.AddField("Button Details", buttonInfo);
             }
 
@@ -611,7 +623,7 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
             var embed = new EmbedBuilder()
                 .WithTitle(Strings.ButtonInformation(ctx.Guild.Id))
                 .AddField("Label", button.Label, true)
-                .AddField("Style", button.Style, true)
+                .AddField("Emoji", string.IsNullOrEmpty(button.Emoji) ? "Auto" : button.Emoji, true)
                 .AddField("Save Transcripts", button.SaveTranscript, true)
                 .AddField("Max Active Tickets", button.MaxActiveTickets, true)
                 .AddField("Auto Close Time",
@@ -655,12 +667,12 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
         }
 
         /// <summary>
-        ///     Sets the title for a ticket creation modal
+        ///     Sets the title shown above the questions asked in a ticket opened with a button
         /// </summary>
         /// <param name="buttonId">The ID of the button to configure</param>
-        /// <param name="title">The title to display on the modal</param>
+        /// <param name="title">The title to show above each question</param>
         /// <remarks>
-        ///     When a user clicks this button, they will see a modal with this title.
+        ///     When a member opens a ticket with this button, the bot asks the questions in the new ticket channel.
         ///     The default title is "Create Ticket" if none is set.
         /// </remarks>
         [Cmd]
@@ -676,33 +688,9 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                 return;
             }
 
-            // Get or create modal config
-            var modalConfig = new ModalConfiguration();
-            if (!string.IsNullOrWhiteSpace(button.ModalJson))
-            {
-                try
-                {
-                    modalConfig = JsonSerializer.Deserialize<ModalConfiguration>(button.ModalJson);
-                }
-                catch
-                {
-                    // If old format, try to preserve fields
-                    try
-                    {
-                        modalConfig.Fields =
-                            JsonSerializer.Deserialize<Dictionary<string, ModalFieldConfig>>(button.ModalJson);
-                    }
-                    catch
-                    {
-                        modalConfig.Fields = new Dictionary<string, ModalFieldConfig>();
-                    }
-                }
-            }
-
-            // Update title
+            var modalConfig = ParseQuestions(button.ModalJson);
             modalConfig.Title = title;
 
-            // Update button
             await Service.UpdateButtonSettingsAsync(ctx.Guild, buttonId, new Dictionary<string, object>
             {
                 {
@@ -714,17 +702,16 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
         }
 
         /// <summary>
-        ///     Adds a field to the ticket creation modal
+        ///     Adds a question to the ones asked when a ticket is opened with a button
         /// </summary>
         /// <param name="buttonId">The ID of the button to configure</param>
-        /// <param name="label">The label for the field</param>
+        /// <param name="label">The question to ask</param>
         /// <param name="fieldConfig">Optional configuration options</param>
         /// <remarks>
         ///     Configuration options (comma-separated):
-        ///     - paragraph: Makes the field multi-line
-        ///     - optional: Makes the field not required
-        ///     - min:X: Sets minimum length (0-4000)
-        ///     - max:X: Sets maximum length (0-4000)
+        ///     - optional: Lets the member skip the question by replying skip
+        ///     - min:X: Sets minimum answer length (0-4000)
+        ///     - max:X: Sets maximum answer length (0-4000)
         /// </remarks>
         [Cmd]
         [Aliases]
@@ -739,35 +726,12 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                 return;
             }
 
-            // Get or create modal config
-            var modalConfig = new ModalConfiguration();
-            if (!string.IsNullOrWhiteSpace(button.ModalJson))
-            {
-                try
-                {
-                    modalConfig = JsonSerializer.Deserialize<ModalConfiguration>(button.ModalJson);
-                }
-                catch
-                {
-                    // If old format, try to preserve fields
-                    try
-                    {
-                        modalConfig.Fields =
-                            JsonSerializer.Deserialize<Dictionary<string, ModalFieldConfig>>(button.ModalJson);
-                    }
-                    catch
-                    {
-                        modalConfig.Fields = new Dictionary<string, ModalFieldConfig>();
-                    }
-                }
-            }
+            var modalConfig = ParseQuestions(button.ModalJson);
 
-            // Process optional field config
             var fieldSettings = new ModalFieldConfig
             {
                 Label = label,
-                Style = 1, // Default to short style
-                Required = true, // Default to required
+                Required = true,
                 MinLength = 1,
                 MaxLength = 1000
             };
@@ -782,9 +746,6 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                 {
                     switch (option)
                     {
-                        case "paragraph":
-                            fieldSettings.Style = 2;
-                            break;
                         case "optional":
                             fieldSettings.Required = false;
                             break;
@@ -800,11 +761,9 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                 }
             }
 
-            // Add or update field
             var fieldId = label.ToLower().Replace(" ", "_");
             modalConfig.Fields[fieldId] = fieldSettings;
 
-            // Update button
             await Service.UpdateButtonSettingsAsync(ctx.Guild, buttonId, new Dictionary<string, object>
             {
                 {
@@ -816,7 +775,6 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                 .WithTitle(Strings.ModalFieldAdded(ctx.Guild.Id))
                 .WithDescription(Strings.ModalFieldAddedSuccess(ctx.Guild.Id, label))
                 .AddField("Field ID", fieldId, true)
-                .AddField("Style", fieldSettings.Style == 2 ? "Paragraph" : "Short", true)
                 .AddField("Required", fieldSettings.Required, true)
                 .AddField("Length Limits",
                     $"Min: {fieldSettings.MinLength ?? 0}, Max: {fieldSettings.MaxLength ?? 4000}",
@@ -827,7 +785,7 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
         }
 
         /// <summary>
-        ///     Removes a field from a ticket creation modal
+        ///     Removes a question from the ones asked when a ticket is opened with a button
         /// </summary>
         [Cmd]
         [Aliases]
@@ -848,20 +806,17 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                 return;
             }
 
-            var modalFields = JsonSerializer.Deserialize<Dictionary<string, ModalFieldConfig>>(button.ModalJson);
-            if (!modalFields.ContainsKey(fieldId))
+            var modalConfig = ParseQuestions(button.ModalJson);
+            if (!modalConfig.Fields.Remove(fieldId))
             {
                 await ctx.Channel.SendErrorAsync(Strings.FieldNotFoundInModal(ctx.Guild.Id), Config);
                 return;
             }
 
-            modalFields.Remove(fieldId);
-
-            // Update button
             await Service.UpdateButtonSettingsAsync(ctx.Guild, buttonId, new Dictionary<string, object>
             {
                 {
-                    "modalJson", modalFields.Any() ? JsonSerializer.Serialize(modalFields) : null
+                    "modalJson", modalConfig.Fields.Any() ? JsonSerializer.Serialize(modalConfig) : null
                 }
             });
 
@@ -869,7 +824,7 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
         }
 
         /// <summary>
-        ///     Lists all fields in a ticket creation modal
+        ///     Lists the questions asked when a ticket is opened with a button
         /// </summary>
         [Cmd]
         [Aliases]
@@ -890,22 +845,31 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                 return;
             }
 
-            var modalFields = JsonSerializer.Deserialize<Dictionary<string, ModalFieldConfig>>(button.ModalJson);
-
             var embed = new EmbedBuilder()
                 .WithTitle(Strings.ModalFieldsForButton(ctx.Guild.Id, button.Label))
                 .WithOkColor();
 
-            foreach (var (fieldId, config) in modalFields)
+            foreach (var (fieldId, config) in ParseQuestions(button.ModalJson).Fields)
             {
                 embed.AddField(fieldId,
                     $"Label: {config.Label}\n" +
-                    $"Style: {(config.Style == 2 ? "Paragraph" : "Short")}\n" +
                     $"Required: {config.Required}\n" +
                     $"Length: {config.MinLength ?? 0}-{config.MaxLength ?? 4000}");
             }
 
             await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        }
+
+        private static ModalConfiguration ParseQuestions(string? json)
+        {
+            try
+            {
+                return ModalConfiguration.Parse(json);
+            }
+            catch (JsonException)
+            {
+                return new ModalConfiguration();
+            }
         }
 
 
@@ -916,8 +880,8 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
         /// <remarks>
         ///     Shows detailed information about a panel's buttons and select menus, including:
         ///     - Component IDs and custom IDs
-        ///     - Labels and styles
-        ///     - Modal and custom message configurations
+        ///     - Labels and emoji
+        ///     - Question and custom message configurations
         ///     - Category and role settings
         /// </remarks>
         [Cmd]
@@ -942,9 +906,9 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                     {
                         buttonText.AppendLine($"**Button ID: {button.Id}**")
                             .AppendLine($"└ Label: {button.Label}")
-                            .AppendLine($"└ Style: {button.Style}")
+                            .AppendLine($"└ Emoji: {(string.IsNullOrEmpty(button.Emoji) ? "Auto" : button.Emoji)}")
                             .AppendLine($"└ Custom ID: {button.CustomId}")
-                            .AppendLine($"└ Has Modal: {(button.HasModal ? "Yes" : "No")}")
+                            .AppendLine($"└ Has Questions: {(button.HasModal ? "Yes" : "No")}")
                             .AppendLine($"└ Has Custom Open Message: {(button.HasCustomOpenMessage ? "Yes" : "No")}")
                             .AppendLine(
                                 $"└ Category: {(button.CategoryId.HasValue ? $"<#{button.CategoryId}>" : "None")}")
@@ -976,7 +940,7 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                                 .AppendLine($"  └ Label: {option.Label}")
                                 .AppendLine($"  └ Value: {option.Value}")
                                 .AppendLine($"  └ Description: {option.Description}")
-                                .AppendLine($"  └ Has Modal: {(option.HasModal ? "Yes" : "No")}")
+                                .AppendLine($"  └ Has Questions: {(option.HasModal ? "Yes" : "No")}")
                                 .AppendLine(
                                     $"  └ Has Custom Open Message: {(option.HasCustomOpenMessage ? "Yes" : "No")}")
                                 .AppendLine(
@@ -1062,7 +1026,6 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                             foreach (var button in panel.Buttons)
                             {
                                 fieldBuilder.AppendLine($"• ID: {button.Id} | Label: {button.Label}")
-                                    .AppendLine($"  Style: {button.Style}")
                                     .AppendLine(
                                         $"  Category: {(button.CategoryId.HasValue ? $"<#{button.CategoryId}>" : "None")}")
                                     .AppendLine(

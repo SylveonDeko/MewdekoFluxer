@@ -2,7 +2,7 @@ addmodalfield:
   args:
     - '<buttonId> <label> [fieldConfig]'
     - number text
-  desc: 'Adds a field to the ticket creation modal'
+  desc: 'Adds a question asked in the new ticket channel when a ticket is opened with a button'
   params:
     - desc: 'The ID of the button to configure'
       name: buttonId
@@ -20,7 +20,7 @@ addmodalfield_int_string_=:
   args:
     - '<buttonId> <label> [fieldConfig]'
     - number text
-  desc: 'Adds a field to the ticket creation modal'
+  desc: 'Adds a question asked in the new ticket channel when a ticket is opened with a button'
   params:
     - desc: 'The ID of the button to configure'
       name: buttonId
@@ -38,7 +38,7 @@ addmodalfield_int_string_=_1:
   args:
     - '<buttonId> <label> [fieldConfig]'
     - number text
-  desc: 'Adds a field to the ticket creation modal'
+  desc: 'Adds a question asked in the new ticket channel when a ticket is opened with a button'
   params:
     - desc: 'The ID of the button to configure'
       name: buttonId
@@ -56,7 +56,7 @@ addmodalfield_int_string_=_2:
   args:
     - '<buttonId> <label> [fieldConfig]'
     - number text
-  desc: 'Adds a field to the ticket creation modal'
+  desc: 'Adds a question asked in the new ticket channel when a ticket is opened with a button'
   params:
     - desc: 'The ID of the button to configure'
       name: buttonId
@@ -74,7 +74,7 @@ addmodalfield_int_string_=_3:
   args:
     - '<buttonId> <label> [fieldConfig]'
     - number text
-  desc: 'Adds a field to the ticket creation modal'
+  desc: 'Adds a question asked in the new ticket channel when a ticket is opened with a button'
   params:
     - desc: 'The ID of the button to configure'
       name: buttonId
@@ -92,7 +92,7 @@ addmodalfield_int_string_=_4:
   args:
     - '<buttonId> <label> [fieldConfig]'
     - number text
-  desc: 'Adds a field to the ticket creation modal'
+  desc: 'Adds a question asked in the new ticket channel when a ticket is opened with a button'
   params:
     - desc: 'The ID of the button to configure'
       name: buttonId
@@ -429,55 +429,55 @@ deleteselectoption:
 listmodalfields:
   args:
     - number
-  desc: 'Lists all fields in a ticket creation modal'
+  desc: 'Lists the questions asked when a ticket is opened with a button'
   params:
     - &ref_277
-      desc: 'Lists all fields in a ticket creation modal'
+      desc: 'Lists the questions asked when a ticket is opened with a button'
       name: buttonId
       optional: false
       type: int
 listmodalfields_int:
   args:
     - number
-  desc: 'Lists all fields in a ticket creation modal'
+  desc: 'Lists the questions asked when a ticket is opened with a button'
   params:
-    - desc: 'Lists all fields in a ticket creation modal'
+    - desc: 'Lists the questions asked when a ticket is opened with a button'
       name: buttonId
       optional: false
       type: int
 listmodalfields_int_1:
   args:
     - number
-  desc: 'Lists all fields in a ticket creation modal'
+  desc: 'Lists the questions asked when a ticket is opened with a button'
   params:
-    - desc: 'Lists all fields in a ticket creation modal'
+    - desc: 'Lists the questions asked when a ticket is opened with a button'
       name: buttonId
       optional: false
       type: int
 listmodalfields_int_2:
   args:
     - number
-  desc: 'Lists all fields in a ticket creation modal'
+  desc: 'Lists the questions asked when a ticket is opened with a button'
   params:
-    - desc: 'Lists all fields in a ticket creation modal'
+    - desc: 'Lists the questions asked when a ticket is opened with a button'
       name: buttonId
       optional: false
       type: int
 listmodalfields_int_3:
   args:
     - number
-  desc: 'Lists all fields in a ticket creation modal'
+  desc: 'Lists the questions asked when a ticket is opened with a button'
   params:
-    - desc: 'Lists all fields in a ticket creation modal'
+    - desc: 'Lists the questions asked when a ticket is opened with a button'
       name: buttonId
       optional: false
       type: int
 listmodalfields_int_4:
   args:
     - number
-  desc: 'Lists all fields in a ticket creation modal'
+  desc: 'Lists the questions asked when a ticket is opened with a button'
   params:
-    - desc: 'Lists all fields in a ticket creation modal'
+    - desc: 'Lists the questions asked when a ticket is opened with a button'
       name: buttonId
       optional: false
       type: int
@@ -638,79 +638,79 @@ recreatepanel:
 removemodalfield:
   args:
     - number text
-  desc: 'Removes a field from a ticket creation modal'
+  desc: 'Removes a question asked when a ticket is opened with a button'
   params:
-    - desc: 'Removes a field from a ticket creation modal'
+    - desc: 'Removes a question asked when a ticket is opened with a button'
       name: buttonId
       optional: false
       type: int
     - &ref_401
-      desc: 'Removes a field from a ticket creation modal'
+      desc: 'Removes a question asked when a ticket is opened with a button'
       name: fieldId
       optional: false
       type: string
 removemodalfield_int_string:
   args:
     - number text
-  desc: 'Removes a field from a ticket creation modal'
+  desc: 'Removes a question asked when a ticket is opened with a button'
   params:
-    - desc: 'Removes a field from a ticket creation modal'
+    - desc: 'Removes a question asked when a ticket is opened with a button'
       name: buttonId
       optional: false
       type: int
-    - desc: 'Removes a field from a ticket creation modal'
+    - desc: 'Removes a question asked when a ticket is opened with a button'
       name: fieldId
       optional: false
       type: string
 removemodalfield_int_string_1:
   args:
     - number text
-  desc: 'Removes a field from a ticket creation modal'
+  desc: 'Removes a question asked when a ticket is opened with a button'
   params:
-    - desc: 'Removes a field from a ticket creation modal'
+    - desc: 'Removes a question asked when a ticket is opened with a button'
       name: buttonId
       optional: false
       type: int
-    - desc: 'Removes a field from a ticket creation modal'
+    - desc: 'Removes a question asked when a ticket is opened with a button'
       name: fieldId
       optional: false
       type: string
 removemodalfield_int_string_2:
   args:
     - number text
-  desc: 'Removes a field from a ticket creation modal'
+  desc: 'Removes a question asked when a ticket is opened with a button'
   params:
-    - desc: 'Removes a field from a ticket creation modal'
+    - desc: 'Removes a question asked when a ticket is opened with a button'
       name: buttonId
       optional: false
       type: int
-    - desc: 'Removes a field from a ticket creation modal'
+    - desc: 'Removes a question asked when a ticket is opened with a button'
       name: fieldId
       optional: false
       type: string
 removemodalfield_int_string_3:
   args:
     - number text
-  desc: 'Removes a field from a ticket creation modal'
+  desc: 'Removes a question asked when a ticket is opened with a button'
   params:
-    - desc: 'Removes a field from a ticket creation modal'
+    - desc: 'Removes a question asked when a ticket is opened with a button'
       name: buttonId
       optional: false
       type: int
-    - desc: 'Removes a field from a ticket creation modal'
+    - desc: 'Removes a question asked when a ticket is opened with a button'
       name: fieldId
       optional: false
       type: string
 removemodalfield_int_string_4:
   args:
     - number text
-  desc: 'Removes a field from a ticket creation modal'
+  desc: 'Removes a question asked when a ticket is opened with a button'
   params:
-    - desc: 'Removes a field from a ticket creation modal'
+    - desc: 'Removes a question asked when a ticket is opened with a button'
       name: buttonId
       optional: false
       type: int
-    - desc: 'Removes a field from a ticket creation modal'
+    - desc: 'Removes a question asked when a ticket is opened with a button'
       name: fieldId
       optional: false
       type: string
@@ -883,79 +883,79 @@ setautoclose_int_int_4:
 setmodaltitle:
   args:
     - number text
-  desc: 'Sets the title for a ticket creation modal'
+  desc: 'Sets the title shown above the questions asked when a ticket is opened with a button'
   params:
     - desc: 'The ID of the button to configure'
       name: buttonId
       optional: false
       type: int
     - &ref_506
-      desc: 'The title to display on the modal'
+      desc: 'The title to show above each question'
       name: title
       optional: false
       type: string
 setmodaltitle_int_string:
   args:
     - number text
-  desc: 'Sets the title for a ticket creation modal'
+  desc: 'Sets the title shown above the questions asked when a ticket is opened with a button'
   params:
     - desc: 'The ID of the button to configure'
       name: buttonId
       optional: false
       type: int
-    - desc: 'The title to display on the modal'
+    - desc: 'The title to show above each question'
       name: title
       optional: false
       type: string
 setmodaltitle_int_string_1:
   args:
     - number text
-  desc: 'Sets the title for a ticket creation modal'
+  desc: 'Sets the title shown above the questions asked when a ticket is opened with a button'
   params:
     - desc: 'The ID of the button to configure'
       name: buttonId
       optional: false
       type: int
-    - desc: 'The title to display on the modal'
+    - desc: 'The title to show above each question'
       name: title
       optional: false
       type: string
 setmodaltitle_int_string_2:
   args:
     - number text
-  desc: 'Sets the title for a ticket creation modal'
+  desc: 'Sets the title shown above the questions asked when a ticket is opened with a button'
   params:
     - desc: 'The ID of the button to configure'
       name: buttonId
       optional: false
       type: int
-    - desc: 'The title to display on the modal'
+    - desc: 'The title to show above each question'
       name: title
       optional: false
       type: string
 setmodaltitle_int_string_3:
   args:
     - number text
-  desc: 'Sets the title for a ticket creation modal'
+  desc: 'Sets the title shown above the questions asked when a ticket is opened with a button'
   params:
     - desc: 'The ID of the button to configure'
       name: buttonId
       optional: false
       type: int
-    - desc: 'The title to display on the modal'
+    - desc: 'The title to show above each question'
       name: title
       optional: false
       type: string
 setmodaltitle_int_string_4:
   args:
     - number text
-  desc: 'Sets the title for a ticket creation modal'
+  desc: 'Sets the title shown above the questions asked when a ticket is opened with a button'
   params:
     - desc: 'The ID of the button to configure'
       name: buttonId
       optional: false
       type: int
-    - desc: 'The title to display on the modal'
+    - desc: 'The title to show above each question'
       name: title
       optional: false
       type: string
@@ -1042,7 +1042,7 @@ setpaneltranscripts_ulong_bool_4:
 setplaceholder:
   args:
     - text text
-  desc: 'Updates the placeholder text for a select menu'
+  desc: 'Updates the heading shown above a select menu options on the panel'
   params:
     - desc: 'The ID of the menu'
       name: menuId
@@ -1056,7 +1056,7 @@ setplaceholder:
 setplaceholder_string_string:
   args:
     - text text
-  desc: 'Updates the placeholder text for a select menu'
+  desc: 'Updates the heading shown above a select menu options on the panel'
   params:
     - desc: 'The ID of the menu'
       name: menuId
@@ -1069,7 +1069,7 @@ setplaceholder_string_string:
 setplaceholder_string_string_1:
   args:
     - text text
-  desc: 'Updates the placeholder text for a select menu'
+  desc: 'Updates the heading shown above a select menu options on the panel'
   params:
     - desc: 'The ID of the menu'
       name: menuId
@@ -1082,7 +1082,7 @@ setplaceholder_string_string_1:
 setplaceholder_string_string_2:
   args:
     - text text
-  desc: 'Updates the placeholder text for a select menu'
+  desc: 'Updates the heading shown above a select menu options on the panel'
   params:
     - desc: 'The ID of the menu'
       name: menuId
@@ -1095,7 +1095,7 @@ setplaceholder_string_string_2:
 setplaceholder_string_string_3:
   args:
     - text text
-  desc: 'Updates the placeholder text for a select menu'
+  desc: 'Updates the heading shown above a select menu options on the panel'
   params:
     - desc: 'The ID of the menu'
       name: menuId
@@ -1108,7 +1108,7 @@ setplaceholder_string_string_3:
 setplaceholder_string_string_4:
   args:
     - text text
-  desc: 'Updates the placeholder text for a select menu'
+  desc: 'Updates the heading shown above a select menu options on the panel'
   params:
     - desc: 'The ID of the menu'
       name: menuId
@@ -1205,89 +1205,73 @@ setresponsetime_int_int_4:
       type: int
 ticketaddbutton:
   args:
-    - '<panelId> <label> [style] [emoji]'
+    - '<panelId> <label> [emoji]'
     - panelid text
-  desc: 'Adds a button to an existing ticket panel.'
+  desc: 'Adds a ticket type to an existing panel. Members open it by reacting with the emoji.'
   params:
-    - desc: 'Adds a button to an existing ticket panel.'
+    - desc: 'Adds a ticket type to an existing panel. Members open it by reacting with the emoji.'
       name: panelId
       optional: false
       type: ulong
-    - desc: 'Adds a button to an existing ticket panel.'
+    - desc: 'Adds a ticket type to an existing panel. Members open it by reacting with the emoji.'
       name: label
       optional: false
       type: string
-    - desc: 'Adds a button to an existing ticket panel.'
-      name: style
-      optional: true
-      type: buttonstyle
-    - desc: 'Adds a button to an existing ticket panel.'
+    - desc: 'Adds a ticket type to an existing panel. Members open it by reacting with the emoji.'
       name: emoji
       optional: true
       type: string
 ticketaddbutton_ulong_string_=_=:
   args:
-    - '<panelId> <label> [style] [emoji]'
+    - '<panelId> <label> [emoji]'
     - panelid text
-  desc: 'Adds a button to an existing ticket panel.'
+  desc: 'Adds a ticket type to an existing panel. Members open it by reacting with the emoji.'
   params:
-    - desc: 'Adds a button to an existing ticket panel.'
+    - desc: 'Adds a ticket type to an existing panel. Members open it by reacting with the emoji.'
       name: panelId
       optional: false
       type: ulong
-    - desc: 'Adds a button to an existing ticket panel.'
+    - desc: 'Adds a ticket type to an existing panel. Members open it by reacting with the emoji.'
       name: label
       optional: false
       type: string
-    - desc: 'Adds a button to an existing ticket panel.'
-      name: style
-      optional: true
-      type: buttonstyle
-    - desc: 'Adds a button to an existing ticket panel.'
+    - desc: 'Adds a ticket type to an existing panel. Members open it by reacting with the emoji.'
       name: emoji
       optional: true
       type: string
 ticketaddbutton_ulong_string_=_=_1:
   args:
-    - '<panelId> <label> [style] [emoji]'
+    - '<panelId> <label> [emoji]'
     - panelid text
-  desc: 'Adds a button to an existing ticket panel.'
+  desc: 'Adds a ticket type to an existing panel. Members open it by reacting with the emoji.'
   params:
-    - desc: 'Adds a button to an existing ticket panel.'
+    - desc: 'Adds a ticket type to an existing panel. Members open it by reacting with the emoji.'
       name: panelId
       optional: false
       type: ulong
-    - desc: 'Adds a button to an existing ticket panel.'
+    - desc: 'Adds a ticket type to an existing panel. Members open it by reacting with the emoji.'
       name: label
       optional: false
       type: string
-    - desc: 'Adds a button to an existing ticket panel.'
-      name: style
-      optional: true
-      type: buttonstyle
-    - desc: 'Adds a button to an existing ticket panel.'
+    - desc: 'Adds a ticket type to an existing panel. Members open it by reacting with the emoji.'
       name: emoji
       optional: true
       type: string
 ticketaddbutton_ulong_string_=_=_2:
   args:
-    - '<panelId> <label> [style] [emoji]'
+    - '<panelId> <label> [emoji]'
     - panelid text
-  desc: 'Adds a button to an existing ticket panel.'
+  desc: 'Adds a ticket type to an existing panel. Members open it by reacting with the emoji.'
   params:
-    - desc: 'Adds a button to an existing ticket panel.'
+    - desc: 'Adds a ticket type to an existing panel. Members open it by reacting with the emoji.'
       name: panelId
       optional: false
       type: ulong
-    - desc: 'Adds a button to an existing ticket panel.'
+    - desc: 'Adds a ticket type to an existing panel. Members open it by reacting with the emoji.'
       name: label
       optional: false
       type: string
-    - desc: 'Adds a button to an existing ticket panel.'
-      name: style
-      optional: true
-      type: buttonstyle
-    - desc: 'Adds a button to an existing ticket panel.'
+    - desc: 'Adds a ticket type to an existing panel. Members open it by reacting with the emoji.'
       name: emoji
       optional: true
       type: string

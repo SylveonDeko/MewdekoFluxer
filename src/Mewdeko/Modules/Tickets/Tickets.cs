@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using System.Text.Json;
 using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Tickets.Common;
@@ -33,17 +32,7 @@ public partial class Tickets(ILogger<Tickets> logger) : MewdekoModuleBase<Ticket
                 switch (response)
                 {
                     case "preview":
-                        // Show default panel preview
-                        var defaultEmbed = new
-                        {
-                            title = "Support Tickets",
-                            description = "Click a button below to create a ticket",
-                            color = "blue"
-                        };
-                        await Service.PreviewPanelAsync(channel, JsonSerializer.Serialize(new[]
-                        {
-                            defaultEmbed
-                        }));
+                        await Service.PreviewPanelAsync(channel, Service.GetDefaultPanelJson(ctx.Guild.Id));
                         return;
 
                     case "create":
@@ -91,14 +80,13 @@ public partial class Tickets(ILogger<Tickets> logger) : MewdekoModuleBase<Ticket
     }
 
     /// <summary>
-    ///     Adds a button to an existing ticket panel.
+    ///     Adds a ticket type to an existing panel. Members open it by reacting with the emoji.
     /// </summary>
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task TicketAddButton(ulong panelId, string label, ButtonStyle style = ButtonStyle.Primary,
-        string? emoji = null)
+    public async Task TicketAddButton(ulong panelId, string label, string? emoji = null)
     {
         var panel = await Service.GetPanelAsync(panelId);
         if (panel == null || panel.GuildId != ctx.Guild.Id)
@@ -107,7 +95,13 @@ public partial class Tickets(ILogger<Tickets> logger) : MewdekoModuleBase<Ticket
             return;
         }
 
-        await Service.AddButtonAsync(panel, label, emoji, style);
+        var button = await Service.AddButtonAsync(panel, label, emoji);
+        if (button == null)
+        {
+            await ctx.Channel.SendErrorAsync(Strings.TicketPanelFull(ctx.Guild.Id), Config);
+            return;
+        }
+
         await ctx.Channel.SendConfirmAsync(Strings.TicketButtonAdded(ctx.Guild.Id, label, panelId));
     }
 

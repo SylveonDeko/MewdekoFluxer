@@ -22,8 +22,20 @@ namespace Mewdeko.Modules.Tickets.Services;
 /// </summary>
 public class TicketService : INService
 {
-    private const string ClaimButtonId = "ticket_claim";
-    private const string CloseButtonId = "ticket_close";
+    private const string ClaimEmoji = "🤝";
+    private const string CloseEmoji = "🔒";
+    private const int MaxPanelEntries = 20;
+    private const int MaxQuestionAttempts = 3;
+
+    private static readonly string[] NumberEmojis =
+    [
+        "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟",
+        "🇦", "🇧", "🇨", "🇩", "🇪", "🇫", "🇬", "🇭", "🇮", "🇯"
+    ];
+
+    private static readonly TimeSpan QuestionTimeout = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan TemporaryMessageLifetime = TimeSpan.FromSeconds(15);
+    private readonly ConcurrentDictionary<(ulong GuildId, ulong UserId), byte> openingTickets = new();
     private readonly ChatLogService chatLogService;
     private readonly DiscordShardedClient client;
     private readonly IAnalyticsCollector collector;
@@ -68,6 +80,7 @@ public class TicketService : INService
         this.credentials = credentials;
 
         eventHandler.Subscribe("MessageDeleted", "TicketService", HandleMessageDeleted);
+        eventHandler.Subscribe("ReactionAdded", "TicketService", HandleReactionAdded);
     }
 
     /// <summary>
@@ -76,6 +89,7 @@ public class TicketService : INService
     public Task Unload()
     {
         eventHandler.Unsubscribe("MessageDeleted", "TicketService", HandleMessageDeleted);
+        eventHandler.Unsubscribe("ReactionAdded", "TicketService", HandleReactionAdded);
         return Task.CompletedTask;
     }
 
@@ -91,23 +105,15 @@ public class TicketService : INService
     public async Task<TicketPanel> CreatePanelAsync(
         ITextChannel channel,
         string? embedJson = null,
-        string title = "Support Tickets",
-        string description = "Click a button below to create a ticket",
+        string? title = null,
+        string? description = null,
         Color? color = null)
     {
         string finalJson;
 
         if (string.IsNullOrWhiteSpace(embedJson))
         {
-            // Create default embed JSON
-            var embed = new NewEmbed
-            {
-                Embed = new Embed
-                {
-                    Title = title, Description = description, Color = Mewdeko.OkColor
-                }
-            };
-            finalJson = JsonSerializer.Serialize(embed);
+            finalJson = GetDefaultPanelJson(channel.GuildId, title, description);
         }
         else
         {
@@ -147,6 +153,26 @@ public class TicketService : INService
 
 
         return panel;
+    }
+
+    /// <summary>
+    ///     Gets the embed JSON a panel uses when none is supplied.
+    /// </summary>
+    /// <param name="guildId">The guild whose language the default text is in.</param>
+    /// <param name="title">Optional title replacing the default.</param>
+    /// <param name="description">Optional description replacing the default.</param>
+    /// <returns>The default panel embed JSON.</returns>
+    public string GetDefaultPanelJson(ulong guildId, string? title = null, string? description = null)
+    {
+        return JsonSerializer.Serialize(new NewEmbed
+        {
+            Embed = new Embed
+            {
+                Title = title ?? strings.TicketPanelDefaultTitle(guildId),
+                Description = description ?? strings.TicketPanelDefaultDescription(guildId),
+                Color = Mewdeko.OkColor
+            }
+        });
     }
 
     /// <summary>
@@ -238,7 +264,6 @@ public class TicketService : INService
     /// <param name="panel">The panel to add the button to.</param>
     /// <param name="label">The button label.</param>
     /// <param name="emoji">Optional emoji for the button.</param>
-    /// <param name="style">The button style.</param>
     /// <param name="openMessageJson">Optional JSON for ticket opening message.</param>
     /// <param name="modalJson">Optional JSON for ticket creation modal.</param>
     /// <param name="channelFormat">Format for ticket channel names.</param>
@@ -255,7 +280,6 @@ public class TicketService : INService
         TicketPanel panel,
         string label,
         string emoji = null,
-        ButtonStyle style = ButtonStyle.Primary,
         string openMessageJson = null,
         string modalJson = null,
         string channelFormat = "ticket-{username}-{id}",
@@ -273,16 +297,10 @@ public class TicketService : INService
         {
             await using var ctx = await dbFactory.CreateConnectionAsync();
 
-            // Check component limits before adding (1 button = 1 component, 1 select menu = 5 components)
-            var currentButtonCount = await ctx.PanelButtons.Where(b => b.PanelId == panel.Id).CountAsync();
-            var currentMenuCount = await ctx.PanelSelectMenus.Where(m => m.PanelId == panel.Id).CountAsync();
-            var currentTotal = currentButtonCount + currentMenuCount * 5;
-
-            if (currentTotal + 1 > 25)
+            if (await CountPanelEntriesAsync(panel.Id) >= MaxPanelEntries)
             {
-                logger.LogError(
-                    "Cannot add button to panel {PanelId}: would exceed component limit ({CurrentTotal} + 1 > 25)",
-                    panel.Id, currentTotal);
+                logger.LogError("Cannot add button to panel {PanelId}: a panel holds at most {Max} ticket types",
+                    panel.Id, MaxPanelEntries);
                 return null;
             }
 
@@ -292,7 +310,7 @@ public class TicketService : INService
                 Label = label,
                 Emoji = emoji,
                 CustomId = $"ticket_btn_{Guid.NewGuid():N}",
-                Style = (int)style,
+                Style = 0,
                 OpenMessageJson = openMessageJson,
                 ModalJson = modalJson,
                 ChannelNameFormat = channelFormat,
@@ -315,7 +333,7 @@ public class TicketService : INService
             existingButtons.Add(button);
             panel.PanelButtons = existingButtons;
 
-            await UpdatePanelComponentsAsync(panel);
+            await RefreshPanelAsync(panel);
 
             return button;
         }
@@ -327,23 +345,15 @@ public class TicketService : INService
         return null;
     }
 
-    private ComponentBuilder GetDefaultTicketComponents()
+    private async Task<int> CountPanelEntriesAsync(int panelId)
     {
-        var claimButton = new ButtonBuilder()
-            .WithCustomId(ClaimButtonId)
-            .WithLabel("Claim")
-            .WithStyle(ButtonStyle.Primary)
-            .WithEmote(new Emoji("🤝"));
-
-        var closeButton = new ButtonBuilder()
-            .WithCustomId(CloseButtonId)
-            .WithLabel("Close")
-            .WithStyle(ButtonStyle.Danger)
-            .WithEmote(new Emoji("🔒"));
-
-        return new ComponentBuilder()
-            .WithButton(claimButton)
-            .WithButton(closeButton);
+        await using var ctx = await dbFactory.CreateConnectionAsync();
+        var buttons = await ctx.PanelButtons.CountAsync(b => b.PanelId == panelId);
+        var options = await (from o in ctx.SelectMenuOptions
+            join m in ctx.PanelSelectMenus on o.SelectMenuId equals m.Id
+            where m.PanelId == panelId
+            select o).CountAsync();
+        return buttons + options;
     }
 
     /// <summary>
@@ -749,12 +759,12 @@ public class TicketService : INService
                     title = "Support Ticket",
                     description = $"Welcome to your ticket <@{ticket.CreatorId}>!\n\n" +
                                   $"• Ticket ID: {ticket.Id}\n" +
-                                  $"• Created: <t:{ticket.CreatedAt}:F>\n\n" +
+                                  $"• Created: <t:{new DateTimeOffset(DateTime.SpecifyKind(ticket.CreatedAt, DateTimeKind.Utc)).ToUnixTimeSeconds()}:F>\n\n" +
                                   "Please describe your issue and wait for a staff member to assist you.",
                     color = "ok", // Uses Mewdeko.OkColor
                     footer = new
                     {
-                        text = "Ticket Support"
+                        text = strings.TicketControlsHint(ticket.GuildId)
                     }
                 }
             }
@@ -765,7 +775,8 @@ public class TicketService : INService
     {
         var defaultMessage = GetTicketOpenMessage(ticket);
         SmartEmbed.TryParse(defaultMessage, channel.GuildId, out var embeds, out var plainText);
-        await channel.SendMessageAsync(plainText, embeds: embeds, components: GetDefaultTicketComponents().Build());
+        var message = await channel.SendMessageAsync(plainText, embeds: embeds);
+        await AddTicketControlsAsync(message);
     }
 
     /// <summary>
@@ -833,15 +844,13 @@ public class TicketService : INService
     /// <param name="creator">The user creating the ticket.</param>
     /// <param name="button">Optional button that triggered the ticket creation.</param>
     /// <param name="option">Optional select menu option that triggered the ticket creation.</param>
-    /// <param name="modalResponses">Optional responses from a modal form.</param>
     /// <returns>The created ticket.</returns>
     /// <exception cref="InvalidOperationException">Thrown when ticket creation fails due to limits or permissions.</exception>
     public async Task<Ticket?> CreateTicketAsync(
         IGuild guild,
         IUser creator,
         PanelButton? button = null,
-        SelectMenuOption? option = null,
-        Dictionary<string, string>? modalResponses = null)
+        SelectMenuOption? option = null)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
 
@@ -849,7 +858,7 @@ public class TicketService : INService
         var settings = await ctx.GuildTicketSettings.FirstOrDefaultAsync(s => s.GuildId == guild.Id);
         if (settings?.BlacklistedUsers?.Contains(creator.Id) == true)
         {
-            throw new InvalidOperationException("You are blacklisted from creating tickets.");
+            throw new InvalidOperationException(strings.TicketBlacklistedCreation(guild.Id));
         }
 
         var id = button?.Id ?? option.Id;
@@ -860,8 +869,7 @@ public class TicketService : INService
 
         if (activeTickets.Count >= maxTickets)
         {
-            throw new InvalidOperationException(
-                $"You can only have {maxTickets} active {(maxTickets == 1 ? "ticket" : "tickets")} of this type.");
+            throw new InvalidOperationException(strings.TicketLimitReached(guild.Id, maxTickets));
         }
 
         // Create ticket channel
@@ -894,8 +902,7 @@ public class TicketService : INService
         {
             collector.Feature("ticket_open", guild.Id, false, ex.GetType().Name);
             logger.LogError(ex, "Failed to create ticket channel");
-            throw new InvalidOperationException(
-                "Failed to create ticket channel. The bot needs Manage Channels and Manage Roles, and must be able to see the ticket category.");
+            throw new InvalidOperationException(strings.TicketChannelCreateFailed(guild.Id));
         }
 
         // Create ticket entity
@@ -906,7 +913,6 @@ public class TicketService : INService
             CreatorId = creator.Id,
             ButtonId = button?.Id,
             SelectOptionId = option?.Id,
-            ModalResponses = modalResponses != null ? JsonSerializer.Serialize(modalResponses) : null,
             Priority = button?.DefaultPriority ?? option?.DefaultPriority,
             CreatedAt = DateTime.UtcNow,
             LastActivityAt = DateTime.UtcNow
@@ -914,6 +920,45 @@ public class TicketService : INService
 
         var newId = await ctx.InsertWithInt32IdentityAsync(ticket);
         ticket.Id = newId;
+
+        Dictionary<string, string>? modalResponses = null;
+        var questionsJson = button?.ModalJson ?? option?.ModalJson;
+        if (!string.IsNullOrWhiteSpace(questionsJson))
+        {
+            try
+            {
+                modalResponses = await AskTicketQuestionsAsync(channel, creator, questionsJson);
+            }
+            catch (Exception ex)
+            {
+                collector.Feature("ticket_open", guild.Id, false, ex.GetType().Name);
+                logger.LogError(ex, "Error asking the ticket questions");
+            }
+
+            if (modalResponses == null)
+            {
+                try
+                {
+                    await ctx.Tickets.Where(t => t.Id == newId).DeleteAsync();
+                    await channel.DeleteAsync();
+                }
+                catch (Exception cleanupEx)
+                {
+                    logger.LogError(cleanupEx, "Error during ticket cleanup");
+                }
+
+                throw new InvalidOperationException(strings.TicketQuestionsCancelled(guild.Id));
+            }
+
+            if (modalResponses.Count > 0)
+            {
+                ticket.ModalResponses = JsonSerializer.Serialize(modalResponses);
+                await ctx.Tickets
+                    .Where(t => t.Id == newId)
+                    .Set(t => t.ModalResponses, ticket.ModalResponses)
+                    .UpdateAsync();
+            }
+        }
 
         try
         {
@@ -952,7 +997,7 @@ public class TicketService : INService
                 logger.LogError(cleanupEx, "Error during ticket cleanup");
             }
 
-            throw new InvalidOperationException("Failed to complete ticket creation.");
+            throw new InvalidOperationException(strings.TicketCreationFailed(guild.Id));
         }
 
         if (settings?.LogChannelId.HasValue == true)
@@ -1021,13 +1066,15 @@ public class TicketService : INService
 
         if (success && (embeds is { Length: > 0 } || !string.IsNullOrWhiteSpace(plainText)))
         {
-            await channel.SendMessageAsync(plainText, embeds: embeds, components: GetDefaultTicketComponents().Build());
+            var message = await channel.SendMessageAsync(plainText, embeds: embeds);
+            await AddTicketControlsAsync(message);
             return true;
         }
 
         if (!success && !rendered.TrimStart().StartsWith('{') && !string.IsNullOrWhiteSpace(rendered))
         {
-            await channel.SendMessageAsync(rendered, components: GetDefaultTicketComponents().Build());
+            var message = await channel.SendMessageAsync(rendered);
+            await AddTicketControlsAsync(message);
             return true;
         }
 
@@ -1300,165 +1347,354 @@ public class TicketService : INService
 
 
     /// <summary>
-    ///     Update all components related to a panel.
+    ///     Lists what a panel offers in the order its reactions are added: buttons first, then the options of each
+    ///     select menu, each with the emoji members react with to open that ticket type.
     /// </summary>
-    /// <param name="panel">The panel who's message components to update</param>
-    public async Task UpdatePanelComponentsAsync(TicketPanel panel)
+    private async Task<List<PanelEntry>> LoadPanelEntriesAsync(int panelId)
+    {
+        await using var ctx = await dbFactory.CreateConnectionAsync();
+        var buttons = await ctx.PanelButtons
+            .Where(b => b.PanelId == panelId)
+            .OrderBy(b => b.Id)
+            .ToListAsync();
+        var menus = await ctx.PanelSelectMenus
+            .Where(m => m.PanelId == panelId)
+            .OrderBy(m => m.Id)
+            .ToListAsync();
+        var menuIds = menus.Select(m => m.Id).ToList();
+        var options = menuIds.Count == 0
+            ? []
+            : await ctx.SelectMenuOptions
+                .Where(o => menuIds.Contains(o.SelectMenuId))
+                .OrderBy(o => o.Id)
+                .ToListAsync();
+
+        var pending = new List<(string Label, string? Description, string? Group, string? Emoji, PanelButton? Button,
+            SelectMenuOption? Option)>();
+        pending.AddRange(buttons.Select(b => (b.Label, (string?)null, (string?)null, b.Emoji, (PanelButton?)b,
+            (SelectMenuOption?)null)));
+        foreach (var menu in menus)
+        {
+            pending.AddRange(options
+                .Where(o => o.SelectMenuId == menu.Id && !string.IsNullOrWhiteSpace(o.Label))
+                .Select(o => (o.Label, o.Description, (string?)menu.Placeholder, o.Emoji, (PanelButton?)null,
+                    (SelectMenuOption?)o)));
+        }
+
+        if (pending.Count > MaxPanelEntries)
+        {
+            logger.LogWarning("Panel {PanelId} has {Count} ticket types, only the first {Max} get a reaction",
+                panelId, pending.Count, MaxPanelEntries);
+            pending = pending.Take(MaxPanelEntries).ToList();
+        }
+
+        var used = new HashSet<string>();
+        var emotes = new IEmote?[pending.Count];
+        for (var i = 0; i < pending.Count; i++)
+        {
+            var configured = ParseEmote(pending[i].Emoji);
+            if (configured != null && used.Add(EmoteKey(configured)))
+                emotes[i] = configured;
+        }
+
+        var next = 0;
+        for (var i = 0; i < pending.Count; i++)
+        {
+            if (emotes[i] != null)
+                continue;
+
+            while (!used.Add(EmoteKey(new Emoji(NumberEmojis[next]))))
+                next++;
+
+            emotes[i] = new Emoji(NumberEmojis[next++]);
+        }
+
+        return pending
+            .Select((p, i) => new PanelEntry(emotes[i]!, p.Label, p.Description, p.Group, p.Button, p.Option))
+            .ToList();
+    }
+
+    private static IEmote? ParseEmote(string? emoji)
+    {
+        if (string.IsNullOrWhiteSpace(emoji))
+            return null;
+
+        var text = emoji.Trim();
+        if (Emote.TryParse(text, out var custom))
+            return custom;
+
+        return Emoji.TryParse(text, out var unicode) ? unicode : null;
+    }
+
+    private static string EmoteKey(IEmote emote)
+    {
+        return emote.ToString()!.Replace("️", string.Empty);
+    }
+
+    /// <summary>
+    ///     Builds a panel's message: its own embeds followed by one embed listing the reaction for each ticket type.
+    /// </summary>
+    private Discord.Embed[] BuildPanelEmbeds(TicketPanel panel, List<PanelEntry> entries, out string? plainText)
+    {
+        SmartEmbed.TryParse(panel.EmbedJson, panel.GuildId, out var parsed, out plainText);
+        var embeds = new List<Discord.Embed>(parsed ?? []);
+        if (entries.Count == 0 || embeds.Count >= 10)
+            return [.. embeds];
+
+        var legend = new StringBuilder();
+        string? group = null;
+        foreach (var entry in entries)
+        {
+            if (entry.Group != null && entry.Group != group)
+            {
+                if (legend.Length > 0)
+                    legend.AppendLine();
+
+                legend.AppendLine($"**{entry.Group}**");
+            }
+
+            group = entry.Group;
+            legend.Append($"{entry.Emote} **{entry.Label}**");
+            if (!string.IsNullOrWhiteSpace(entry.Description))
+                legend.Append($" - {entry.Description}");
+
+            legend.AppendLine();
+        }
+
+        embeds.Add(new EmbedBuilder()
+            .WithTitle(strings.TicketPanelReactTitle(panel.GuildId))
+            .WithDescription(legend.ToString().TrimEnd())
+            .WithColor(Mewdeko.OkColor)
+            .Build());
+
+        return [.. embeds];
+    }
+
+    private async Task AddPanelReactionsAsync(IUserMessage message, List<PanelEntry> entries)
+    {
+        foreach (var entry in entries)
+        {
+            try
+            {
+                await message.AddReactionAsync(entry.Emote);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Could not add the panel reaction {Emote}", entry.Emote);
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Sends a panel's message to a channel with one reaction per ticket type.
+    /// </summary>
+    /// <param name="panel">The panel to send.</param>
+    /// <param name="channel">The channel to send it to.</param>
+    /// <returns>The sent message.</returns>
+    private async Task<IUserMessage> PostPanelAsync(TicketPanel panel, ITextChannel channel)
+    {
+        var entries = await LoadPanelEntriesAsync(panel.Id);
+        var embeds = BuildPanelEmbeds(panel, entries, out var plainText);
+        var message = await channel.SendMessageAsync(plainText, embeds: embeds);
+        await AddPanelReactionsAsync(message, entries);
+        return message;
+    }
+
+    /// <summary>
+    ///     Rewrites a panel's message and reactions to match its current buttons and select menu options.
+    /// </summary>
+    /// <param name="panel">The panel whose message to refresh.</param>
+    /// <returns>True when the message was updated, false when it could not be found or edited.</returns>
+    public async Task<bool> RefreshPanelAsync(TicketPanel panel)
     {
         try
         {
             IGuild guild = client.GetGuild(panel.GuildId);
             if (guild == null)
-                return;
+                return false;
 
             if (await guild.GetChannelAsync(panel.ChannelId) is not ITextChannel channel)
-                return;
+                return false;
 
-            var message = await channel.GetMessageAsync(panel.MessageId);
+            if (await channel.GetMessageAsync(panel.MessageId) is not IUserMessage message)
+                return false;
 
-            if (message is not IUserMessage userMessage)
-                return;
-
-            // RELOAD the panel data to ensure we have all buttons and menus
-            await using var ctx = await dbFactory.CreateConnectionAsync();
-            var fullPanel = await ctx.TicketPanels
-                .LoadWithAsTable(p => p.PanelButtons)
-                .LoadWithAsTable(p => p.PanelSelectMenus)
-                .FirstOrDefaultAsync(p => p.Id == panel.Id);
-
-            if (fullPanel == null)
-                return;
-
-            // Load select menu options
-            var menuIds = fullPanel.PanelSelectMenus?.Select(m => m.Id).ToList() ?? new List<int>();
-            if (menuIds.Any())
+            var entries = await LoadPanelEntriesAsync(panel.Id);
+            var embeds = BuildPanelEmbeds(panel, entries, out var plainText);
+            await message.ModifyAsync(m =>
             {
-                var options = await ctx.SelectMenuOptions
-                    .Where(o => menuIds.Contains(o.SelectMenuId))
-                    .ToListAsync();
+                m.Content = plainText;
+                m.Embeds = embeds;
+            });
 
-                foreach (var menu in fullPanel.PanelSelectMenus)
-                {
-                    menu.SelectMenuOptions = options.Where(o => o.SelectMenuId == menu.Id).ToList();
-                }
+            try
+            {
+                await message.RemoveAllReactionsAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Could not clear the reactions on panel {PanelId}", panel.Id);
             }
 
-            // Validate Discord component limits
-            // Max 25 components per message (buttons = 1, select menus = 5 each)
-            var buttonCount = fullPanel.PanelButtons?.Count() ?? 0;
-            var selectMenuCount = fullPanel.PanelSelectMenus?.Count() ?? 0;
-            var totalComponents = buttonCount + selectMenuCount * 5;
-
-            if (totalComponents > 25)
-            {
-                logger.LogError(
-                    "Panel {PanelId} exceeds Discord component limit: {ButtonCount} buttons + {SelectMenuCount} select menus = {TotalComponents} components (max 25)",
-                    panel.Id, buttonCount, selectMenuCount, totalComponents);
-                return;
-            }
-
-            // Validate select menu option limits (max 25 per menu)
-            if (fullPanel.PanelSelectMenus?.Any() == true)
-            {
-                foreach (var menu in fullPanel.PanelSelectMenus)
-                {
-                    var optionCount = menu.SelectMenuOptions?.Count() ?? 0;
-                    if (optionCount > 25)
-                    {
-                        logger.LogError(
-                            "Select menu {MenuId} on panel {PanelId} has {OptionCount} options (max 25)",
-                            menu.Id, panel.Id, optionCount);
-                        return;
-                    }
-                }
-            }
-
-            var components = new ComponentBuilder();
-
-            // Add buttons
-            if (fullPanel.PanelButtons?.Any() == true)
-            {
-                var buttonRow = new ActionRowBuilder();
-                foreach (var button in fullPanel.PanelButtons)
-                {
-                    var btnBuilder = new ButtonBuilder()
-                        .WithLabel(button.Label)
-                        .WithCustomId(button.CustomId)
-                        .WithStyle((ButtonStyle)button.Style);
-
-                    if (!string.IsNullOrEmpty(button.Emoji))
-                    {
-                        try
-                        {
-                            btnBuilder.WithEmote(Emote.Parse(button.Emoji));
-                        }
-                        catch
-                        {
-                            // If emoji parsing fails, try as unicode emoji
-                            btnBuilder.WithEmote(new Emoji(button.Emoji));
-                        }
-                    }
-
-                    buttonRow.WithButton(btnBuilder);
-                }
-
-                components.AddRow(buttonRow);
-            }
-
-            // Add select menus
-            if (fullPanel.PanelSelectMenus?.Any() == true)
-            {
-                foreach (var menu in fullPanel.PanelSelectMenus)
-                {
-                    var selectBuilder = new SelectMenuBuilder()
-                        .WithCustomId(menu.CustomId)
-                        .WithPlaceholder(menu.Placeholder)
-                        .WithMaxValues(1);
-
-                    foreach (var option in menu.SelectMenuOptions)
-                    {
-                        logger.LogInformation(
-                            "Processing option: ID={Id}, Label='{Label}', Value='{Value}', SelectMenuId={SelectMenuId}",
-                            option.Id, option.Label ?? "NULL", option.Value ?? "NULL", option.SelectMenuId);
-
-                        if (string.IsNullOrWhiteSpace(option.Label))
-                        {
-                            logger.LogWarning("Skipping option {Id} - Label is null/empty", option.Id);
-                            continue;
-                        }
-
-                        var optBuilder = new SelectMenuOptionBuilder()
-                            .WithLabel(option.Label)
-                            .WithValue(option.Value)
-                            .WithDescription(option.Description);
-
-                        if (!string.IsNullOrEmpty(option.Emoji))
-                        {
-                            try
-                            {
-                                optBuilder.WithEmote(Emote.Parse(option.Emoji));
-                            }
-                            catch
-                            {
-                                // If emoji parsing fails, try as unicode emoji
-                                optBuilder.WithEmote(new Emoji(option.Emoji));
-                            }
-                        }
-
-                        selectBuilder.AddOption(optBuilder);
-                    }
-
-                    components.AddRow(new ActionRowBuilder().WithSelectMenu(selectBuilder));
-                }
-            }
-
-            await userMessage.ModifyAsync(m => m.Components = components.Build());
+            await AddPanelReactionsAsync(message, entries);
+            return true;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to update panel components for panel {PanelId}", panel.Id);
+            logger.LogError(ex, "Failed to refresh panel {PanelId}", panel.Id);
+            return false;
         }
     }
+
+    private async Task HandleReactionAdded(Cacheable<IUserMessage, ulong> message,
+        Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
+    {
+        try
+        {
+            if (reaction.UserId == client.CurrentUser.Id || reaction.User.IsSpecified && reaction.User.Value.IsBot)
+                return;
+
+            if (await channel.GetOrDownloadAsync() is not ITextChannel textChannel)
+                return;
+
+            await using var ctx = await dbFactory.CreateConnectionAsync();
+            var panel = await ctx.TicketPanels.FirstOrDefaultAsync(p => p.MessageId == message.Id);
+            var key = EmoteKey(reaction.Emote);
+            if (panel == null)
+            {
+                if (key != ClaimEmoji && key != CloseEmoji)
+                    return;
+
+                if (!await ctx.Tickets.AnyAsync(t => t.ChannelId == textChannel.Id && t.ClosedAt == null))
+                    return;
+            }
+
+            var member = reaction.User.IsSpecified && reaction.User.Value is IGuildUser cached
+                ? cached
+                : await textChannel.Guild.GetUserAsync(reaction.UserId);
+            if (member == null || member.IsBot || await message.GetOrDownloadAsync() is not { } userMessage)
+                return;
+
+            if (panel == null)
+            {
+                await HandleTicketControlAsync(userMessage, textChannel, member, reaction, key);
+                return;
+            }
+
+            try
+            {
+                await userMessage.RemoveReactionAsync(reaction.Emote, member);
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "Could not clear a panel reaction in {ChannelId}", textChannel.Id);
+            }
+
+            var entry = (await LoadPanelEntriesAsync(panel.Id)).FirstOrDefault(e => EmoteKey(e.Emote) == key);
+            if (entry != null)
+                _ = Task.Run(() => OpenTicketFromPanelAsync(textChannel, member, entry));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to handle a ticket reaction in message {MessageId}", message.Id);
+        }
+    }
+
+    private async Task HandleTicketControlAsync(IUserMessage message, ITextChannel channel, IGuildUser member,
+        SocketReaction reaction, string key)
+    {
+        if (message.Author.Id != client.CurrentUser.Id ||
+            !message.Reactions.TryGetValue(reaction.Emote, out var metadata) || !metadata.IsMe)
+            return;
+
+        try
+        {
+            await message.RemoveReactionAsync(reaction.Emote, member);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Could not clear a ticket control reaction in {ChannelId}", channel.Id);
+        }
+
+        switch (key)
+        {
+            case ClaimEmoji:
+                await ClaimTicket(channel.Guild, channel.Id, member);
+                break;
+            case CloseEmoji:
+                await CloseTicket(channel.Guild, channel.Id);
+                break;
+        }
+    }
+
+    private async Task OpenTicketFromPanelAsync(ITextChannel panelChannel, IGuildUser member, PanelEntry entry)
+    {
+        var guild = panelChannel.Guild;
+        if (!openingTickets.TryAdd((guild.Id, member.Id), 0))
+            return;
+
+        try
+        {
+            var ticket = await CreateTicketAsync(guild, member, entry.Button, entry.Option);
+            await SendTemporaryAsync(panelChannel, member,
+                ticket != null
+                    ? strings.TicketOpened(guild.Id, $"<#{ticket.ChannelId}>")
+                    : strings.TicketOpenError(guild.Id),
+                ticket == null);
+        }
+        catch (InvalidOperationException ex)
+        {
+            await SendTemporaryAsync(panelChannel, member, ex.Message, true);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error opening a ticket for {UserId} in {GuildId}", member.Id, guild.Id);
+            await SendTemporaryAsync(panelChannel, member, strings.TicketOpenError(guild.Id), true);
+        }
+        finally
+        {
+            openingTickets.TryRemove((guild.Id, member.Id), out _);
+        }
+    }
+
+    private async Task SendTemporaryAsync(ITextChannel channel, IUser user, string text, bool isError)
+    {
+        try
+        {
+            var message = await channel.SendMessageAsync(user.Mention, embed: new EmbedBuilder()
+                .WithDescription(text)
+                .WithColor(isError ? Color.Red : Mewdeko.OkColor)
+                .Build());
+
+            await Task.Delay(TemporaryMessageLifetime);
+            await message.DeleteAsync();
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Could not send or clear a ticket notice in {ChannelId}", channel.Id);
+        }
+    }
+
+    private async Task AddTicketControlsAsync(IUserMessage message)
+    {
+        try
+        {
+            await message.AddReactionAsync(new Emoji(ClaimEmoji));
+            await message.AddReactionAsync(new Emoji(CloseEmoji));
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not add the ticket control reactions in {ChannelId}", message.Channel.Id);
+        }
+    }
+
+    private sealed record PanelEntry(
+        IEmote Emote,
+        string Label,
+        string? Description,
+        string? Group,
+        PanelButton? Button,
+        SelectMenuOption? Option);
 
     /// <summary>
     ///     Builds the permission overwrites for a new ticket channel: everyone denied, the bot and the creator
@@ -1537,10 +1773,7 @@ public class TicketService : INService
         {
             await using var ctx = await dbFactory.CreateConnectionAsync();
 
-            // Load panel with all components
             var panel = await ctx.TicketPanels
-                .LoadWithAsTable(p => p.PanelButtons)
-                .LoadWithAsTable(p => p.PanelSelectMenus)
                 .FirstOrDefaultAsync(p => p.MessageId == panelId && p.GuildId == guildId);
 
             if (panel == null)
@@ -1564,115 +1797,10 @@ public class TicketService : INService
                 // Message doesn't exist, proceed with recreation
             }
 
-            // Load select menu options if any menus exist
-            if (panel.PanelSelectMenus?.Any() == true)
-            {
-                var menuIds = panel.PanelSelectMenus.Select(m => m.Id).ToArray();
-                var options = await ctx.SelectMenuOptions
-                    .Where(o => menuIds.Contains(o.SelectMenuId))
-                    .ToListAsync();
-
-                foreach (var menu in panel.PanelSelectMenus)
-                {
-                    menu.SelectMenuOptions = options.Where(o => o.SelectMenuId == menu.Id).ToList();
-                }
-            }
-
-            // Parse the embed JSON and recreate the message
-            var success = SmartEmbed.TryParse(panel.EmbedJson, panel.GuildId, out var embeds, out var plainText);
-            if (!success)
+            if (!SmartEmbed.TryParse(panel.EmbedJson, panel.GuildId, out _, out _))
                 return (false, null, channel.Mention, "Failed to parse panel embed configuration.");
 
-            // Build components
-            var components = new ComponentBuilder();
-
-            // Add buttons if any exist
-            if (panel.PanelButtons?.Any() == true)
-            {
-                var buttonRow = new ActionRowBuilder();
-                foreach (var button in panel.PanelButtons)
-                {
-                    var btnBuilder = new ButtonBuilder()
-                        .WithLabel(button.Label)
-                        .WithCustomId(button.CustomId)
-                        .WithStyle((ButtonStyle)button.Style);
-
-                    if (!string.IsNullOrEmpty(button.Emoji))
-                    {
-                        try
-                        {
-                            btnBuilder.WithEmote(Emote.Parse(button.Emoji));
-                        }
-                        catch
-                        {
-                            try
-                            {
-                                btnBuilder.WithEmote(new Emoji(button.Emoji));
-                            }
-                            catch (Exception ex)
-                            {
-                                logger.LogWarning(ex, "Failed to parse emoji {Emoji} for button {ButtonId}",
-                                    button.Emoji,
-                                    button.Id);
-                            }
-                        }
-                    }
-
-                    buttonRow.WithButton(btnBuilder);
-                }
-
-                components.AddRow(buttonRow);
-            }
-
-            // Add select menus if any exist
-            if (panel.PanelSelectMenus?.Any() == true)
-            {
-                foreach (var menu in panel.PanelSelectMenus)
-                {
-                    var selectBuilder = new SelectMenuBuilder()
-                        .WithCustomId(menu.CustomId)
-                        .WithPlaceholder(menu.Placeholder)
-                        .WithMaxValues(1);
-
-                    foreach (var option in menu.SelectMenuOptions)
-                    {
-                        var optBuilder = new SelectMenuOptionBuilder()
-                            .WithLabel(option.Label)
-                            .WithValue(option.Value)
-                            .WithDescription(option.Description);
-
-                        if (!string.IsNullOrEmpty(option.Emoji))
-                        {
-                            try
-                            {
-                                optBuilder.WithEmote(Emote.Parse(option.Emoji));
-                            }
-                            catch
-                            {
-                                try
-                                {
-                                    optBuilder.WithEmote(new Emoji(option.Emoji));
-                                }
-                                catch (Exception ex)
-                                {
-                                    logger.LogWarning(ex, "Failed to parse emoji {Emoji} for option {OptionId}",
-                                        option.Emoji,
-                                        option.Id);
-                                }
-                            }
-                        }
-
-                        selectBuilder.AddOption(optBuilder);
-                    }
-
-                    components.AddRow(new ActionRowBuilder().WithSelectMenu(selectBuilder));
-                }
-            }
-
-            // Send the recreated panel message
-            var newMessage = await channel.SendMessageAsync(
-                plainText,
-                embeds: embeds);
+            var newMessage = await PostPanelAsync(panel, channel);
 
             // Update the panel's message ID in the database
             await ctx.TicketPanels
@@ -1795,31 +1923,12 @@ public class TicketService : INService
 
         await using var ctx = await dbFactory.CreateConnectionAsync();
 
-        // Check if deleted message was a panel
-        var panel = await ctx.TicketPanels
-            .LoadWithAsTable(p => p.PanelButtons)
-            .LoadWithAsTable(p => p.PanelSelectMenus)
-            .FirstOrDefaultAsync(p => p.MessageId == message.Value.Id);
+        var panel = await ctx.TicketPanels.FirstOrDefaultAsync(p => p.MessageId == message.Value.Id);
 
         if (panel != null)
         {
             try
             {
-                // Load select menu options if any menus exist
-                if (panel.PanelSelectMenus?.Any() == true)
-                {
-                    var menuIds = panel.PanelSelectMenus.Select(m => m.Id).ToArray();
-                    var options = await ctx.SelectMenuOptions
-                        .Where(o => menuIds.Contains(o.SelectMenuId))
-                        .ToListAsync();
-
-                    foreach (var menu in panel.PanelSelectMenus)
-                    {
-                        menu.SelectMenuOptions = options.Where(o => o.SelectMenuId == menu.Id).ToList();
-                    }
-                }
-
-                // Get the channel where the panel was deleted
                 var targetChannel = channel.Value as ITextChannel;
                 if (targetChannel == null)
                 {
@@ -1827,107 +1936,8 @@ public class TicketService : INService
                     return;
                 }
 
-                // Parse the embed JSON and recreate the message
-                var success = SmartEmbed.TryParse(panel.EmbedJson, panel.GuildId, out var embeds, out var plainText);
-                if (!success)
-                {
-                    logger.LogError("Failed to parse embed JSON for panel {PanelId}", panel.Id);
-                    return;
-                }
+                var newMessage = await PostPanelAsync(panel, targetChannel);
 
-                // Build components
-                var components = new ComponentBuilder();
-
-                // Add buttons if any exist
-                if (panel.PanelButtons?.Any() == true)
-                {
-                    var buttonRow = new ActionRowBuilder();
-                    foreach (var button in panel.PanelButtons)
-                    {
-                        var btnBuilder = new ButtonBuilder()
-                            .WithLabel(button.Label)
-                            .WithCustomId(button.CustomId)
-                            .WithStyle((ButtonStyle)button.Style);
-
-                        if (!string.IsNullOrEmpty(button.Emoji))
-                        {
-                            try
-                            {
-                                btnBuilder.WithEmote(Emote.Parse(button.Emoji));
-                            }
-                            catch
-                            {
-                                // If emoji parsing fails, try as unicode emoji
-                                try
-                                {
-                                    btnBuilder.WithEmote(new Emoji(button.Emoji));
-                                }
-                                catch (Exception ex)
-                                {
-                                    logger.LogWarning(ex, "Failed to parse emoji {Emoji} for button {ButtonId}",
-                                        button.Emoji,
-                                        button.Id);
-                                }
-                            }
-                        }
-
-                        buttonRow.WithButton(btnBuilder);
-                    }
-
-                    components.AddRow(buttonRow);
-                }
-
-                // Add select menus if any exist
-                if (panel.PanelSelectMenus?.Any() == true)
-                {
-                    foreach (var menu in panel.PanelSelectMenus)
-                    {
-                        var selectBuilder = new SelectMenuBuilder()
-                            .WithCustomId(menu.CustomId)
-                            .WithPlaceholder(menu.Placeholder)
-                            .WithMaxValues(1);
-
-                        foreach (var option in menu.SelectMenuOptions)
-                        {
-                            var optBuilder = new SelectMenuOptionBuilder()
-                                .WithLabel(option.Label)
-                                .WithValue(option.Value)
-                                .WithDescription(option.Description);
-
-                            if (!string.IsNullOrEmpty(option.Emoji))
-                            {
-                                try
-                                {
-                                    optBuilder.WithEmote(Emote.Parse(option.Emoji));
-                                }
-                                catch
-                                {
-                                    // If emoji parsing fails, try as unicode emoji
-                                    try
-                                    {
-                                        optBuilder.WithEmote(new Emoji(option.Emoji));
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        logger.LogWarning(ex, "Failed to parse emoji {Emoji} for option {OptionId}",
-                                            option.Emoji, option.Id);
-                                    }
-                                }
-                            }
-
-                            selectBuilder.AddOption(optBuilder);
-                        }
-
-                        components.AddRow(new ActionRowBuilder().WithSelectMenu(selectBuilder));
-                    }
-                }
-
-                // Send the recreated panel message
-                var newMessage = await targetChannel.SendMessageAsync(
-                    plainText,
-                    embeds: embeds);
-
-                // Update the panel's message ID in the database
                 await ctx.TicketPanels
                     .Where(p => p.Id == panel.Id)
                     .Set(p => p.MessageId, newMessage.Id)
@@ -2011,7 +2021,7 @@ public class TicketService : INService
                 .DeleteAsync();
 
             // Update the panel in Discord
-            await UpdatePanelComponentsAsync(menu.Panel);
+            await RefreshPanelAsync(menu.Panel);
 
             logger.LogInformation("Deleted select menu {MenuId} from guild {GuildId}", menuId, guild.Id);
             return true;
@@ -2054,7 +2064,7 @@ public class TicketService : INService
                 .DeleteAsync();
 
             // Update the panel in Discord
-            await UpdatePanelComponentsAsync(option.SelectMenu.Panel);
+            await RefreshPanelAsync(option.SelectMenu.Panel);
 
             logger.LogInformation("Deleted select menu option {OptionId} from guild {GuildId}", optionId, guild.Id);
             return true;
@@ -2270,7 +2280,6 @@ public class TicketService : INService
             Id = b.Id,
             CustomId = b.CustomId,
             Label = b.Label,
-            Style = (ButtonStyle)b.Style,
             Emoji = b.Emoji,
             CategoryId = b.CategoryId,
             ArchiveCategoryId = b.ArchiveCategoryId,
@@ -2395,7 +2404,6 @@ public class TicketService : INService
                 Id = b.Id,
                 CustomId = b.CustomId,
                 Label = b.Label,
-                Style = (ButtonStyle)b.Style,
                 Emoji = b.Emoji,
                 CategoryId = b.CategoryId,
                 ArchiveCategoryId = b.ArchiveCategoryId,
@@ -2516,91 +2524,127 @@ public class TicketService : INService
     }
 
     /// <summary>
-    ///     Validates and creates modal for ticket creation
+    ///     Asks a ticket's configured questions in its channel and collects the answers.
     /// </summary>
-    public async Task HandleModalCreation(IGuildUser user, string modalJson, string customId,
-        IDiscordInteraction component)
+    /// <param name="channel">The new ticket channel.</param>
+    /// <param name="user">The member opening the ticket.</param>
+    /// <param name="questionsJson">The stored question configuration.</param>
+    /// <returns>The answers by field key, or null when a required question went unanswered.</returns>
+    private async Task<Dictionary<string, string>?> AskTicketQuestionsAsync(ITextChannel channel, IUser user,
+        string questionsJson)
     {
+        var answers = new Dictionary<string, string>();
+        var guildId = channel.GuildId;
+
+        ModalConfiguration config;
         try
         {
-            logger.LogInformation(modalJson);
-
-            ModalConfiguration modalConfig;
-            Dictionary<string, ModalFieldConfig> fields;
-
-            try
-            {
-                modalConfig = JsonSerializer.Deserialize<ModalConfiguration>(modalJson,
-                    new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-                fields = modalConfig.Fields;
-            }
-            catch
-            {
-                fields = JsonSerializer.Deserialize<Dictionary<string, ModalFieldConfig>>(modalJson,
-                    new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-                modalConfig = new ModalConfiguration
-                {
-                    Fields = fields
-                };
-            }
-
-            logger.LogInformation(JsonSerializer.Serialize(fields));
-
-            // Validate field count
-            if (fields.Count > 5)
-                throw new ArgumentException("Modal cannot have more than 5 fields");
-
-            var mb = new ModalBuilder()
-                .WithCustomId(customId)
-                .WithTitle(modalConfig.Title ?? strings.CreateTicketModalTitle(user.GuildId));
-
-            foreach (var (key, field) in fields)
-            {
-                // Validate and enforce length limits
-                var minLength = Math.Max(0, Math.Min(field.MinLength ?? 0, 4000));
-                var maxLength = Math.Max(minLength, Math.Min(field.MaxLength ?? 4000, 4000));
-
-                // Determine style
-                var style = field.Style == 2 ? TextInputStyle.Paragraph : TextInputStyle.Short;
-                Console.WriteLine(JsonSerializer.Serialize(field));
-
-                mb.AddTextInput(
-                    field.Label,
-                    key.ToLower().Replace(" ", "_"),
-                    style,
-                    field.Placeholder,
-                    minLength == 0 ? null : minLength,
-                    maxLength,
-                    field.Required,
-                    field.Value
-                );
-            }
-
-            _ = Task.Run(async () => await component.RespondWithModalAsync(mb.Build()));
-            var msg = (component as IComponentInteraction).Message;
-            await (component as IComponentInteraction).Message.ModifyAsync(x =>
-            {
-                x.Components = ComponentBuilder.FromComponents(msg.Components).Build();
-            });
+            config = ModalConfiguration.Parse(questionsJson);
         }
         catch (JsonException ex)
         {
-            logger.LogError($"Invalid modal configuration format: {ex}");
-            await component.RespondAsync(strings.InvalidTicketFormConfig(user.GuildId), ephemeral: true);
+            logger.LogWarning(ex, "Invalid ticket questions in {GuildId}", guildId);
+            return answers;
         }
-        catch (Exception ex)
+
+        var number = 0;
+        var timedOut = false;
+        foreach (var (key, field) in config.Fields)
         {
-            logger.LogError(ex, "Error creating modal");
-            await component.RespondAsync(strings.FailedCreateTicketForm(user.GuildId), ephemeral: true);
+            number++;
+            if (timedOut)
+            {
+                if (field.Required)
+                    return null;
+
+                continue;
+            }
+
+            var minLength = Math.Max(field.Required ? 1 : 0, Math.Min(field.MinLength ?? 0, 4000));
+            var maxLength = Math.Max(minLength, Math.Min(field.MaxLength ?? 4000, 4000));
+            var hint = field.Required
+                ? strings.TicketQuestionRequired(guildId)
+                : strings.TicketQuestionOptional(guildId);
+
+            var question = new EmbedBuilder()
+                .WithTitle(config.Title ?? strings.CreateTicketModalTitle(guildId))
+                .WithDescription(string.IsNullOrWhiteSpace(field.Placeholder)
+                    ? $"**{field.Label}**"
+                    : $"**{field.Label}**\n{field.Placeholder}")
+                .WithFooter(strings.TicketQuestionFooter(guildId, number, config.Fields.Count, hint))
+                .WithColor(Mewdeko.OkColor)
+                .Build();
+
+            await channel.SendMessageAsync(user.Mention, embed: question);
+
+            string? answer = null;
+            var answered = false;
+            for (var attempt = 0; attempt < MaxQuestionAttempts && !answered; attempt++)
+            {
+                var reply = (await WaitForAnswerAsync(channel.Id, user.Id))?.Trim();
+                switch (reply)
+                {
+                    case null:
+                        timedOut = true;
+                        attempt = MaxQuestionAttempts;
+                        break;
+                    case not null when !field.Required && reply.Equals("skip", StringComparison.OrdinalIgnoreCase):
+                        answer = field.Value;
+                        answered = true;
+                        break;
+                    case not null when reply.Length < minLength || reply.Length > maxLength:
+                        await channel.SendMessageAsync(strings.TicketQuestionLength(guildId, minLength, maxLength));
+                        break;
+                    default:
+                        answer = reply;
+                        answered = true;
+                        break;
+                }
+            }
+
+            if (!answered && !timedOut)
+                answer = field.Value;
+
+            if (string.IsNullOrEmpty(answer))
+            {
+                if (field.Required)
+                    return null;
+
+                continue;
+            }
+
+            answers[key.ToLower().Replace(" ", "_")] = answer;
         }
+
+        return answers;
     }
 
+    /// <summary>
+    ///     Waits for a member's next message in a channel.
+    /// </summary>
+    /// <returns>The message text, or null when nothing arrived within the question timeout.</returns>
+    private async Task<string?> WaitForAnswerAsync(ulong channelId, ulong userId)
+    {
+        var answer = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Func<SocketMessage, Task> handler = message =>
+        {
+            if (message.Author.Id == userId && message.Channel.Id == channelId)
+                answer.TrySetResult(message.Content);
+
+            return Task.CompletedTask;
+        };
+
+        eventHandler.Subscribe("MessageReceived", "TicketService", handler);
+        try
+        {
+            var finished = await Task.WhenAny(answer.Task, Task.Delay(QuestionTimeout)).ConfigureAwait(false);
+            return finished == answer.Task ? await answer.Task.ConfigureAwait(false) : null;
+        }
+        finally
+        {
+            eventHandler.Unsubscribe("MessageReceived", "TicketService", handler);
+        }
+    }
 
     /// <summary>
     ///     Gets a ticket panel by ID.
@@ -2646,8 +2690,6 @@ public class TicketService : INService
     /// <param name="firstOptionLabel">Label for the first option</param>
     /// <param name="firstOptionDescription">Description for the first option</param>
     /// <param name="firstOptionEmoji">Emoji for the first option</param>
-    /// <param name="minValues">Minimum number of selections required</param>
-    /// <param name="maxValues">Maximum number of selections allowed</param>
     /// <param name="updateComponents">Whether to update the panel components after adding the menu</param>
     /// <returns>The created panel select menu</returns>
     public async Task<PanelSelectMenu> AddSelectMenuAsync(
@@ -2656,21 +2698,14 @@ public class TicketService : INService
         string firstOptionLabel,
         string firstOptionDescription = null,
         string firstOptionEmoji = null,
-        int minValues = 1,
-        int maxValues = 1, bool updateComponents = true)
+        bool updateComponents = true)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
 
-        // Check component limits before adding (1 select menu = 5 components)
-        var currentButtonCount = await ctx.PanelButtons.Where(b => b.PanelId == panel.Id).CountAsync();
-        var currentMenuCount = await ctx.PanelSelectMenus.Where(m => m.PanelId == panel.Id).CountAsync();
-        var currentTotal = currentButtonCount + currentMenuCount * 5;
-
-        if (currentTotal + 5 > 25)
+        if (await CountPanelEntriesAsync(panel.Id) >= MaxPanelEntries)
         {
-            logger.LogError(
-                "Cannot add select menu to panel {PanelId}: would exceed component limit ({CurrentTotal} + 5 > 25)",
-                panel.Id, currentTotal);
+            logger.LogError("Cannot add select menu to panel {PanelId}: a panel holds at most {Max} ticket types",
+                panel.Id, MaxPanelEntries);
             return null;
         }
 
@@ -2724,7 +2759,7 @@ public class TicketService : INService
             }
 
             if (updateComponents)
-                await UpdatePanelComponentsAsync(panel);
+                await RefreshPanelAsync(panel);
 
             return completeMenu;
         }
@@ -2770,7 +2805,7 @@ public class TicketService : INService
         menu.Panel ??= await ctx.TicketPanels
             .FirstOrDefaultAsync(p => p.Id == menu.PanelId);
 
-        await UpdatePanelComponentsAsync(menu.Panel);
+        await RefreshPanelAsync(menu.Panel);
     }
 
     /// <summary>
@@ -2818,13 +2853,10 @@ public class TicketService : INService
         {
             await using var ctx = await dbFactory.CreateConnectionAsync();
 
-            // Check option limit (max 25 per select menu)
-            var currentOptionCount = await ctx.SelectMenuOptions.Where(o => o.SelectMenuId == menu.Id).CountAsync();
-            if (currentOptionCount >= 25)
+            if (await CountPanelEntriesAsync(menu.PanelId) >= MaxPanelEntries)
             {
-                logger.LogError(
-                    "Cannot add option to select menu {MenuId}: already has 25 options (Discord limit)",
-                    menu.Id);
+                logger.LogError("Cannot add option to select menu {MenuId}: a panel holds at most {Max} ticket types",
+                    menu.Id, MaxPanelEntries);
                 return null;
             }
 
@@ -2865,7 +2897,7 @@ public class TicketService : INService
             menu.Panel ??= await ctx.TicketPanels
                 .FirstOrDefaultAsync(p => p.Id == menu.PanelId);
             if (updateComponents)
-                await UpdatePanelComponentsAsync(menu.Panel);
+                await RefreshPanelAsync(menu.Panel);
 
             return option;
         }
@@ -4826,36 +4858,24 @@ public class TicketService : INService
     public async Task<bool> UpdatePanelEmbedAsync(IGuild guild, ulong panelId, string embedJson)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
-        var panel = await ctx.TicketPanels.FindAsync((int)panelId);
-
-        if (panel == null)
+        var panel = await ctx.TicketPanels.FirstOrDefaultAsync(x => x.GuildId == guild.Id && x.MessageId == panelId);
+        if (panel == null && panelId <= int.MaxValue)
         {
-            panel = await ctx.TicketPanels.FirstOrDefaultAsync(x => x.GuildId == guild.Id && x.MessageId == panelId);
+            var databaseId = (int)panelId;
+            panel = await ctx.TicketPanels.FirstOrDefaultAsync(x => x.GuildId == guild.Id && x.Id == databaseId);
         }
 
-        if (panel == null || panel.GuildId != guild.Id)
+        if (panel == null)
             return false;
 
         try
         {
-            var channel = await guild.GetTextChannelAsync(panel.ChannelId);
-            if (channel == null)
+            if (!SmartEmbed.TryParse(embedJson, guild.Id, out _, out _))
                 return false;
-
-            var message = await channel.GetMessageAsync(panel.MessageId) as IUserMessage;
-            if (message == null)
-                return false;
-
-            SmartEmbed.TryParse(embedJson, guild.Id, out var embeds, out var plainText);
-            await message.ModifyAsync(m =>
-            {
-                m.Content = plainText;
-                m.Embeds = embeds;
-            });
 
             panel.EmbedJson = embedJson;
-
-            return true;
+            await ctx.UpdateAsync(panel);
+            return await RefreshPanelAsync(panel);
         }
         catch (Exception ex)
         {
@@ -4874,23 +4894,33 @@ public class TicketService : INService
     public async Task<bool> MovePanelAsync(IGuild guild, ulong panelId, ulong newChannelId)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
-        var panel = await ctx.TicketPanels
-            .LoadWithAsTable(p => p.PanelButtons)
-            .LoadWithAsTable(p => p.PanelSelectMenus)
-            .FirstOrDefaultAsync(p => p.MessageId == panelId);
+        var panel = await ctx.TicketPanels.FirstOrDefaultAsync(p => p.MessageId == panelId);
 
         if (panel == null || panel.GuildId != guild.Id)
             return false;
 
         try
         {
-            // Delete old message
-            var oldChannel = await guild.GetTextChannelAsync(panel.ChannelId);
+            var newChannel = await guild.GetTextChannelAsync(newChannelId);
+            if (newChannel == null)
+                return false;
+
+            var oldChannelId = panel.ChannelId;
+            var oldMessageId = panel.MessageId;
+            var message = await PostPanelAsync(panel, newChannel);
+
+            await ctx.TicketPanels
+                .Where(p => p.Id == panel.Id)
+                .Set(p => p.ChannelId, newChannelId)
+                .Set(p => p.MessageId, message.Id)
+                .UpdateAsync();
+
+            var oldChannel = await guild.GetTextChannelAsync(oldChannelId);
             if (oldChannel != null)
             {
                 try
                 {
-                    var oldMessage = await oldChannel.GetMessageAsync(panel.MessageId);
+                    var oldMessage = await oldChannel.GetMessageAsync(oldMessageId);
                     if (oldMessage != null)
                         await oldMessage.DeleteAsync();
                 }
@@ -4899,67 +4929,6 @@ public class TicketService : INService
                     logger.LogWarning(ex, "Failed to delete old panel message");
                 }
             }
-
-            // Create new message
-            var newChannel = await guild.GetTextChannelAsync(newChannelId);
-            if (newChannel == null)
-                return false;
-
-            SmartEmbed.TryParse(panel.EmbedJson, guild.Id, out var embeds, out var plainText);
-            var components = new ComponentBuilder();
-
-            // Rebuild buttons
-            if (panel.PanelButtons?.Any() == true)
-            {
-                var buttonRow = new ActionRowBuilder();
-                foreach (var button in panel.PanelButtons)
-                {
-                    var btnBuilder = new ButtonBuilder()
-                        .WithLabel(button.Label)
-                        .WithCustomId(button.CustomId)
-                        .WithStyle((ButtonStyle)button.Style);
-
-                    if (!string.IsNullOrEmpty(button.Emoji))
-                        btnBuilder.WithEmote(Emote.Parse(button.Emoji));
-
-                    buttonRow.WithButton(btnBuilder);
-                }
-
-                components.AddRow(buttonRow);
-            }
-
-            // Rebuild select menus
-            if (panel.PanelSelectMenus?.Any() == true)
-            {
-                foreach (var menu in panel.PanelSelectMenus)
-                {
-                    var selectBuilder = new SelectMenuBuilder()
-                        .WithCustomId(menu.CustomId)
-                        .WithPlaceholder(menu.Placeholder)
-                        .WithMaxValues(1);
-
-                    foreach (var option in menu.SelectMenuOptions)
-                    {
-                        var optBuilder = new SelectMenuOptionBuilder()
-                            .WithLabel(option.Label)
-                            .WithValue(option.Value)
-                            .WithDescription(option.Description);
-
-                        if (!string.IsNullOrEmpty(option.Emoji))
-                            optBuilder.WithEmote(Emote.Parse(option.Emoji));
-
-                        selectBuilder.AddOption(optBuilder);
-                    }
-
-                    components.AddRow(new ActionRowBuilder().WithSelectMenu(selectBuilder));
-                }
-            }
-
-            var message = await newChannel.SendMessageAsync(plainText, embeds: embeds);
-
-            panel.ChannelId = newChannelId;
-            panel.MessageId = message.Id;
-
 
             return true;
         }
@@ -5012,8 +4981,7 @@ public class TicketService : INService
             if (newChannel == null)
                 return null;
 
-            SmartEmbed.TryParse(sourcePanel.EmbedJson, guild.Id, out var embeds, out var plainText);
-            var message = await newChannel.SendMessageAsync(plainText, embeds: embeds);
+            var message = await PostPanelAsync(sourcePanel, newChannel);
 
             await using var transaction = await ctx.BeginTransactionAsync();
             try
@@ -5105,14 +5073,10 @@ public class TicketService : INService
                     newMenus.Add(newMenu);
                 }
 
-                // Set up in-memory relationships for UpdatePanelComponentsAsync
                 newPanel.PanelButtons = newButtons;
                 newPanel.PanelSelectMenus = newMenus;
 
                 await transaction.CommitAsync();
-
-                // Update message with components
-                await UpdatePanelComponentsAsync(newPanel);
 
                 return newPanel;
             }
@@ -5206,10 +5170,10 @@ public class TicketService : INService
 
                 await transaction.CommitAsync();
 
-                // Update the in-memory collection for UpdatePanelComponentsAsync
+                // Update the in-memory collection for RefreshPanelAsync
                 panel.PanelButtons = reorderedButtons;
 
-                await UpdatePanelComponentsAsync(panel);
+                await RefreshPanelAsync(panel);
 
                 return true;
             }
@@ -5322,9 +5286,6 @@ public class TicketService : INService
                     case "emoji":
                         button.Emoji = (string)setting.Value;
                         break;
-                    case "style":
-                        button.Style = (int)setting.Value;
-                        break;
                     case "categoryid":
                         button.CategoryId = (ulong?)setting.Value;
                         break;
@@ -5412,7 +5373,7 @@ public class TicketService : INService
             var complete = await ctx.UpdateAsync(button);
 
             // Update the panel components in Discord
-            await UpdatePanelComponentsAsync(button.Panel);
+            await RefreshPanelAsync(button.Panel);
 
             return true;
         }
@@ -5544,7 +5505,7 @@ public class TicketService : INService
             await ctx.UpdateAsync(option);
 
             // Update the panel components in Discord
-            await UpdatePanelComponentsAsync(option.SelectMenu.Panel);
+            await RefreshPanelAsync(option.SelectMenu.Panel);
 
             return true;
         }
@@ -5595,7 +5556,7 @@ public class TicketService : INService
                 .DeleteAsync();
 
             // Update the panel in Discord
-            await UpdatePanelComponentsAsync(button.Panel);
+            await RefreshPanelAsync(button.Panel);
 
             return true;
         }

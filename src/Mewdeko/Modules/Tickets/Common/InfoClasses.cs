@@ -11,22 +11,17 @@ public class ButtonInfo
     public int Id { get; set; }
 
     /// <summary>
-    ///     The custom ID used to identify the button in Discord interactions
+    ///     The custom ID that identifies the button
     /// </summary>
     public string CustomId { get; set; }
 
     /// <summary>
-    ///     The text label displayed on the button
+    ///     The label listed beside the reaction
     /// </summary>
     public string Label { get; set; }
 
     /// <summary>
-    ///     The visual style of the button (Primary, Secondary, Success, or Danger)
-    /// </summary>
-    public ButtonStyle Style { get; set; }
-
-    /// <summary>
-    ///     The emoji displayed on the button (if any)
+    ///     The reaction emoji configured for the button (if any)
     /// </summary>
     public string Emoji { get; set; }
 
@@ -51,7 +46,7 @@ public class ButtonInfo
     public List<ulong> ViewerRoles { get; set; }
 
     /// <summary>
-    ///     Indicates whether this button shows a modal form when clicked
+    ///     Indicates whether this button asks questions in the new ticket channel
     /// </summary>
     public bool HasModal { get; set; }
 
@@ -72,7 +67,7 @@ public class SelectMenuInfo
     public int Id { get; set; }
 
     /// <summary>
-    ///     The custom ID used to identify the select menu in Discord interactions
+    ///     The custom ID that identifies the select menu
     /// </summary>
     public string CustomId { get; set; }
 
@@ -128,7 +123,7 @@ public class SelectOptionInfo
     public ulong? ArchiveCategoryId { get; set; }
 
     /// <summary>
-    ///     Indicates whether this option shows a modal form when selected
+    ///     Indicates whether this option asks questions in the new ticket channel
     /// </summary>
     public bool HasModal { get; set; }
 

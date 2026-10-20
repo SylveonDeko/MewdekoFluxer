@@ -16,7 +16,7 @@ public abstract class TicketComponentRequestBase
     public string? OpenMessageJson { get; set; }
 
     /// <summary>
-    ///     Optional JSON for ticket creation modal.
+    ///     Optional JSON for the questions asked in the new ticket channel.
     /// </summary>
     public string? ModalJson { get; set; }
 

@@ -1,70 +1,94 @@
+using System.Text.Json;
+
 namespace Mewdeko.Modules.Tickets.Common;
 
 /// <summary>
-///     Represents the configuration for a Discord modal used in ticket creation.
+///     Represents the questions asked in a new ticket channel before the ticket's opening message is sent.
 /// </summary>
 /// <remarks>
-///     This class combines both the modal's title and its field configurations,
-///     allowing for complete customization of ticket creation forms.
+///     The configuration is stored on buttons and select options as JSON, either as this whole object or, for
+///     older entries, as just the dictionary of fields.
 /// </remarks>
 public class ModalConfiguration
 {
+    private static readonly JsonSerializerOptions Options = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     /// <summary>
-    ///     Gets or sets the title displayed at the top of the modal.
+    ///     Gets or sets the title shown above each question.
     /// </summary>
-    /// <remarks>
-    ///     Defaults to "Create Ticket" if not explicitly set.
-    ///     This title is shown to users when they interact with a ticket button.
-    /// </remarks>
     public string? Title { get; set; } = "Create Ticket";
 
     /// <summary>
-    ///     Gets or sets the dictionary of fields in the modal.
+    ///     Gets or sets the dictionary of questions.
     /// </summary>
     /// <remarks>
-    ///     The dictionary keys are the field identifiers, and the values are their configurations.
-    ///     A modal can have up to 5 fields as per Discord's limitations.
+    ///     The dictionary keys are the field identifiers used in %modal.key% replacements, and the values are their
+    ///     configurations. Questions are asked in the order they were added.
     /// </remarks>
     public Dictionary<string, ModalFieldConfig> Fields { get; set; } = new();
+
+    /// <summary>
+    ///     Reads a stored configuration in either of its stored shapes.
+    /// </summary>
+    /// <param name="json">The stored JSON, or null for none.</param>
+    /// <returns>The configuration, empty when the JSON is blank.</returns>
+    /// <exception cref="JsonException">Thrown when the JSON is not valid.</exception>
+    public static ModalConfiguration Parse(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return new ModalConfiguration();
+
+        using var document = JsonDocument.Parse(json);
+        var wrapped = document.RootElement.ValueKind == JsonValueKind.Object &&
+                      document.RootElement.EnumerateObject().Any(p =>
+                          p.Name.Equals(nameof(Fields), StringComparison.OrdinalIgnoreCase) &&
+                          p.Value.ValueKind == JsonValueKind.Object);
+
+        if (wrapped)
+            return JsonSerializer.Deserialize<ModalConfiguration>(json, Options) ?? new ModalConfiguration();
+
+        return new ModalConfiguration
+        {
+            Fields = JsonSerializer.Deserialize<Dictionary<string, ModalFieldConfig>>(json, Options) ?? new()
+        };
+    }
 }
 
 /// <summary>
-///     Represents configuration for a modal field in a ticket creation form.
+///     Represents configuration for a question asked while opening a ticket.
 /// </summary>
 public class ModalFieldConfig
 {
     /// <summary>
-    ///     Gets or sets the label text shown above the field.
+    ///     Gets or sets the question text.
     /// </summary>
     public string Label { get; set; }
 
     /// <summary>
-    ///     Gets or sets the input style (1 for short, 2 for paragraph).
-    /// </summary>
-    public int Style { get; set; }
-
-    /// <summary>
-    ///     Gets or sets whether the field is required.
+    ///     Gets or sets whether the question must be answered.
     /// </summary>
     public bool Required { get; set; }
 
     /// <summary>
-    ///     Gets or sets the minimum length for the input.
+    ///     Gets or sets the minimum length for the answer.
     /// </summary>
     public int? MinLength { get; set; }
 
     /// <summary>
-    ///     Gets or sets the maximum length for the input.
+    ///     Gets or sets the maximum length for the answer.
     /// </summary>
     public int? MaxLength { get; set; }
 
     /// <summary>
-    ///     Gets or sets the placeholder text shown when no input is provided.
+    ///     Gets or sets the hint shown under the question.
     /// </summary>
     public string Placeholder { get; set; }
 
     /// <summary>
-    ///     Gets or sets the default value of the field.
+    ///     Gets or sets the answer used when an optional question is skipped.
     /// </summary>
     public string Value { get; set; }
 }
