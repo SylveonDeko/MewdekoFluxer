@@ -28,7 +28,6 @@ public sealed class BotConfig
         Prefix = ".";
         RotateStatuses = false;
         GroupGreets = false;
-        ShowInviteButton = true;
         LoadingEmote = "<a:HaneMeow:968564817784877066>";
         ErrorEmote = "<:HaneNo:914307917954576414>";
         SuccessEmote = "<:hane_wow:945005763829575680>";
@@ -294,12 +293,6 @@ public sealed class BotConfig
     /// </summary>
     [Comment("Enable or disable youtube support")]
     public bool YoutubeSupport { get; set; }
-
-    /// <summary>
-    ///     Gets or sets whether the invite and donation button will be shown on some commands.
-    /// </summary>
-    [Comment("Used to enable or disable showing the invite button on some commands")]
-    public bool ShowInviteButton { get; set; }
 
     /// <summary>
     ///     Gets or sets the redirect url for the auth command.

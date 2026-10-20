@@ -27,12 +27,6 @@ public class TicketService : INService
     private const int MaxPanelEntries = 20;
     private const int MaxQuestionAttempts = 3;
 
-    private static readonly string[] NumberEmojis =
-    [
-        "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟",
-        "🇦", "🇧", "🇨", "🇩", "🇪", "🇫", "🇬", "🇭", "🇮", "🇯"
-    ];
-
     private static readonly TimeSpan QuestionTimeout = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan TemporaryMessageLifetime = TimeSpan.FromSeconds(15);
     private readonly ConcurrentDictionary<(ulong GuildId, ulong UserId), byte> openingTickets = new();
@@ -1403,10 +1397,10 @@ public class TicketService : INService
             if (emotes[i] != null)
                 continue;
 
-            while (!used.Add(EmoteKey(new Emoji(NumberEmojis[next]))))
+            while (!used.Add(EmoteKey(new Emoji(NumberEmojis.At(next)))))
                 next++;
 
-            emotes[i] = new Emoji(NumberEmojis[next++]);
+            emotes[i] = new Emoji(NumberEmojis.At(next++));
         }
 
         return pending
