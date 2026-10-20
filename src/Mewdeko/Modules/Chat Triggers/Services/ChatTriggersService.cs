@@ -126,6 +126,11 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// </summary>
     private static readonly TimeSpan RegexTimeout = TimeSpan.FromMilliseconds(100);
 
+    private static readonly IDeserializer ImportDeserializer = new DeserializerBuilder()
+        .WithNamingConvention(CamelCaseNamingConvention.Instance)
+        .IgnoreUnmatchedProperties()
+        .Build();
+
     private static readonly ISerializer ExportSerializer = new SerializerBuilder()
         .WithEventEmitter(args => new MultilineScalarFlowStyleEmitter(args))
         .WithNamingConvention(CamelCaseNamingConvention.Instance)
@@ -133,12 +138,6 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
         .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitDefaults)
         .DisableAliases()
         .Build();
-
-
-    /// <summary>
-    ///     A regex pattern to validate command names.
-    /// </summary>
-    public static readonly Regex ValidCommandRegex = new(@"^(?:[\w-]{1,32} {0,1}){1,3}$", RegexOptions.Compiled);
 
     /// <summary>
     ///     Match indexes, keyed by the trigger array they describe so that they are collected along with it.
@@ -541,7 +540,6 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
             return null;
 
         var oldTrigger = ct.Trigger;
-        var oldCommandType = ct.ApplicationCommandType;
 
         ct.IsRegex = incoming.IsRegex;
         ct.OwnerOnly = incoming.OwnerOnly;
@@ -560,10 +558,6 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
         ct.RemovedRoles = incoming.RemovedRoles;
         ct.RoleGrantType = incoming.RoleGrantType;
         ct.ValidTriggerTypes = incoming.ValidTriggerTypes;
-        ct.ApplicationCommandName = incoming.ApplicationCommandName;
-        ct.ApplicationCommandDescription = incoming.ApplicationCommandDescription;
-        ct.ApplicationCommandType = incoming.ApplicationCommandType;
-        ct.EphemeralResponse = incoming.EphemeralResponse;
         ct.CrosspostingChannelId = incoming.CrosspostingChannelId;
         ct.CrosspostingWebhookUrl = incoming.CrosspostingWebhookUrl;
         ct.ReplyToTrigger = incoming.ReplyToTrigger;
@@ -604,13 +598,6 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
 
         await UpdateInternalAsync(guildId, ct).ConfigureAwait(false);
 
-        if (oldCommandType != (int)CtApplicationCommandType.None &&
-            ct.ApplicationCommandType == (int)CtApplicationCommandType.None &&
-            client.GetGuild(guildId) is { } guild)
-        {
-            await RegisterTriggersToGuildAsync(guild).ConfigureAwait(false);
-        }
-
         return ct;
     }
 
@@ -623,195 +610,6 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     {
         await AddAsync(arg.GuildId, arg.Trigger, arg.Response, arg.IsRegex);
     }
-
-
-    /// <summary>
-    ///     Runs an interaction trigger. Thank you to cottagedwelling cat for this. Really.
-    /// </summary>
-    /// <param name="inter">The SocketInteraction to process.</param>
-    /// <param name="ct">The CTModel representing the chat trigger.</param>
-    /// <param name="followup">A boolean indicating whether the response should be sent as a follow-up message.</param>
-    public async Task RunInteractionTrigger(SocketInteraction inter, CTModel? ct, bool followup = false)
-    {
-        if (inter is null)
-            return;
-
-        // A component's custom id carries the trigger id, so a button outlives the trigger it points at. Deleting a
-        // trigger leaves its buttons in place, and clicking one used to throw rather than say anything.
-        if (ct is null)
-        {
-            try
-            {
-                var guildId = (inter.Channel as IGuildChannel)?.GuildId;
-                await inter.RespondAsync(strings.CtTriggerGone(guildId), ephemeral: true).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "Failed to report a missing chat trigger for an interaction");
-            }
-
-            return;
-        }
-
-        // Switch based on the type of interaction
-        switch (inter)
-        {
-            // If the interaction is a command and the trigger type does not include interaction triggers, or
-            // if the interaction is a message component (button) and the trigger type does not include buttons,
-            // return without further processing.
-            // Refusing to run still has to answer the interaction. Returning silently leaves Discord showing
-            // "The application did not respond" a few seconds later, which reads as the bot being broken.
-            case not null when ct.IsDisabled:
-            case SocketCommandBase when !((ChatTriggerType)ct.ValidTriggerTypes).HasFlag(ChatTriggerType.Interaction):
-            case SocketMessageComponent when !((ChatTriggerType)ct.ValidTriggerTypes).HasFlag(ChatTriggerType.Button):
-                await AcknowledgeUnavailableTriggerAsync(inter).ConfigureAwait(false);
-                return;
-            default:
-                try
-                {
-                    // Create a fake message to represent the interaction.
-                    var fakeMsg = new MewdekoUserMessage
-                    {
-                        Author = inter.User, Content = ct.Trigger, Channel = inter.Channel
-                    };
-
-                    // If the ActualChatTriggers module is blocked, return without further processing.
-                    if (gperm.BlockedModules.Contains("ActualChatTriggers"))
-                        return;
-
-                    // If the interaction occurs in a guild channel, check permissions.
-                    if (inter.Channel is IGuildChannel { Guild: SocketGuild guild })
-                    {
-                        var pc = await perms.GetCacheFor(guild.Id);
-
-                        // Check if the user has permissions to trigger the chat command.
-                        if (!pc.Permissions.CheckPermissions(fakeMsg, ct.Trigger, "ActualChatTriggers",
-                                out var index, ct.Id.ToString()))
-                        {
-                            // If verbose mode is enabled, provide a detailed message about the prevented action.
-                            if (!pc.Verbose)
-                                return;
-                            var returnMsg = strings.PermPrevent(guild.Id,
-                                index + 1,
-                                Format.Bold(pc.Permissions[index]
-                                    .GetCommand(await guildSettings.GetPrefix(guild), guild)));
-                            try
-                            {
-                                await fakeMsg.Channel.SendErrorAsync(returnMsg, configService.Data)
-                                    .ConfigureAwait(false);
-                            }
-                            catch
-                            {
-                                // ignored
-                            }
-
-                            if (configService.Data.LogChatTriggerFires)
-                                logger.LogInformation(returnMsg);
-
-                            return;
-                        }
-
-                        // Check for permission overrides.
-                        if (discordPermOverride.TryGetOverrides(guild.Id, ct.Trigger, out var guildPermission))
-                        {
-                            var user = inter.User as IGuildUser;
-                            if (!user.GuildPermissions.Has(guildPermission))
-                            {
-                                if (configService.Data.LogChatTriggerFires)
-                                {
-                                    logger.LogInformation(
-                                        $"Chat Trigger {ct.Trigger} Blocked for {inter.User} in {guild} due to them missing {guildPermission}.");
-                                }
-
-                                return;
-                            }
-                        }
-                    }
-
-                    var channel = inter.Channel as IGuildChannel;
-
-                    // Check the trigger's own conditions before anything is charged or sent.
-                    if (!await PassesConditionsAsync(ct, channel.GuildId, channel.Id, inter.User)
-                            .ConfigureAwait(false))
-                    {
-                        return;
-                    }
-
-                    // Apply economy requirements and rewards before anything is sent.
-                    if (!await TryApplyEconomyAsync(ct, channel.GuildId, inter.User, inter.Channel)
-                            .ConfigureAwait(false))
-                    {
-                        return;
-                    }
-
-                    await IncrementTriggerUsage(ct).ConfigureAwait(false);
-
-                    // Get guild configuration.
-                    var guildConfig = await guildSettings.GetGuildConfig(channel.GuildId);
-
-                    // If stats tracking is enabled for the guild and the user has not opted out, record the usage.
-                    await RecordTriggerFireAsync(ct, channel.GuildId, channel.Id, inter.User).ConfigureAwait(false);
-
-                    var sentMsg = await ct.SendInteraction(inter, client, false, fakeMsg,
-                        ct.EphemeralResponse, dbFactory, followup, placeholders,
-                        (await SelectResponsesAsync(ct).ConfigureAwait(false)).FirstOrDefault()).ConfigureAwait(false);
-
-                    // Add reactions to the sent message, if any. An interaction has no separate trigger message,
-                    // so both cases target the response.
-                    QueueTriggerReactions(ct, sentMsg, sentMsg);
-
-                    // Process role grants for the interaction.
-                    if (ct.GuildId is null || inter.User is not IGuildUser guildUser)
-                        return;
-                    {
-                        var effectedUsers = inter is SocketUserCommand uCmd
-                            ? (CtRoleGrantType)ct.RoleGrantType switch
-                            {
-                                CtRoleGrantType.Mentioned => [uCmd.Data.Member.Id],
-                                CtRoleGrantType.Sender => [uCmd.User.Id],
-                                CtRoleGrantType.Both => [uCmd.User.Id, uCmd.Data.Member.Id],
-                                _ => []
-                            }
-                            : (CtRoleGrantType)ct.RoleGrantType switch
-                            {
-                                CtRoleGrantType.Mentioned => [],
-                                CtRoleGrantType.Sender => [inter.User.Id],
-                                CtRoleGrantType.Both => [inter.User.Id],
-                                _ => new List<ulong>()
-                            };
-
-                        foreach (var userId in effectedUsers)
-                        {
-                            var user = await guildUser.Guild.GetUserAsync(userId).ConfigureAwait(false);
-                            try
-                            {
-                                var baseRoles = user.RoleIds.Where(x => x != guildUser.Guild?.EveryoneRole.Id).ToList();
-                                var roles = baseRoles.Where(x => !ct.RemovedRoles?.Contains(x.ToString()) ?? true)
-                                    .ToList();
-                                roles.AddRange(ct.GetGrantedRoles().Where(x => !user.RoleIds.Contains(x)));
-
-                                // Apply role modifications.
-                                if (baseRoles.Any(x => !roles.Contains(x)) || roles.Any(x => !baseRoles.Contains(x)))
-                                    await user.ModifyAsync(x => x.RoleIds = new Optional<IEnumerable<ulong>>(roles))
-                                        .ConfigureAwait(false);
-                            }
-                            catch
-                            {
-                                logger.LogWarning("Unable to modify the roles of {User} in {GuildId}", guildUser.Id,
-                                    ct.GuildId);
-                            }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex.Message);
-                }
-
-                return;
-        }
-    }
-
 
     /// <summary>
     ///     Exports chat triggers data for a specific guild or all guilds.
@@ -848,7 +646,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
             try
             {
                 // Deserialize the input string to a dictionary of trigger strings and exported triggers
-                data = Yaml.Deserializer.Deserialize<Dictionary<string, List<ExportedTriggers>>>(input);
+                data = ImportDeserializer.Deserialize<Dictionary<string, List<ExportedTriggers>>>(input);
                 if (data.Sum(x => x.Value.Count) == 0)
                     return false;
             }
@@ -1152,16 +950,6 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
                 };
             }
 
-            // Handle Components (pass through, format should be similar)
-            if (json["Components"] != null)
-            {
-                newFormat["components"] = json["Components"];
-            }
-            else if (json["components"] != null)
-            {
-                newFormat["components"] = json["components"];
-            }
-
             // If there's nothing to convert, return null
             if (!newFormat.HasValues)
                 return null;
@@ -1448,21 +1236,9 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     {
         // Check if the guild ID is provided
         if (maybeGuildId is { } guildId)
-            await UpdateInternal(guildId, ct); // Update internally based on guild ID
+            await UpdateInternal(guildId, ct);
         else
-        {
-            // Publish the chat trigger edited event
             _ = pubSub.Pub(gcrEditedKey, ct);
-            return; // Return completed task
-        }
-
-        // Handle interaction updates
-        if ((CtApplicationCommandType)ct.ApplicationCommandType == CtApplicationCommandType.None)
-            return; // Return completed task if no application command type
-
-        // Get the guild by guild ID
-        var guild = client.GetGuild(guildId);
-        await RegisterTriggersToGuildAsync(guild); // Register triggers to the guild asynchronously
     }
 
     /// <summary>
@@ -2013,23 +1789,6 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     }
 
     /// <summary>
-    ///     Answers an interaction for a trigger that will not run, so Discord does not report a timeout.
-    /// </summary>
-    /// <param name="inter">The interaction to answer.</param>
-    private async Task AcknowledgeUnavailableTriggerAsync(SocketInteraction inter)
-    {
-        try
-        {
-            var guildId = (inter.Channel as IGuildChannel)?.GuildId;
-            await inter.RespondAsync(strings.CtTriggerUnavailable(guildId), ephemeral: true).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to acknowledge an unavailable chat trigger interaction");
-        }
-    }
-
-    /// <summary>
     ///     Splits a set of triggers into those that can be matched by an exact lookup and those that need evaluating.
     /// </summary>
     /// <param name="crs">The triggers to index.</param>
@@ -2092,8 +1851,8 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// <param name="channelId">The channel it fired in.</param>
     /// <param name="user">The user that fired it.</param>
     /// <remarks>
-    ///     Previously only the message and interaction paths recorded anything, so reaction and event fires were
-    ///     invisible. Guild and user statistics opt-outs are honoured, in which case nothing is written.
+    ///     Reaction and event fires are recorded alongside message fires, so they are all
+    ///     visible in the history. Guild and user statistics opt-outs are honoured, in which case nothing is written.
     /// </remarks>
     private async Task RecordTriggerFireAsync(CTModel ct, ulong guildId, ulong channelId, IUser user)
     {
@@ -2930,29 +2689,6 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     }
 
     /// <summary>
-    ///     Sets the interaction type of a chat trigger asynchronously.
-    /// </summary>
-    /// <param name="guildId">The ID of the guild where the trigger belongs.</param>
-    /// <param name="id">The ID of the trigger to update.</param>
-    /// <param name="type">The new interaction type.</param>
-    /// <returns>The updated chat trigger, or null if not found or not permitted.</returns>
-    public async Task<CTModel?> SetInteractionType(ulong? guildId, int id, CtApplicationCommandType type)
-    {
-        // Initialize the database context
-        await using var dbContext = await dbFactory.CreateConnectionAsync();
-        var ct = await dbContext.ChatTriggers.FirstOrDefaultAsync(x => x.Id == id); // Retrieve the chat trigger by ID
-
-        if (ct == null || ct.GuildId != guildId) // Check if the trigger exists and belongs to the guild
-            return null;
-
-        ct.ApplicationCommandType = (int)type; // Update the interaction type
-        // Save changes
-        await UpdateInternalAsync(guildId, ct).ConfigureAwait(false); // Update the trigger internally
-
-        return ct; // Return the updated trigger
-    }
-
-    /// <summary>
     ///     Enables or disables every trigger in a category at once.
     /// </summary>
     /// <param name="guildId">The guild whose triggers should be changed.</param>
@@ -3011,76 +2747,6 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
         await UpdateInternalAsync(guildId, ct).ConfigureAwait(false);
 
         return ct;
-    }
-
-    /// <summary>
-    ///     Sets the interaction name of a chat trigger asynchronously.
-    /// </summary>
-    /// <param name="guildId">The ID of the guild where the trigger belongs.</param>
-    /// <param name="id">The ID of the trigger to update.</param>
-    /// <param name="name">The new interaction name.</param>
-    /// <returns>The updated chat trigger, or null if not found or not permitted.</returns>
-    public async Task<CTModel?> SetInteractionName(ulong? guildId, int id, string name)
-    {
-        // Initialize the database context
-        await using var dbContext = await dbFactory.CreateConnectionAsync();
-        var ct = await dbContext.ChatTriggers.FirstOrDefaultAsync(x => x.Id == id); // Retrieve the chat trigger by ID
-
-        if (ct == null || ct.GuildId != guildId) // Check if the trigger exists and belongs to the guild
-            return null;
-
-        ct.ApplicationCommandName = name; // Update the interaction name
-        // Save changes
-        await UpdateInternalAsync(guildId, ct).ConfigureAwait(false); // Update the trigger internally
-
-        return ct; // Return the updated trigger
-    }
-
-
-    /// <summary>
-    ///     Sets the interaction description of a chat trigger asynchronously.
-    /// </summary>
-    /// <param name="guildId">The ID of the guild where the trigger belongs.</param>
-    /// <param name="id">The ID of the trigger to update.</param>
-    /// <param name="description">The new interaction description.</param>
-    /// <returns>The updated chat trigger, or null if not found or not permitted.</returns>
-    public async Task<CTModel?> SetInteractionDescription(ulong? guildId, int id, string description)
-    {
-        // Initialize the database context
-        await using var dbContext = await dbFactory.CreateConnectionAsync();
-        var ct = await dbContext.ChatTriggers.FirstOrDefaultAsync(x => x.Id == id); // Retrieve the chat trigger by ID
-
-        if (ct == null || ct.GuildId != guildId) // Check if the trigger exists and belongs to the guild
-            return null;
-
-        ct.ApplicationCommandDescription = description; // Update the interaction description
-        // Save changes
-        await UpdateInternalAsync(guildId, ct).ConfigureAwait(false); // Update the trigger internally
-
-        return ct; // Return the updated trigger
-    }
-
-    /// <summary>
-    ///     Sets the ephemeral response property of a chat trigger asynchronously.
-    /// </summary>
-    /// <param name="guildId">The ID of the guild where the trigger belongs.</param>
-    /// <param name="id">The ID of the trigger to update.</param>
-    /// <param name="ephemeral">The value indicating whether the response should be ephemeral.</param>
-    /// <returns>The updated chat trigger, or null if not found or not permitted.</returns>
-    public async Task<CTModel?> SetInteractionEphemeral(ulong? guildId, int id, bool ephemeral)
-    {
-        // Initialize the database context
-        await using var dbContext = await dbFactory.CreateConnectionAsync();
-        var ct = await dbContext.ChatTriggers.FirstOrDefaultAsync(x => x.Id == id); // Retrieve the chat trigger by ID
-
-        if (ct == null || ct.GuildId != guildId) // Check if the trigger exists and belongs to the guild
-            return null;
-
-        ct.EphemeralResponse = ephemeral; // Update the ephemeral response
-        // Save changes
-        await UpdateInternalAsync(guildId, ct).ConfigureAwait(false); // Update the trigger internally
-
-        return ct; // Return the updated trigger
     }
 
     /// <summary>
@@ -3312,18 +2978,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
             .WithTitle(title)
             .WithDescription(strings.ChatTriggerId(gId, ct.Id));
 
-        try
-        {
-            eb.AddField(strings.CtInteractionTypeTitle(gId),
-                strings.CtInteractionTypeBody(gId, ((CtApplicationCommandType)ct.ApplicationCommandType).ToString()));
-        }
-        catch
-        {
-            eb.AddField(strings.CtInteractionTypeTitle(gId), strings.CtUnknown(gId));
-        }
-
-        eb.AddField(strings.CtRealname(gId), ct.RealName() ?? strings.CtNotAvailable(gId))
-            .AddField(efb =>
+        eb.AddField(efb =>
                 efb.WithName(strings.Trigger(gId)).WithValue(ct.Trigger?.TrimTo(1024) ?? strings.CtNotAvailable(gId)))
             .AddField(efb =>
                 efb.WithName(strings.Response(gId))
@@ -3451,19 +3106,9 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
         if (!string.IsNullOrWhiteSpace(ct.RequirementFailMessage))
             eb.AddField(strings.CtRequirementFailMessage(gId), ct.RequirementFailMessage.TrimTo(1024));
 
-        if (!string.IsNullOrWhiteSpace(ct.ApplicationCommandDescription))
-        {
-            eb.AddField(strings.CtInteractionDescription(gId), ct.ApplicationCommandDescription);
-        }
-
-        if (ct.ApplicationCommandId != 0)
-        {
-            eb.AddField(strings.CtInteractionId(gId), ct.ApplicationCommandId.ToString());
-        }
-
         if (ct.ValidTriggerTypes != 0b11111)
         {
-            eb.AddField(strings.CtValidFields(gId), ((ChatTriggerType)(ct.ValidTriggerTypes)).ToString());
+            eb.AddField(strings.CtValidFields(gId), ((ChatTriggerType)(ct.ValidTriggerTypes & 0b111001)).ToString());
         }
 
         if (!string.IsNullOrWhiteSpace(ct.CrosspostingWebhookUrl))
@@ -3483,289 +3128,6 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
         }
 
         return eb;
-    }
-
-    /// <summary>
-    ///     Gets the application command properties for a guild.
-    /// </summary>
-    /// <param name="guildId">The ID of the guild.</param>
-    /// <returns>A list of application command properties.</returns>
-    public async Task<List<ApplicationCommandProperties>> GetApplicationCommandProperties(ulong guildId)
-    {
-        var props = new List<ApplicationCommandProperties>();
-
-        // A disabled trigger must not stay registered with Discord: its command would still appear, but the
-        // interaction handler refuses to run it, leaving the user with a command that always fails. Disabled
-        // triggers are dropped before validation as well, so disabling a trigger with a bad command name is a way
-        // out of a guild whose registration is otherwise blocked by it.
-        var triggers = (await GetChatTriggersFor(guildId)).Where(x => !x.IsDisabled).ToArray();
-
-        if (GetAcctErrors(triggers)?.Any() ?? false)
-        {
-            throw new InvalidOperationException("ACCTs cannot be build when ACCT errors are detected.");
-        }
-
-        if (triggers.Length == 0)
-            return props;
-
-        var groups = triggers.Where(x => x.ApplicationCommandType == (int)CtApplicationCommandType.Slash
-                                         && ((ChatTriggerType)x.ValidTriggerTypes).HasFlag(ChatTriggerType.Interaction)
-                                         && x.RealName().Split(' ').Length == 1)
-            .Select(x => new TriggerChildGrouping(x.RealName(), x, null)).ToList();
-        triggers.Where(x =>
-                x.ApplicationCommandType == (int)CtApplicationCommandType.Slash && x.RealName().Split(' ').Length == 2)
-            .ForEach(x =>
-            {
-                if (groups.Any(y => y.Name == x.RealName().Split(' ').First()))
-                    groups.First(y => y.Name == x.RealName().Split(' ').First()).Children
-                        .Add(new TriggerChildGrouping(x.RealName().Split(' ').Last(), x, null));
-                else
-                    groups.Add(new TriggerChildGrouping(x.RealName().Split(' ').First(), null,
-                        [new TriggerChildGrouping(x.RealName().Split(' ').Last(), x, null)]));
-            });
-
-        triggers.Where(x =>
-            x.ApplicationCommandType == (int)CtApplicationCommandType.Slash
-            && ((ChatTriggerType)x.ValidTriggerTypes).HasFlag(ChatTriggerType.Interaction)
-            && x.RealName().Split(' ').Length == 3).Select(x =>
-        {
-            TriggerChildGrouping group;
-            if (groups.Any(y => y.Name == x.RealName().Split(' ').First()))
-                group = groups.First(y => y.Name == x.RealName().Split(' ').First());
-            else
-            {
-                groups.Add(new TriggerChildGrouping(x.RealName().Split(' ').First(), null,
-                    []));
-                group = groups.First(y => y.Name == x.RealName().Split(' ').First());
-            }
-
-            return (Triggers: x, Group: group);
-        }).Select(x =>
-        {
-            TriggerChildGrouping group;
-            var groupChildren = x.Group.Children;
-            if (groupChildren.Any(y => y.Name == x.Triggers.RealName().Split(' ')[1]))
-                group = groupChildren.First(y => y.Name == x.Triggers.RealName().Split(' ')[1]);
-            else
-            {
-                groupChildren.Add(new TriggerChildGrouping(x.Triggers.RealName().Split(' ')[1], null, []));
-                group = groupChildren.First(y => y.Name == x.Triggers.RealName().Split(' ')[1]);
-            }
-
-            return x with
-            {
-                Group = group
-            };
-        }).ForEach(x => x.Group.Children.Add(new TriggerChildGrouping(x.Triggers.RealName(), x.Triggers, null)));
-
-        props = groups.Select(x => new SlashCommandBuilder()
-                .WithName(x.Name)
-                .WithDescription(x.Triggers?.ApplicationCommandDescription.IsNullOrWhiteSpace() ?? true
-                    ? strings.CtDefaultDescription(guildId)
-                    : x.Triggers!.ApplicationCommandDescription)
-                .AddOptions(x.Triggers is not null
-                    ? []
-                    : x.Children.Select(y => new SlashCommandOptionBuilder
-                        {
-                            Options = []
-                        }
-                        .WithName(y.Name)
-                        .WithDescription(y.Triggers?.ApplicationCommandDescription.IsNullOrWhiteSpace() ?? true
-                            ? strings.CtDefaultDescription(guildId)
-                            : y.Triggers!.ApplicationCommandDescription)
-                        .WithType(y.Triggers is null
-                            ? ApplicationCommandOptionType.SubCommandGroup
-                            : ApplicationCommandOptionType.SubCommand)
-                        .AddOptions(y.Children is null
-                            ? []
-                            : y.Children.Select(z => new SlashCommandOptionBuilder()
-                                .WithName(z.Name.Split(' ')[2])
-                                .WithDescription(z.Triggers?.ApplicationCommandDescription.IsNullOrWhiteSpace() ?? true
-                                    ? strings.CtDefaultDescription(guildId)
-                                    : z.Triggers!.ApplicationCommandDescription)
-                                .WithType(ApplicationCommandOptionType.SubCommand)).ToArray())).ToArray()))
-            .Select(x => x.Build() as ApplicationCommandProperties).ToList();
-
-        triggers.Where(x => x.ApplicationCommandType == (int)CtApplicationCommandType.Message).ForEach(x =>
-            props.Add(new MessageCommandBuilder().WithName(x.RealName()).WithContextTypes(InteractionContextType.Guild)
-                .Build()));
-
-        triggers.Where(x => x.ApplicationCommandType == (int)CtApplicationCommandType.User).ForEach(x =>
-            props.Add(new UserCommandBuilder().WithName(x.RealName()).WithContextTypes(InteractionContextType.Guild)
-                .Build()));
-        return props;
-    }
-
-    /// <summary>
-    ///     Tries to retrieve the application command properties for a guild.
-    /// </summary>
-    /// <param name="guildId">The ID of the guild.</param>
-    /// <returns>
-    ///     A tuple containing a boolean indicating success and the application command properties if successful, otherwise
-    ///     null.
-    /// </returns>
-    public async Task<(bool, List<ApplicationCommandProperties>? props)> TryGetApplicationCommandProperties(
-        ulong guildId)
-    {
-        var props = new List<ApplicationCommandProperties>();
-        try
-        {
-            props = await GetApplicationCommandProperties(guildId);
-            return (true, props);
-        }
-        catch
-        {
-            props = null;
-            return (false, props);
-        }
-    }
-
-    /// <summary>
-    ///     Registers chat triggers as application commands to a guild asynchronously.
-    /// </summary>
-    /// <param name="guild">The guild to register the chat triggers to.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task RegisterTriggersToGuildAsync(IGuild guild)
-    {
-        var result = await TryGetApplicationCommandProperties(guild.Id);
-        // Try to get the application command properties for the guild
-        if (!result.Item1 || result.props is null)
-            return;
-
-        // Create or overwrite application commands based on the debug mode
-#if DEBUG
-        var cmd = new List<IApplicationCommand>();
-        foreach (var prop in result.props)
-            cmd.Add(await guild.CreateApplicationCommandAsync(prop));
-#else
-    var cmd = await guild.BulkOverwriteApplicationCommandsAsync(result.props.ToArray()).ConfigureAwait(false);
-    if (cmd is null) return;
-#endif
-
-        // Associate chat trigger IDs with their corresponding application command IDs
-        await using var dbContext = await dbFactory.CreateConnectionAsync();
-        var cts = dbContext.ChatTriggers.Where(x => x.GuildId == guild.Id).ToList();
-        foreach (var x in cmd.SelectMany(applicationCommand =>
-                     applicationCommand.GetCtNames().Select(name => (cmd: applicationCommand, name))))
-        {
-            cts.First(y => y.RealName() == x.name).ApplicationCommandId = x.cmd.Id;
-        }
-    }
-
-    /// <summary>
-    ///     Checks whether a given command name is valid for the specified application command type.
-    /// </summary>
-    /// <param name="type">The type of the application command.</param>
-    /// <param name="name">The name of the command.</param>
-    /// <returns><see langword="true" /> if the command name is valid; otherwise, <see langword="false" />.</returns>
-    public static bool IsValidName(CtApplicationCommandType type, string name)
-    {
-        if (string.IsNullOrWhiteSpace(name) || name.Length is > 32 or < 1)
-            return false;
-
-        return type is not CtApplicationCommandType.Slash || ValidCommandRegex.IsMatch(name);
-    }
-
-    /// <summary>
-    ///     Gets a list of errors related to chat trigger interactions.
-    /// </summary>
-    /// <param name="guildId">The ID of the guild.</param>
-    /// <returns>A list of errors related to chat trigger interactions, if any; otherwise, <see langword="null" />.</returns>
-    public async Task<List<ChatTriggersInteractionError>?> GetAcctErrors(ulong? guildId)
-    {
-        return GetAcctErrors(await GetChatTriggersFor(guildId));
-    }
-
-
-    /// <summary>
-    ///     Gets a list of errors related to chat trigger interactions based on the provided triggers.
-    /// </summary>
-    /// <param name="triggers">The collection of chat triggers to analyze.</param>
-    /// <returns>
-    ///     A list of errors related to chat trigger interactions, if any; otherwise, <see langword="null" />.
-    /// </returns>
-    public static List<ChatTriggersInteractionError>? GetAcctErrors(IEnumerable<CTModel> triggers)
-    {
-        // Filter out triggers with CtApplicationCommandType.None
-        triggers = triggers.Where(x => x.ApplicationCommandType != (int)CtApplicationCommandType.None);
-
-        // Initialize a dictionary to store parent-child relationships
-        var totalChildren = new Dictionary<string?, List<(string Name, int Id)>>();
-
-        // Initialize a list to store errors
-        var errors = new List<ChatTriggersInteractionError>();
-
-        // Iterate through each trigger to identify errors
-        foreach (var trigger in triggers)
-        {
-            // Determine the depth of the trigger's name
-            var triggerDepth = trigger.RealName().Split(' ').Length;
-
-            // Determine the parent of the trigger (if exists)
-            var parent = triggerDepth > 1 ? string.Join(' ', trigger.RealName().Split(' ').Take(triggerDepth - 1)) : "";
-
-            // Update the totalChildren dictionary with parent-child relationships
-            if (!parent.IsNullOrWhiteSpace())
-            {
-                var value = totalChildren.GetValueOrDefault(parent, new List<(string, int)>());
-                value.Add((trigger.RealName(), trigger.Id));
-                totalChildren[parent] = value;
-            }
-
-            // Check if the trigger name is valid
-            if (!IsValidName((CtApplicationCommandType)trigger.ApplicationCommandType, trigger.RealName()))
-            {
-                errors.Add(new ChatTriggersInteractionError("invalid_name", [
-                    trigger.Id
-                ], [
-                    trigger.RealName()
-                ]));
-            }
-
-            // Check for duplicate trigger names and subcommand matching parent triggers
-            foreach (var newTrigger in triggers.Where(x => x.Id != trigger.Id))
-            {
-                var newTriggerDepth = newTrigger.RealName().Split(' ').Length;
-
-                if (trigger.RealName() == newTrigger.RealName())
-                {
-                    errors.Add(new ChatTriggersInteractionError("duplicate", [
-                            trigger.Id, newTrigger.Id
-                        ],
-                        [
-                            trigger.RealName(), newTrigger.RealName()
-                        ]));
-                }
-
-                switch (triggerDepth)
-                {
-                    case 1 when newTriggerDepth == 2 && newTrigger.RealName().Split(' ')[0] == trigger.RealName():
-                        errors.Add(new ChatTriggersInteractionError("subcommand_match_parent", [
-                                trigger.Id, newTrigger.Id
-                            ],
-                            [
-                                trigger.RealName(), newTrigger.RealName()
-                            ]));
-                        break;
-                    case 2 when newTriggerDepth == 3 &&
-                                string.Join(' ', newTrigger.RealName().Split(' ').Take(2)) == trigger.RealName():
-                        errors.Add(new ChatTriggersInteractionError("subcommand_match_parent", [
-                                trigger.Id, newTrigger.Id
-                            ],
-                            [
-                                trigger.RealName(), newTrigger.RealName()
-                            ]));
-                        break;
-                }
-            }
-        }
-
-        // Check for triggers with too many children and add errors if necessary
-        totalChildren.Where(x => x.Value.Count > 25).ForEach(x => errors.Add(new ChatTriggersInteractionError(
-            "too_many_children",
-            x.Value.Select(y => y.Id).ToArray(), x.Value.Select(y => y.Name).ToArray())));
-
-        return errors.Any() ? errors : null;
     }
 
     /// <summary>
@@ -3865,7 +3227,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
                             ct.Id.ToString()))
                         continue;
 
-                    // Honour permission overrides the same way the message and interaction paths do.
+                    // Honour permission overrides the same way the message path does.
                     if (discordPermOverride.TryGetOverrides(guild.Id, ct.Trigger, out var guildPermission)
                         && !sgUser.GuildPermissions.Has(guildPermission))
                     {
@@ -3942,7 +3304,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
             await HandleRoleOperations(ct, guild, user, message, channel).ConfigureAwait(false);
         }
 
-        // Create a fake message for the reaction trigger (similar to button/interaction triggers)
+        // Create a fake message for the reaction trigger
         var fakeMsg = new MewdekoUserMessage
         {
             Author = user,
@@ -4109,9 +3471,4 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// <param name="Exact">Triggers whose whole message must equal the trigger, keyed by that text.</param>
     /// <param name="Complex">Triggers that require prefix stripping, regex or positional matching.</param>
     private sealed record TriggerIndex(Dictionary<string, List<CTModel>> Exact, CTModel[] Complex);
-
-    /// <summary>
-    ///     Represents the grouping of trigger children for building application command properties.
-    /// </summary>
-    private record TriggerChildGrouping(string Name, CTModel? Triggers, List<TriggerChildGrouping>? Children);
 }

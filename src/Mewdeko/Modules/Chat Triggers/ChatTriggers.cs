@@ -658,7 +658,7 @@ public class ChatTriggers(
     /// <param name="id">The ID of the chat trigger.</param>
     /// <param name="type">The trigger type to set validity for. <see cref="ChatTriggerType" /></param>
     /// <param name="enabled">Whether the trigger type should be enabled or disabled.</param>
-    /// <example>.chattriggervalidtype 9987 Slash true</example>
+    /// <example>.chattriggervalidtype 9987 Reactions true</example>
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.Administrator)]
@@ -677,8 +677,6 @@ public class ChatTriggers(
                     .Build())
                 .ConfigureAwait(false);
         }
-
-        await FollowupWithTriggerStatus().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -707,8 +705,6 @@ public class ChatTriggers(
 
         await ctx.Channel.EmbedAsync(Service.GetEmbed(res.Trigger, ctx.Guild?.Id, Strings.EditedChatTrig(ctx.Guild.Id)))
             .ConfigureAwait(false);
-
-        await FollowupWithTriggerStatus().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -731,192 +727,6 @@ public class ChatTriggers(
 
         await ctx.Channel.EmbedAsync(Service.GetEmbed(res, ctx.Guild?.Id, Strings.EditedChatTrig(ctx.Guild.Id)))
             .ConfigureAwait(false);
-
-        await FollowupWithTriggerStatus().ConfigureAwait(false);
-    }
-
-
-    /// <summary>
-    ///     Sets the interaction type for a chat trigger.
-    /// </summary>
-    /// <param name="id">The ID of the chat trigger.</param>
-    /// <param name="type">The interaction type to set. <see cref="CtApplicationCommandType" /></param>
-    /// <example>.setctintertype 9987 Slash</example>
-    [Cmd]
-    [Aliases]
-    [UserPerm(GuildPermission.Administrator)]
-    public async Task SetCtInterType(int id, CtApplicationCommandType type)
-    {
-        var ct = await Service.GetChatTriggers(ctx.Guild?.Id, id);
-        if (ct is null)
-        {
-            await ReplyErrorAsync(Strings.NoFoundId(ctx.Guild.Id)).ConfigureAwait(false);
-            return;
-        }
-
-        // Validate the name based on type
-        if (type != CtApplicationCommandType.None
-            && !ChatTriggersService.IsValidName(type,
-                string.IsNullOrWhiteSpace(ct.ApplicationCommandName) ? ct.Trigger : ct.ApplicationCommandName))
-        {
-            await ReplyErrorAsync(Strings.CtInteractionNameInvalid(ctx.Guild.Id)).ConfigureAwait(false);
-            return;
-        }
-
-        var res = await Service.SetInteractionType(ctx.Guild?.Id, id, type).ConfigureAwait(false);
-
-        if (res is null)
-        {
-            await ReplyErrorAsync(Strings.NoFoundId(ctx.Guild.Id)).ConfigureAwait(false);
-        }
-        else
-        {
-            await ctx.Channel.EmbedAsync(Service.GetEmbed(res, ctx.Guild?.Id, Strings.EditedChatTrig(ctx.Guild.Id)))
-                .ConfigureAwait(false);
-        }
-
-        await FollowupWithTriggerStatus().ConfigureAwait(false);
-    }
-
-    /// <summary>
-    ///     Sets the interaction name for a chat trigger.
-    /// </summary>
-    /// <param name="id">The ID of the chat trigger.</param>
-    /// <param name="name">The name to set for the interaction.</param>
-    /// <example>.setctintername 9987 ihatedocumentation</example>
-    [Cmd]
-    [Aliases]
-    [UserPerm(GuildPermission.Administrator)]
-    public async Task SetCtInterName(int id, string name)
-    {
-        var res = await Service.SetInteractionName(ctx.Guild?.Id, id, name).ConfigureAwait(false);
-
-        if (res is null)
-        {
-            await ReplyErrorAsync(Strings.NoFoundId(ctx.Guild.Id)).ConfigureAwait(false);
-        }
-        else
-        {
-            await ctx.Channel.EmbedAsync(Service.GetEmbed(res, ctx.Guild?.Id, Strings.EditedChatTrig(ctx.Guild.Id)))
-                .ConfigureAwait(false);
-        }
-
-        await FollowupWithTriggerStatus().ConfigureAwait(false);
-    }
-
-    /// <summary>
-    ///     Sets the interaction description for a chat trigger.
-    /// </summary>
-    /// <param name="id">The ID of the chat trigger.</param>
-    /// <param name="description">The description to set for the interaction.</param>
-    /// <example>.setctinterdesc 9987 3591 things to continue documenting....</example>
-    [Cmd]
-    [Aliases]
-    [UserPerm(GuildPermission.Administrator)]
-    public async Task SetCtInterDesc(int id, string description)
-    {
-        var res = await Service.SetInteractionDescription(ctx.Guild?.Id, id, description).ConfigureAwait(false);
-
-        if (res is null)
-        {
-            await ReplyErrorAsync(Strings.NoFoundId(ctx.Guild.Id)).ConfigureAwait(false);
-        }
-        else
-        {
-            await ctx.Channel.EmbedAsync(Service.GetEmbed(res, ctx.Guild?.Id, Strings.EditedChatTrig(ctx.Guild.Id)))
-                .ConfigureAwait(false);
-        }
-
-        await FollowupWithTriggerStatus().ConfigureAwait(false);
-    }
-
-
-    /// <summary>
-    ///     Sets whether the interaction response should be ephemeral for a chat trigger. To not show others my suffering with
-    ///     docs!
-    /// </summary>
-    /// <param name="id">The ID of the chat trigger.</param>
-    /// <param name="ephemeral">True if the response should be ephemeral, false otherwise.</param>
-    /// <example>.ctca 9987 true/false</example>
-    [Cmd]
-    [Aliases]
-    [UserPerm(GuildPermission.Administrator)]
-    public async Task CtInterEphemeral(int id, bool ephemeral)
-    {
-        var res = await Service.SetInteractionEphemeral(ctx.Guild?.Id, id, ephemeral).ConfigureAwait(false);
-
-        if (res is null)
-        {
-            await ReplyErrorAsync(Strings.NoFoundId(ctx.Guild.Id)).ConfigureAwait(false);
-        }
-        else
-        {
-            await ctx.Channel.EmbedAsync(Service.GetEmbed(res, ctx.Guild?.Id, Strings.EditedChatTrig(ctx.Guild.Id)))
-                .ConfigureAwait(false);
-        }
-
-        await FollowupWithTriggerStatus().ConfigureAwait(false);
-    }
-
-    /// <summary>
-    ///     Displays the interaction errors for chat triggers.
-    /// </summary>
-    /// <example>.ctintererrors</example>
-    [Cmd]
-    [Aliases]
-    [UserPerm(GuildPermission.Administrator)]
-    public async Task CtInterErrors()
-    {
-        var errors = await Service.GetAcctErrors(ctx.Guild?.Id);
-
-        var eb = new EmbedBuilder();
-        var cb = new ComponentBuilder().WithButton("Support Server",
-            style: ButtonStyle.Link,
-            url: "https://discord.gg/Mewdeko",
-            emote: Emote.Parse("<:IconInvite:778931752835088426>"));
-
-        if (errors?.Any() ?? false)
-        {
-            eb.WithFields(errors.Select(x =>
-                {
-                    var title = x.ErrorKey switch
-                    {
-                        "duplicate" => Strings.CtInterrDuplicate(ctx.Guild.Id),
-                        "invalid_name" => Strings.CtInterrInvalidName(ctx.Guild.Id),
-                        "subcommand_match_parent" => Strings.CtInterrSubcommandMatchParent(ctx.Guild.Id),
-                        "too_many_children" => Strings.CtInterrTooManyChildren(ctx.Guild.Id),
-                        _ => x.ErrorKey
-                    };
-
-                    var body = x.ErrorKey switch
-                    {
-                        "duplicate" => Strings.CtInterrDuplicateBody(ctx.Guild.Id,
-                            x.CtRealNames.Select(s => $" - {s}").Join('\n')),
-                        "invalid_name" => Strings.CtInterrInvalidNameBody(ctx.Guild.Id,
-                            x.CtRealNames.Select(s => $" - {s}").Join('\n')),
-                        "subcommand_match_parent" => Strings.CtInterrSubcommandMatchParentBody(ctx.Guild.Id,
-                            x.CtRealNames.Select(s => $" - {s}").Join('\n')),
-                        "too_many_children" => Strings.CtInterrTooManyChildrenBody(ctx.Guild.Id,
-                            x.CtRealNames.Select(s => $" - {s}").Join('\n')),
-                        _ => x.ErrorKey
-                    };
-
-                    return new EmbedFieldBuilder()
-                        .WithName(title)
-                        .WithValue(body);
-                }))
-                .WithTitle(Strings.CtInteractionErrorsInfoTitle(ctx.Guild.Id, errors.Count))
-                .WithDescription(Strings.CtInteractionErrorsInfoDesc(ctx.Guild.Id))
-                .WithErrorColor();
-        }
-        else
-        {
-            eb.WithOkColor()
-                .WithTitle(Strings.CtInteractionErrorsNone(ctx.Guild.Id))
-                .WithDescription(Strings.CtInteractionErrorsNoneDesc(ctx.Guild.Id));
-        }
-
-        await ctx.Channel.SendMessageAsync(embed: eb.Build(), components: cb.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1810,20 +1620,5 @@ public class ChatTriggers(
 
         await ctx.Channel.EmbedAsync(Service.GetEmbed(res, ctx.Guild?.Id, Strings.EditedChatTrig(ctx.Guild.Id)))
             .ConfigureAwait(false);
-    }
-
-    /// <summary>
-    ///     Checks for any interaction errors related to chat triggers and sends a follow-up message with their status.
-    /// </summary>
-    public async Task FollowupWithTriggerStatus()
-    {
-        var errors = await Service.GetAcctErrors(ctx.Guild?.Id);
-        if (!(errors?.Any() ?? false))
-            return;
-        var embed = new EmbedBuilder()
-            .WithTitle(Strings.CtInteractionErrorsTitle(ctx.Guild.Id))
-            .WithDescription(Strings.CtInteractionErrorsDesc(ctx.Guild.Id))
-            .WithErrorColor();
-        await ctx.Channel.EmbedAsync(embed).ConfigureAwait(false);
     }
 }

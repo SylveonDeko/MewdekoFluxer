@@ -850,14 +850,6 @@ ctcpsetwebhook:
   - ctcrosspostwh
 ctdm:
   - ctdm
-ctinterephemeral:
-  - ctinterephemeral
-  - ctiephemeral
-  - ctieph
-ctintererrors:
-  - ctintererrors
-  - ctierrors
-  - ctie
 ctnr:
   - ctnr
   - chattriggernoresponse
@@ -2597,21 +2589,6 @@ setchanlname:
   - schn
 setchannelxp:
   - setchannelxp
-setctinterdesc:
-  - setctinterdesc
-  - ctidesc
-  - ctinterdesc
-setctintername:
-  - setctintername
-  - ctiname
-  - ctintername
-  - setctrealname
-  - ctrealname
-  - ctrn
-setctintertype:
-  - setctintertype
-  - ctitype
-  - ctintertype
 setdaily:
   - setdaily
 setdefaultpunishment:

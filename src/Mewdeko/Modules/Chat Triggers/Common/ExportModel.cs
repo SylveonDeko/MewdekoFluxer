@@ -80,26 +80,6 @@ public class ExportedTriggers
     public ChatTriggerType VTypes { get; set; } = ChatTriggerType.Message;
 
     /// <summary>
-    ///     Gets or sets the application command name for the trigger.
-    /// </summary>
-    public string AcName { get; set; } = "";
-
-    /// <summary>
-    ///     Gets or sets the application command description for the trigger.
-    /// </summary>
-    public string AcDesc { get; set; } = "";
-
-    /// <summary>
-    ///     Gets or sets the application command type for the trigger.
-    /// </summary>
-    public CtApplicationCommandType Act { get; set; }
-
-    /// <summary>
-    ///     Gets or sets a value indicating whether the response is ephemeral.
-    /// </summary>
-    public bool Eph { get; set; }
-
-    /// <summary>
     ///     Gets or sets the trigger text. Needed on import, since a single exported key may hold several triggers.
     /// </summary>
     public string? Trig { get; set; }
@@ -258,10 +238,6 @@ public class ExportedTriggers
             ARole = ct.GetGrantedRoles(),
             Rgt = (CtRoleGrantType)ct.RoleGrantType,
             VTypes = (ChatTriggerType)ct.ValidTriggerTypes,
-            AcName = ct.ApplicationCommandName,
-            AcDesc = ct.ApplicationCommandDescription,
-            Act = (CtApplicationCommandType)ct.ApplicationCommandType,
-            Eph = ct.EphemeralResponse,
             Trig = ct.Trigger,
             Pt = (RequirePrefixType)ct.PrefixType,
             Cp = ct.CustomPrefix,
@@ -324,10 +300,6 @@ public class ExportedTriggers
             RemovedRoles = RRole.Count > 0 ? string.Join("@@@", RRole) : null,
             RoleGrantType = (int)Rgt,
             ValidTriggerTypes = (int)(VTypes == 0 ? ChatTriggerType.Message : VTypes),
-            ApplicationCommandName = AcName,
-            ApplicationCommandDescription = AcDesc,
-            ApplicationCommandType = (int)Act,
-            EphemeralResponse = Eph,
             PrefixType = (int)Pt,
             CustomPrefix = Cp,
             IsDisabled = Dis,

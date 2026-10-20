@@ -22,32 +22,6 @@ public enum CtRoleGrantType
 }
 
 /// <summary>
-///     Specifies the type of application command for chat triggers.
-/// </summary>
-public enum CtApplicationCommandType
-{
-    /// <summary>
-    ///     No application command associated.
-    /// </summary>
-    None,
-
-    /// <summary>
-    ///     A slash command.
-    /// </summary>
-    Slash,
-
-    /// <summary>
-    ///     A message context menu command.
-    /// </summary>
-    Message,
-
-    /// <summary>
-    ///     A user context menu command.
-    /// </summary>
-    User
-}
-
-/// <summary>
 ///     Specifies the types of chat triggers.
 /// </summary>
 [Flags]
@@ -57,16 +31,6 @@ public enum ChatTriggerType
     ///     Triggered by a regular message.
     /// </summary>
     Message = 0b0001,
-
-    /// <summary>
-    ///     Triggered by an interaction.
-    /// </summary>
-    Interaction = 0b0010,
-
-    /// <summary>
-    ///     Triggered by a button press.
-    /// </summary>
-    Button = 0b0100,
 
     /// <summary>
     ///     Triggered by reactions.
@@ -89,7 +53,7 @@ public enum ChatTriggerType
 /// </summary>
 /// <remarks>
 ///     These let a trigger act as the formatting layer for another module's notification, so a server can use the full
-///     trigger response toolkit, embeds, components, conditions and role grants, in place of that module's own fixed
+///     trigger response toolkit, embeds, conditions and role grants, in place of that module's own fixed
 ///     message.
 /// </remarks>
 public enum CtEventType

@@ -426,100 +426,6 @@ public static class Extensions
     }
 
     /// <summary>
-    ///     Sends a message based on the provided chat trigger and interaction asynchronously.
-    /// </summary>
-    /// <param name="ct">The chat trigger model.</param>
-    /// <param name="inter">The socket interaction.</param>
-    /// <param name="client">The Discord socket client.</param>
-    /// <param name="sanitize">Boolean value indicating whether to sanitize mentions in the response.</param>
-    /// <param name="fakeMsg">The fake user message for context.</param>
-    /// <param name="ephemeral">Boolean value indicating whether the response should be ephemeral. Default is false.</param>
-    /// <param name="dbProvider">Optional: The database context. Default is null.</param>
-    /// <param name="followup">Boolean value indicating whether to send a follow-up response. Default is false.</param>
-    /// <param name="placeholders">
-    ///     Optional: the contextual placeholder service, used to resolve placeholders contributed by other modules such
-    ///     as XP or currency.
-    /// </param>
-    /// <param name="responseOverride">
-    ///     Optional: the response to send instead of the trigger's primary response, used when a trigger defines
-    ///     several responses.
-    /// </param>
-    /// <returns>The sent user message or null if no response is required.</returns>
-    public static async Task<IUserMessage>? SendInteraction(this ChatTrigger ct,
-        SocketInteraction inter,
-        DiscordShardedClient client, bool sanitize, IUserMessage fakeMsg, bool ephemeral = false,
-        IDataConnectionFactory dbProvider = null, bool followup = false,
-        TriggerPlaceholderService? placeholders = null, string? responseOverride = null)
-    {
-        await using var dbContext = await dbProvider.CreateConnectionAsync();
-
-        var interactionTarget = inter switch
-        {
-            IMessageCommandInteraction mData => mData.Data.Message.Author.Id,
-            IUserCommandInteraction uData => uData.Data.User.Id,
-            _ => 0ul
-        };
-
-        var response = await ct.ResolveContextualPlaceholdersAsync(placeholders, client,
-            (inter.Channel as IGuildChannel)?.Guild, inter.Channel, inter.User, interactionTarget, null,
-            responseOverride).ConfigureAwait(false);
-
-        var rep = new ReplacementBuilder()
-            .WithDefault(inter.User, inter.Channel, (inter.Channel as ITextChannel)?.Guild as SocketGuild, client)
-            .WithOverride("%target%", () => inter switch
-            {
-                IMessageCommandInteraction mData => mData.Data.Message.Content.SanitizeAllMentions(),
-                IUserCommandInteraction uData => uData.Data.User.Mention,
-                _ => "%target%"
-            })
-            .WithOverride("%usecount%", () => dbContext.CommandStats
-                .Count(x => x.Trigger && x.GuildId == (ct.GuildId ?? 0) && x.NameOrId == $"{ct.Id}")
-                .ToString())
-            .WithOverride("%targetuser%", () => inter switch
-            {
-                IMessageCommandInteraction mData => $"{mData.Data.Message.Author.Mention}",
-                IUserCommandInteraction uData => $"{uData.Data.User.Mention}",
-                _ => "%targetuser%"
-            })
-            .WithOverride("%targetuser.id%", () => inter switch
-            {
-                IMessageCommandInteraction mData => $"{mData.Data.Message.Author.Id}",
-                IUserCommandInteraction uData => $"{uData.Data.User.Id}",
-                _ => "%targetuser.id%"
-            })
-            .WithOverride("%targetuser.avatar%", () => inter switch
-            {
-                IMessageCommandInteraction mData => $"{mData.Data.Message.Author.RealAvatarUrl()}",
-                IUserCommandInteraction uData => $"{uData.Data.User.RealAvatarUrl()}",
-                _ => "%targetuser.avatar%"
-            })
-            .Build();
-        if (SmartEmbed.TryParse(response, ct.GuildId, out var crembed, out var plainText))
-        {
-            SmartEmbed.TryParse(rep.Replace(response), ct.GuildId, out crembed, out plainText);
-            if (sanitize)
-                plainText = plainText.SanitizeMentions();
-            await ct.SendCrosspostAsync(client, plainText, crembed).ConfigureAwait(false);
-
-            if (ct.NoRespond)
-                return null;
-            return await SendInteractionResponseAsync(inter, plainText, ephemeral, followup, crembed)
-                .ConfigureAwait(false);
-        }
-
-
-        var context = rep
-            .Replace(await ct.ResponseWithContextAsync(fakeMsg, client, ct.ContainsAnywhere, dbProvider, response)
-                .ConfigureAwait(false))
-            .SanitizeMentions(sanitize);
-        await ct.SendCrosspostAsync(client, context).ConfigureAwait(false);
-
-        if (ct.NoRespond)
-            return null;
-        return await SendInteractionResponseAsync(inter, context, ephemeral, followup).ConfigureAwait(false);
-    }
-
-    /// <summary>
     ///     Resolves placeholders contributed by other modules against the invocation context.
     /// </summary>
     /// <param name="ct">The chat trigger whose response is being resolved.</param>
@@ -595,18 +501,6 @@ public static class Extensions
         {
             /* ignored */
         }
-    }
-
-    private static async Task<IUserMessage> SendInteractionResponseAsync(SocketInteraction inter, string? plainText,
-        bool ephemeral, bool followup, Embed[]? embeds = null)
-    {
-        if (followup)
-            return await inter.FollowupAsync(plainText, embeds, ephemeral: ephemeral)
-                .ConfigureAwait(false);
-
-        await inter.RespondAsync(plainText, embeds, ephemeral: ephemeral)
-            .ConfigureAwait(false);
-        return await inter.GetOriginalResponseAsync().ConfigureAwait(false);
     }
 
     /// <summary>

@@ -577,67 +577,6 @@ public static partial class Extensions
     }
 
     /// <summary>
-    ///     Gets the command names associated with the IApplicationCommand.
-    /// </summary>
-    /// <param name="command">IApplicationCommand to get the command names for.</param>
-    /// <returns>An array of command names.</returns>
-    public static string[] GetCtNames(this IApplicationCommand command)
-    {
-        var baseName = command.Name;
-        var sgs = command.Options.Where(x =>
-            x.Type is ApplicationCommandOptionType.SubCommand or ApplicationCommandOptionType.SubCommandGroup);
-
-        var applicationCommandOptions = sgs as IApplicationCommandOption[] ?? sgs.ToArray();
-        if (!applicationCommandOptions.Any())
-            return
-            [
-                baseName
-            ];
-
-        var ctNames = new List<string>();
-        foreach (var sg in applicationCommandOptions)
-            if (sg.Type == ApplicationCommandOptionType.SubCommand)
-                ctNames.Add(baseName + " " + sg.Name);
-            else
-                ctNames.AddRange(sg.Options.Select(x => baseName + " " + sg.Name + " " + x.Name));
-
-        return ctNames.ToArray();
-    }
-
-    /// <summary>
-    ///     Gets the real name of the interaction.
-    /// </summary>
-    /// <param name="interaction">SocketInteraction instance.</param>
-    /// <returns>The real name of the interaction.</returns>
-    public static string GetRealName(this SocketInteraction interaction)
-    {
-        switch (interaction)
-        {
-            case SocketUserCommand uCmd:
-                return uCmd.Data.Name;
-            case SocketMessageCommand mCmd:
-                return mCmd.Data.Name;
-            default:
-            {
-                if (interaction is not SocketSlashCommand sCmd)
-                    throw new ArgumentException("interaction is not a valid type");
-                return (sCmd.Data.Name
-                        + " "
-                        + ((sCmd.Data.Options?.FirstOrDefault()?.Type is ApplicationCommandOptionType.SubCommand
-                               or ApplicationCommandOptionType.SubCommandGroup
-                               ? sCmd.Data.Options?.First().Name
-                               : "")
-                           ?? "")
-                        + " "
-                        + (sCmd.Data.Options?.FirstOrDefault()?.Options?.FirstOrDefault()?.Type
-                           == ApplicationCommandOptionType.SubCommand
-                            ? sCmd.Data.Options?.FirstOrDefault()?.Options?.FirstOrDefault()?.Name
-                            : "")).Trim();
-            }
-        }
-    }
-
-    /// <summary>
     ///     Generates a regular expression for URL validation.
     /// </summary>
     /// <returns>A compiled regular expression for URL validation.</returns>

@@ -154,10 +154,4 @@ public static class ChatTriggersExtensions
 
         return responses;
     }
-
-    /// <summary>
-    ///     Gets the real name of the trigger, which is either the application command name or the trigger text.
-    /// </summary>
-    public static string? RealName(this ChatTrigger ct)
-        => (string.IsNullOrEmpty(ct.ApplicationCommandName) ? ct.Trigger : ct.ApplicationCommandName).Trim();
 }
