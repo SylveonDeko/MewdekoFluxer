@@ -4258,6 +4258,98 @@ achexcluderole:
   - achexcluderole
 achexcludechannel:
   - achexcludechannel
+twitchset:
+  - twitchset
+twitchremove:
+  - twitchremove
+twitchenable:
+  - twitchenable
+twitchdisable:
+  - twitchdisable
+twitchconfig:
+  - twitchconfig
+twitchstatus:
+  - twitchstatus
+twitchprefix:
+  - twitchprefix
+twitchlanguage:
+  - twitchlanguage
+twitchstreaminfo:
+  - twitchstreaminfo
+twitchclip:
+  - twitchclip
+twitchlink:
+  - twitchlink
+twitchunlink:
+  - twitchunlink
+twitchlinks:
+  - twitchlinks
+twitchclaim:
+  - twitchclaim
+twitchcommandadd:
+  - twitchcommandadd
+twitchcommandremove:
+  - twitchcommandremove
+twitchcommandlist:
+  - twitchcommandlist
+twitchcounterset:
+  - twitchcounterset
+twitchcounterlist:
+  - twitchcounterlist
+twitchscheduleset:
+  - twitchscheduleset
+twitchscheduleclear:
+  - twitchscheduleclear
+twitchsocialsset:
+  - twitchsocialsset
+twitchsocialsclear:
+  - twitchsocialsclear
+twitchtimeradd:
+  - twitchtimeradd
+twitchtimerremove:
+  - twitchtimerremove
+twitchtimerlist:
+  - twitchtimerlist
+twitchtimerenable:
+  - twitchtimerenable
+twitchtimerdisable:
+  - twitchtimerdisable
+twitchtimertest:
+  - twitchtimertest
+twitchgolive:
+  - twitchgolive
+twitchgoliveclear:
+  - twitchgoliveclear
+twitchsubchannel:
+  - twitchsubchannel
+twitchsubclear:
+  - twitchsubclear
+twitchraidchannel:
+  - twitchraidchannel
+twitchraidclear:
+  - twitchraidclear
+twitchrecapchannel:
+  - twitchrecapchannel
+twitchrecapclear:
+  - twitchrecapclear
+twitchrolesyncadd:
+  - twitchrolesyncadd
+twitchrolesyncremove:
+  - twitchrolesyncremove
+twitchrolesynclist:
+  - twitchrolesynclist
+twitchredemptionadd:
+  - twitchredemptionadd
+twitchredemptionremove:
+  - twitchredemptionremove
+twitchredemptionlist:
+  - twitchredemptionlist
+twitchraidtargetadd:
+  - twitchraidtargetadd
+twitchraidtargetremove:
+  - twitchraidtargetremove
+twitchraidtargetlist:
+  - twitchraidtargetlist
 importxp:
   - importxp
 importcurrency:
