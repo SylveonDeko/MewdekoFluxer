@@ -153,12 +153,6 @@ public class BotCredentials : IBotCredentials
 
 
     /// <summary>
-    ///     Gets or sets the URL used for giveaway entries.
-    /// </summary>
-    public string GiveawayEntryUrl { get; set; }
-
-
-    /// <summary>
     ///     Gets or sets the port used for the API.
     /// </summary>
     public int ApiPort { get; set; } = 5001;
@@ -560,7 +554,6 @@ public class BotCredentials : IBotCredentials
                     .Select(c => ulong.Parse(c.Value))
             ];
             TurnstileKey = data[nameof(TurnstileKey)];
-            GiveawayEntryUrl = data[nameof(GiveawayEntryUrl)];
             GoogleApiKey = data[nameof(GoogleApiKey)];
             PsqlConnectionString = data[nameof(PsqlConnectionString)];
             CsrfToken = data[nameof(CsrfToken)];
@@ -740,7 +733,6 @@ public class BotCredentials : IBotCredentials
 
         public bool UseGlobalCurrency { get; set; } = false;
         public string TurnstileKey { get; set; } = "";
-        public string GiveawayEntryUrl { get; set; } = "";
 
         public string PsqlConnectionString { get; set; } =
             "Server=ServerIp;Database=DatabaseName;Port=PsqlPort;UID=PsqlUser;Password=UserPassword";

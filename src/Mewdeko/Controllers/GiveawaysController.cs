@@ -1,11 +1,7 @@
-using System.Net.Http;
-using System.Text.Json;
 using DataModel;
 using LinqToDB.Async;
 using Mewdeko.Controllers.Common.DashboardAccess;
-using Mewdeko.Controllers.Common.Giveaways;
 using Mewdeko.Modules.Giveaways.Services;
-using Mewdeko.Services.Impl;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,8 +16,6 @@ namespace Mewdeko.Controllers;
 public class GiveawaysController : Controller
 {
     private readonly IDashboardAuditContext auditContext;
-    private readonly HttpClient client;
-    private readonly BotCredentials creds;
     private readonly IDataConnectionFactory dbFactory;
     private readonly ILogger<GiveawaysController> logger;
     private readonly GiveawayService service;
@@ -30,53 +24,18 @@ public class GiveawaysController : Controller
     ///     Initializes a new instance of the <see cref="GiveawaysController" /> class.
     /// </summary>
     /// <param name="service">The giveaway service instance.</param>
-    /// <param name="creds">The bot credentials instance.</param>
-    /// <param name="client">The HTTP client instance.</param>
     /// <param name="dbFactory">The factory for creating database connections.</param>
     /// <param name="logger">Logger for this class.</param>
     /// <param name="auditContext">Records before/after state for the dashboard audit log.</param>
     public GiveawaysController(
         GiveawayService service,
-        BotCredentials creds,
-        HttpClient client,
         IDataConnectionFactory dbFactory, ILogger<GiveawaysController> logger,
         IDashboardAuditContext auditContext)
     {
         this.service = service;
-        this.creds = creds;
-        this.client = client;
         this.dbFactory = dbFactory;
         this.logger = logger;
         this.auditContext = auditContext;
-    }
-
-    /// <summary>
-    ///     Allows a user to enter a specific giveaway after verifying a Turnstile captcha token.
-    /// </summary>
-    /// <param name="request">The request containing user ID, giveaway ID, and Turnstile token.</param>
-    /// <returns>
-    ///     An <see cref="OkResult" /> if entry is successful, or <see cref="BadRequestObjectResult" /> if captcha fails
-    ///     or entry is disallowed.
-    /// </returns>
-    [HttpPost("enter")]
-    public async Task<IActionResult> EnterGiveaway(
-        [FromBody] GiveawayEntryRequest request)
-    {
-        var authenticatedUserId = await HttpContext.GetDashboardUserIdAsync();
-        if (authenticatedUserId is null)
-            return Unauthorized("You must be signed in to enter a giveaway.");
-
-        var verificationResponse = await VerifyTurnstileToken(request.TurnstileToken);
-        if (!verificationResponse.Success)
-        {
-            return BadRequest("Captcha verification failed");
-        }
-
-        var (successful, reason) = await service.AddUserToGiveaway(authenticatedUserId.Value, request.GiveawayId);
-
-        if (!successful)
-            return BadRequest(reason);
-        return Ok();
     }
 
     /// <summary>
@@ -172,61 +131,6 @@ public class GiveawaysController : Controller
         {
             logger.LogError(ex, "Failed to end giveaway {GiveawayId} for guild {GuildId}", giveawayId, guildId);
             return BadRequest(ex.Message);
-        }
-    }
-
-    /// <summary>
-    ///     Verifies a Cloudflare Turnstile token.
-    /// </summary>
-    /// <param name="token">The Turnstile token from the client.</param>
-    /// <returns>The deserialized response from the verification endpoint.</returns>
-    private async Task<TurnstileVerificationResponse> VerifyTurnstileToken(string token)
-    {
-        var content = new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            {
-                "secret", creds.TurnstileKey
-            },
-            {
-                "response", token
-            }
-        });
-
-        try
-        {
-            var response =
-                await client.PostAsync("https://challenges.cloudflare.com/turnstile/v0/siteverify", content);
-            response.EnsureSuccessStatusCode(); // Throw on bad response
-            var responseStream = await response.Content.ReadAsStreamAsync();
-            var verificationData = await JsonSerializer.DeserializeAsync<TurnstileVerificationResponse>(responseStream);
-            return verificationData ?? new TurnstileVerificationResponse
-            {
-                Success = false
-            };
-        }
-        catch (HttpRequestException httpEx)
-        {
-            logger.LogError(httpEx, "HTTP error verifying Turnstile token");
-            return new TurnstileVerificationResponse
-            {
-                Success = false
-            };
-        }
-        catch (JsonException jsonEx)
-        {
-            logger.LogError(jsonEx, "JSON error deserializing Turnstile response");
-            return new TurnstileVerificationResponse
-            {
-                Success = false
-            };
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Generic error verifying Turnstile token");
-            return new TurnstileVerificationResponse
-            {
-                Success = false
-            };
         }
     }
 }

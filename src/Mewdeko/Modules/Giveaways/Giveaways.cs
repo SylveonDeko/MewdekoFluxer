@@ -338,8 +338,6 @@ public partial class Giveaways(
         ulong messageCount = 0;
         var host = ctx.User;
         TimeSpan time;
-        var useCaptcha = false;
-        var useButton = false;
         string prize = null;
         string requiredRoles = null;
 
@@ -540,34 +538,6 @@ public partial class Giveaways(
             }
         }
 
-        // Use Button or Captcha
-
-        await msg.ModifyAsync(x => x.Embed = promptEmbed
-            .WithDescription(Strings.GiveawayStartEntryTypePrompt(ctx.Guild.Id))
-            .Build()).ConfigureAwait(false);
-        response = await NextMessageAsync(ctx.Channel.Id, ctx.User.Id).ConfigureAwait(false);
-        if (response.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
-            response.Equals("y", StringComparison.OrdinalIgnoreCase))
-        {
-            await msg.ModifyAsync(x => x.Embed = promptEmbed
-                .WithDescription(Strings.GiveawayStartEntryChoicePrompt(ctx.Guild.Id))
-                .Build()).ConfigureAwait(false);
-            response = await NextMessageAsync(ctx.Channel.Id, ctx.User.Id).ConfigureAwait(false);
-            if (response.Equals("button", StringComparison.OrdinalIgnoreCase))
-            {
-                useButton = true;
-            }
-            else if (response.Equals("captcha", StringComparison.OrdinalIgnoreCase))
-            {
-                useCaptcha = true;
-            }
-            else
-            {
-                await msg.ModifyAsync(x => x.Embed = errorEmbed).ConfigureAwait(false);
-                return;
-            }
-        }
-
         // Role Requirements
         await msg.ModifyAsync(x => x.Embed = promptEmbed
             .WithDescription(Strings.GiveawayStartRoleReqPrompt(ctx.Guild.Id))
@@ -598,7 +568,7 @@ public partial class Giveaways(
         // Start the Giveaway
         await Service.GiveawaysInternal(channel, time, prize, winners, host.Id, ctx.Guild.Id,
             ctx.Channel as ITextChannel, ctx.Guild, requiredRoles, null, null, banner,
-            pingRole, useButton, useCaptcha, messageCount).ConfigureAwait(false);
+            pingRole, messageCount).ConfigureAwait(false);
     }
 
 // Helper Methods

@@ -22,7 +22,6 @@ public class GiveawayService : INService, IDisposable
     private readonly DiscordShardedClient client;
     private readonly IAnalyticsCollector collector;
     private readonly BotConfig config;
-    private readonly BotCredentials credentials;
     private readonly IDataConnectionFactory dbFactory;
 
 
@@ -50,7 +49,6 @@ public class GiveawayService : INService, IDisposable
     /// <param name="dbFactory">Provider for database contexts.</param>
     /// <param name="guildConfig">Service for accessing guild settings.</param>
     /// <param name="config">Bot configuration settings.</param>
-    /// <param name="credentials">Bot credentials.</param>
     /// <param name="msgCntService">Service for tracking message counts.</param>
     /// <param name="strings">Service for localized strings.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
@@ -61,7 +59,6 @@ public class GiveawayService : INService, IDisposable
         IDataConnectionFactory dbFactory,
         GuildSettingsService guildConfig,
         BotConfig config,
-        BotCredentials credentials,
         MessageCountService msgCntService,
         GeneratedBotStrings strings, ILogger<GiveawayService> logger, TriggerEventPublisher triggerEvents,
         IAnalyticsCollector collector)
@@ -72,7 +69,6 @@ public class GiveawayService : INService, IDisposable
         this.dbFactory = dbFactory;
         this.guildConfig = guildConfig;
         this.config = config;
-        this.credentials = credentials;
         this.msgCntService = msgCntService;
         this.strings = strings;
         this.logger = logger;
@@ -126,52 +122,6 @@ public class GiveawayService : INService, IDisposable
     }
 
     /// <summary>
-    ///     Adds a user to a giveaway.
-    /// </summary>
-    /// <param name="userId">The user's ID.</param>
-    /// <param name="giveawayId">The giveaway ID.</param>
-    /// <returns>A tuple containing a success flag and an optional error message.</returns>
-    public async Task<(bool Success, string? ErrorMessage)> AddUserToGiveaway(ulong userId, int giveawayId)
-    {
-        await using var dbContext = await dbFactory.CreateConnectionAsync();
-
-        // Validate giveaway exists and is active
-        var giveaway = await GetGiveawayById(giveawayId);
-        if (giveaway == null)
-            return (false, strings.GiveawayNotFound(giveaway?.ServerId ?? 0));
-
-        if (giveaway.Ended == 1)
-            return (false, strings.GiveawayAlreadyEnded(giveaway.ServerId, "", 0));
-
-        if (!giveaway.UseButton && !giveaway.UseCaptcha)
-            return (false, strings.GiveawayInvalidEntryMethod(giveaway.ServerId));
-
-        // Verify user is in the guild
-        var guild = client.GetGuild(giveaway.ServerId);
-        if (guild == null)
-            return (false, strings.GiveawayGuildNotFound(giveaway.ServerId));
-
-        var users = await guild.GetUsersAsync().FlattenAsync();
-        if (users.All(u => u.Id != userId))
-            return (false, strings.GiveawayUserNotInServer(giveaway.ServerId));
-
-        // Check if user is already entered
-        var existing = await dbContext.GiveawayUsers
-            .AnyAsync(gu => gu.UserId == userId && gu.GiveawayId == giveawayId);
-
-        if (existing)
-            return (false, strings.GiveawayAlreadyEntered(giveaway.ServerId));
-
-        // Add user to giveaway
-        await dbContext.InsertAsync(new GiveawayUser
-        {
-            UserId = userId, GiveawayId = giveawayId
-        });
-        collector.Feature("giveaway_enter", giveaway.ServerId);
-        return (true, null);
-    }
-
-    /// <summary>
     ///     Creates a giveaway from the dashboard.
     /// </summary>
     /// <param name="serverId">The ID of the server where the giveaway is being created.</param>
@@ -212,12 +162,12 @@ public class GiveawayService : INService, IDisposable
             pingRole != null ? pingRole.Mention : "",
             embed: eb.Build());
 
-        // Add reaction or button
-        if (!giveaway.UseButton && !giveaway.UseCaptcha)
-            await msg.AddReactionAsync(emote);
+        await msg.AddReactionAsync(emote);
 
         var curUser = await guild.GetCurrentUserAsync();
         // Set giveaway properties
+        giveaway.UseButton = false;
+        giveaway.UseCaptcha = false;
         giveaway.ServerId = serverId;
         giveaway.UserId = hostUser.Id;
         giveaway.Ended = 0;
@@ -228,34 +178,6 @@ public class GiveawayService : INService, IDisposable
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         var entry = await dbContext.InsertWithInt32IdentityAsync(giveaway);
         var gway = await dbContext.Giveaways.FirstOrDefaultAsync(x => x.Id == entry);
-
-        // Add button or captcha if needed
-        if (giveaway.UseButton)
-        {
-            var builder = new ComponentBuilder()
-                .WithButton(strings.GiveawayEnterButton(serverId), $"entergiveaway:{entry}", emote: emote);
-
-            await msg.ModifyAsync(x => x.Components = builder.Build());
-        }
-
-        if (giveaway.UseCaptcha)
-        {
-            try
-            {
-                var builder = new ComponentBuilder()
-                    .WithButton(strings.GiveawayEnterCaptchaButton(serverId),
-                        url: $"{credentials.GiveawayEntryUrl}?guildId={guild.Id}&giveawayId={entry}",
-                        style: ButtonStyle.Link,
-                        emote: emote);
-
-                await msg.ModifyAsync(x => x.Components = builder.Build());
-            }
-            catch (Exception e)
-            {
-                logger.LogError(e, "Error adding captcha button to giveaway {GiveawayId}", entry);
-                throw;
-            }
-        }
 
         // Schedule timer
         await ScheduleGiveaway(gway);
@@ -280,8 +202,6 @@ public class GiveawayService : INService, IDisposable
     /// <param name="blacklistroles">Optional: Roles blacklisted from entering the giveaway.</param>
     /// <param name="banner">Optional: The URL of the banner for the giveaway.</param>
     /// <param name="pingRole">Optional: The role to ping for the giveaway.</param>
-    /// <param name="useButton">Whether to use a button for entry instead of reaction.</param>
-    /// <param name="useCaptcha">Whether to use captcha for giveaway entry.</param>
     /// <param name="messageCount">Minimum message count required to enter.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task GiveawaysInternal(
@@ -298,8 +218,6 @@ public class GiveawayService : INService, IDisposable
         string? blacklistroles = null,
         string? banner = null,
         IRole? pingRole = null,
-        bool useButton = false,
-        bool useCaptcha = false,
         ulong messageCount = 0)
     {
         // Get guild config
@@ -346,9 +264,7 @@ public class GiveawayService : INService, IDisposable
             role is not null ? role.Mention : "",
             embed: eb.Build());
 
-        // Add reaction if not using button or captcha
-        if (!useButton && !useCaptcha)
-            await msg.AddReactionAsync(emote);
+        await msg.AddReactionAsync(emote);
 
         // Create giveaway entry
         var giveaway = new Giveaway
@@ -362,8 +278,6 @@ public class GiveawayService : INService, IDisposable
             MessageId = msg.Id,
             Winners = winners,
             Emote = emote.ToString(),
-            UseButton = useButton,
-            UseCaptcha = useCaptcha,
             MessageCountReq = messageCount,
             RestrictTo = reqroles
         };
@@ -372,34 +286,6 @@ public class GiveawayService : INService, IDisposable
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         var entry = await dbContext.InsertWithInt32IdentityAsync(giveaway);
         var gway = await dbContext.Giveaways.FirstOrDefaultAsync(x => x.Id == entry);
-
-        // Add button or captcha components if needed
-        if (useButton)
-        {
-            var builder = new ComponentBuilder()
-                .WithButton(strings.GiveawayEnterButton(serverId), $"entergiveaway:{entry}", emote: emote);
-
-            await msg.ModifyAsync(x => x.Components = builder.Build());
-        }
-
-        if (useCaptcha)
-        {
-            try
-            {
-                var builder = new ComponentBuilder()
-                    .WithButton(strings.GiveawayEnterCaptchaButton(serverId),
-                        url: $"{credentials.GiveawayEntryUrl}?guildId={guild.Id}&giveawayId={entry}",
-                        style: ButtonStyle.Link,
-                        emote: emote);
-
-                await msg.ModifyAsync(x => x.Components = builder.Build());
-            }
-            catch (Exception e)
-            {
-                logger.LogError(e, "Error adding captcha button to giveaway {GiveawayId}", entry);
-                throw;
-            }
-        }
 
         // Schedule the giveaway
         await ScheduleGiveaway(gway);
@@ -538,7 +424,6 @@ public class GiveawayService : INService, IDisposable
                 {
                     x.Embed = eb.Build();
                     x.Content = null;
-                    x.Components = null;
                 });
 
                 await MarkGiveawayEnded(giveaway);
@@ -595,7 +480,6 @@ public class GiveawayService : INService, IDisposable
                 {
                     x.Embed = eb;
                     x.Content = null;
-                    x.Components = null;
                 });
 
                 await MarkGiveawayEnded(giveaway);
@@ -706,7 +590,6 @@ public class GiveawayService : INService, IDisposable
         {
             x.Embed = winnerEmbed.Build();
             x.Content = strings.GiveawayEndedContent(guild.Id, giveaway.Emote);
-            x.Components = null;
         });
 
         // Send winner announcement message
@@ -752,7 +635,6 @@ public class GiveawayService : INService, IDisposable
         {
             x.Embed = winnerEmbed.Build();
             x.Content = strings.GiveawayEndedContent(guild.Id, giveaway.Emote);
-            x.Components = null;
         });
 
         // Send winner announcement message in chunks to avoid message limits
