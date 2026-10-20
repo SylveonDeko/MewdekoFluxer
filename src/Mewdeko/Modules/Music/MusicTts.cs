@@ -57,7 +57,7 @@ public partial class Music
                     LeaveFormat = existing.LeaveFormat,
                     AutoJoin = existing.AutoJoin
                 });
-                await ReplyConfirmAsync("TTS has been **disabled** for this voice channel.");
+                await ReplyConfirmAsync(Strings.TtsDisabled(ctx.Guild.Id));
             }
             else
             {
@@ -71,7 +71,7 @@ public partial class Music
                     LeaveFormat = existing?.LeaveFormat,
                     AutoJoin = existing?.AutoJoin ?? false
                 });
-                await ReplyConfirmAsync("TTS has been **enabled** for this voice channel.");
+                await ReplyConfirmAsync(Strings.TtsEnabled(ctx.Guild.Id));
             }
         }
 
@@ -108,9 +108,9 @@ public partial class Music
             });
 
             if (channel is null)
-                await ReplyConfirmAsync("Text channel unlinked. TTS will only read from VC built-in text chat.");
+                await ReplyConfirmAsync(Strings.TtsUnlinked(ctx.Guild.Id));
             else
-                await ReplyConfirmAsync($"TTS linked to <#{channel.Id}>.");
+                await ReplyConfirmAsync(Strings.TtsLinked(ctx.Guild.Id, channel.Id));
         }
 
         /// <summary>
@@ -145,8 +145,8 @@ public partial class Music
             });
 
             await ReplyConfirmAsync(newVal
-                ? "Join/leave announcements **enabled** for this voice channel."
-                : "Join/leave announcements **disabled** for this voice channel.");
+                ? Strings.TtsAnnounceEnabled(ctx.Guild.Id)
+                : Strings.TtsAnnounceDisabled(ctx.Guild.Id));
         }
 
         /// <summary>
@@ -207,8 +207,8 @@ public partial class Music
             });
 
             await ReplyConfirmAsync(string.IsNullOrWhiteSpace(format)
-                ? "Join format reset to default."
-                : $"Join format set to: **{format}**");
+                ? Strings.TtsJoinFormatReset(ctx.Guild.Id)
+                : Strings.TtsJoinFormatSet(ctx.Guild.Id, format));
         }
 
         /// <summary>
@@ -244,8 +244,8 @@ public partial class Music
             });
 
             await ReplyConfirmAsync(string.IsNullOrWhiteSpace(format)
-                ? "Leave format reset to default."
-                : $"Leave format set to: **{format}**");
+                ? Strings.TtsLeaveFormatReset(ctx.Guild.Id)
+                : Strings.TtsLeaveFormatSet(ctx.Guild.Id, format));
         }
 
         /// <summary>
@@ -259,7 +259,7 @@ public partial class Music
         {
             if (volume is < 0 or > 100)
             {
-                await ReplyErrorAsync("Volume must be between 0 and 100.");
+                await ReplyErrorAsync(Strings.TtsVolumeInvalid(ctx.Guild.Id));
                 return;
             }
 
@@ -271,7 +271,7 @@ public partial class Music
             }
 
             await player.UpdateTtsGuildSettingAsync(s => s.TtsVolume = volume);
-            await ReplyConfirmAsync($"TTS volume set to **{volume}%**.");
+            await ReplyConfirmAsync(Strings.TtsVolumeSet(ctx.Guild.Id, volume));
         }
 
         /// <summary>
@@ -285,7 +285,7 @@ public partial class Music
         {
             if (speed is < 0.5f or > 2.0f)
             {
-                await ReplyErrorAsync("Speed must be between 0.5 and 2.0.");
+                await ReplyErrorAsync(Strings.TtsSpeedInvalid(ctx.Guild.Id));
                 return;
             }
 
@@ -297,7 +297,7 @@ public partial class Music
             }
 
             await player.UpdateTtsGuildSettingAsync(s => s.TtsSpeed = speed);
-            await ReplyConfirmAsync($"TTS speed set to **{speed:F1}x**.");
+            await ReplyConfirmAsync(Strings.TtsSpeedSet(ctx.Guild.Id, speed.ToString("F1")));
         }
 
         /// <summary>
@@ -319,8 +319,8 @@ public partial class Music
             await player.UpdateTtsGuildSettingAsync(s => s.TtsDefaultVoice = voice);
 
             await ReplyConfirmAsync(string.IsNullOrWhiteSpace(voice)
-                ? "Default TTS voice has been reset to the system default."
-                : $"Default TTS voice set to **{voice}**.");
+                ? Strings.TtsDefaultVoiceReset(ctx.Guild.Id)
+                : Strings.TtsDefaultVoiceSet(ctx.Guild.Id, voice));
         }
 
         /// <summary>
@@ -341,8 +341,8 @@ public partial class Music
             await player.UpsertTtsUserSettingAsync(ctx.User.Id, s => s.Voice = voice);
 
             await ReplyConfirmAsync(string.IsNullOrWhiteSpace(voice)
-                ? "Your TTS voice has been reset to the server default."
-                : $"Your TTS voice set to **{voice}**.");
+                ? Strings.TtsVoiceReset(ctx.Guild.Id)
+                : Strings.TtsVoiceSet(ctx.Guild.Id, voice));
         }
 
         /// <summary>
@@ -355,7 +355,7 @@ public partial class Music
         {
             if (string.IsNullOrWhiteSpace(search))
             {
-                await ReplyErrorAsync("Please provide a search term (e.g. voice name, language, or gender).");
+                await ReplyErrorAsync(Strings.TtsVoicesSearchRequired(ctx.Guild.Id));
                 return;
             }
 
@@ -374,7 +374,7 @@ public partial class Music
             }
             catch
             {
-                await ReplyErrorAsync("Failed to fetch voice list from Flowery TTS API.");
+                await ReplyErrorAsync(Strings.TtsVoicesFetchFailed(ctx.Guild.Id));
                 return;
             }
 
@@ -390,7 +390,7 @@ public partial class Music
 
             if (results.Count == 0)
             {
-                await ReplyErrorAsync($"No voices found matching **{search}**.");
+                await ReplyErrorAsync(Strings.TtsVoicesNoResults(ctx.Guild.Id, search));
                 return;
             }
 
@@ -441,8 +441,8 @@ public partial class Music
             await player.UpsertTtsUserSettingAsync(user.Id, s => s.IsBlocked = !isBlocked);
 
             await ReplyConfirmAsync(!isBlocked
-                ? $"**{user.DisplayName}** has been blocked from TTS."
-                : $"**{user.DisplayName}** has been unblocked from TTS.");
+                ? Strings.TtsUserBlocked(ctx.Guild.Id, user.DisplayName)
+                : Strings.TtsUserUnblocked(ctx.Guild.Id, user.DisplayName));
         }
 
         /// <summary>
@@ -461,7 +461,7 @@ public partial class Music
 
             if (blockedUsers.Count == 0)
             {
-                await ReplyConfirmAsync("No users are blocked from TTS.");
+                await ReplyConfirmAsync(Strings.TtsBlockListEmpty(ctx.Guild.Id));
                 return;
             }
 
@@ -511,8 +511,8 @@ public partial class Music
             await player.UpdateTtsGuildSettingAsync(s => s.TtsRoleId = role?.Id);
 
             await ReplyConfirmAsync(role is null
-                ? "TTS role restriction removed. Anyone can use TTS."
-                : $"TTS restricted to users with the **{role.Name}** role.");
+                ? Strings.TtsRoleRemoved(ctx.Guild.Id)
+                : Strings.TtsRoleSet(ctx.Guild.Id, role.Name));
         }
 
         /// <summary>
@@ -536,8 +536,8 @@ public partial class Music
             await player.UpdateTtsGuildSettingAsync(s => s.TtsReplyContext = newVal);
 
             await ReplyConfirmAsync(newVal
-                ? "TTS will now read reply context."
-                : "TTS will no longer read reply context.");
+                ? Strings.TtsReplyContextOn(ctx.Guild.Id)
+                : Strings.TtsReplyContextOff(ctx.Guild.Id));
         }
 
         /// <summary>
@@ -561,8 +561,8 @@ public partial class Music
             await player.UpdateTtsGuildSettingAsync(s => s.TtsAttachmentNarration = newVal);
 
             await ReplyConfirmAsync(newVal
-                ? "TTS will now narrate attachments."
-                : "TTS will no longer narrate attachments.");
+                ? Strings.TtsAttachmentNarrationOn(ctx.Guild.Id)
+                : Strings.TtsAttachmentNarrationOff(ctx.Guild.Id));
         }
 
         /// <summary>
@@ -586,8 +586,8 @@ public partial class Music
             await player.UpdateTtsGuildSettingAsync(s => s.TtsConsecutiveGrouping = newVal);
 
             await ReplyConfirmAsync(newVal
-                ? "Consecutive messages from the same user will skip the name prefix."
-                : "Every message will include the speaker's name.");
+                ? Strings.TtsConsecutiveGroupingOn(ctx.Guild.Id)
+                : Strings.TtsConsecutiveGroupingOff(ctx.Guild.Id));
         }
 
         /// <summary>
@@ -601,7 +601,7 @@ public partial class Music
         {
             if (size is < 1 or > 50)
             {
-                await ReplyErrorAsync("Queue size must be between 1 and 50.");
+                await ReplyErrorAsync(Strings.TtsMaxQueueInvalid(ctx.Guild.Id));
                 return;
             }
 
@@ -613,7 +613,7 @@ public partial class Music
             }
 
             await player.UpdateTtsGuildSettingAsync(s => s.TtsMaxQueueSize = size);
-            await ReplyConfirmAsync($"TTS max queue size set to **{size}**.");
+            await ReplyConfirmAsync(Strings.TtsMaxQueueSet(ctx.Guild.Id, size));
         }
 
         /// <summary>
@@ -686,7 +686,7 @@ public partial class Music
             }
 
             await player.RemoveTtsVcSettingAsync(player.VoiceChannelId);
-            await ReplyConfirmAsync("TTS settings removed for this voice channel.");
+            await ReplyConfirmAsync(Strings.TtsRemoved(ctx.Guild.Id));
         }
 
         private async Task SendErrorAsync(string message)
