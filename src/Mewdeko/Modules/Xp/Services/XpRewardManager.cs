@@ -373,9 +373,9 @@ public class XpRewardManager : INService
             if (dmChannel != null)
             {
                 // Try to parse as embed first, fall back to plain text
-                if (SmartEmbed.TryParse(message, guildId, out var embed, out var plainText, out var components))
+                if (SmartEmbed.TryParse(message, guildId, out var embed, out var plainText))
                 {
-                    await dmChannel.SendMessageAsync(plainText, embeds: embed, components: components?.Build());
+                    await dmChannel.SendMessageAsync(plainText, embeds: embed);
                 }
                 else
                 {
@@ -413,9 +413,9 @@ public class XpRewardManager : INService
                 return;
 
             // Try to parse as embed first, fall back to plain text
-            if (SmartEmbed.TryParse(message, guild.Id, out var embed, out var plainText, out var components))
+            if (SmartEmbed.TryParse(message, guild.Id, out var embed, out var plainText))
             {
-                await channel.SendMessageAsync(plainText, embeds: embed, components: components?.Build());
+                await channel.SendMessageAsync(plainText, embeds: embed);
             }
             else
             {

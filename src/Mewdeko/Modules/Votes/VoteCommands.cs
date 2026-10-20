@@ -66,10 +66,9 @@ public class Vote(InteractiveService interactivity) : MewdekoModuleBase<VoteServ
                             () => votes.Count(x => x.DateAdded.Value.Month == DateTime.UtcNow.Month).ToString())
                         .Build();
 
-                    if (SmartEmbed.TryParse(rep.Replace(voteMessage), ctx.Guild.Id, out var embeds, out var plainText,
-                            out var components))
+                    if (SmartEmbed.TryParse(rep.Replace(voteMessage), ctx.Guild.Id, out var embeds, out var plainText))
                     {
-                        await ctx.Channel.SendMessageAsync(plainText, embeds: embeds, components: components.Build());
+                        await ctx.Channel.SendMessageAsync(plainText, embeds: embeds);
                     }
                     else
                     {

@@ -199,9 +199,8 @@ public class HelpService : INService, IReadyExecutor
             return;
         var replacer = new ReplacementBuilder()
             .WithDefault(msg.Author, msg.Channel, null, DiscordShardedClient).Build();
-        if (SmartEmbed.TryParse(replacer.Replace(settings.DmHelpText), null, out var embed, out var plainText,
-                out var components))
-            await msg.Channel.SendMessageAsync(plainText, embeds: embed, components: components?.Build());
+        if (SmartEmbed.TryParse(replacer.Replace(settings.DmHelpText), null, out var embed, out var plainText))
+            await msg.Channel.SendMessageAsync(plainText, embeds: embed);
         else
             await msg.Channel.SendMessageAsync(settings.DmHelpText);
     }
@@ -618,7 +617,7 @@ public class HelpService : INService, IReadyExecutor
 
         try
         {
-            await inviter.SendMessageAsync(embed: eb.Build(), components: cb.Build()).ConfigureAwait(false);
+            await inviter.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
         }
         catch (HttpException)
         {

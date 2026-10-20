@@ -9,7 +9,8 @@ namespace Mewdeko.Common;
 public static class SmartEmbed
 {
     /// <summary>
-    ///     Tries to parse the input string into Discord embeds, plain text, and components.
+    ///     Tries to parse the input string into Discord embeds and plain text. Link buttons in the input are added to
+    ///     the plain text as markdown links.
     /// </summary>
     /// <param name="input">The input string containing the embed data.</param>
     /// <param name="guildId">The ID of the guild where the embed is parsed.</param>
@@ -18,24 +19,18 @@ public static class SmartEmbed
     ///     null.
     /// </param>
     /// <param name="plainText">When this method returns, contains the parsed plain text, if parsing succeeds; otherwise, null.</param>
-    /// <param name="components">
-    ///     When this method returns, contains the parsed components, if parsing succeeds; otherwise,
-    ///     null.
-    /// </param>
     /// <returns>
-    ///     <c>true</c> if the input string is successfully parsed into Discord embeds, plain text, and components;
+    ///     <c>true</c> if the input string is successfully parsed into Discord embeds and plain text;
     ///     otherwise, <c>false</c>.
     /// </returns>
     public static bool TryParse(
         string input,
         ulong? guildId,
         out Discord.Embed[]? embeds,
-        out string? plainText,
-        out ComponentBuilder? components)
+        out string? plainText)
     {
         try
         {
-            components = null;
             plainText = null;
             embeds = null;
 
@@ -124,8 +119,10 @@ public static class SmartEmbed
                 embeds = null;
             }
 
-            plainText = newEmbed.Content;
-            components = newEmbed.GetComponents(guildId);
+            var links = newEmbed.GetLinkText();
+            plainText = links is null
+                ? newEmbed.Content
+                : string.IsNullOrWhiteSpace(newEmbed.Content) ? links : $"{newEmbed.Content}\n{links}";
             return true;
         }
         catch (Exception ex)
@@ -133,7 +130,6 @@ public static class SmartEmbed
             Log.Warning(ex, "Unable to parse embed for guild {GuildId}", guildId);
             embeds = null;
             plainText = null;
-            components = null;
             return false;
         }
     }

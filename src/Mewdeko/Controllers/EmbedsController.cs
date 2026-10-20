@@ -124,7 +124,7 @@ public class EmbedsController(
         if (string.IsNullOrWhiteSpace(request.JsonCode))
             return BadRequest("Embed JSON is required");
 
-        if (!SmartEmbed.TryParse(request.JsonCode, request.GuildId, out _, out _, out _))
+        if (!SmartEmbed.TryParse(request.JsonCode, request.GuildId, out _, out _))
             return BadRequest("Invalid embed JSON");
 
         if (request.IsGuildShared)
@@ -174,7 +174,7 @@ public class EmbedsController(
             return Forbid();
 
         if (request.JsonCode != null &&
-            !SmartEmbed.TryParse(request.JsonCode, existing.GuildId, out _, out _, out _))
+            !SmartEmbed.TryParse(request.JsonCode, existing.GuildId, out _, out _))
             return BadRequest("Invalid embed JSON");
 
         auditContext.RecordBefore(existing);
@@ -486,15 +486,13 @@ public class EmbedsController(
 
         // Anything that isn't a recognised embed payload is sent as plain message content, matching how
         // the rest of the bot treats embed strings.
-        if (!SmartEmbed.TryParse(request.JsonCode, guildId, out var embeds, out var plainText, out var components))
+        if (!SmartEmbed.TryParse(request.JsonCode, guildId, out var embeds, out var plainText))
         {
             embeds = null;
-            components = null;
             plainText = request.JsonCode;
         }
 
-        if (string.IsNullOrWhiteSpace(plainText) && (embeds == null || embeds.Length == 0) &&
-            components?.ActionRows is not { Count: > 0 })
+        if (string.IsNullOrWhiteSpace(plainText) && (embeds == null || embeds.Length == 0))
             return BadRequest("Nothing to send");
 
         var userProblem = DescribeSendRestriction(userPerms, isThread, embeds?.Length > 0, request.UseWebhook, "You");
@@ -543,9 +541,9 @@ public class EmbedsController(
         try
         {
             messageId = request.UseWebhook
-                ? await SendViaWebhookAsync(channel, plainText, embeds, components, allowedMentions,
+                ? await SendViaWebhookAsync(channel, plainText, embeds, allowedMentions,
                     webhookUsername, avatarUrl, uploadedAvatarPersona)
-                : await SendAsBotAsync(channel, plainText, embeds, components, allowedMentions);
+                : await SendAsBotAsync(channel, plainText, embeds, allowedMentions);
         }
         catch (WebhookLimitReachedException)
         {
@@ -605,11 +603,9 @@ public class EmbedsController(
         ITextChannel channel,
         string? plainText,
         Discord.Embed[]? embeds,
-        ComponentBuilder? components,
         AllowedMentions allowedMentions)
     {
-        var message = await channel.SendMessageAsync(plainText, embeds: embeds, allowedMentions: allowedMentions,
-            components: components?.Build());
+        var message = await channel.SendMessageAsync(plainText, embeds: embeds, allowedMentions: allowedMentions);
         return message.Id;
     }
 
@@ -622,7 +618,6 @@ public class EmbedsController(
     /// <param name="channel">The channel or thread to post in.</param>
     /// <param name="plainText">The message content, or null for an embed only message.</param>
     /// <param name="embeds">The embeds to attach, if any.</param>
-    /// <param name="components">The components to attach, if any.</param>
     /// <param name="allowedMentions">Which mentions the message is allowed to ping.</param>
     /// <param name="username">The display name to post under, or null to use the webhook's own name.</param>
     /// <param name="avatarUrl">The avatar to post with, or null to use the webhook's own avatar.</param>
@@ -631,7 +626,6 @@ public class EmbedsController(
         ITextChannel channel,
         string? plainText,
         Discord.Embed[]? embeds,
-        ComponentBuilder? components,
         AllowedMentions allowedMentions,
         string? username,
         string? avatarUrl,
@@ -659,7 +653,7 @@ public class EmbedsController(
         using var webhookClient = new DiscordWebhookClient(webhook);
 
         return await webhookClient.SendMessageAsync(plainText, embeds: embeds, username: username,
-            avatarUrl: avatarUrl, allowedMentions: allowedMentions, components: components?.Build(),
+            avatarUrl: avatarUrl, allowedMentions: allowedMentions,
             threadId: threadId);
     }
 

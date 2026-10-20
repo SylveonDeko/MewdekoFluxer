@@ -281,7 +281,7 @@ public static class Extensions
             (ctx.Channel as IGuildChannel)?.Guild, ctx.Channel, ctx.Author,
             ctx.MentionedUserIds.FirstOrDefault(), regexMatch, responseOverride).ConfigureAwait(false);
 
-        if (SmartEmbed.TryParse(response, ct.GuildId, out var crembed, out var plainText, out var components))
+        if (SmartEmbed.TryParse(response, ct.GuildId, out var crembed, out var plainText))
         {
             var trigger = ct.Trigger.ResolveTriggerString(client);
             var substringIndex = trigger.Length;
@@ -342,7 +342,7 @@ public static class Extensions
                 .WithOverride("%replied.author%", () => repliedMessage?.Author.Mention ?? "")
                 .Build();
 
-            SmartEmbed.TryParse(rep.Replace(response), ct.GuildId, out crembed, out plainText, out components);
+            SmartEmbed.TryParse(rep.Replace(response), ct.GuildId, out crembed, out plainText);
             if (sanitize)
                 plainText = plainText.SanitizeMentions();
 
@@ -351,8 +351,7 @@ public static class Extensions
             if (ct.NoRespond)
                 return null;
 
-            var sent = await channel.SendMessageAsync(plainText, embeds: crembed,
-                    components: components?.Build(), messageReference: ct.BuildReference(ctx, channel))
+            var sent = await channel.SendMessageAsync(plainText, embeds: crembed, messageReference: ct.BuildReference(ctx, channel))
                 .ConfigureAwait(false);
 
             ct.QueueResponseDeletion(sent);
@@ -495,16 +494,16 @@ public static class Extensions
                 _ => "%targetuser.avatar%"
             })
             .Build();
-        if (SmartEmbed.TryParse(response, ct.GuildId, out var crembed, out var plainText, out var components))
+        if (SmartEmbed.TryParse(response, ct.GuildId, out var crembed, out var plainText))
         {
-            SmartEmbed.TryParse(rep.Replace(response), ct.GuildId, out crembed, out plainText, out components);
+            SmartEmbed.TryParse(rep.Replace(response), ct.GuildId, out crembed, out plainText);
             if (sanitize)
                 plainText = plainText.SanitizeMentions();
-            await ct.SendCrosspostAsync(client, plainText, crembed, components).ConfigureAwait(false);
+            await ct.SendCrosspostAsync(client, plainText, crembed).ConfigureAwait(false);
 
             if (ct.NoRespond)
                 return null;
-            return await SendInteractionResponseAsync(inter, plainText, ephemeral, followup, crembed, components)
+            return await SendInteractionResponseAsync(inter, plainText, ephemeral, followup, crembed)
                 .ConfigureAwait(false);
         }
 
@@ -574,12 +573,12 @@ public static class Extensions
     }
 
     private static async Task SendCrosspostAsync(this ChatTrigger ct, DiscordShardedClient client, string? plainText,
-        Embed[]? embeds = null, ComponentBuilder? components = null)
+        Embed[]? embeds = null)
     {
         if (ct.CrosspostingChannelId != 0 && ct.GuildId is > 0)
         {
             await client.GetGuild(ct.GuildId ?? 0).GetTextChannel(ct.CrosspostingChannelId)
-                .SendMessageAsync(plainText, embeds: embeds, components: components?.Build())
+                .SendMessageAsync(plainText, embeds: embeds)
                 .ConfigureAwait(false);
             return;
         }
@@ -599,13 +598,13 @@ public static class Extensions
     }
 
     private static async Task<IUserMessage> SendInteractionResponseAsync(SocketInteraction inter, string? plainText,
-        bool ephemeral, bool followup, Embed[]? embeds = null, ComponentBuilder? components = null)
+        bool ephemeral, bool followup, Embed[]? embeds = null)
     {
         if (followup)
-            return await inter.FollowupAsync(plainText, embeds, ephemeral: ephemeral, components: components?.Build())
+            return await inter.FollowupAsync(plainText, embeds, ephemeral: ephemeral)
                 .ConfigureAwait(false);
 
-        await inter.RespondAsync(plainText, embeds, ephemeral: ephemeral, components: components?.Build())
+        await inter.RespondAsync(plainText, embeds, ephemeral: ephemeral)
             .ConfigureAwait(false);
         return await inter.GetOriginalResponseAsync().ConfigureAwait(false);
     }

@@ -730,11 +730,9 @@ public class AfkService : INService, IReadyExecutor, IDisposable
                             .Build();
                         var parsedMessage = replacer.Replace(customAfkMessage);
 
-                        if (SmartEmbed.TryParse(parsedMessage, user.GuildId, out var embed, out var plainText,
-                                out var components))
+                        if (SmartEmbed.TryParse(parsedMessage, user.GuildId, out var embed, out var plainText))
                         {
-                            var sentMsg = await msg.Channel.SendMessageAsync(plainText, embeds: embed,
-                                components: components?.Build());
+                            var sentMsg = await msg.Channel.SendMessageAsync(plainText, embeds: embed);
                             if (afkDeleteTime > 0) sentMsg.DeleteAfter(afkDeleteTime);
                         }
                         else

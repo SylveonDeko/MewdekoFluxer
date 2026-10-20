@@ -847,13 +847,13 @@ public partial class Moderation : MewdekoModule
                 try
                 {
                     var defaultMessage = Strings.Bandm(ctx.Guild.Id, Format.Bold(ctx.Guild.Name), msg);
-                    var (embedBuilder, message, components) = await Service
+                    var (embedBuilder, message) = await Service
                         .GetBanUserDmEmbed(Context, user, defaultMessage, msg, time.Time).ConfigureAwait(false);
                     if (embedBuilder is not null || message is not null)
                     {
                         var userChannel = await user.CreateDMChannelAsync().ConfigureAwait(false);
                         await userChannel
-                            .SendMessageAsync(message, embeds: embedBuilder, components: components?.Build())
+                            .SendMessageAsync(message, embeds: embedBuilder)
                             .ConfigureAwait(false);
                     }
                 }
@@ -960,12 +960,12 @@ public partial class Moderation : MewdekoModule
             try
             {
                 var defaultMessage = Strings.Bandm(ctx.Guild.Id, Format.Bold(ctx.Guild.Name), msg);
-                var (embedBuilder, message, components) = await Service
+                var (embedBuilder, message) = await Service
                     .GetBanUserDmEmbed(Context, user, defaultMessage, msg, null).ConfigureAwait(false);
                 if (embedBuilder is not null || message is not null)
                 {
                     var userChannel = await user.CreateDMChannelAsync().ConfigureAwait(false);
-                    await userChannel.SendMessageAsync(message, embeds: embedBuilder, components: components?.Build())
+                    await userChannel.SendMessageAsync(message, embeds: embedBuilder)
                         .ConfigureAwait(false);
                 }
             }
@@ -1016,12 +1016,12 @@ public partial class Moderation : MewdekoModule
             try
             {
                 var defaultMessage = Strings.Bandm(ctx.Guild.Id, Format.Bold(ctx.Guild.Name), msg);
-                var (embedBuilder, message, components) = await Service
+                var (embedBuilder, message) = await Service
                     .GetBanUserDmEmbed(Context, user, defaultMessage, msg, null).ConfigureAwait(false);
                 if (embedBuilder is not null || message is not null)
                 {
                     var userChannel = await user.CreateDMChannelAsync().ConfigureAwait(false);
-                    await userChannel.SendMessageAsync(message, embeds: embedBuilder, components: components?.Build())
+                    await userChannel.SendMessageAsync(message, embeds: embedBuilder)
                         .ConfigureAwait(false);
                 }
             }
@@ -1143,7 +1143,7 @@ public partial class Moderation : MewdekoModule
                 try
                 {
                     await dmChannel
-                        .SendMessageAsync(crEmbed.Item2, embeds: crEmbed.Item1, components: crEmbed.Item3?.Build())
+                        .SendMessageAsync(crEmbed.Item2, embeds: crEmbed.Item1)
                         .ConfigureAwait(false);
                 }
                 catch (Exception)

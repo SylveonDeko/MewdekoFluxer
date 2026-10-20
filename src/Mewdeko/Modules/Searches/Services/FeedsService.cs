@@ -187,13 +187,12 @@ public class FeedsService : INService
                             var channel = client.GetGuild(feed1.GuildId).GetTextChannel(feed1.ChannelId);
                             if (channel is null)
                                 continue;
-                            var (builder, content, componentBuilder) =
+                            var (builder, content) =
                                 await GetFeedEmbed(repbuilder.Replace(feed1.Message), channel.Guild.Id);
                             if (feed1.Message is "-" or null)
                                 allSendTasks.Add(channel.EmbedAsync(embed));
                             else
-                                allSendTasks.Add(channel.SendMessageAsync(content ?? "", embeds: builder ?? null,
-                                    components: componentBuilder?.Build()));
+                                allSendTasks.Add(channel.SendMessageAsync(content ?? "", embeds: builder ?? null));
                         }
                     }
                 }
@@ -289,19 +288,18 @@ public class FeedsService : INService
         embed.WithTitle(title.TrimTo(256));
         var desc = feedItem.Description?.StripHtml();
         if (!string.IsNullOrWhiteSpace(feedItem.Description)) embed.WithDescription(desc.TrimTo(2048));
-        var (builder, content, componentBuilder) = await GetFeedEmbed(repbuilder.Replace(sub.Message), channel.GuildId);
+        var (builder, content) = await GetFeedEmbed(repbuilder.Replace(sub.Message), channel.GuildId);
         if (sub.Message is "-" or null) await channel.EmbedAsync(embed);
         else
-            await channel.SendMessageAsync(content ?? "", embeds: builder ?? null,
-                components: componentBuilder?.Build());
+            await channel.SendMessageAsync(content ?? "", embeds: builder ?? null);
     }
 
-    private Task<(Embed[] builder, string content, ComponentBuilder componentBuilder)> GetFeedEmbed(string message,
+    private Task<(Embed[] builder, string content)> GetFeedEmbed(string message,
         ulong guildId)
     {
-        return SmartEmbed.TryParse(message, guildId, out var embed, out var content, out var components)
-            ? Task.FromResult((embed, content, components))
-            : Task.FromResult<(Embed[], string, ComponentBuilder)>(([], message, null));
+        return SmartEmbed.TryParse(message, guildId, out var embed, out var content)
+            ? Task.FromResult((embed, content))
+            : Task.FromResult<(Embed[], string)>(([], message));
     }
 
 

@@ -807,9 +807,9 @@ public class GiveawayService : INService, IDisposable
                 var customMessage = replacer.Build().Replace(guildSettings.GiveawayEndMessage);
 
                 // Try to parse as SmartEmbed
-                if (SmartEmbed.TryParse(customMessage, guild.Id, out var embeds, out var plaintext, out var components))
+                if (SmartEmbed.TryParse(customMessage, guild.Id, out var embeds, out var plaintext))
                 {
-                    await winner.SendMessageAsync(plaintext, embeds: embeds, components: components?.Build());
+                    await winner.SendMessageAsync(plaintext, embeds: embeds);
                 }
                 else
                 {

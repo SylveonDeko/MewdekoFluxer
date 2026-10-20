@@ -115,7 +115,7 @@ public class TicketService : INService
             try
             {
                 // Test parse to validate
-                if (!SmartEmbed.TryParse(embedJson, channel.Guild.Id, out _, out _, out _))
+                if (!SmartEmbed.TryParse(embedJson, channel.Guild.Id, out _, out _))
                     throw new ArgumentException("Invalid embed JSON format");
                 finalJson = embedJson;
             }
@@ -126,7 +126,7 @@ public class TicketService : INService
         }
 
         // Create and send panel message
-        SmartEmbed.TryParse(finalJson, channel.Guild.Id, out var embeds, out var plainText, out _);
+        SmartEmbed.TryParse(finalJson, channel.Guild.Id, out var embeds, out var plainText);
         var message = await channel.SendMessageAsync(plainText, embeds: embeds);
 
 
@@ -164,10 +164,9 @@ public class TicketService : INService
 
             var content = replacer.Replace(embedJson);
 
-            if (SmartEmbed.TryParse(content, channel.Guild.Id, out var embedData, out var plainText,
-                    out var components))
+            if (SmartEmbed.TryParse(content, channel.Guild.Id, out var embedData, out var plainText))
             {
-                await channel.SendMessageAsync(plainText, embeds: embedData, components: components?.Build());
+                await channel.SendMessageAsync(plainText, embeds: embedData);
             }
             else
             {
@@ -765,7 +764,7 @@ public class TicketService : INService
     private async Task SendDefaultOpenMessage(ITextChannel channel, Ticket ticket)
     {
         var defaultMessage = GetTicketOpenMessage(ticket);
-        SmartEmbed.TryParse(defaultMessage, channel.GuildId, out var embeds, out var plainText, out _);
+        SmartEmbed.TryParse(defaultMessage, channel.GuildId, out var embeds, out var plainText);
         await channel.SendMessageAsync(plainText, embeds: embeds, components: GetDefaultTicketComponents().Build());
     }
 
@@ -1018,19 +1017,11 @@ public class TicketService : INService
         }
 
         var rendered = replacer.Build().Replace(openMessageJson);
-        var success = SmartEmbed.TryParse(rendered, guild.Id, out var embeds, out var plainText, out var components);
+        var success = SmartEmbed.TryParse(rendered, guild.Id, out var embeds, out var plainText);
 
         if (success && (embeds is { Length: > 0 } || !string.IsNullOrWhiteSpace(plainText)))
         {
-            var finalComponents = new ComponentBuilder();
-            if (components != null)
-            {
-                foreach (var row in components.ActionRows)
-                    finalComponents.AddRow(row);
-            }
-
-            finalComponents.WithRows(GetDefaultTicketComponents().ActionRows);
-            await channel.SendMessageAsync(plainText, embeds: embeds, components: finalComponents.Build());
+            await channel.SendMessageAsync(plainText, embeds: embeds, components: GetDefaultTicketComponents().Build());
             return true;
         }
 
@@ -1588,7 +1579,7 @@ public class TicketService : INService
             }
 
             // Parse the embed JSON and recreate the message
-            var success = SmartEmbed.TryParse(panel.EmbedJson, panel.GuildId, out var embeds, out var plainText, out _);
+            var success = SmartEmbed.TryParse(panel.EmbedJson, panel.GuildId, out var embeds, out var plainText);
             if (!success)
                 return (false, null, channel.Mention, "Failed to parse panel embed configuration.");
 
@@ -1681,8 +1672,7 @@ public class TicketService : INService
             // Send the recreated panel message
             var newMessage = await channel.SendMessageAsync(
                 plainText,
-                embeds: embeds,
-                components: components.Build());
+                embeds: embeds);
 
             // Update the panel's message ID in the database
             await ctx.TicketPanels
@@ -1838,8 +1828,7 @@ public class TicketService : INService
                 }
 
                 // Parse the embed JSON and recreate the message
-                var success = SmartEmbed.TryParse(panel.EmbedJson, panel.GuildId, out var embeds, out var plainText,
-                    out _);
+                var success = SmartEmbed.TryParse(panel.EmbedJson, panel.GuildId, out var embeds, out var plainText);
                 if (!success)
                 {
                     logger.LogError("Failed to parse embed JSON for panel {PanelId}", panel.Id);
@@ -1936,8 +1925,7 @@ public class TicketService : INService
                 // Send the recreated panel message
                 var newMessage = await targetChannel.SendMessageAsync(
                     plainText,
-                    embeds: embeds,
-                    components: components.Build());
+                    embeds: embeds);
 
                 // Update the panel's message ID in the database
                 await ctx.TicketPanels
@@ -4858,7 +4846,7 @@ public class TicketService : INService
             if (message == null)
                 return false;
 
-            SmartEmbed.TryParse(embedJson, guild.Id, out var embeds, out var plainText, out _);
+            SmartEmbed.TryParse(embedJson, guild.Id, out var embeds, out var plainText);
             await message.ModifyAsync(m =>
             {
                 m.Content = plainText;
@@ -4917,7 +4905,7 @@ public class TicketService : INService
             if (newChannel == null)
                 return false;
 
-            SmartEmbed.TryParse(panel.EmbedJson, guild.Id, out var embeds, out var plainText, out _);
+            SmartEmbed.TryParse(panel.EmbedJson, guild.Id, out var embeds, out var plainText);
             var components = new ComponentBuilder();
 
             // Rebuild buttons
@@ -4967,7 +4955,7 @@ public class TicketService : INService
                 }
             }
 
-            var message = await newChannel.SendMessageAsync(plainText, embeds: embeds, components: components.Build());
+            var message = await newChannel.SendMessageAsync(plainText, embeds: embeds);
 
             panel.ChannelId = newChannelId;
             panel.MessageId = message.Id;
@@ -5024,7 +5012,7 @@ public class TicketService : INService
             if (newChannel == null)
                 return null;
 
-            SmartEmbed.TryParse(sourcePanel.EmbedJson, guild.Id, out var embeds, out var plainText, out _);
+            SmartEmbed.TryParse(sourcePanel.EmbedJson, guild.Id, out var embeds, out var plainText);
             var message = await newChannel.SendMessageAsync(plainText, embeds: embeds);
 
             await using var transaction = await ctx.BeginTransactionAsync();

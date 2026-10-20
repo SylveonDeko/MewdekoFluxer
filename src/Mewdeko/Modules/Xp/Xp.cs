@@ -1720,10 +1720,9 @@ public class Xp(
         // Send the test message
         try
         {
-            if (SmartEmbed.TryParse(processedMessage, ctx.Guild.Id, out var embed, out var plainText,
-                    out var components))
+            if (SmartEmbed.TryParse(processedMessage, ctx.Guild.Id, out var embed, out var plainText))
             {
-                await ctx.Channel.SendMessageAsync(plainText, embeds: embed, components: components?.Build());
+                await ctx.Channel.SendMessageAsync(plainText, embeds: embed);
             }
             else
             {

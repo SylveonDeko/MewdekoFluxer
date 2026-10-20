@@ -376,11 +376,10 @@ public class MultiGreets(InteractiveService interactivity) : MewdekoModuleBase<M
                         .WithClient(ctx.Client as DiscordShardedClient)
                         .WithServer(ctx.Client as DiscordShardedClient, ctx.Guild as SocketGuild).Build();
                     var content = replacer.Replace(greet.Message);
-                    if (SmartEmbed.TryParse(content, ctx.Guild.Id, out var embedData, out var plainText,
-                            out var components2))
+                    if (SmartEmbed.TryParse(content, ctx.Guild.Id, out var embedData, out var plainText))
                     {
                         await ctx.Channel
-                            .SendMessageAsync(plainText ?? "", embeds: embedData, components: components2?.Build())
+                            .SendMessageAsync(plainText ?? "", embeds: embedData)
                             .ConfigureAwait(false);
                         return;
                     }

@@ -870,10 +870,9 @@ public class TwitchService : INService, IReadyExecutor
         {
             var processed = replacer.Replace(config.GoLiveMessage);
 
-            if (SmartEmbed.TryParse(processed ?? string.Empty, stream.GuildId, out var embed, out var plainText,
-                    out var components))
+            if (SmartEmbed.TryParse(processed ?? string.Empty, stream.GuildId, out var embed, out var plainText))
             {
-                await textChannel.SendMessageAsync(plainText, embeds: embed, components: components?.Build());
+                await textChannel.SendMessageAsync(plainText, embeds: embed);
                 return;
             }
 

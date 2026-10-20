@@ -168,7 +168,7 @@ public class SuggestionsService : INService
         }
 
         if (SmartEmbed.TryParse(await GetSuggestButtonMessage(channel.Guild), channel.GuildId, out var embed,
-                out var plainText, out _))
+                out var plainText))
         {
             try
             {
@@ -689,7 +689,7 @@ public class SuggestionsService : INService
             var message = await channel.GetMessageAsync(messageId).ConfigureAwait(false);
             if (message is null)
             {
-                if (SmartEmbed.TryParse(code, channel.GuildId, out var embed, out var plainText, out _))
+                if (SmartEmbed.TryParse(code, channel.GuildId, out var embed, out var plainText))
                 {
                     var toadd = await channel.SendMessageAsync(plainText, embeds: embed,
                         components: (await GetSuggestButton(channel.Guild)).Build()).ConfigureAwait(false);
@@ -737,7 +737,7 @@ public class SuggestionsService : INService
             }
             else
             {
-                if (SmartEmbed.TryParse(code, channel.GuildId, out var embed, out var plainText, out _))
+                if (SmartEmbed.TryParse(code, channel.GuildId, out var embed, out var plainText))
                 {
                     await ((IUserMessage)message).ModifyAsync(async x =>
                     {
@@ -1625,7 +1625,7 @@ public class SuggestionsService : INService
             .Build();
 
         var content = replacer.Replace(statusConfig.Message);
-        return SmartEmbed.TryParse(content, guild.Id, out var embed, out _, out _)
+        return SmartEmbed.TryParse(content, guild.Id, out var embed, out _)
             ? embed.FirstOrDefault()
             : new EmbedBuilder().WithDescription(content).Build();
     }
@@ -1875,8 +1875,7 @@ public class SuggestionsService : INService
                 .SendMessageAsync(
                     embed: new EmbedBuilder().WithAuthor(user)
                         .WithTitle(strings.SuggestionNumber(channel.Guild.Id, sugnum1))
-                        .WithDescription(suggestion).WithOkColor().Build(),
-                    components: builder.Build()).ConfigureAwait(false);
+                        .WithDescription(suggestion).WithOkColor().Build()).ConfigureAwait(false);
             if (await GetEmoteMode(guild) == 0)
             {
                 if (em is null or "disabled")
@@ -1907,14 +1906,13 @@ public class SuggestionsService : INService
                 .WithOverride("%suggest.user.name%", () => user.Username)
                 .WithOverride("%suggest.user.avatar%", () => user.RealAvatarUrl().ToString()).Build();
             var ebe = SmartEmbed.TryParse(replacer.Replace(await GetSuggestionMessage(guild)), guild.Id, out var embed,
-                out var plainText, out _);
+                out var plainText);
             var chan = await guild.GetTextChannelAsync(await GetSuggestionChannel(guild.Id)).ConfigureAwait(false);
             IUserMessage msg;
             if (!ebe)
             {
                 if (await GetEmoteMode(guild) == 1)
-                    msg = await chan.SendMessageAsync(replacer.Replace(await GetSuggestionMessage(guild)),
-                        components: builder.Build()).ConfigureAwait(false);
+                    msg = await chan.SendMessageAsync(replacer.Replace(await GetSuggestionMessage(guild))).ConfigureAwait(false);
                 else
                     msg = await chan.SendMessageAsync(replacer.Replace(await GetSuggestionMessage(guild)))
                         .ConfigureAwait(false);
@@ -1922,7 +1920,7 @@ public class SuggestionsService : INService
             else
             {
                 if (await GetEmoteMode(guild) == 1)
-                    msg = await chan.SendMessageAsync(plainText, embeds: embed, components: builder.Build())
+                    msg = await chan.SendMessageAsync(plainText, embeds: embed)
                         .ConfigureAwait(false);
                 else
                     msg = await chan.SendMessageAsync(plainText, embeds: embed).ConfigureAwait(false);

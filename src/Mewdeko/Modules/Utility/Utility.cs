@@ -83,17 +83,15 @@ public partial class Utility(
         var watch = Stopwatch.StartNew();
         try
         {
-            SmartEmbed.TryParse(embedText, ctx.Guild.Id, out var embeds, out var plainText, out var components);
-            var comps = components?.Build();
+            SmartEmbed.TryParse(embedText, ctx.Guild.Id, out var embeds, out var plainText);
             watch.Stop();
             var eb = new EmbedBuilder()
                 .WithTitle(Strings.EmbedParsed(ctx.Guild.Id))
                 .WithOkColor()
                 .WithDescription(Strings.PlaintextLength(ctx.Guild.Id, plainText.Length) +
-                                 $"`Embed Count:` ***{embeds?.Length}***\n" +
-                                 $"`Component Count:` ***{comps?.Components.Count}")
+                                 $"`Embed Count:` ***{embeds?.Length}***")
                 .WithFooter(Strings.ExecutionTime(ctx.Guild.Id, watch.Elapsed));
-            await ctx.Channel.SendMessageAsync(plainText, embeds: embeds, components: comps);
+            await ctx.Channel.SendMessageAsync(plainText, embeds: embeds);
             await ctx.Channel.SendMessageAsync(embed: eb.Build());
         }
         catch (Exception e)
@@ -1722,14 +1720,13 @@ public partial class Utility(
 
         var msg = rep.Replace(processedMessage);
 
-        if (SmartEmbed.TryParse(msg, ctx.Guild?.Id, out var embedData, out var plainText, out var components))
+        if (SmartEmbed.TryParse(msg, ctx.Guild?.Id, out var embedData, out var plainText))
         {
             if (attachments.Any())
             {
                 try
                 {
                     await channel.SendFilesAsync(attachments, plainText, embeds: embedData,
-                            components: components?.Build(),
                             allowedMentions: !canMention
                                 ? new AllowedMentions(AllowedMentionTypes.Users)
                                 : AllowedMentions.All)
@@ -1746,7 +1743,7 @@ public partial class Utility(
             else
                 try
                 {
-                    await channel.SendMessageAsync(plainText, embeds: embedData, components: components?.Build(),
+                    await channel.SendMessageAsync(plainText, embeds: embedData,
                             allowedMentions: !canMention
                                 ? new AllowedMentions(AllowedMentionTypes.Users)
                                 : AllowedMentions.All)

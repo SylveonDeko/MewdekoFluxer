@@ -824,8 +824,8 @@ public class MinecraftService(
     /// <param name="server">The server database entry.</param>
     /// <param name="status">The queried server status.</param>
     /// <param name="guild">The guild for context.</param>
-    /// <returns>The parsed embed components, or null if parsing fails.</returns>
-    public (Embed[]? Embeds, string? PlainText, ComponentBuilder? Components)? BuildCustomStatusEmbed(
+    /// <returns>The parsed embeds and text, or null if parsing fails.</returns>
+    public (Embed[]? Embeds, string? PlainText)? BuildCustomStatusEmbed(
         MinecraftServer server, McServerStatus status, IGuild guild)
     {
         if (string.IsNullOrWhiteSpace(server.CustomEmbedTemplate))
@@ -834,8 +834,8 @@ public class MinecraftService(
         var replacer = BuildMcReplacer(server, status, guild).Build();
         var parsed = replacer.Replace(server.CustomEmbedTemplate);
 
-        if (SmartEmbed.TryParse(parsed, guild.Id, out var embeds, out var plainText, out var components))
-            return (embeds, plainText, components);
+        if (SmartEmbed.TryParse(parsed, guild.Id, out var embeds, out var plainText))
+            return (embeds, plainText);
 
         return null;
     }
@@ -1038,12 +1038,11 @@ public class MinecraftService(
             var replacer = BuildMcReplacer(server, status, guild).Build();
             var parsed = replacer.Replace(customMessage);
 
-            if (SmartEmbed.TryParse(parsed, guild.Id, out var embeds, out var plainText, out var components))
+            if (SmartEmbed.TryParse(parsed, guild.Id, out var embeds, out var plainText))
             {
                 await channel.SendMessageAsync(
                     plainText,
-                    embeds: embeds,
-                    components: components?.Build());
+                    embeds: embeds);
                 return;
             }
 
@@ -1168,14 +1167,12 @@ public class MinecraftService(
     {
         Embed embed;
         string? plainText = null;
-        ComponentBuilder? components = null;
 
         var customResult = BuildCustomStatusEmbed(server, status, guild);
         if (customResult?.Embeds != null && customResult.Value.Embeds.Length > 0)
         {
             embed = customResult.Value.Embeds[0];
             plainText = customResult.Value.PlainText;
-            components = customResult.Value.Components;
         }
         else
         {
@@ -1190,7 +1187,6 @@ public class MinecraftService(
                 {
                     m.Embed = embed;
                     m.Content = plainText ?? Optional<string>.Unspecified;
-                    m.Components = components?.Build() ?? new ComponentBuilder().Build();
                 });
                 return;
             }
@@ -1210,8 +1206,7 @@ public class MinecraftService(
 
         var newMsg = await channel.SendMessageAsync(
             plainText,
-            embed: embed,
-            components: components?.Build());
+            embed: embed);
 
         server.WatchMessageId = newMsg.Id;
         await db.MinecraftServers

@@ -653,11 +653,10 @@ public class StreamNotificationService : IReadyExecutor, INService
                 var processedMessage = replacer.Replace(streamerMessage);
 
                 if (SmartEmbed.TryParse(processedMessage ?? string.Empty, followedStream.GuildId, out var embed,
-                        out var plainText,
-                        out var components))
+                        out var plainText))
                 {
                     // Valid JSON - use SmartEmbed
-                    await textChannel.SendMessageAsync(plainText, embeds: embed, components: components?.Build());
+                    await textChannel.SendMessageAsync(plainText, embeds: embed);
                     return;
                 }
                 else
@@ -674,10 +673,9 @@ public class StreamNotificationService : IReadyExecutor, INService
                 var processedTemplate = replacer.Replace(guildTemplate);
 
                 if (SmartEmbed.TryParse(processedTemplate ?? string.Empty, followedStream.GuildId, out var embed,
-                        out var plainText,
-                        out var components))
+                        out var plainText))
                 {
-                    await textChannel.SendMessageAsync(plainText, embeds: embed, components: components?.Build());
+                    await textChannel.SendMessageAsync(plainText, embeds: embed);
                     return;
                 }
                 else

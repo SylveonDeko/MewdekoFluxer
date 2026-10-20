@@ -58,7 +58,7 @@ public class TicketController : Controller
             var result = await Task.WhenAll(panels.Select(async panel =>
             {
                 var channel = await guild.GetTextChannelAsync(panel.ChannelId);
-                SmartEmbed.TryParse(panel.EmbedJson, guildId, out var embeds, out var text, out var builder);
+                SmartEmbed.TryParse(panel.EmbedJson, guildId, out var embeds, out var text);
                 return new
                 {
                     panel.Id,

@@ -908,9 +908,9 @@ public class CoprMonitoringService : INService, IReadyExecutor, IDisposable
 
         var content = replacer.Replace(customMessage);
 
-        if (SmartEmbed.TryParse(content, guild.Id, out var embeds, out var plainText, out var components))
+        if (SmartEmbed.TryParse(content, guild.Id, out var embeds, out var plainText))
         {
-            await channel.SendMessageAsync(plainText, embeds: embeds, components: components?.Build());
+            await channel.SendMessageAsync(plainText, embeds: embeds);
         }
         else
         {

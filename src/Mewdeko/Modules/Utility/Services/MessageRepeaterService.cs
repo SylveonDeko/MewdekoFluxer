@@ -320,10 +320,10 @@ public class MessageRepeaterService : INService, IReadyExecutor, IDisposable
             var message = rep.Replace(repeater.Message ?? "");
             IMessage? sentMessage = null;
 
-            if (SmartEmbed.TryParse(message, thread.Guild.Id, out var embed, out var plainText, out var components))
+            if (SmartEmbed.TryParse(message, thread.Guild.Id, out var embed, out var plainText))
             {
                 sentMessage =
-                    await thread.SendMessageAsync(plainText ?? "", embeds: embed, components: components?.Build());
+                    await thread.SendMessageAsync(plainText ?? "", embeds: embed);
             }
             else
             {
@@ -1210,10 +1210,10 @@ public class MessageRepeaterService : INService, IReadyExecutor, IDisposable
             var message = rep.Replace(repeater.Message ?? "");
             IMessage? newMessage = null;
 
-            if (SmartEmbed.TryParse(message, thread.Guild.Id, out var embed, out var plainText, out var components))
+            if (SmartEmbed.TryParse(message, thread.Guild.Id, out var embed, out var plainText))
             {
                 newMessage =
-                    await thread.SendMessageAsync(plainText ?? "", embeds: embed, components: components?.Build());
+                    await thread.SendMessageAsync(plainText ?? "", embeds: embed);
             }
             else
             {

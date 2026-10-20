@@ -227,123 +227,19 @@ public class NewEmbed
     }
 
     /// <summary>
-    ///     Gets the components of the message.
+    ///     Renders the link buttons of the message as markdown links, since Fluxer messages cannot carry buttons.
+    ///     Buttons without a link and select menus have no text equivalent and are left out.
     /// </summary>
-    /// <param name="guildId">The ID of the guild.</param>
-    /// <returns>A <see cref="ComponentBuilder" /> containing the components.</returns>
-    public ComponentBuilder? GetComponents(ulong? guildId)
+    /// <returns>One markdown link per line, or null when the message has no link buttons.</returns>
+    public string? GetLinkText()
     {
-        if (Components is null) return null;
-
-        var cb = new ComponentBuilder();
-
-        // Group components by row and add them in order
-        var groupedByRow = Components
-            .GroupBy(c => c.Row)
-            .OrderBy(g => g.Key)
+        var links = Components?
+            .Where(c => !c.IsSelect && !string.IsNullOrWhiteSpace(c.Url) && !string.IsNullOrWhiteSpace(c.DisplayName))
+            .OrderBy(c => c.Row)
+            .Select(c => $"{(c.Emoji is null ? "" : $"{c.Emoji} ")}[{c.DisplayName}]({c.Url})")
             .ToList();
 
-        foreach (var rowGroup in groupedByRow)
-        {
-            var rowId = rowGroup.Key;
-            var componentsInRow = rowGroup.ToList();
-
-            // Add all components in this row
-            foreach (var comp in componentsInRow)
-            {
-                if (comp.IsSelect)
-                {
-                    cb.WithSelectMenu(GetSelectMenu(comp, rowId, guildId ?? 0), rowId);
-                }
-                else
-                {
-                    cb.WithButton(GetButton(comp, rowId, guildId ?? 0), rowId);
-                }
-            }
-        }
-
-        return cb;
-    }
-
-    private static ButtonBuilder GetButton(NewEmbedComponent btn, int pos, ulong guildId)
-    {
-        var bb = new ButtonBuilder();
-        if (btn.Url.IsNullOrWhiteSpace() && btn.Id.IsNullOrWhiteSpace())
-            bb.WithDisabled(true).WithLabel("Buttons must have a url or id").WithStyle(ButtonStyle.Danger)
-                .WithCustomId(pos.ToString());
-        else if (!btn.Url.IsNullOrWhiteSpace() && !btn.Id.IsNullOrWhiteSpace())
-            bb.WithDisabled(true).WithLabel("Buttons cannot have both a url and id").WithStyle(ButtonStyle.Danger)
-                .WithCustomId(pos.ToString());
-        else if (btn.Url.IsNullOrWhiteSpace() && btn.Style == ButtonStyle.Link)
-            bb.WithDisabled(true).WithLabel("Button styles must be 1, 2, 3, or 4").WithStyle(ButtonStyle.Danger)
-                .WithCustomId(pos.ToString());
-        else if (btn.DisplayName.IsNullOrWhiteSpace())
-            bb.WithDisabled(true).WithLabel("Buttons must have a display name").WithStyle(ButtonStyle.Danger)
-                .WithCustomId(pos.ToString());
-        else if (!btn.Url.IsNullOrWhiteSpace() && !btn.Url.StartsWith("https://") &&
-                 !btn.Url.StartsWith("discord://"))
-            bb.WithDisabled(true).WithLabel("Buttons with a url must have a https:// or discord:// link")
-                .WithStyle(ButtonStyle.Danger).WithCustomId(pos.ToString());
-        else if (!btn.Url.IsNullOrWhiteSpace())
-        {
-            bb.WithLabel(btn.DisplayName).WithStyle(ButtonStyle.Link).WithUrl(btn.Url);
-            if (btn.Emoji is not null)
-            {
-                bb.WithEmote(btn.Emoji.ToIEmote());
-            }
-        }
-        else
-        {
-            bb.WithLabel(btn.DisplayName).WithStyle(btn.Style)
-                .WithCustomId($"trigger.{btn.Id}.runin.{guildId}${pos}");
-            if (btn.Emoji is not null)
-            {
-                bb.WithEmote(btn.Emoji.ToIEmote());
-            }
-        }
-
-        return bb;
-    }
-
-    private SelectMenuBuilder GetSelectMenu(NewEmbedComponent sel, int pos, ulong guildId)
-    {
-        var sb = new SelectMenuBuilder();
-
-        var error = new SelectMenuBuilder()
-            .WithDisabled(true)
-            .WithOptions([new SelectMenuOptionBuilder("a", "a")])
-            .WithCustomId(pos.ToString());
-
-        if ((sel.MaxOptions, sel.MinOptions) is (> 25 or < 0, > 25 or < 0))
-            sb = error.WithPlaceholder("MinOptions and MaxOptions must be less than 25 and more than 0");
-        else if (sel.MaxOptions < sel.MinOptions)
-            sb = error.WithPlaceholder("MinOptions must be larger than or equal to MaxOptions");
-        else if (sel.MaxOptions > (sel.Options?.Count ?? 0))
-            sb = error.WithPlaceholder("MaxOptions cannot be greater than total options");
-        else if ((sel.Options?.Count ?? 0) == 0)
-            sb = error.WithPlaceholder("Options must not be empty");
-        else if (sel.Options.Count > 25)
-            sb = error.WithPlaceholder("More than 25 options cannot be specified");
-        else if (sel.DisplayName?.Length > 80)
-            sb = error.WithPlaceholder("displayName.length cannot be greater than 80");
-        else if (sel.Options.Any(x => x.Name.Length > 100))
-            sb = error.WithPlaceholder("select option names length cannot be greater than 100");
-        else if (sel.Options.Any(x => x.Description?.Length > 100))
-            sb = error.WithPlaceholder("select option description length cannot be greater than 100");
-        else
-            sb
-                .WithPlaceholder(sel.DisplayName)
-                .WithCustomId($"multitrigger.runin.{guildId}${pos}")
-                .WithMaxValues(sel.MaxOptions)
-                .WithMinValues(sel.MinOptions)
-                .WithOptions(sel.Options
-                    .Select(x =>
-                        new SelectMenuOptionBuilder(x.Name, $"option.{x.Id}.{GenerateSecureString(10)}",
-                            x.Description ?? "None",
-                            x.Emoji?.ToIEmote()))
-                    .ToList());
-
-        return sb;
+        return links is { Count: > 0 } ? string.Join("\n", links) : null;
     }
 
     /// <summary>

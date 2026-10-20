@@ -1372,7 +1372,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
                 .WithDefault(client.CurrentUser, channel, guild, client)
                 .Build();
             var rendered = replacer.Replace(menu.Message) ?? menu.Message;
-            if (SmartEmbed.TryParse(rendered, guild.Id, out var parsedEmbeds, out var plain, out _))
+            if (SmartEmbed.TryParse(rendered, guild.Id, out var parsedEmbeds, out var plain))
             {
                 text = string.IsNullOrWhiteSpace(plain) ? null : plain;
                 embeds = parsedEmbeds is { Length: > 0 } ? parsedEmbeds : null;

@@ -402,12 +402,11 @@ public class MinecraftBridgeService : INService
             var built = replacer.Build();
             var parsed = built.Replace(template);
 
-            if (SmartEmbed.TryParse(parsed, guild.Id, out var embeds, out var plainText, out var components))
+            if (SmartEmbed.TryParse(parsed, guild.Id, out var embeds, out var plainText))
             {
                 await channel.SendMessageAsync(
                     plainText,
                     embeds: embeds,
-                    components: components?.Build(),
                     allowedMentions: AllowedMentions.None);
                 return;
             }

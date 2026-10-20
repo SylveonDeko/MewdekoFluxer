@@ -1598,10 +1598,9 @@ public class OwnerOnly(
                 return;
             }
 
-            if (SmartEmbed.TryParse(rep.Replace(msg), ctx.Guild?.Id, out var embed, out var plainText,
-                    out var components))
+            if (SmartEmbed.TryParse(rep.Replace(msg), ctx.Guild?.Id, out var embed, out var plainText))
             {
-                await potentialUser.SendMessageAsync(plainText, embeds: embed, components: components.Build())
+                await potentialUser.SendMessageAsync(plainText, embeds: embed)
                     .ConfigureAwait(false);
                 await ctx.Channel.SendConfirmAsync(Strings.MessageSentToUser(ctx.Guild.Id, potentialUser.Mention))
                     .ConfigureAwait(false);
@@ -1624,10 +1623,9 @@ public class OwnerOnly(
         var channel = await potentialServer.GetTextChannelAsync(to).ConfigureAwait(false);
         if (channel is not null)
         {
-            if (SmartEmbed.TryParse(rep.Replace(msg), ctx.Guild.Id, out var embed, out var plainText,
-                    out var components))
+            if (SmartEmbed.TryParse(rep.Replace(msg), ctx.Guild.Id, out var embed, out var plainText))
             {
-                await channel.SendMessageAsync(plainText, embeds: embed, components: components?.Build())
+                await channel.SendMessageAsync(plainText, embeds: embed)
                     .ConfigureAwait(false);
                 await ctx.Channel
                     .SendConfirmAsync(Strings.MessageSentToServer(ctx.Guild.Id, potentialServer, channel.Mention))
@@ -1649,10 +1647,9 @@ public class OwnerOnly(
             return;
         }
 
-        if (SmartEmbed.TryParse(rep.Replace(msg), ctx.Guild?.Id, out var embed1, out var plainText1,
-                out var components1))
+        if (SmartEmbed.TryParse(rep.Replace(msg), ctx.Guild?.Id, out var embed1, out var plainText1))
         {
-            await channel.SendMessageAsync(plainText1, embeds: embed1, components: components1?.Build())
+            await channel.SendMessageAsync(plainText1, embeds: embed1)
                 .ConfigureAwait(false);
             await ctx.Channel.SendConfirmAsync(Strings.MessageSentGuild(ctx.Guild.Id, potentialServer, user.Mention));
 

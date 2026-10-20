@@ -387,9 +387,9 @@ public class PatreonService : BackgroundService, INService, IReadyExecutor
             }
 
             // Send the message
-            if (SmartEmbed.TryParse(message, guild.Id, out var embed, out var plainText, out var components))
+            if (SmartEmbed.TryParse(message, guild.Id, out var embed, out var plainText))
             {
-                await channel.SendMessageAsync(plainText, embeds: embed, components: components?.Build());
+                await channel.SendMessageAsync(plainText, embeds: embed);
             }
             else
             {

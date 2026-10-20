@@ -207,12 +207,10 @@ public class MultiGreetService : INService
     private static async Task SendSmartEmbedMessage(IMessageChannel channel, string content, ulong guildId,
         int deleteTime = 0)
     {
-        var built = SmartEmbed.TryParse(content, guildId, out var embedData, out var plainText, out var components)
-            ? components?.Build()
-            : null;
-        if (!string.IsNullOrWhiteSpace(plainText) || embedData?.Length > 0 || built?.Components.Count > 0)
+        SmartEmbed.TryParse(content, guildId, out var embedData, out var plainText);
+        if (!string.IsNullOrWhiteSpace(plainText) || embedData?.Length > 0)
         {
-            var msg = await channel.SendMessageAsync(plainText, embeds: embedData, components: built);
+            var msg = await channel.SendMessageAsync(plainText, embeds: embedData);
             if (deleteTime > 0)
                 msg.DeleteAfter(deleteTime);
         }
@@ -226,12 +224,10 @@ public class MultiGreetService : INService
 
     private async Task<ulong> SendSmartEmbedWebhookMessage(DiscordWebhookClient webhook, string content, ulong guildId)
     {
-        var built = SmartEmbed.TryParse(content, guildId, out var embedData, out var plainText, out var components)
-            ? components?.Build()
-            : null;
-        if (!string.IsNullOrWhiteSpace(plainText) || embedData?.Length > 0 || built?.Components.Count > 0)
+        SmartEmbed.TryParse(content, guildId, out var embedData, out var plainText);
+        if (!string.IsNullOrWhiteSpace(plainText) || embedData?.Length > 0)
         {
-            return await webhook.SendMessageAsync(plainText, embeds: embedData, components: built);
+            return await webhook.SendMessageAsync(plainText, embeds: embedData);
         }
 
         return await webhook.SendMessageAsync(content);

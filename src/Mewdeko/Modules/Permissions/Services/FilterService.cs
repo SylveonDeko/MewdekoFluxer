@@ -418,7 +418,7 @@ public class FilterService : IEarlyBehavior, INService
                     null).ConfigureAwait(false);
 
                 await (await msg.Author.CreateDMChannelAsync().ConfigureAwait(false))
-                    .SendMessageAsync(embed.Item2, embeds: embed.Item1, components: embed.Item3.Build())
+                    .SendMessageAsync(embed.Item2, embeds: embed.Item1)
                     .ConfigureAwait(false);
             }
             catch

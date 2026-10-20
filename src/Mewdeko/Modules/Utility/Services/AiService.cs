@@ -631,8 +631,7 @@ public class AiService : INService
                 if (webhook != null && webhookMessageId.HasValue)
                 {
                     // WEBHOOK CASE - fallback
-                    if (SmartEmbed.TryParse(processedContent, config.GuildId, out var embedData, out var plainText,
-                            out _))
+                    if (SmartEmbed.TryParse(processedContent, config.GuildId, out var embedData, out var plainText))
                     {
                         // Use the parsed embed data
                         var modifiedEmbeds = embedData.Select(embed =>
@@ -678,8 +677,7 @@ public class AiService : INService
                     if (regularMessage == null)
                     {
                         // First update - create new message
-                        if (SmartEmbed.TryParse(processedContent, config.GuildId, out var embedData, out var plainText,
-                                out _))
+                        if (SmartEmbed.TryParse(processedContent, config.GuildId, out var embedData, out var plainText))
                         {
                             // Use the parsed embed data for the initial message
                             var modifiedEmbeds = embedData.Select(embed =>
@@ -708,8 +706,7 @@ public class AiService : INService
                     else
                     {
                         // Subsequent updates - modify existing message
-                        if (SmartEmbed.TryParse(processedContent, config.GuildId, out var embedData, out var plainText,
-                                out _))
+                        if (SmartEmbed.TryParse(processedContent, config.GuildId, out var embedData, out var plainText))
                         {
                             // Use the parsed embed data for updates
                             var modifiedEmbeds = embedData.Select(embed =>

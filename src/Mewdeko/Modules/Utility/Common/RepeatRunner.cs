@@ -514,10 +514,10 @@ public class RepeatRunner : IDisposable
         // Set message flags - suppress notifications if enabled
         var flags = Repeater.SuppressNotifications ? MessageFlags.SuppressNotification : MessageFlags.None;
 
-        if (SmartEmbed.TryParse(message, Channel.GuildId, out var embed, out var plainText, out var components))
+        if (SmartEmbed.TryParse(message, Channel.GuildId, out var embed, out var plainText))
         {
             return await Channel
-                .SendMessageAsync(plainText ?? "", embeds: embed, components: components?.Build(), flags: flags)
+                .SendMessageAsync(plainText ?? "", embeds: embed, flags: flags)
                 .ConfigureAwait(false);
         }
 

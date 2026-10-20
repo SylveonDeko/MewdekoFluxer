@@ -49,10 +49,10 @@ public partial class Giveaways(
                 var replacer = rep.Build();
 
                 if (SmartEmbed.TryParse(replacer.Replace(gc.GiveawayEndMessage), Context.Guild.Id, out var embeds,
-                        out var plaintext, out var components))
+                        out var plaintext))
                 {
                     await ctx.Channel
-                        .SendMessageAsync(plaintext, embeds: embeds ?? null, components: components?.Build())
+                        .SendMessageAsync(plaintext, embeds: embeds ?? null)
                         .ConfigureAwait(false);
                 }
 

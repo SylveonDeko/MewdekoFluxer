@@ -38,8 +38,7 @@ public partial class Utility
             }
 
             // Validate the embed JSON
-            if (!SmartEmbed.TryParse(embedJson, ctx.Guild?.Id, out var embedData, out var plainText,
-                    out var components))
+            if (!SmartEmbed.TryParse(embedJson, ctx.Guild?.Id, out var embedData, out var plainText))
             {
                 await ReplyErrorAsync(Strings.EmbedSaveInvalidJson(ctx.Guild?.Id ?? 0)).ConfigureAwait(false);
                 return;
@@ -99,7 +98,7 @@ public partial class Utility
             }
 
             // Validate the embed JSON
-            if (!SmartEmbed.TryParse(embedJson, ctx.Guild.Id, out var embedData, out var plainText, out var components))
+            if (!SmartEmbed.TryParse(embedJson, ctx.Guild.Id, out var embedData, out var plainText))
             {
                 await ReplyErrorAsync(Strings.EmbedSaveInvalidJson(ctx.Guild.Id)).ConfigureAwait(false);
                 return;
@@ -299,9 +298,9 @@ public partial class Utility
 
             var content = replacer.Replace(embed.JsonCode);
 
-            if (SmartEmbed.TryParse(content, ctx.Guild?.Id, out var embedData, out var plainText, out var components))
+            if (SmartEmbed.TryParse(content, ctx.Guild?.Id, out var embedData, out var plainText))
             {
-                await ctx.Channel.SendMessageAsync(plainText ?? "", embeds: embedData, components: components?.Build())
+                await ctx.Channel.SendMessageAsync(plainText ?? "", embeds: embedData)
                     .ConfigureAwait(false);
             }
             else

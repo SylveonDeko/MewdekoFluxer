@@ -299,10 +299,9 @@ public class RoleGreets(InteractiveService interactivity, HttpClient http) : Mew
                         .WithClient(ctx.Client as DiscordShardedClient)
                         .WithServer(ctx.Client as DiscordShardedClient, ctx.Guild as SocketGuild).Build();
                     var content = replacer.Replace(greet.Message);
-                    if (SmartEmbed.TryParse(content, ctx.Guild?.Id, out var embedData, out var plainText, out var cb))
+                    if (SmartEmbed.TryParse(content, ctx.Guild?.Id, out var embedData, out var plainText))
                     {
-                        await ctx.Channel.SendMessageAsync(plainText, embeds: embedData,
-                            components: cb.Build()).ConfigureAwait(false);
+                        await ctx.Channel.SendMessageAsync(plainText, embeds: embedData).ConfigureAwait(false);
                         return;
                     }
 

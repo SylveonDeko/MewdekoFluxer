@@ -155,14 +155,14 @@ public sealed partial class AchievementService
         {
             var replacer = BuildReplacer(user, context, unlocked, summary, catalog);
             var processed = replacer.Replace(settings.Row.UnlockMessage) ?? "";
-            sent = SmartEmbed.TryParse(processed, guild.Id, out var embeds, out var plainText, out var components)
-                ? await SendAsync(channel, image, plainText, embeds, components?.Build(), allowed)
-                : await SendAsync(channel, image, processed, null, null, allowed);
+            sent = SmartEmbed.TryParse(processed, guild.Id, out var embeds, out var plainText)
+                ? await SendAsync(channel, image, plainText, embeds, allowed)
+                : await SendAsync(channel, image, processed, null, allowed);
         }
         else
         {
             var embed = BuildUnlockEmbed(user, unlocked, summary, catalog, image is not null);
-            sent = await SendAsync(channel, image, mention ? user.Mention : null, [embed], null, allowed);
+            sent = await SendAsync(channel, image, mention ? user.Mention : null, [embed], allowed);
         }
 
         if (settings.Row.DeleteAfter > 0 && channel is not IDMChannel)
@@ -180,13 +180,13 @@ public sealed partial class AchievementService
     public const int MaxDeleteAfter = 86400;
 
     private static async Task<IUserMessage> SendAsync(IMessageChannel channel, Stream? image, string? text,
-        Embed[]? embeds, MessageComponent? components, AllowedMentions allowed)
+        Embed[]? embeds, AllowedMentions allowed)
     {
         if (image is null)
-            return await channel.SendMessageAsync(text, embeds: embeds, components: components, allowedMentions: allowed);
+            return await channel.SendMessageAsync(text, embeds: embeds, allowedMentions: allowed);
 
         return await channel.SendFileAsync(new FileAttachment(image, UnlockImageFileName), text, embeds: embeds,
-            components: components, allowedMentions: allowed);
+            allowedMentions: allowed);
     }
 
     /// <summary>
@@ -404,7 +404,7 @@ public sealed partial class AchievementService
             return (null, [BuildUnlockEmbed(user, sample, summary, catalog)]);
 
         var processed = BuildReplacer(user, null, sample, summary, catalog).Replace(source) ?? "";
-        return SmartEmbed.TryParse(processed, user.Guild.Id, out var embeds, out var plainText, out _)
+        return SmartEmbed.TryParse(processed, user.Guild.Id, out var embeds, out var plainText)
             ? (plainText, embeds)
             : (processed, null);
     }

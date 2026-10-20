@@ -22,8 +22,27 @@ public class SmartEmbedTests
               {"color":"#5865F2"}]}
             """;
 
-        Assert.That(SmartEmbed.TryParse(json, null, out var embeds, out var plainText, out _), Is.True);
+        Assert.That(SmartEmbed.TryParse(json, null, out var embeds, out var plainText), Is.True);
         Assert.That(plainText, Is.EqualTo("Niiiice job!"));
         Assert.That(embeds!.Select(e => e.Title), Is.EqualTo(new[] { "Verify Via ID", "Verify Via Server" }));
+    }
+
+    /// <summary>
+    ///     Link buttons become markdown links under the content, and buttons without a link or select menus are dropped.
+    /// </summary>
+    [Test]
+    public void LinkButtonsBecomeMarkdownLinks()
+    {
+        const string json = """
+            {"content":"Welcome!","components":[
+              {"displayName":"Rules","url":"https://example.com/rules"},
+              {"displayName":"Run trigger","id":"5"},
+              {"displayName":"Pick","isSelect":true,"options":[{"id":"1","name":"One"}]},
+              {"displayName":"Site","url":"https://example.com","emoji":"🌐","row":1}]}
+            """;
+
+        Assert.That(SmartEmbed.TryParse(json, null, out _, out var plainText), Is.True);
+        Assert.That(plainText,
+            Is.EqualTo("Welcome!\n[Rules](https://example.com/rules)\n🌐 [Site](https://example.com)"));
     }
 }

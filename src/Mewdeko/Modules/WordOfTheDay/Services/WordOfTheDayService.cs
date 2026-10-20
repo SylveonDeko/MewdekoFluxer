@@ -744,10 +744,10 @@ public class WordOfTheDayService : INService, IDisposable
     /// <param name="entry">The word to render.</param>
     /// <param name="localDate">The guild-local date to display.</param>
     /// <returns>
-    ///     Plain text, embeds, and components to send, plus whether the guild template was ignored because it
+    ///     Plain text and embeds to send, plus whether the guild template was ignored because it
     ///     rendered an empty message.
     /// </returns>
-    public (string? Text, Discord.Embed[]? Embeds, MessageComponent? Components, bool UsedFallback) BuildMessage(
+    public (string? Text, Discord.Embed[]? Embeds, bool UsedFallback) BuildMessage(
         IGuild guild, IMessageChannel channel, WordOfTheDayConfig config, WordEntry entry, DateTime localDate)
     {
         var usedFallback = false;
@@ -759,20 +759,18 @@ public class WordOfTheDayService : INService, IDisposable
         {
             var replacer = BuildReplacer(guild, channel, entry, localDate, pingText);
             var rendered = replacer.Replace(config.MessageTemplate);
-            if (SmartEmbed.TryParse(rendered, guild.Id, out var embeds, out var plain, out var components))
+            if (SmartEmbed.TryParse(rendered, guild.Id, out var embeds, out var plain))
             {
                 var text = string.IsNullOrWhiteSpace(plain) ? pingText : plain;
                 var usableEmbeds = embeds?.Where(HasVisibleContent).ToArray();
                 if (usableEmbeds is { Length: 0 }) usableEmbeds = null;
-                var built = components?.Build();
-                var hasComponents = built?.Components is { Count: > 0 };
 
-                if (!string.IsNullOrWhiteSpace(text) || usableEmbeds is not null || hasComponents)
-                    return (text, usableEmbeds, built, false);
+                if (!string.IsNullOrWhiteSpace(text) || usableEmbeds is not null)
+                    return (text, usableEmbeds, false);
             }
             else if (!string.IsNullOrWhiteSpace(rendered))
             {
-                return (rendered.SanitizeMentions(true), null, null, false);
+                return (rendered.SanitizeMentions(true), null, false);
             }
 
             usedFallback = true;
@@ -802,7 +800,7 @@ public class WordOfTheDayService : INService, IDisposable
             : strings.WotdFooterDatamuse(guild.Id);
         builder.WithFooter(footer);
 
-        return (pingText, [builder.Build()], null, usedFallback);
+        return (pingText, [builder.Build()], usedFallback);
     }
 
     /// <summary>
@@ -926,9 +924,9 @@ public class WordOfTheDayService : INService, IDisposable
         await postLock.WaitAsync();
         try
         {
-            var (text, embeds, components, fallback) = BuildMessage(guild, channel, config, entry, localNow);
+            var (text, embeds, fallback) = BuildMessage(guild, channel, config, entry, localNow);
             usedFallback = fallback;
-            var message = await channel.SendMessageAsync(text, embeds: embeds, components: components,
+            var message = await channel.SendMessageAsync(text, embeds: embeds,
                 allowedMentions: AllowedMentions.All);
 
             if (config.CreateThread)

@@ -740,31 +740,8 @@ public class UserPunishService : INService, IDisposable
     /// <param name="banReason">The reason for the ban.</param>
     /// <param name="duration">The duration of the ban.</param>
     /// <returns></returns>
-    public Task<(Embed[]?, string?, ComponentBuilder?)> GetBanUserDmEmbed(ICommandContext context, IGuildUser? target,
+    public Task<(Embed[]?, string?)> GetBanUserDmEmbed(ICommandContext context, IGuildUser? target,
         string? defaultMessage,
-        string? banReason, TimeSpan? duration)
-    {
-        return GetBanUserDmEmbed(
-            (DiscordShardedClient)context.Client,
-            (SocketGuild)context.Guild,
-            (IGuildUser)context.User,
-            target,
-            defaultMessage,
-            banReason,
-            duration);
-    }
-
-    /// <summary>
-    ///     Gets the dm ban embed for a user.
-    /// </summary>
-    /// <param name="context">The context of the command.</param>
-    /// <param name="target">The user to ban.</param>
-    /// <param name="defaultMessage">The default message to send.</param>
-    /// <param name="banReason">The reason for the ban.</param>
-    /// <param name="duration">The duration of the ban.</param>
-    /// <returns></returns>
-    public Task<(Embed[]?, string?, ComponentBuilder?)> GetBanUserDmEmbed(IInteractionContext context,
-        IGuildUser? target, string? defaultMessage,
         string? banReason, TimeSpan? duration)
     {
         return GetBanUserDmEmbed(
@@ -788,7 +765,7 @@ public class UserPunishService : INService, IDisposable
     /// <param name="banReason">The reason for the ban.</param>
     /// <param name="duration">The duration of the ban.</param>
     /// <returns></returns>
-    public async Task<(Embed[], string?, ComponentBuilder?)> GetBanUserDmEmbed(
+    public async Task<(Embed[], string?)> GetBanUserDmEmbed(
         DiscordShardedClient DiscordShardedClient,
         SocketGuild guild,
         IGuildUser moderator, IGuildUser? target, string? defaultMessage, string? banReason, TimeSpan? duration)
@@ -814,7 +791,6 @@ public class UserPunishService : INService, IDisposable
             .WithOverride("%ban.duration%", () => duration?.ToString(@"d\.hh\:mm") ?? "perma")
             .Build();
         Embed[] embed;
-        ComponentBuilder components;
         string plainText;
         // if template isn't set, use the old message style
         if (string.IsNullOrWhiteSpace(template))
@@ -824,26 +800,26 @@ public class UserPunishService : INService, IDisposable
                 color = Mewdeko.ErrorColor.RawValue, description = defaultMessage
             });
 
-            SmartEmbed.TryParse(replacer.Replace(template), guild?.Id, out embed, out plainText, out components);
+            SmartEmbed.TryParse(replacer.Replace(template), guild?.Id, out embed, out plainText);
         }
         // if template is set to "-" do not dm the user
         else if (template == "-")
         {
-            return (null, null, null);
+            return (null, null);
         }
         // otherwise, treat template as a regular string with replacements
         else
         {
-            if (SmartEmbed.TryParse(replacer.Replace(template), guild?.Id, out embed, out plainText, out components)
-                && (embed is not null || components is not null || plainText is not null))
-                return (embed, plainText, components);
+            if (SmartEmbed.TryParse(replacer.Replace(template), guild?.Id, out embed, out plainText)
+                && (embed is not null || plainText is not null))
+                return (embed, plainText);
             return (
             [
                 new EmbedBuilder().WithErrorColor().WithDescription(replacer.Replace(template)).Build()
-            ], null, null);
+            ], null);
         }
 
-        return (embed, plainText, components);
+        return (embed, plainText);
     }
 
     /// <summary>

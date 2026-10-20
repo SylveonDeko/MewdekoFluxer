@@ -148,11 +148,10 @@ public partial class Utility
                 .WithDefault(Context)
                 .Build();
 
-            if (SmartEmbed.TryParse(rep.Replace(quote.Text), ctx.Guild?.Id, out var embed, out var plainText,
-                    out var components))
+            if (SmartEmbed.TryParse(rep.Replace(quote.Text), ctx.Guild?.Id, out var embed, out var plainText))
             {
                 await ctx.Channel.SendMessageAsync($"`#{quote.Id}` 📣 {plainText?.SanitizeAllMentions()}",
-                    embeds: embed, components: components?.Build()).ConfigureAwait(false);
+                    embeds: embed).ConfigureAwait(false);
                 return;
             }
 
@@ -263,11 +262,9 @@ public partial class Utility
             var infoText =
                 $"`#{quote.Id} added by {quote.AuthorName.SanitizeAllMentions()}` 🗯️ {quote.Keyword.ToLowerInvariant().SanitizeAllMentions()}:\n";
 
-            if (SmartEmbed.TryParse(rep.Replace(quote.Text), ctx.Guild?.Id, out var embed, out var plainText,
-                    out var components))
+            if (SmartEmbed.TryParse(rep.Replace(quote.Text), ctx.Guild?.Id, out var embed, out var plainText))
             {
-                await ctx.Channel.SendMessageAsync(infoText + plainText.SanitizeMentions(), embeds: embed,
-                        components: components?.Build())
+                await ctx.Channel.SendMessageAsync(infoText + plainText.SanitizeMentions(), embeds: embed)
                     .ConfigureAwait(false);
             }
             else

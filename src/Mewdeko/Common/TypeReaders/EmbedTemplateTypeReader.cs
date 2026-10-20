@@ -81,19 +81,17 @@ public partial class EmbedTemplateTypeReader : MewdekoTypeReader<EmbedTemplateRe
                 ContentToStore = contentToStore
             };
 
-            if (SmartEmbed.TryParse(input, guildId, out var embedData, out var plainText, out var components))
+            if (SmartEmbed.TryParse(input, guildId, out var embedData, out var plainText))
             {
                 // Successfully parsed as embed/JSON
                 result.Embeds = embedData;
                 result.PlainText = plainText;
-                result.Components = components;
             }
             else
             {
                 // Failed to parse as JSON, treat as plain text
                 result.Embeds = null;
                 result.PlainText = input;
-                result.Components = null;
             }
 
             return TypeReaderResult.FromSuccess(result);

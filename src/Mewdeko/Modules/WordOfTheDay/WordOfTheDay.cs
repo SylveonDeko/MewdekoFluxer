@@ -60,12 +60,12 @@ public class WordOfTheDay : MewdekoModuleBase<WordOfTheDayService>
             note = Strings.WotdPreviewNote(ctx.Guild.Id);
         }
 
-        var (text, embeds, components, usedFallback) =
+        var (text, embeds, usedFallback) =
             Service.BuildMessage(ctx.Guild, ctx.Channel, config, entry, localNow);
         if (usedFallback)
             note = Strings.WotdTemplateFallback(ctx.Guild.Id);
         var content = note ?? (posted is null ? text : null);
-        await ctx.Channel.SendMessageAsync(content, embeds: embeds, components: components);
+        await ctx.Channel.SendMessageAsync(content, embeds: embeds);
     }
 
     /// <summary>

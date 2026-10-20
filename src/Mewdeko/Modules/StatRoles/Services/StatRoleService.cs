@@ -99,8 +99,8 @@ public class StatRoleService : INService, IReadyExecutor, IDisposable
         {
             try
             {
-                if (SmartEmbed.TryParse(text, guild.Id, out var embeds, out var plain, out var components))
-                    await channel.SendMessageAsync(plain, embeds: embeds, components: components?.Build());
+                if (SmartEmbed.TryParse(text, guild.Id, out var embeds, out var plain))
+                    await channel.SendMessageAsync(plain, embeds: embeds);
                 else
                     await channel.SendMessageAsync(text, allowedMentions: AllowedMentions.None);
             }
