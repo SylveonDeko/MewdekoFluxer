@@ -1,0 +1,4284 @@
+accept:
+  - accept
+  - suggestaccept
+  - acceptsuggest
+acceptchannel:
+  - acceptchannel
+acceptmessage:
+  - acceptmessage
+  - acceptmsg
+acrophobia:
+  - acrophobia
+  - acro
+activefilters:
+  - activefilters
+  - activefx
+activitygraph:
+  - activitygraph
+  - actgraph
+addautopublish:
+  - addautopublish
+  - addautopub
+  - aap
+topserversupdate:
+  - topserversupdate
+  - updatetopguilds
+addblacklistedpermission:
+  - addblacklistedpermission
+  - abp
+  - blacklistpermission
+  - addbpermission
+addblacklistedrole:
+  - addblacklistedrole
+  - abr
+  - blacklistrole
+  - addbrole
+addchattrigger:
+  - addchattrigger
+  - act
+  - acr
+addchattriggerregex:
+  - addchattriggerregex
+  - actr
+addcompetitionreward:
+  - addcompetitionreward
+addemote:
+  - addemote
+  - emoteadd
+  - ae
+  - ea
+addinstance:
+  - addinstance
+  - addins
+addlevelupmessage:
+  - addlevelupmessage
+  - addlvlupmsg
+addmodalfield:
+  - addmodalfield
+  - addmfield
+addoption:
+  - addoption
+  - addopt
+addplaying:
+  - addplaying
+  - adpl
+addpublishblacklist:
+  - addpublishblacklist
+  - addpubbl
+addreactiontrigger:
+  - addreactiontrigger
+  - addrt
+addrolestorolestate:
+  - addrolestorolestate
+  - arsrs
+addroletolist:
+  - addroletolist
+  - artl
+addroletorole:
+  - addroletorole
+  - artr
+addselectmenu:
+  - addselectmenu
+  - addsmenu
+addstarboardemote:
+  - addstarboardemote
+  - addstaremote
+  - starboardaddemote
+  - asbe
+addstatusrole:
+  - addstatusrole
+  - asr
+addthenremove:
+  - addthenremove
+  - atr
+addtoall:
+  - addtoall
+  - ata
+addtoallbots:
+  - addtoallbots
+  - atab
+addtoallusers:
+  - addtoallusers
+  - atau
+addtousersover:
+  - atuo
+  - addtousersover
+addtousersunder:
+  - atuu
+  - addtousersunder
+adduserstorole:
+  - adduserstorole
+  - autr
+addwhitelistedrole:
+  - addwhitelistedrole
+  - awr
+  - whitelistrole
+  - addwrole
+addwhitelisteduser:
+  - addwhitelisteduser
+  - awu
+  - whitelistuser
+  - addwuser
+addxp:
+  - addxp
+adsarm:
+  - adsarm
+afkdel:
+  - afkdel
+  - afkdelete
+afkdisable:
+  - afkdisable
+afkdisabledlist:
+  - afkdisabledlist
+afklength:
+  - afklength
+  - maxafklength
+afkremove:
+  - afkrm
+  - afkremove
+afktimeout:
+  - afktimeout
+afktype:
+  - afktype
+afkundisable:
+  - afkundisable
+afkview:
+  - afkview
+  - viewafk
+aichannel:
+  - aichannel
+  - aic
+aiconfig:
+  - aiconfig
+  - ac
+aicustomembed:
+  - aicustomembed
+  - aice
+aikey:
+  - aikey
+  - ak
+aimodel:
+  - aimodel
+  - aim
+aiprompt:
+  - aiprompt
+  - aip
+aiwebhook:
+  - aiwebhook
+  - aiw
+aiwebsearch:
+  - aiwebsearch
+  - aws
+alias:
+  - alias
+  - cmdmap
+aliasesclear:
+  - aliasesclear
+  - aliasclear
+aliaslist:
+  - aliaslist
+  - cmdmaplist
+  - aliases
+allcatmdls:
+  - allcatmdls
+  - acamds
+allchnlmdls:
+  - allchnlmdls
+  - acm
+allcmdcooldowns:
+  - allcmdcooldowns
+  - acmdcds
+allrolemdls:
+  - allrolemdls
+  - arm
+allsrvrmdls:
+  - allsrvrmdls
+  - asm
+allusrmdls:
+  - allusrmdls
+  - aum
+anal:
+  - anal
+anime:
+  - anime
+  - ani
+  - aq
+anonrep:
+  - anonrep
+antialt:
+  - antialt
+antimassmention:
+  - antimassmention
+  - amm
+  - massmention
+  - stopmassmention
+antipattern:
+  - antipattern
+  - apattern
+antiraid:
+  - antiraid
+antispam:
+  - antispam
+archiveonaccept:
+  - archiveonaccept
+archiveonconsider:
+  - archiveonconsider
+archiveondeny:
+  - archiveondeny
+archiveonimplement:
+  - archiveonimplement
+asar:
+  - asar
+autoassignbotrole:
+  - autoassignbotrole
+  - aabr
+autoassignrole:
+  - autoassignrole
+  - aar
+autobanroleadd:
+  - autobanroleadd
+  - abra
+autobanrolelist:
+  - autobanrolelist
+  - abrl
+autobanroleremove:
+  - autobanroleremove
+  - abrr
+autobanrolereason:
+  - autobanrolereason
+  - abreason
+autobanword:
+  - autobanword
+  - autobanw
+autobanwordlist:
+  - autobanwordlist
+  - autobwlist
+autoboobs:
+  - autoboobs
+autobutts:
+  - autobutts
+autocommandadd:
+  - acadd
+  - autocmdadd
+autocommandremove:
+  - acrm
+  - autocmdrm
+autocommandslist:
+  - aclist
+  - autolist
+  - autocommands
+  - autocmdlist
+autohentai:
+  - autohentai
+autoplay:
+  - autoplay
+  - ap
+autotranslang:
+  - autotranslang
+  - atl
+autotranslate:
+  - autotranslate
+  - at
+  - autotrans
+avatar:
+  - avatar
+  - av
+baccarat:
+  - baccarat
+baka:
+  - baka
+ban:
+  - ban
+  - b
+banbyhash:
+  - banbyhash
+  - bbh
+baninrole:
+  - baninrole
+banmessage:
+  - banmessage
+  - banmsg
+  - bantemplate
+  - bantemp
+banmessagetest:
+  - banmsgtest
+banmsgreset:
+  - banmsgreset
+banner:
+  - banner
+  - userbanner
+banunder:
+  - banunder
+banprune:
+  - banprune
+  - banpurge
+banpruneset:
+  - banpruneset
+  - banpurgeset
+banpruneclear:
+  - banpruneclear
+  - banpurgeclear
+banprunereset:
+  - banprunereset
+  - banpurgereset
+bash:
+  - bash
+  - zfs
+  - pacman
+  - shell
+bass:
+  - bass
+bible:
+  - bible
+bingo:
+  - bingo
+birthdayannouncements:
+  - birthdayannouncements
+  - bdayann
+birthdaychannel:
+  - birthdaychannel
+  - bdaychannel
+  - bdaychan
+birthdayconfig:
+  - birthdayconfig
+  - bdaycfg
+birthdaylist:
+  - birthdaylist
+  - bdaylist
+  - upcomingbirthdays
+birthdaymessage:
+  - birthdaymessage
+  - bdaymsg
+birthdaypingrole:
+  - birthdaypingrole
+  - bdayping
+birthdayrole:
+  - birthdayrole
+  - bdayrole
+birthdaytimezone:
+  - birthdaytimezone
+  - bdaytz
+birthdaytoday:
+  - birthdaytoday
+  - todaysbirthdays
+bite:
+  - bite
+blackjack:
+  - blackjack
+  - bj
+blush:
+  - blush
+bondage:
+  - bondage
+boobs:
+  - boobs
+boost:
+  - boost
+boostdel:
+  - boostdel
+  - boostdelete
+boostmsg:
+  - boostmsg
+  - boostmessage
+boosttest:
+  - boosttest
+  - testboost
+bored:
+  - bored
+buttoninfo:
+  - buttoninfo
+  - binfo
+butts:
+  - butts
+  - ass
+  - butt
+bye:
+  - bye
+byedel:
+  - byedel
+byemsg:
+  - byemsg
+byetest:
+  - byetest
+calcops:
+  - calcops
+calculate:
+  - calculate
+  - calc
+cancelboost:
+  - cancelboost
+cash:
+  - cash
+  - $
+  - currency
+  - $$
+  - $$$
+  - cur
+catcmd:
+  - catcmd
+  - cac
+catfact:
+  - catfact
+catmdl:
+  - catmdl
+  - cam
+challengeleaderboard:
+  - challengeleaderboard
+  - chlb
+channelaccessapply:
+  - channelaccessapply
+  - caapply
+channelaccessapprove:
+  - channelaccessapprove
+  - caapprove
+channelaccessblacklist:
+  - channelaccessblacklist
+  - cablacklist
+channelaccessblacklistadd:
+  - channelaccessblacklistadd
+  - cabladd
+channelaccessblacklistremove:
+  - channelaccessblacklistremove
+  - cablremove
+channelaccessconfig:
+  - channelaccessconfig
+  - caconfig
+channelaccessdeny:
+  - channelaccessdeny
+  - cadeny
+channelaccesshistory:
+  - channelaccesshistory
+  - cahistory
+channelaccesslist:
+  - channelaccesslist
+  - calist
+channelaccesspanel:
+  - channelaccesspanel
+  - capanel
+channelaccesspending:
+  - channelaccesspending
+  - capending
+channelaccessquestionadd:
+  - channelaccessquestionadd
+  - caqadd
+channelaccessquestionlist:
+  - channelaccessquestionlist
+  - caqlist
+channelaccessquestionremove:
+  - channelaccessquestionremove
+  - caqremove
+channelaccessremove:
+  - channelaccessremove
+  - caremove
+channelaccesssetup:
+  - channelaccesssetup
+  - casetup
+channelaccesswithdraw:
+  - channelaccesswithdraw
+  - cawithdraw
+channelblacklist:
+  - channelblacklist
+  - cbl
+channelid:
+  - channelid
+  - cid
+channelinfo:
+  - channelinfo
+  - cinfo
+channelmessages:
+  - channelmessages
+  - channelmsg
+  - cmsg
+channeltopic:
+  - channeltopic
+  - ct
+charinfo:
+  - charinfo
+  - characterinfo
+chatmute:
+  - chatmute
+chattriggerrolegranttype:
+  - chattriggerrolegranttype
+  - ctrolegranttype
+  - ctrgt
+chattriggervalidtype:
+  - chattriggervalidtype
+  - ctvalidtype
+  - ctvt
+chatunmute:
+  - chatunmute
+checkpanels:
+  - checkpanels
+  - tcheckpanels
+checkrep:
+  - checkrep
+chnlcmd:
+  - chnlcmd
+  - cc
+chnlfilterinv:
+  - chnlfilterinv
+  - cfi
+chnlfilterlin:
+  - chnlfilterlin
+  - cfl
+chnlfilterwords:
+  - chnlfilterwords
+  - cfw
+chnlmdl:
+  - chnlmdl
+  - cm
+choose:
+  - choose
+chucknorris:
+  - chucknorris
+  - cn
+claimchallenge:
+  - claimchallenge
+  - claimch
+clearqueue:
+  - clearqueue
+  - cq
+cmdcooldown:
+  - cmdcooldown
+  - cmdcd
+coinflip:
+  - coinflip
+  - flip
+color:
+  - color
+  - clr
+commandlogchannel:
+  - commandlogchannel
+  - commandlog
+  - logcommands
+commands:
+  - commands
+  - cmds
+commandstats:
+  - commandstats
+  - cstats
+competitionleaderboard:
+  - competitionleaderboard
+  - complb
+confess:
+  - confess
+confessionblacklist:
+  - confessblacklist
+  - confessionblacklist
+  - confessbl
+confessionchannel:
+  - confesschannel
+  - confessionchannel
+confessionlogchannel:
+  - confesslogchannel
+  - confessionlogchannel
+  - confessionlogchnl
+confessionunblacklist:
+  - confessunblacklist
+  - confessionunblacklist
+  - confessunbl
+config:
+  - config
+  - conf
+coprmonitoradd:
+  - coprmonitoradd
+  - coprmonadd
+  - copradd
+coprmonitorremove:
+  - coprmonitorremove
+  - coprmonremove
+  - coprremove
+  - coprmonrem
+coprmonitorlist:
+  - coprmonitorlist
+  - coprmonlist
+  - coprlist
+coprmonitortoggle:
+  - coprmonitortoggle
+  - coprmontoggle
+  - coprtoggle
+coprnotify:
+  - coprnotify
+  - coprn
+coprfilter:
+  - coprfilter
+  - coprf
+coprsucceededmessage:
+  - coprsucceededmessage
+  - coprsuccessmsg
+  - coprsuccessmessage
+coprfailedmessage:
+  - coprfailedmessage
+  - coprfailmsg
+  - coprfailmessage
+coprcanceledmessage:
+  - coprcanceledmessage
+  - coprcancelmsg
+  - coprcancelmessage
+coprpendingmessage:
+  - coprpendingmessage
+  - coprpendmsg
+coprrunningmessage:
+  - coprrunningmessage
+  - coprrunmsg
+coprskippedmessage:
+  - coprskippedmessage
+  - coprskipmsg
+coprdefaultmessage:
+  - coprdefaultmessage
+  - coprdefmsg
+consider:
+  - consider
+  - suggestconsider
+  - considersuggest
+considerchannel:
+  - considerchannel
+considermessage:
+  - considermessage
+  - considermsg
+convert:
+  - convert
+convertlist:
+  - convertlist
+convertunits:
+  - convertunits
+  - unitconvert
+  - units
+countingban:
+  - countingban
+  - cban
+  - countban
+countingconfig:
+  - countingconfig
+  - cconfig
+  - countconfig
+countingcooldown:
+  - countingcooldown
+  - ccooldown
+  - countcooldown
+countingdisable:
+  - countingdisable
+  - cdisable
+  - countdisable
+countingfailurechannel:
+  - countingfailurechannel
+  - cfailurechannel
+  - countfailurechannel
+countingfailuremessage:
+  - countingfailuremessage
+  - cfailuremessage
+  - countfailuremessage
+countingfailurethreshold:
+  - countingfailurethreshold
+  - cfailurethreshold
+  - countfailurethreshold
+countingleaderboard:
+  - countingleaderboard
+  - cleaderboard
+  - countleaderboard
+  - clb
+countinglist:
+  - countinglist
+  - clist
+  - countlist
+countingmilestonechannel:
+  - countingmilestonechannel
+  - cmilestonechannel
+  - countmilestonechannel
+countingmilestonemessage:
+  - countingmilestonemessage
+  - cmilestonemessage
+  - countmilestonemessage
+countingmilestones:
+  - countingmilestones
+  - cmilestones
+  - countmilestones
+countingreset:
+  - countingreset
+  - creset
+  - countreset
+countingrestore:
+  - countingrestore
+  - crestore
+  - countrestore
+countingsave:
+  - countingsave
+  - csave
+  - countsave
+countingsetup:
+  - countingsetup
+  - csetup
+  - countsetup
+countingstats:
+  - countingstats
+  - countstats
+countingstatus:
+  - countingstatus
+  - cstatus
+  - countstatus
+countingsuccessmessage:
+  - countingsuccessmessage
+  - csuccessmessage
+  - countsuccessmessage
+countingtimeout:
+  - countingtimeout
+  - ctimeout
+  - counttimeout
+countingunban:
+  - countingunban
+  - cunban
+  - countunban
+countmodbanned:
+  - countmodbanned
+  - cmbanned
+  - countmoderationbanned
+countmodclear:
+  - countmodclear
+  - cmclear
+  - countmoderationclear
+countmodclearall:
+  - countmodclearall
+  - cmclearall
+  - countmoderationclearall
+countmoddefaults:
+  - countmoddefaults
+  - cmdefaults
+  - countmoderationdefaults
+countmodedits:
+  - countmodedits
+  - cmedits
+  - countmoderationedits
+countmodenable:
+  - countmodenable
+  - cmenable
+  - countmoderationenable
+countmodignore:
+  - countmodignore
+  - cmignore
+  - countmoderationignore
+countmodnonnumbers:
+  - countmodnonnumbers
+  - cmnonnumbers
+  - countmoderationnonnumbers
+countmodpunish:
+  - countmodpunish
+  - cmpunish
+  - countmoderationpunish
+countmodpunishlist:
+  - countmodpunishlist
+  - cmpunishlist
+  - countmoderationpunishlist
+countmodpunishment:
+  - countmodpunishment
+  - cmpunishment
+  - countmoderationpunishment
+countmodrequired:
+  - countmodrequired
+  - cmrequired
+  - countmoderationrequired
+countmodreset:
+  - countmodreset
+  - cmreset
+  - countmoderationreset
+countmodshow:
+  - countmodshow
+  - cmshow
+  - countmoderationshow
+countmodthreshold:
+  - countmodthreshold
+  - cmthreshold
+  - countmoderationthreshold
+countmodunpunish:
+  - countmodunpunish
+  - cmunpunish
+  - countmoderationunpunish
+countmodwindow:
+  - countmodwindow
+  - cmwindow
+  - countmoderationwindow
+craps:
+  - craps
+crash:
+  - crash
+createcatandtxtchannels:
+  - ccatc
+createcatandvcchannels:
+  - ccavc
+createcattxtchans:
+  - cctc
+createcatvcchans:
+  - ccvc
+createrole:
+  - createrole
+  - cr
+createroles:
+  - createroles
+  - croles
+  - crs
+createstarboard:
+  - createstarboard
+  - addstarboard
+  - newstarboard
+createwebhook:
+  - createwebhook
+  - cwh
+creatvoichanl:
+  - creatvoichanl
+  - cvch
+creatxtchanl:
+  - creatxtchanl
+  - ctch
+cry:
+  - cry
+ctad:
+  - ctad
+ctat:
+  - ctat
+ctca:
+  - ctca
+ctcpsetchannel:
+  - chattriggerscrosspostchannel
+  - ctcpch
+  - ctcpchannel
+  - ctcrosspostchannel
+  - ctcrosspostch
+ctcpsetwebhook:
+  - chattriggerscrosspostwebhook
+  - ctcpwh
+  - ctcpwebhook
+  - ctcrosspostwebhook
+  - ctcrosspostwh
+ctdm:
+  - ctdm
+ctinterephemeral:
+  - ctinterephemeral
+  - ctiephemeral
+  - ctieph
+ctintererrors:
+  - ctintererrors
+  - ctierrors
+  - ctie
+ctnr:
+  - ctnr
+  - chattriggernoresponse
+ctprefix:
+  - ctprefix
+  - chattriggersprefix
+  - chattriggerprefix
+ctreply:
+  - ctreply
+  - chattriggerreply
+ctdeleteafter:
+  - ctdeleteafter
+  - chattriggerdeleteafter
+ctcooldown:
+  - ctcooldown
+  - chattriggercooldown
+ctrequirecounter:
+  - ctrequirecounter
+  - chattriggerrequirecounter
+ctcategory:
+  - ctcategory
+  - chattriggercategory
+ctcategorytoggle:
+  - ctcategorytoggle
+  - chattriggercategorytoggle
+ctstats:
+  - ctstats
+  - chattriggerstats
+cttest:
+  - cttest
+  - chattriggertest
+ctchain:
+  - ctchain
+  - chattriggerchain
+ctallowbots:
+  - ctallowbots
+  - chattriggerallowbots
+ctcounters:
+  - ctcounters
+  - chattriggercounters
+ctcounterset:
+  - ctcounterset
+  - chattriggercounterset
+ctcounterdelete:
+  - ctcounterdelete
+  - chattriggercounterdelete
+ctevent:
+  - ctevent
+  - chattriggerevent
+statchanneltwitchcounter:
+  - statchanneltwitchcounter
+statchannelmechanism:
+  - statchannelmechanism
+statchannelstyle:
+  - statchannelstyle
+statchanneldefaults:
+  - statchanneldefaults
+statchanneltypes:
+  - statchanneltypes
+musiclinkchannel:
+  - musiclinkchannel
+musiclinkchannels:
+  - musiclinkchannels
+economyconfig:
+  - economyconfig
+economyset:
+  - economyset
+economyreset:
+  - economyreset
+economystats:
+  - economystats
+economyflow:
+  - economyflow
+gamestats:
+  - gamestats
+work:
+  - work
+crime:
+  - crime
+rob:
+  - rob
+pay:
+  - pay
+bank:
+  - bank
+deposit:
+  - deposit
+withdraw:
+  - withdraw
+shop:
+  - shop
+buy:
+  - buy
+inventory:
+  - inventory
+use:
+  - use
+shopaddrole:
+  - shopaddrole
+shopadditem:
+  - shopadditem
+shopremove:
+  - shopremove
+shopprice:
+  - shopprice
+shopstock:
+  - shopstock
+shopdesc:
+  - shopdesc
+shoptoggle:
+  - shoptoggle
+cteventchannel:
+  - cteventchannel
+  - chattriggereventchannel
+ctplaceholders:
+  - ctplaceholders
+  - chattriggerplaceholders
+cttime:
+  - cttime
+  - chattriggertime
+ctexpiry:
+  - ctexpiry
+  - chattriggerexpiry
+ctmaxuses:
+  - ctmaxuses
+  - chattriggermaxuses
+ctminage:
+  - ctminage
+  - chattriggerminimumage
+ctminmember:
+  - ctminmember
+  - chattriggerminimummembership
+cttoggle:
+  - cttoggle
+  - chattriggertoggle
+ctaddresponse:
+  - ctaddresponse
+  - chattriggeraddresponse
+ctclearresponses:
+  - ctclearresponses
+  - chattriggerclearresponses
+ctresponsemode:
+  - ctresponsemode
+  - chattriggerresponsemode
+ctcost:
+  - ctcost
+  - chattriggercost
+ctreward:
+  - ctreward
+  - chattriggerreward
+ctxpreward:
+  - ctxpreward
+  - chattriggerxpreward
+ctreqlevel:
+  - ctreqlevel
+  - chattriggerrequiredlevel
+ctreqmsg:
+  - ctreqmsg
+  - chattriggerrequirementmessage
+ctprefixtype:
+  - ctprefixtype
+  - chattriggersprefixtype
+  - chattriggerprefixtype
+ctreact:
+  - ctreact
+  - ctr
+ctrgranttoggle:
+  - ctrgranttoggle
+  - ctgt
+  - ctgranttoggle
+ctrremovetoggle:
+  - ctrremovetoggle
+  - ctrt
+  - ctremovetoggle
+ctsclear:
+  - ctsclear
+ctsexport:
+  - ctsexport
+ctsmigrate:
+  - ctsmigrate
+  - ctsconvert
+ctsimport:
+  - ctsimport
+ctsreload:
+  - ctsreload
+cuddle:
+  - cuddle
+currencyreward:
+  - currencyreward
+  - curreward
+currencyrewards:
+  - currencyrewards
+customafkmessage:
+  - customafkmessage
+  - afkmessage
+dailychallenge:
+  - dailychallenge
+  - dc
+dailyreward:
+  - dailyreward
+  - daily
+danbooru:
+  - danbooru
+dance:
+  - dance
+deafen:
+  - deafen
+  - deaf
+debugembed:
+  - debugembed
+  - embeddebug
+define:
+  - define
+  - def
+defprefix:
+  - defprefix
+dehoist:
+  - dehoist
+dehoistall:
+  - dehoistall
+  - dehoista
+delallquotes:
+  - delallquotes
+  - daq
+  - delallq
+delete:
+  - delete
+  - del
+deletebutton:
+  - deletebutton
+  - delbtn
+deletechattrigger:
+  - deletechattrigger
+  - dct
+deleteguildstatsdata:
+  - deleteguildstatsdata
+  - delguildstatsdata
+deleteplaylist:
+  - deleteplaylist
+  - delplist
+deleterole:
+  - deleterole
+  - dr
+deleteroles:
+  - deleteroles
+  - drs
+deleteselectmenu:
+  - deleteselectmenu
+  - delselectmenu
+deleteselectoption:
+  - deleteselectoption
+  - delselectoption
+deletestarboard:
+  - deletestarboard
+  - removestarboard
+  - delstarboard
+deleteuserrolestate:
+  - deleteuserrolestate
+  - dur
+deleteuserstatsdata:
+  - deleteuserstatsdata
+  - deluserstatsdata
+delmsgoncmd:
+  - delmsgoncmd
+  - dmc
+deltxtchanl:
+  - deltxtchanl
+  - dtch
+delvoichanl:
+  - delvoichanl
+  - dvch
+deny:
+  - deny
+  - suggestdeny
+  - denysuggest
+denychannel:
+  - denychannel
+denymessage:
+  - denymessage
+  - denymsg
+derpibooru:
+  - derpibooru
+  - derpi
+diceduel:
+  - diceduel
+  - dd
+die:
+  - die
+discordpermoverride:
+  - dpo
+discordpermoverridelist:
+  - dpol
+  - dpoli
+discordpermoverridereset:
+  - dpor
+distortion:
+  - distortion
+donate:
+  - donate
+dragon:
+  - dragon
+duckrace:
+  - duckrace
+  - duck
+e621:
+  - e621
+edit:
+  - edit
+editchattrigger:
+  - editchattrigger
+  - ect
+editsnipe:
+  - editsnipe
+editsnipelist:
+  - editsnipelist
+  - esnipelist
+echo:
+  - echo
+eightball:
+  - eightball
+  - 8ball
+eightd:
+  - eightd
+  - 8d
+embeddelete:
+  - embeddelete
+  - edel
+  - edelete
+embedlist:
+  - embedlist
+  - elist
+embedpreview:
+  - embedpreview
+  - epreview
+  - eprev
+embedsave:
+  - embedsave
+  - esave
+emotelist:
+  - emotelist
+endcompetition:
+  - endcompetition
+evaluate:
+  - evaluate
+  - eval
+exportcommandsjson:
+  - exportcommandsjson
+  - exportcommands
+  - excj
+exportrolelist:
+  - exportrolelist
+  - exportroles
+  - erl
+facepalm:
+  - facepalm
+feed:
+  - feed
+feedadd:
+  - feedadd
+  - rss
+feedlist:
+  - feedlist
+  - feeds
+feedmessage:
+  - feedmessage
+  - rssmessage
+feedremove:
+  - feedremove
+  - feedrm
+  - feeddel
+fetch:
+  - fetch
+filterword:
+  - filterword
+  - fw
+findanime:
+  - findanime
+  - whatanime
+forwardmessages:
+  - forwardmessages
+  - fwmsgs
+forwardtoall:
+  - forwardtoall
+  - fwtoall
+fwarn:
+  - fwarn
+  - filteredwarn
+fwclear:
+  - fwclear
+gamevoicechannel:
+  - gamevoicechannel
+  - gvc
+gatari:
+  - gatari
+gbanner:
+  - gbanner
+  - giveawaybanner
+gdm:
+  - gdm
+  - giveawaydm
+gdmmessage:
+  - gdmmessage
+  - gdmmsg
+gelbooru:
+  - gelbooru
+gembedcolor:
+  - gembedcolor
+  - giveawayembedcolor
+gemote:
+  - gemote
+  - giveawayemote
+gend:
+  - gend
+  - giveawayend
+generatedocs:
+  - generatedocs
+  - gendocs
+getactiveafks:
+  - getactiveafks
+  - activeafks
+getautopublishes:
+  - getautopublishes
+  - getaps
+getjson:
+  - getjson
+giverep:
+  - giverep
+  - +rep
+  - gr
+glist:
+  - glist
+  - giveaways
+  - giveawaylist
+globalcommand:
+  - globalcommand
+  - gcmd
+globalmodule:
+  - globalmodule
+  - gmod
+globalpermlist:
+  - globalpermlist
+  - gpl
+  - lgp
+  - globalperms
+  - listglobalperms
+google:
+  - google
+  - g
+grab:
+  - grab
+  - getoverhere
+graph:
+  - plot
+  - graphfunction
+greetdm:
+  - greetdm
+greetdmmsg:
+  - greetdmmsg
+greetdmoptout:
+  - greetdmoptout
+  - gdmoptout
+greetdmtest:
+  - greetdmtest
+greroll:
+  - greroll
+  - giveawayreroll
+  - reroll
+gstart:
+  - gstart
+  - giveawaystart
+gstats:
+  - gstats
+  - giveawaystats
+guide:
+  - guide
+  - readme
+guildembeddelete:
+  - guildembeddelete
+  - gedel
+  - gembeddelete
+guildembedlist:
+  - guildembedlist
+  - gelist
+  - gembedlist
+guildembedsave:
+  - guildembedsave
+  - gesave
+  - gembedsave
+guildstatsoptout:
+  - guildstatsoptout
+  - gstatsoptout
+gwinembedcolor:
+  - gwinembedcolor
+  - giveawaywinembedcolor
+h:
+  - help
+  - h
+handhold:
+  - handhold
+hangman:
+  - hangman
+hangmanlist:
+  - hangmanlist
+hangmanstop:
+  - hangmanstop
+happy:
+  - happy
+hentai:
+  - hentai
+hentaibomb:
+  - hentaibomb
+hentaigif:
+  - hentaigif
+highfive:
+  - highfive
+highlight:
+  - highlights
+  - hl
+highlow:
+  - highlow
+hit:
+  - hit
+horserace:
+  - horserace
+  - hr
+hug:
+  - hug
+iam:
+  - iam
+iamnot:
+  - iamnot
+  - iamn
+image:
+  - image
+  - img
+  - rimg
+imagesreload:
+  - imagesreload
+implementchannel:
+  - implementchannel
+implemented:
+  - implemented
+  - suggestimplement
+  - implementsuggest
+implementmessage:
+  - implementmessage
+  - implementmsg
+importrolelist:
+  - importrolelist
+  - importroles
+  - irl
+inrole:
+  - inrole
+inroles:
+  - inroles
+instancestatus:
+  - instancestatus
+  - instatus
+invite:
+  - invite
+invitedusers:
+  - invitedusers
+  - userinvites
+inviteleaderboard:
+  - inviteleaderboard
+  - inviteslb
+invites:
+  - invites
+invitesettings:
+  - invitesettings
+  - inviteconfig
+invwarn:
+  - invwarn
+  - invitewarn
+join:
+  - join
+  - j
+  - mv
+joinstats:
+  - joinstats
+  - jstats
+joinstatscolor:
+  - joinstatscolor
+  - jstatscolor
+kaladont:
+  - kaladont
+  - kal
+kaladontstop:
+  - kaladontstop
+  - kalstop
+kaladontsetup:
+  - kaladontsetup
+  - kalsetup
+kaladontdisable:
+  - kaladontdisable
+  - kaldisable
+karaoke:
+  - karaoke
+keno:
+  - keno
+kick:
+  - kick
+  - k
+kickunder:
+  - kickunder
+kiss:
+  - kiss
+konachan:
+  - konachan
+languageset:
+  - languageset
+  - langset
+languagesetdefault:
+  - langsetdefault
+  - langsetd
+languageslist:
+  - languageslist
+  - langli
+laugh:
+  - laugh
+cashleaderboard:
+  - cashleaderboard
+  - cashlb
+  - richest
+leaderboard:
+  - leaderboard
+  - lb
+leave:
+  - leave
+  - disconnect
+  - d
+leavehook:
+  - leavehook
+  - byehook
+leaveserver:
+  - leaveserver
+retentionpending:
+  - retentionpending
+  - purgepending
+retentionrecent:
+  - retentionrecent
+  - purgerecent
+retentioncancel:
+  - retentioncancel
+  - purgecancel
+retentionpurge:
+  - retentionpurge
+  - purgenow
+retentionpurgeall:
+  - retentionpurgeall
+  - purgeall
+retentionscan:
+  - retentionscan
+  - purgescan
+bothells:
+  - bothells
+  - bothell
+bothellcheck:
+  - bothellcheck
+  - checkbothell
+leavestats:
+  - leavestats
+  - lstats
+leavestatscolor:
+  - leavestatscolor
+  - lstatscolor
+levelnotif:
+  - levelnotif
+  - lvlnotif
+levelupchannel:
+  - levelupchannel
+  - lvlupchan
+levelupmessages:
+  - levelupmessages
+  - lvlupmsgs
+leveluppings:
+  - leveluppings
+  - lvluppings
+levelupplaceholders:
+  - levelupplaceholders
+  - lvlupplaceholders
+liftlockdown:
+  - liftlockdown
+  - unlockserver
+linux:
+  - linux
+listblacklists:
+  - listblacklists
+  - lbl
+  - blacklists
+  - listbws
+listchattriggers:
+  - listchattriggers
+  - lct
+listchattriggersgroup:
+  - listchattriggersgroup
+  - lctg
+listinstances:
+  - listinstances
+  - listins
+listmodalfields:
+  - listmodalfields
+  - listmfields
+listoptions:
+  - listoptions
+  - listopts
+listperms:
+  - listperms
+  - lp
+listplaying:
+  - listplaying
+  - lipl
+listquotes:
+  - listquotes
+  - liqu
+listservers:
+  - listservers
+liststarboards:
+  - liststarboards
+  - starboardlist
+  - starboards
+liststatusroles:
+  - liststatusroles
+  - lsr
+loadplaylist:
+  - loadplaylist
+  - loadplist
+lock:
+  - lock
+  - channellock
+  - lockchannel
+lockdown:
+  - lockdown
+  - lockdownserver
+log:
+  - log
+logcategory:
+  - logcategory
+  - logcat
+logevents:
+  - logevents
+logignore:
+  - logignore
+  - lignore
+logignorelist:
+  - logignorelist
+  - lignorel
+loop:
+  - loop
+  - queuerepeat
+  - qrp
+lowpass:
+  - lowpass
+  - rpl
+lottery:
+  - lottery
+lsar:
+  - lsar
+lstfilterwords:
+  - lstfilterwords
+  - lfw
+magicitem:
+  - magicitem
+  - mi
+mal:
+  - mal
+manga:
+  - manga
+  - mang
+  - mq
+manualblacklistcheck:
+  - manualblacklistcheck
+  - manualblcheck
+  - mbc
+masskick:
+  - masskick
+  - mkick
+masskill:
+  - masskill
+massnickprogress:
+  - massnickprogress
+  - mnickprogress
+  - mnp
+massnickstop:
+  - massnickstop
+  - mnstop
+  - mns
+maxsuggestionlength:
+  - maxsuggestionlength
+  - maxsuggestlength
+memberrole:
+  - memberrole
+meme:
+  - meme
+  - randommeme
+memegen:
+  - memegen
+memelist:
+  - memelist
+memory:
+  - memory
+minesweeper:
+  - minesweeper
+  - mines
+minmessagecountlength:
+  - minmsglength
+  - mmlength
+  - minmlength
+minsuggestionlength:
+  - minsuggestionlength
+  - minsuggestlength
+modifybalance:
+  - modifybalance
+  - modbal
+modules:
+  - modules
+  - mdls
+moveperm:
+  - moveperm
+  - mp
+movesong:
+  - movesong
+  - ms
+  - move
+moveto:
+  - moveto
+moveuserto:
+  - moveuserto
+  - moveuto
+movie:
+  - movie
+  - omdb
+  - imdb
+multigreetadd:
+  - multigreetadd
+  - mgadd
+  - mga
+multigreetdelete:
+  - multigreetdelete
+  - mgdel
+  - mgd
+multigreetdisable:
+  - multigreetdisable
+  - mgdisable
+  - mgdis
+multigreetgreetbots:
+  - multigreetgreetbots
+  - multigreetbots
+  - mggb
+multigreetlist:
+  - multigreetlist
+  - mglist
+  - mgl
+multigreetmessage:
+  - multigreetmessage
+  - mgmsg
+  - mgm
+multigreetremove:
+  - multigreetremove
+  - mgrem
+  - mgrm
+  - mgr
+multigreettype:
+  - multigreettype
+  - mgtype
+  - mgt
+multigreetwebhook:
+  - multigreetwebhook
+  - mgwebhook
+  - mghook
+  - mgh
+musicsettings:
+  - musicsettings
+  - msettings
+mute:
+  - mute
+muterole:
+  - muterole
+  - setmuterole
+mwarn:
+  - mwarn
+  - miniwarn
+mwarnclear:
+  - mwarnclear
+  - mwarnc
+mwarnexpire:
+  - mwarnexpire
+  - mwarne
+mwarnlog:
+  - mwarnlog
+mwarnlogall:
+  - mwarnlogall
+  - mwarnlogs
+mwarnpunish:
+  - mwarnpunish
+  - mwarnp
+mwarnpunishlist:
+  - mwarnpunishlist
+  - mwarnplist
+  - mwarnpl
+myrep:
+  - myrep
+nameban:
+  - nameban
+  - nban
+nhentai:
+  - nhentai
+  - nh
+nhentaisearch:
+  - nhentaisearch
+  - nhsearch
+  - nhs
+nightcore:
+  - nightcore
+  - nc
+normalize:
+  - normalize
+  - normalization
+nowplaying:
+  - nowplaying
+  - np
+nsfwtagblacklist:
+  - nsfwtagbl
+  - nsfwtbl
+nsfwtoggle:
+  - nsfwtoggle
+  - nsfw
+  - nsfwtgl
+nuke:
+  - nuke
+  - channelnuke
+  - nukechannel
+nunchi:
+  - nunchi
+osu:
+  - osu
+osu5:
+  - osu5
+owoify:
+  - owoify
+  - owo
+panelinfo:
+  - panelinfo
+  - pinfo
+panellist:
+  - panellist
+  - plist
+pat:
+  - pat
+patreonanalytics:
+  - patreonanalytics
+  - ptanalytics
+patreonannounce:
+  - patreonannounce
+  - ptannounce
+patreonchannel:
+  - patreonch
+  - ptch
+patreonconfig:
+  - patreonconfig
+  - ptconfig
+patreonday:
+  - patreonday
+  - ptday
+patreondisable:
+  - patreondisable
+  - ptdisable
+patreonhelp:
+  - patreonhelp
+  - pthelp
+patreonlink:
+  - patreonlink
+  - ptlink
+patternadd:
+  - patternadd
+  - padd
+patternlist:
+  - patternlist
+  - patterns
+patternremove:
+  - patternremove
+  - premove
+  - prem
+patternconfig:
+  - patternconfig
+  - pconfig
+patreonmessage:
+  - patreonmsg
+  - ptmsg
+patreonrecognize:
+  - patreonrecognize
+  - ptrecognize
+patreonroles:
+  - patreonroles
+  - ptroles
+patreonrolesync:
+  - patreonrolesync
+  - ptrolesync
+patreonstats:
+  - patreonstats
+  - ptstats
+patreonsupporters:
+  - patreonsupporters
+  - ptsupporters
+patreonsync:
+  - patreonsync
+  - ptsync
+patreonsyncall:
+  - patreonsyncall
+  - ptsyncall
+patreontiermap:
+  - patreontiermap
+  - pttiermap
+patreontoggle:
+  - patreontoggle
+  - pttoggle
+patreontop:
+  - patreontop
+  - pttop
+pause:
+  - pause
+permcontrol:
+  - permcontrol
+  - permc
+permrole:
+  - permrole
+  - pr
+permview:
+  - permview
+  - pview
+ping:
+  - ping
+pingip:
+  - pingip
+play:
+  - play
+  - p
+  - start
+playlists:
+  - playlists
+  - playlistshow
+  - plshow
+plinko:
+  - plinko
+poke:
+  - poke
+pokemon:
+  - pokemon
+poll:
+  - poll
+  - ppoll
+polla:
+  - polla
+pollc:
+  - pollc
+pollm:
+  - pollm
+polltemplate:
+  - polltemplate
+  - ptemplate
+polltemplates:
+  - polltemplates
+  - ptemplates
+porn:
+  - porn
+pornbomb:
+  - pornbomb
+pout:
+  - pout
+prefixcommand:
+  - prefix
+previewlinks:
+  - previewlinks
+  - plinks
+profile:
+  - profile
+  - userprofile
+pronouns:
+  - pronouns
+  - getpronouns
+pronounsforceclear:
+  - pronounsforceclear
+  - pnfc
+prunemembers:
+  - prunemembers
+  - memberprune
+punch:
+  - punch
+purge:
+  - purge
+  - clear
+  - prune
+purgeuser:
+  - purgeuser
+  - pruneuser
+pussy:
+  - pussy
+queue:
+  - queue
+  - q
+  - yq
+  - enqueue
+quoteadd:
+  - quoteadd
+  - .
+quotedelete:
+  - quotedelete
+  - qdel
+quoteexport:
+  - quoteexport
+  - qexport
+quoteid:
+  - quoteid
+  - qid
+quoteimport:
+  - quoteimport
+  - qimport
+quoteprint:
+  - quoteprint
+  - ..
+quotesearch:
+  - quotesearch
+  - qsearch
+quoteshow:
+  - quoteshow
+randjoke:
+  - randjoke
+randombird:
+  - randombird
+  - birb
+  - bird
+randomcat:
+  - randomcat
+  - meow
+randomdog:
+  - randomdog
+  - woof
+randomfood:
+  - randomfood
+  - yum
+randomkitsune:
+  - randomkitsune
+  - kitsune
+randomneko:
+  - randomneko
+  - neko
+randomreddit:
+  - randomreddit
+  - subreddit
+randomwaifu:
+  - randomwaifu
+  - waifu
+rank:
+  - rank
+rategirl:
+  - rategirl
+reactionroles:
+  - reactionroles
+  - rero
+reactionroleslist:
+  - reactionroleslist
+  - reroli
+reactionrolesremove:
+  - reactionrolesremove
+  - rerorm
+realbooru:
+  - realbooru
+  - rb
+recreateallpanels:
+  - recreateallpanels
+  - trecreateall
+recreatepanel:
+  - recreatepanel
+  - trecreate
+redditnsfw:
+  - redditnsfw
+  - nsfwsubreddit
+redisexec:
+  - redisexec
+  - rexec
+remind:
+  - remind
+reminddelete:
+  - reminddelete
+  - remindrm
+  - reminddel
+remindlist:
+  - remindlist
+  - remindl
+  - remindlst
+removeaddroles:
+  - removeaddroles
+  - remar
+removeallroles:
+  - removeallroles
+  - rar
+removeautopublish:
+  - removeautopublish
+  - removeautopub
+removeblacklistedpermission:
+  - removeblacklistedpermission
+  - rbp
+  - unblacklistpermission
+  - removebpermission
+removeblacklistedrole:
+  - removeblacklistedrole
+  - rbr
+  - unblacklistrole
+  - removebrole
+removecurrencyreward:
+  - removecurrencyreward
+  - removecr
+removeemote:
+  - removeemote
+  - deleteemote
+  - emoteremove
+  - emotedelete
+removefromall:
+  - removefromall
+  - rfa
+removefromallbots:
+  - removefromallbots
+  - rfab
+removefromallusers:
+  - removefromallusers
+  - rfau
+removefromrole:
+  - removefromrole
+  - rfr
+removeinstance:
+  - removeinstance
+  - removeins
+removelevelupmessage:
+  - removelevelupmessage
+  - remlvlupmsg
+removemodalfield:
+  - removemodalfield
+  - removemfield
+removeonmute:
+  - removeonmute
+removeoption:
+  - removeoption
+  - removeopt
+removeperm:
+  - removeperm
+  - rp
+removeplaying:
+  - removeplaying
+  - rmpl
+removepublishblacklist:
+  - removepublishblacklist
+  - removepubbl
+removeremoveroles:
+  - removeremoveroles
+  - rmremoveroles
+removerole:
+  - removerole
+  - rr
+removerolereward:
+  - removerolereward
+  - removerr
+removeroles:
+  - removeroles
+  - rrs
+removerolesfromrolestate:
+  - removerolesfromrolestate
+  - rrfrs
+removestarboardemote:
+  - removestarboardemote
+  - removestaremote
+  - starboardremoveemote
+  - rsbe
+removestatusrole:
+  - removestatusrole
+  - rsr
+removeusersfromrole:
+  - removeusersfromrole
+  - rufr
+removewhitelistedrole:
+  - removewhitelistedrole
+  - rwr
+  - unwhitelistrole
+  - removewrole
+removewhitelisteduser:
+  - removewhitelisteduser
+  - rwu
+  - unwhitelistuser
+  - removewuser
+renamechannel:
+  - renamechannel
+  - channelrename
+renameemote:
+  - renameemote
+  - emoterename
+renamerole:
+  - renamerole
+  - renr
+rep:
+  - rep
+repanon:
+  - repanon
+  - anongiverep
+repanonymous:
+  - repanonymous
+  - repanonym
+repchannel:
+  - repchannel
+  - repch
+repcheck:
+  - repcheck
+repcommandbypass:
+  - repcommandbypass
+  - repcmdbypass
+  - rcb
+repcommandinfo:
+  - repcommandinfo
+  - repcmdinfo
+  - rci
+repcommandreq:
+  - repcommandreq
+  - repcmdreq
+  - rcr
+repcommandreqlist:
+  - repcommandreqlist
+  - repcmdreqlist
+  - rcrl
+repcommandreqremove:
+  - repcommandreqremove
+  - repcmdreqremove
+  - rcrr
+repconfig:
+  - repconfig
+  - repcfg
+repcooldown:
+  - repcooldown
+  - repcd
+repdailylimit:
+  - repdailylimit
+  - repdl
+repdecay:
+  - repdecay
+  - repd
+repdecayamount:
+  - repdecayamount
+  - repda
+repdecayinactive:
+  - repdecayinactive
+  - repdi
+repdecaytype:
+  - repdecaytype
+  - repdt
+repeat:
+  - repeat
+repeatactivity:
+  - repeatactivity
+  - repactivity
+  - repact
+repeatchannel:
+  - repeatchannel
+  - repchan
+repeatconversation:
+  - repeatconversation
+  - repconversation
+  - repconv
+repeatforumtags:
+  - repeatforumtags
+  - repforumtags
+  - repftags
+repeatinvoke:
+  - repeatinvoke
+  - repinv
+repeatlist:
+  - repeatlist
+  - replst
+  - replist
+  - repli
+repeatmessage:
+  - repeatmessage
+  - repmsg
+repeatpriority:
+  - repeatpriority
+  - reppriority
+  - repprio
+repeatredundant:
+  - repeatredun
+  - repred
+repeatremove:
+  - repeatremove
+  - reprm
+repeatschedule:
+  - repeatschedule
+  - repschedule
+  - repsched
+repeatthreadautosticky:
+  - repeatthreadautosticky
+  - repthreadauto
+  - repthreads
+repeatthreadonly:
+  - repeatthreadonly
+  - repthreadonly
+  - reptonly
+repeatsuppressnotifications:
+  - repeatsuppressnotifications
+  - repsuppressnotif
+  - repsilent
+  - repsuppress
+repeattoggle:
+  - repeattoggle
+  - reptoggle
+  - reptog
+repeattriggermode:
+  - repeattriggermode
+  - reptriggermode
+  - repmode
+repenable:
+  - repenable
+  - repe
+repeventcreate:
+  - repeventcreate
+  - repec
+repeventend:
+  - repeventend
+  - repee
+repexport:
+  - repexport
+  - repex
+repfreeze:
+  - repfreeze
+  - freezerep
+repgive:
+  - repgive
+rephistory:
+  - rephistory
+  - rephist
+repimport:
+  - repimport
+  - repim
+replb:
+  - replb
+repleaderboard:
+  - repleaderboard
+repmilestonelost:
+  - repmilestonelost
+  - repml
+repminage:
+  - repminage
+  - repma
+repminmembership:
+  - repminmembership
+  - repmm
+repminmessages:
+  - repminmessages
+  - repminmsg
+repnegative:
+  - repnegative
+  - repneg
+repnotificationchannel:
+  - repnotificationchannel
+  - repnotify
+repreaction:
+  - repreaction
+  - repemoji
+  - rre
+repreactionlist:
+  - repreactionlist
+  - repemojilist
+  - rrel
+repreactionremove:
+  - repreactionremove
+  - repemojiremove
+  - rrer
+represet:
+  - represet
+  - resetrep
+restartallinstances:
+  - restartallinstances
+  - restartall
+  - rai
+restartinstance:
+  - restartinstance
+  - restartins
+  - ri
+reprole:
+  - reprole
+reprolechannel:
+  - reprolechannel
+  - reprc
+reproleremove:
+  - reproleremove
+  - reprr
+repset:
+  - repset
+  - setrep
+repstats:
+  - repstats
+  - repstat
+repstatus:
+  - repstatus
+  - repsettings
+reptake:
+  - reptake
+  - '-rep'
+  - takerep
+reptop:
+  - reptop
+reptypeadd:
+  - reptypeadd
+  - repaddtype
+  - rta
+reptypelist:
+  - reptypelist
+  - replisttypes
+  - rtl
+reptyperemove:
+  - reptyperemove
+  - repremovetype
+  - rtr
+repunfreeze:
+  - repunfreeze
+  - unfreeze
+  - unfreezerep
+repweeklylimit:
+  - repweeklylimit
+  - repwl
+resetfilters:
+  - resetfilters
+  - resetfx
+resetglobalperms:
+  - resetglobalperms
+resetmessagecounts:
+  - resetmessagecounts
+  - rmc
+  - resetmsgcounts
+  - resetmessages
+  - resetcounts
+resetperms:
+  - resetperms
+resetxp:
+  - resetxp
+resolvetonetags:
+  - resolvetonetags
+  - tonetag
+  - resolvetonetag
+  - tonetags
+revav:
+  - revav
+revimg:
+  - revimg
+rinfo:
+  - rinfo
+  - roleinfo
+rip:
+  - rip
+rolecmd:
+  - rolecmd
+  - rc
+rolecolor:
+  - rolecolor
+  - roleclr
+rolegreetadd:
+  - rolegreetadd
+  - rgadd
+  - rga
+rolegreetdelete:
+  - rolegreetdelete
+  - rgdel
+  - rgd
+rolegreetdisable:
+  - rolegreetdisable
+  - rgdisable
+  - rgdis
+rolegreetgreetbots:
+  - rolegreetgreetbots
+  - rolegreetbots
+  - rggb
+rolegreetlist:
+  - rolegreetlist
+  - rglist
+  - rgl
+rolegreetmessage:
+  - rolegreetmessage
+  - rgmsg
+  - rgm
+rolegreetremove:
+  - rolegreetremove
+  - rgrem
+  - rgrm
+  - rgr
+rolegreetwebhook:
+  - rolegreetwebhook
+  - rgwebhook
+  - rghook
+  - rgh
+rolehoist:
+  - rolehoist
+  - rh
+roleid:
+  - roleid
+  - rid
+rolejobs:
+  - rj
+  - rolejobs
+rolelevelreq:
+  - rolelevelreq
+  - rlr
+rolemdl:
+  - rolemdl
+  - rm
+rolepermlist:
+  - rolepermlist
+  - roleperms
+rolereward:
+  - rolereward
+rolerewards:
+  - rolerewards
+roles:
+  - roles
+rolestatesadddenyrole:
+  - rolestatesadddenyrole
+  - rsadr
+rolestatesadddenyuser:
+  - rolestatesadddenyuser
+  - rsadu
+rolestatesremovedenyrole:
+  - rolestatesremovedenyrole
+  - rsrra
+rolestatesremovedenyuser:
+  - rolestatesremoveadduser
+  - rsrau
+roll:
+  - roll
+rotateplaying:
+  - rotateplaying
+  - ropl
+roulette:
+  - roulette
+rps:
+  - rps
+rsar:
+  - rsar
+rsstest:
+  - rsstest
+  - feedtest
+rtt:
+  - rtt
+  - reactottrigger
+rule34:
+  - rule34
+  - r34
+russianroulette:
+  - russianroulette
+  - rroulette
+safebooru:
+  - safebooru
+sanitize:
+  - sanitize
+sanitizeall:
+  - sanitizeall
+  - sanitizea
+sankaku:
+  - sankaku
+sargn:
+  - sargn
+saveallrolestates:
+  - saveallrolestates
+  - saveserverstates
+  - backuprolestates
+savechat:
+  - savechat
+saveplaylist:
+  - saveplaylist
+  - saveplist
+say:
+  - say
+scratchcard:
+  - scratchcard
+  - scratch
+search:
+  - search
+  - find
+searchcommand:
+  - searchcommand
+seek:
+  - seek
+send:
+  - send
+serverblacklist:
+  - serverblacklist
+  - sbl
+serverid:
+  - serverid
+  - sid
+serverinfo:
+  - serverinfo
+  - sinfo
+servermessages:
+  - servermessages
+  - servermsg
+  - smsg
+  - guildmessages
+  - guildmsg
+  - gmsg
+setaddroles:
+  - setaddroles
+  - sar
+setafk:
+  - afk
+setautoclose:
+  - setautoclose
+  - sautoclose
+setavatar:
+  - setavatar
+  - setav
+setbanner:
+  - setbanner
+  - setserverbanner
+setbio:
+  - setbio
+setguildavatar:
+  - setguildavatar
+  - sgav
+  - setgav
+setguildbanner:
+  - setguildbanner
+  - sgbanner
+  - setgbanner
+setguildbio:
+  - setguildbio
+  - sgbio
+  - setgbio
+setbirthday:
+  - setbirthday
+setbirthdayprivacy:
+  - setbirthdayprivacy
+setchanlname:
+  - setchanlname
+  - schn
+setchannelxp:
+  - setchannelxp
+setctinterdesc:
+  - setctinterdesc
+  - ctidesc
+  - ctinterdesc
+setctintername:
+  - setctintername
+  - ctiname
+  - ctintername
+  - setctrealname
+  - ctrealname
+  - ctrn
+setctintertype:
+  - setctintertype
+  - ctitype
+  - ctintertype
+setdaily:
+  - setdaily
+setdefaultpunishment:
+  - setdefaultpunishment
+  - sdp
+  - defaultpunishment
+  - setdefpunishment
+setdjrole:
+  - setdjrole
+  - djrole
+setgame:
+  - setgame
+seticon:
+  - seticon
+  - setservericon
+  - seticonimage
+setmessagexp:
+  - setmessagexp
+  - setmsgxp
+setminaccountage:
+  - setminaccountage
+  - inviteminage
+setmodaltitle:
+  - setmodaltitle
+  - smodaltitle
+setmusicchannel:
+  - setmusicchannel
+  - smch
+setmwarnchannel:
+  - setmwarnchannel
+  - mwarnchannel
+setname:
+  - setname
+  - newnm
+setnick:
+  - setnick
+setpaneltranscripts:
+  - setpaneltranscripts
+  - sptranscripts
+setplaceholder:
+  - setplaceholder
+  - splaceholder
+setprivacy:
+  - setprivacy
+  - profilepricvacy
+setprofilecolor:
+  - setprofilecolor
+setprofileimage:
+  - setprofileimage
+setpronouns:
+  - setpronouns
+  - pronounsset
+setremoveroles:
+  - setremoveroles
+  - srr
+setrepostthreshold:
+  - setrepostthreshold
+  - starboardrepost
+  - repostthreshold
+setresponsetime:
+  - setresponsetime
+  - sresponsetime
+setrole:
+  - setrole
+  - sr
+  - giverole
+setroles:
+  - setroles
+  - srs
+setrolexp:
+  - setrolexp
+setservername:
+  - setservername
+setsplash:
+  - setsplash
+  - setserversplash
+  - setsplashimage
+setstarthreshold:
+  - setstarthreshold
+  - starthreshold
+setstatus:
+  - setstatus
+setstatusrolechannel:
+  - setstatusrolechannel
+  - statusrolechannel
+  - ssrc
+setstatusroleembed:
+  - setstatusroleembed
+  - statusroleembed
+  - asre
+setstream:
+  - setstream
+setsuggestchannel:
+  - setsuggestchannel
+  - suggestchannel
+  - suggestchan
+setswitchfc:
+  - setswitchfc
+  - setfc
+  - setswitchfriendcode
+  - setfriendcode
+settopic:
+  - settopic
+  - st
+setupvoicehub:
+  - setupvoicehub
+  - svh
+  - createvoicehub
+  - voicesetup
+setuserrolestate:
+  - setuserrolestate
+  - surs
+setvoicehub:
+  - setvoicehub
+  - sethub
+  - voicehub
+setvoicetimeout:
+  - setvoicetimeout
+setvoicexp:
+  - setvoicexp
+setwarnchannel:
+  - setwarnchannel
+  - warnchannel
+setxp:
+  - setxp
+setxpcooldown:
+  - setxpcooldown
+  - xpcd
+setxpcurve:
+  - setxpcurve
+setxpexclusive:
+  - setxpexclusive
+  - xpexclusive
+  - exclusivexp
+  - setxpexcl
+  - xpexcl
+setxpmultiplier:
+  - setxpmultiplier
+  - xpmult
+setzodiac:
+  - setzodiac
+shardstats:
+  - shardstats
+ship:
+  - ship
+shoot:
+  - shoot
+shorten:
+  - shorten
+showchattrigger:
+  - showchattrigger
+  - sct
+showemojis:
+  - showemojis
+  - se
+shrug:
+  - shrug
+shuffle:
+  - shuffle
+  - playlistshuffle
+  - sh
+  - plsh
+skip:
+  - skip
+  - next
+  - 'n'
+slap:
+  - slap
+sleep:
+  - sleep
+slot:
+  - slot
+  - slots
+slowmode:
+  - slowmode
+smile:
+  - smile
+smug:
+  - smug
+snipe:
+  - snipe
+snipelist:
+  - snipelist
+  - slist
+snipeset:
+  - snipeset
+  - setsnipe
+softban:
+  - softban
+  - sb
+songremove:
+  - songremove
+  - trackremove
+  - srm
+source:
+  - source
+  - github
+  - repo
+  - gitlab
+  - bitbucket
+spinwheel:
+  - spinwheel
+  - wheel
+sqlexec:
+  - sqlexec
+srvrcmd:
+  - srvrcmd
+  - sc
+srvrfilterinv:
+  - srvrfilterinv
+  - sfi
+srvrfilterlin:
+  - srvrfilterlin
+  - sfl
+srvrfilterwords:
+  - srvrfilterwords
+  - sfw
+srvrmdl:
+  - srvrmdl
+  - sm
+staffrole:
+  - staffrole
+staffroledisable:
+  - staffroledisable
+stand:
+  - stand
+starboardallowbots:
+  - starboardallowbots
+  - starbots
+  - starbotsallow
+  - starbab
+starboardchtoggle:
+  - starboardchtoggle
+  - starboardchannel
+  - togglestarboardchannel
+  - scht
+starboardremoveonbelowthreshold:
+  - starboardremoveonbelowthreshold
+  - starboardbelowthreshold
+  - starbelow
+  - srobt
+starboardremoveondelete:
+  - starboardremoveondelete
+  - starboarddelete
+  - stardelete
+  - srod
+starboardremoveonreactionsclear:
+  - starboardremoveonreactionsclear
+  - starboardreactionclear
+  - starclear
+starboardstats:
+  - starboardstats
+  - starstats
+  - starboardstatistics
+  - sbstats
+starboarduserstats:
+  - starboarduserstats
+  - staruserstats
+  - userstarstats
+  - sbuserstats
+starboardwlmode:
+  - starboardwlmode
+  - starboardmode
+  - starboardwhitelist
+  - swm
+stare:
+  - stare
+startupcommandadd:
+  - scadd
+  - startcmdadd
+startupcommandremove:
+  - scrm
+  - startcmdrm
+startupcommandsclear:
+  - scclear
+  - scclr
+startupcommandslist:
+  - sclist
+  - startcmdlist
+stats:
+  - stats
+stealemotes:
+  - steal
+  - stealemotes
+stealforrole:
+  - sfr
+steam:
+  - steam
+stereowiden:
+  - stereowiden
+  - swiden
+stfu:
+  - stfu
+  - cmute
+  - channelmute
+stopjob:
+  - sj
+  - stopjob
+streamadd:
+  - streamadd
+  - sta
+  - stadd
+streamcheck:
+  - streamcheck
+  - stc
+streamlist:
+  - streamlist
+  - stl
+  - streamslist
+streammessage:
+  - streammessage
+  - stm
+  - stmsg
+streamoffline:
+  - streamoffline
+  - sto
+  - stoff
+streamofflinemessage:
+  - streamofflinemessage
+  - stofmsg
+  - stoffline
+streamremove:
+  - streamremove
+  - strm
+streamrole:
+  - streamrole
+streamroleblacklist:
+  - streamroleblacklist
+  - srbl
+streamrolekeyword:
+  - streamrolekeyword
+  - srkw
+streamrolewhitelist:
+  - streamrolewhitelist
+  - srwl
+streamsclear:
+  - streamsclear
+  - stclear
+streamtemplate:
+  - streamtemplate
+  - stt
+  - sttemplate
+stringsreload:
+  - stringsreload
+sudo:
+  - sudo
+  - doas
+suggest:
+  - suggest
+  - suggestion
+suggestbuttonchannel:
+  - suggestbuttonchannel
+suggestbuttoncolor:
+  - suggestbuttoncolor
+suggestbuttonemote:
+  - suggestbuttonemote
+suggestbuttonlabel:
+  - suggestbuttonlabel
+suggestbuttonmessage:
+  - suggestbuttonmessage
+suggestclear:
+  - suggestclear
+  - suggestreset
+  - resetsuggestions
+  - clearsuggestions
+suggestinfo:
+  - suggestinfo
+  - suginfo
+suggestmessage:
+  - suggestmessage
+  - suggestmsg
+suggestmotecolor:
+  - suggestmotecolor
+suggestmotes:
+  - suggestmotes
+  - smotes
+  - suggestemotes
+suggestmotesmode:
+  - suggestmotesmode
+suggestthreadstype:
+  - suggestthreadstype
+  - suggestthreads
+symbolic:
+  - sym
+  - symbolicmath
+syncallxproles:
+  - syncallxproles
+syncmyxproles:
+  - syncmyxproles
+syncroletoall:
+  - syncroletoall
+  - synctoall
+syncroletoallcategories:
+  - syncroletoallcategories
+  - srtc
+  - srtac
+syncroletoallchannels:
+  - syncroletoallchannels
+  - srtch
+  - srtach
+syncuserxproles:
+  - syncuserxproles
+testlevelupmessage:
+  - testlevelupmessage
+  - testlvlupmsg
+textrank:
+  - textrank
+think:
+  - think
+thumbsup:
+  - thumbsup
+ticketaddbutton:
+  - ticketaddbutton
+  - taddbtn
+ticketaddpriority:
+  - ticketaddpriority
+  - taddpriority
+ticketaddtag:
+  - ticketaddtag
+  - taddtag
+ticketaddtags:
+  - ticketaddtags
+  - taddtags
+ticketarchive:
+  - ticketarchive
+  - tarchive
+ticketarchivecategory:
+  - ticketarchivecategory
+  - tarchivecat
+ticketautoarchive:
+  - ticketautoarchive
+  - tautoarchive
+ticketautoclose:
+  - ticketautoclose
+  - tautoclose
+ticketblock:
+  - ticketblock
+  - tblock
+ticketcategory:
+  - ticketcategory
+  - tcat
+ticketclaim:
+  - ticketclaim
+  - tclaim
+ticketclose:
+  - ticketclose
+  - tclose
+ticketclosebehavior:
+  - ticketclosebehavior
+  - tclosebehavior
+ticketcloseinactive:
+  - ticketcloseinactive
+  - tcloseinactive
+ticketcreatecase:
+  - ticketcreatecase
+  - tcreatecase
+ticketduplicatepanel:
+  - ticketduplicatepanel
+  - tduplicatepanel
+ticketlinkcase:
+  - ticketlinkcase
+  - tlinkcase
+ticketlistpanel:
+  - ticketlistpanel
+  - tlistpanel
+ticketlistpanels:
+  - ticketlistpanels
+  - tlistpanels
+ticketlogchannel:
+  - ticketlogchannel
+  - tlogch
+ticketmoveall:
+  - ticketmoveall
+  - tmoveall
+ticketmovepanel:
+  - ticketmovepanel
+  - tmovepanel
+ticketnote:
+  - ticketnote
+  - tnote
+ticketpanel:
+  - ticketpanel
+  - tpanel
+ticketpaneldelete:
+  - ticketpaneldelete
+  - tpaneldelete
+ticketpriority:
+  - ticketpriority
+  - tpriority
+ticketremovepriority:
+  - ticketremovepriority
+  - tremovepriority
+ticketremovetag:
+  - ticketremovetag
+  - tremovetag
+ticketremovetags:
+  - ticketremovetags
+  - tremovetags
+ticketresponsetime:
+  - ticketresponsetime
+  - tresponsetime
+ticketstats:
+  - ticketstats
+  - tstats
+tickettranscriptchannel:
+  - tickettranscriptchannel
+  - ttranscriptch
+ticketunblock:
+  - ticketunblock
+  - tunblock
+ticketunclaim:
+  - ticketunclaim
+  - tunclaim
+ticketunlinkcase:
+  - ticketunlinkcase
+  - tunlinkcase
+ticketupdatepanel:
+  - ticketupdatepanel
+  - tupdatepanel
+ticketuserstats:
+  - ticketuserstats
+  - tuserstats
+tickle:
+  - tickle
+tictactoe:
+  - tictactoe
+  - ttt
+time:
+  - time
+timedafk:
+  - timedafk
+  - tafk
+timeout:
+  - timeout
+timezone:
+  - timezone
+timezones:
+  - timezones
+tl:
+  - tl
+todoadd:
+  - todoadd
+  - ta
+todoaddpriority:
+  - todoaddpriority
+  - tap
+todoaddtag:
+  - todoaddtag
+  - tat
+todocleardue:
+  - todocleardue
+  - tcd
+todoclearreminder:
+  - todoclearreminder
+  - tcr
+todocomplete:
+  - todocomplete
+  - tc
+todocreatelist:
+  - todocreatelist
+  - tcl
+todocreateserverlist:
+  - todocreateserverlist
+  - tcsl
+tododelete:
+  - tododelete
+  - td
+tododeletelist:
+  - tododeletelist
+  - tdl
+todoedit:
+  - todoedit
+  - te
+todofilter:
+  - todofilter
+  - tf
+todogrant:
+  - todogrant
+  - tg
+todolists:
+  - todolists
+todopermissions:
+  - todopermissions
+  - tp
+todoremovetag:
+  - todoremovetag
+  - trt
+todoreorder:
+  - todoreorder
+  - tr
+todorevoke:
+  - todorevoke
+  - trv
+todosearch:
+  - todosearch
+  - tsearch
+todosetcolor:
+  - todosetcolor
+  - tsc
+todosetdue:
+  - todosetdue
+  - tsd
+todosetreminder:
+  - todosetreminder
+  - tsr
+todoshow:
+  - todoshow
+  - ts
+todotoggleprivacy:
+  - todotoggleprivacy
+  - ttp
+toggleinvitetracking:
+  - toggleinvitetracking
+togglelevelupmessage:
+  - togglelevelupmessage
+  - togglelvlupmsg
+togglemessagecount:
+  - togglemsgcount
+  - togglemessagecount
+togglereaddremoved:
+  - togglereaddremoved
+  - togglermrm
+toggleremoveadded:
+  - toggleremoveadded
+  - togglerma
+toggleremoveinviteonleave:
+  - toggleremoveinviteonleave
+  - triol
+togglerolestates:
+  - togglerolestates
+  - trs
+togglerolestatesclearonban:
+  - togglerolestatesclearonban
+  - trscob
+togglerolestatesignorebots:
+  - togglerolestatesignorebots
+  - trsib
+togglerolestatesskipautoassign:
+  - togglerolestatesskipautoassign
+  - trssaa
+  - rsskipautoassign
+togglexclsar:
+  - togglexclsar
+  - tesar
+toprep:
+  - toprep
+topusers:
+  - topusers
+  - topu
+tq:
+  - tq
+traceroute:
+  - traceroute
+  - tracert
+  - trcrt
+transactions:
+  - transactions
+  - txs
+transferrolestates:
+  - transferrolestates
+  - copyrolestates
+  - moverolestates
+translangs:
+  - translangs
+translate:
+  - translate
+  - trans
+tremolo:
+  - tremolo
+trivia:
+  - trivia
+  - t
+triviachain:
+  - triviachain
+  - tchain
+ttsenable:
+  - ttsenable
+  - tts
+  - ttson
+ttslink:
+  - ttslink
+  - ttschannel
+ttsannounce:
+  - ttsannounce
+  - ttsjoinleave
+ttsautojoin:
+  - ttsautojoin
+  - ttsauto
+ttsjoinformat:
+  - ttsjoinformat
+  - ttsjoin
+ttsleaveformat:
+  - ttsleaveformat
+  - ttsleave
+ttsvolume:
+  - ttsvolume
+  - ttsvol
+ttsspeed:
+  - ttsspeed
+ttsdefaultvoice:
+  - ttsdefaultvoice
+  - ttsdefvoice
+ttsvoice:
+  - ttsvoice
+ttsvoices:
+  - ttsvoices
+  - ttsvoicelist
+  - ttsvoicesearch
+ttsblock:
+  - ttsblock
+  - ttsban
+ttsblocklist:
+  - ttsblocklist
+  - ttsbanlist
+  - ttsblocked
+ttsrole:
+  - ttsrole
+ttsreplycontext:
+  - ttsreplycontext
+  - ttsreply
+ttsattachmentnarration:
+  - ttsattachmentnarration
+  - ttsattach
+ttsconsecutivegrouping:
+  - ttsconsecutivegrouping
+  - ttsgroup
+ttsmaxqueue:
+  - ttsmaxqueue
+  - ttsqueue
+ttssettings:
+  - ttssettings
+  - ttsinfo
+ttsremove:
+  - ttsremove
+  - ttsoff
+typeadd:
+  - typeadd
+typedel:
+  - typedel
+typelist:
+  - typelist
+typestart:
+  - typestart
+typestop:
+  - typestop
+unban:
+  - unban
+undeafen:
+  - undeafen
+  - undef
+unlock:
+  - unlock
+  - channelunlock
+  - unlockchannel
+unlockdown:
+  - unlockdown
+  - endlockdown
+unmute:
+  - unmute
+unmuteall:
+  - unmuteall
+  - umall
+unstfu:
+  - unstfu
+  - unchannelmute
+untimeout:
+  - untimeout
+update:
+  - update
+  - upd
+updateallinstances:
+  - updateallinstances
+  - updateall
+  - uai
+updateinstance:
+  - updateinstance
+  - updateins
+  - ui
+urbandict:
+  - urbandict
+  - ud
+userblacklist:
+  - userblacklist
+  - ubl
+userid:
+  - userid
+  - uid
+userinfo:
+  - userinfo
+  - uinfo
+usermessages:
+  - usermessages
+  - usermsg
+  - umsg
+userstatsoptout:
+  - userstatsoptout
+  - ustatsoptout
+usrcmd:
+  - usrcmd
+  - uc
+usrmdl:
+  - usrmdl
+  - um
+vaporwave:
+  - vaporwave
+  - vw
+vcheck:
+  - vcheck
+  - viruscheck
+vcrole:
+  - vcrole
+vcrolelist:
+  - vcrolelist
+vcrolerm:
+  - vcrolerm
+verbose:
+  - verbose
+  - v
+verboseerror:
+  - verboseerror
+  - ve
+vibrato:
+  - vibrato
+viewrolestatessettings:
+  - viewrolestatessettings
+  - vrss
+viewuserrolestates:
+  - viewrolestates
+  - viewuserrolestates
+  - vurs
+vinfo:
+  - vinfo
+  - voiceinfo
+voiceallow:
+  - voiceallow
+  - vcallow
+  - allowuser
+  - vallow
+  - adduser
+voicebitrate:
+  - voicebitrate
+  - vcbitrate
+  - vbitrate
+  - setbitrate
+voicechannels:
+  - voicechannels
+  - vchannels
+  - listvoice
+  - customvoices
+  - voicelist
+voiceclaim:
+  - voiceclaim
+  - vcclaim
+  - claimvoice
+  - vclaim
+  - takeover
+voiceconfig:
+  - voiceconfig
+  - vcconfig
+  - voicesettings
+  - vcsettings
+  - customvoiceconfig
+voicecontrols:
+  - voicecontrols
+  - vcontrols
+voicedeny:
+  - voicedeny
+  - vcdeny
+  - denyuser
+  - vdeny
+  - removeuser
+voicekeepalive:
+  - voicekeepalive
+  - vckeepalive
+  - keepvoice
+  - vkeep
+  - persist
+voicelimit:
+  - voicelimit
+  - vclimit
+  - limitvoice
+  - vlimit
+  - setlimit
+voicelock:
+  - voicelock
+  - vclock
+  - lockvoice
+  - vlock
+  - lockvc
+voicemute:
+  - voicemute
+voicepreferences:
+  - voicepreferences
+  - vcprefs
+  - voiceprefs
+  - vprefs
+  - myvoice
+voiceprefsbitrate:
+  - voiceprefsbitrate
+  - vcprefsbitrate
+  - vpbitrate
+  - prefbitrate
+  - bitratepref
+voiceprefskeepalive:
+  - voiceprefskeepalive
+  - vcprefskeepalive
+  - vpkeepalive
+  - prefkeepalive
+  - keeppref
+voiceprefslimit:
+  - voiceprefslimit
+  - vcprefslimit
+  - vplimit
+  - preflimit
+  - limitpref
+voiceprefslock:
+  - voiceprefslock
+  - vprefslock
+voiceprefsname:
+  - voiceprefsname
+  - vcprefsname
+  - vpname
+  - prefname
+  - namepref
+voiceprefsreset:
+  - voiceprefsreset
+  - vcprefsreset
+  - vprefsreset
+  - resetprefs
+  - clearprefs
+voicerename:
+  - voicerename
+  - vrename
+  - renamevoice
+  - vcname
+  - vcrename
+voicetransfer:
+  - voicetransfer
+  - vctransfer
+  - transfervoice
+  - vtransfer
+  - givevc
+voiceunlock:
+  - voiceunlock
+  - vcunlock
+  - unlockvoice
+  - vunlock
+  - unlockvc
+voiceunmute:
+  - voiceunmute
+volume:
+  - volume
+  - vol
+vote:
+  - vote
+votechannel:
+  - votechannel
+votemessage:
+  - votemessage
+  - votemsg
+votepassword:
+  - votepassword
+  - votepass
+voteroleadd:
+  - voteroleadd
+  - vra
+voteroleedit:
+  - voteroleedit
+  - vre
+voteroleremove:
+  - voteroleremove
+  - vrr
+voterolesclear:
+  - voterolesclear
+  - vrc
+voteroleslist:
+  - voteroleslist
+  - vrl
+votes:
+  - votes
+voteskip:
+  - voteskip
+  - vskip
+votesleaderboard:
+  - votesleaderboard
+  - voteslb
+wait:
+  - wait
+war:
+  - war
+warn:
+  - warn
+warnclear:
+  - warnclear
+  - warnc
+warnexpire:
+  - warnexpire
+  - warne
+warnlog:
+  - warnlog
+warnlogall:
+  - warnlogall
+warnpunish:
+  - warnpunish
+  - warnp
+warnpunishlist:
+  - warnpunishlist
+  - warnpl
+wave:
+  - wave
+weather:
+  - weather
+  - we
+wheelfortune:
+  - wheelfortune
+  - wof
+whoinvited:
+  - whoinvited
+  - invitedby
+whosplaying:
+  - whosplaying
+  - whpl
+wiki:
+  - wiki
+  - wikipedia
+wikia:
+  - wikia
+  - fandom
+wink:
+  - wink
+wotd:
+  - wotd
+  - wordoftheday
+wotdtoggle:
+  - wotdtoggle
+  - wordofthedaytoggle
+wotdchannel:
+  - wotdchannel
+  - wordofthedaychannel
+wotdtime:
+  - wotdtime
+  - wotdhour
+wotdtimezone:
+  - wotdtimezone
+  - wotdtz
+wotdpingrole:
+  - wotdpingrole
+  - wotdping
+wotdmessage:
+  - wotdmessage
+  - wotdmsg
+  - wotdtemplate
+wotdtopic:
+  - wotdtopic
+  - wotdtheme
+wotdpos:
+  - wotdpos
+  - wotdpartofspeech
+wotddifficulty:
+  - wotddifficulty
+  - wotdlevel
+wotdmode:
+  - wotdmode
+  - wotdsource
+wotdadd:
+  - wotdadd
+  - wotdaddword
+wotdremove:
+  - wotdremove
+  - wotdrem
+  - wotddelete
+wotdlist:
+  - wotdlist
+  - wotdwords
+wotdhistory:
+  - wotdhistory
+  - wotdrecent
+wotdconfig:
+  - wotdconfig
+  - wotdsettings
+wotdpost:
+  - wotdpost
+  - wotdnow
+wotdreset:
+  - wotdreset
+wotdday:
+  - wotdday
+  - wotdweekday
+wotddayfilter:
+  - wotddayfilter
+  - wotdweekdayfilter
+wotdmonth:
+  - wotdmonth
+wotdmonthfilter:
+  - wotdmonthfilter
+wotdschedule:
+  - wotdschedule
+  - wotdrules
+wotdthread:
+  - wotdthread
+  - wotdthreads
+wotdthreadname:
+  - wotdthreadname
+  - wotdthreadtitle
+wotdthreadarchive:
+  - wotdthreadarchive
+  - wotdthreadexpire
+wowjoke:
+  - wowjoke
+xkcd:
+  - xkcd
+xpboost:
+  - xpboost
+xpboosts:
+  - xpboosts
+xpcompetition:
+  - xpcompetition
+xpcompetitions:
+  - xpcompetitions
+xpexclude:
+  - xpexclude
+xpexcludelist:
+  - xpexcludelist
+xpinclude:
+  - xpinclude
+xpsettings:
+  - xpsettings
+  - xpconfig
+yandere:
+  - yandere
+yomama:
+  - yomama
+  - ym
+statchannelcreate:
+  - statchannelcreate
+  - scnew
+statchanneladd:
+  - statchanneladd
+  - sca
+statchannelrole:
+  - statchannelrole
+  - scr
+statchannelcountdown:
+  - statchannelcountdown
+  - scc
+statchannelgoal:
+  - statchannelgoal
+  - scg
+statchannelremove:
+  - statchannelremove
+  - statchrm
+statchannellist:
+  - statchannellist
+  - scl
+youtube:
+  - youtube
+  - yt
+mcstatus:
+  - mcstatus
+  - mcs
+mcadd:
+  - mcadd
+mcremove:
+  - mcremove
+  - mcrm
+mclist:
+  - mclist
+  - mcl
+mcdefault:
+  - mcdefault
+  - mcdef
+mcwatch:
+  - mcwatch
+  - mcw
+mcwatchmode:
+  - mcwatchmode
+  - mcwm
+mcembed:
+  - mcembed
+  - mce
+mcplayer:
+  - mcplayer
+  - mcp
+mcskin:
+  - mcskin
+mcrcon:
+  - mcrcon
+mcwhitelist:
+  - mcwhitelist
+  - mcwl
+lastfmlink:
+  - lastfmlink
+  - lflink
+lastfmunlink:
+  - lastfmunlink
+  - lfunlink
+lastfmtoggle:
+  - lastfmtoggle
+  - lftoggle
+lastfmstatus:
+  - lastfmstatus
+  - lfstatus
+fm:
+  - fm
+fmrecent:
+  - fmrecent
+  - fmr
+fmtopartists:
+  - fmtopartists
+  - fmta
+fmtopalbums:
+  - fmtopalbums
+  - fmtal
+fmtoptracks:
+  - fmtoptracks
+  - fmtt
+fmartist:
+  - fmartist
+  - fma
+fmalbum:
+  - fmalbum
+  - fmal
+fmwhoknows:
+  - fmwhoknows
+  - whoknows
+  - wk
+fmwhoknowsalbum:
+  - fmwhoknowsalbum
+  - whoknowsalbum
+  - wka
+fmwhoknowstrack:
+  - fmwhoknowstrack
+  - whoknowstrack
+  - wkt
+fmcrowns:
+  - fmcrowns
+  - crowns
+fmtaste:
+  - fmtaste
+  - taste
+fmchart:
+  - fmchart
+  - chart
+antimasspost:
+  - antimasspost
+antipostchannel:
+  - antipostchannel
+antipostchanneladd:
+  - antipostchanneladd
+antipostchannelremove:
+  - antipostchannelremove
+antiimagehash:
+  - antiimagehash
+  - aih
+antiimagehashignore:
+  - antiimagehashignore
+  - aihignore
+antiexternalapp:
+  - antiexternalapp
+  - aea
+  - antiuserapp
+antiimagehashpreset:
+  - antiimagehashpreset
+  - aihpreset
+  - blockcommonscams
+blockimage:
+  - blockimage
+  - banimage
+unblockimage:
+  - unblockimage
+  - unbanimage
+blockedimages:
+  - blockedimages
+  - blockedimagelist
+imagehash:
+  - imagehash
+err:
+  - err
+  - nxerr
+  - serr
+err2hex:
+  - err2hex
+  - e2h
+hex2err:
+  - hex2err
+  - h2e
+switchbrew:
+  - switchbrew
+  - svc
+analyselog:
+  - analyselog
+  - analyzelog
+  - analyselogs
+  - analyzelogs
+  - analyze
+  - analyse
+togglecountrejoins:
+  - togglecountrejoins
+  - invitesrejoins
+togglefakenoavatar:
+  - togglefakenoavatar
+  - invitesnoavatar
+invitelinkchannel:
+  - invitelinkchannel
+invitelogchannel:
+  - invitelogchannel
+invitestats:
+  - invitestats
+  - inviteanalytics
+  - growthstats
+invitedbycode:
+  - invitedbycode
+invitedbylabel:
+  - invitedbylabel
+invitecodes:
+  - invitecodes
+  - mycodes
+invitelink:
+  - invitelink
+  - findlink
+  - mylink
+addinvites:
+  - addinvites
+removeinvites:
+  - removeinvites
+addbonusinvites:
+  - addbonusinvites
+  - addbonus
+removebonusinvites:
+  - removebonusinvites
+  - removebonus
+addfakeinvites:
+  - addfakeinvites
+removefakeinvites:
+  - removefakeinvites
+resetinvites:
+  - resetinvites
+syncinvites:
+  - syncinvites
+deleteinvite:
+  - deleteinvite
+  - delinvite
+purgeinvites:
+  - purgeinvites
+  - purgeinvitecodes
+inviteblacklist:
+  - inviteblacklist
+  - invbl
+invitehide:
+  - invitehide
+  - invhide
+inviteexclusions:
+  - inviteexclusions
+  - invitebllist
+invitelabelset:
+  - invitelabelset
+  - labelinvite
+invitelabelrole:
+  - invitelabelrole
+invitelabelremove:
+  - invitelabelremove
+  - unlabelinvite
+invitelabels:
+  - invitelabels
+inviteexport:
+  - inviteexport
+  - exportinvites
+invitedexport:
+  - invitedexport
+  - exportinvitedlist
+invitemassban:
+  - invitemassban
+  - massbaninviter
+invitemassbancode:
+  - invitemassbancode
+  - massbancode
+serveractivity:
+  - serveractivity
+  - sstats
+  - activitystats
+useractivity:
+  - useractivity
+  - ustats
+  - mystats
+channelactivity:
+  - channelactivity
+  - cstats
+activitytop:
+  - activitytop
+  - topactivity
+  - topchatters
+  - topvoice
+activitytopchannels:
+  - activitytopchannels
+  - topchannels
+activitychart:
+  - activitychart
+  - statschart
+  - graph
+activityexport:
+  - activityexport
+  - exportactivity
+statssettings:
+  - statssettings
+  - activitysettings
+statslookback:
+  - statslookback
+  - lookback
+statscooldown:
+  - statscooldown
+statstrackvoice:
+  - statstrackvoice
+  - trackvoice
+statstracksnapshots:
+  - statstracksnapshots
+  - tracksnapshots
+statscountbots:
+  - statscountbots
+statsignorevoicestate:
+  - statsignorevoicestate
+  - ignorevoicestate
+statsignore:
+  - statsignore
+  - activityignore
+statsignored:
+  - statsignored
+  - activityignored
+statsprivacy:
+  - statsprivacy
+  - activityprivacy
+  - optoutstats
+topgames:
+  - topgames
+  - topactivities
+  - games
+whoplays:
+  - whoplays
+  - whosplayingstats
+statstrackactivities:
+  - statstrackactivities
+  - trackactivities
+  - trackgames
+statsverifyactivities:
+  - statsverifyactivities
+  - verifyactivities
+statsactivityfiltermode:
+  - statsactivityfiltermode
+  - activityfiltermode
+statsactivityfilter:
+  - statsactivityfilter
+  - activityfilter
+  - gamefilter
+statsactivityfilters:
+  - statsactivityfilters
+  - activityfilters
+  - gamefilters
+statroleadd:
+  - statroleadd
+  - sradd
+statroletop:
+  - statroletop
+  - srtop
+statrolepercent:
+  - statrolepercent
+  - srpercent
+statrolestreak:
+  - statrolestreak
+  - srstreak
+statrolelist:
+  - statrolelist
+  - statroles
+  - srlist
+statroleinfo:
+  - statroleinfo
+  - srinfo
+statroleremove:
+  - statroleremove
+  - srremove
+  - srdel
+statroletoggle:
+  - statroletoggle
+  - srtoggle
+statrolepreview:
+  - statrolepreview
+  - srpreview
+statrolerun:
+  - statrolerun
+  - srrun
+statroleset:
+  - statroleset
+  - srset
+statrolefilter:
+  - statrolefilter
+  - srfilter
+liveboardadd:
+  - liveboardadd
+  - pinleaderboard
+  - pinboard
+liveboardlist:
+  - liveboardlist
+  - liveboards
+liveboardremove:
+  - liveboardremove
+  - unpinboard
+liveboardrefresh:
+  - liveboardrefresh
+serverreportchannel:
+  - serverreportchannel
+  - reportchannel
+serverreportfrequency:
+  - serverreportfrequency
+  - reportfrequency
+serverreportnow:
+  - serverreportnow
+  - reportnow
+rolemenulist:
+  - rolemenus
+  - rolemenulist
+  - rmenus
+rolemenuinfo:
+  - rolemenuinfo
+  - rmenuinfo
+rolemenucreate:
+  - rolemenucreate
+  - rmenucreate
+  - rolemenunew
+rolemenuadd:
+  - rolemenuadd
+  - rmenuadd
+rolemenuremove:
+  - rolemenuremove
+  - rmenuremove
+rolemenuname:
+  - rolemenuname
+  - rmenuname
+  - rolemenurename
+rolemenumessage:
+  - rolemenumessage
+  - rolemenumsg
+  - rmenumsg
+rolemenusetstyle:
+  - rolemenustyle
+  - rmenustyle
+rolemenusetmode:
+  - rolemenumode
+  - rmenumode
+rolemenulimits:
+  - rolemenulimits
+  - rmenulimits
+rolemenurequire:
+  - rolemenurequire
+  - rmenurequire
+rolemenusetreply:
+  - rolemenureply
+  - rmenureply
+rolemenupause:
+  - rolemenupause
+  - rmenupause
+  - rolemenuresume
+rolemenurepost:
+  - rolemenurepost
+  - rmenurepost
+rolemenudelete:
+  - rolemenudelete
+  - rmenudelete
+  - rolemenudel
+rolemenuimport:
+  - rolemenuimport
+  - rmenuimport
+achoverview:
+  - achievements
+  - achoverview
+  - achs
+achcategory:
+  - achcategory
+  - achcat
+achlist:
+  - achlist
+  - achall
+achlatest:
+  - achlatest
+achhighest:
+  - achhighest
+  - achbest
+achsearch:
+  - achsearch
+achglobal:
+  - achglobal
+achleaderboard:
+  - achleaderboard
+  - achlb
+achgloballeaderboard:
+  - achgloballeaderboard
+  - achglb
+achcard:
+  - achcard
+  - achprofile
+achstats:
+  - achstats
+achview:
+  - achview
+  - achimage
+achicon:
+  - achicon
+badges:
+  - badges
+  - badgeinv
+badgeequip:
+  - badgeequip
+  - equipbadge
+badgeremove:
+  - badgeremove
+  - unequipbadge
+badgepreview:
+  - badgepreview
+achprivacy:
+  - achprivacy
+achnotify:
+  - achnotify
+achmanage:
+  - achmanage
+  - achadmin
+achtoggle:
+  - achtoggle
+achlogchannel:
+  - achlogchannel
+  - achlog
+achannounce:
+  - achannounce
+achdmdefault:
+  - achdmdefault
+achmessage:
+  - achmessage
+achxpperpoint:
+  - achxpperpoint
+achenable:
+  - achenable
+achdisable:
+  - achdisable
+achcategorytoggle:
+  - achcategorytoggle
+  - achcattoggle
+achgrant:
+  - achgrant
+achrevoke:
+  - achrevoke
+achreset:
+  - achreset
+achcreate:
+  - achcreate
+achcreatephrase:
+  - achcreatephrase
+achcreatereaction:
+  - achcreatereaction
+achcreatemanual:
+  - achcreatemanual
+achdelete:
+  - achdelete
+achrewardrole:
+  - achrewardrole
+achrewardcurrency:
+  - achrewardcurrency
+achrewardxp:
+  - achrewardxp
+achrewardclear:
+  - achrewardclear
+achexcluderole:
+  - achexcluderole
+achexcludechannel:
+  - achexcludechannel

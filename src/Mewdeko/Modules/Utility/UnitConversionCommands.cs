@@ -1,0 +1,104 @@
+﻿using Discord.Commands;
+using Mewdeko.Common.Attributes.TextCommands;
+using Mewdeko.Modules.Utility.Services;
+
+namespace Mewdeko.Modules.Utility;
+
+public partial class Utility
+{
+    /// <summary>
+    ///     Contains commands for converting units from one system to another.
+    /// </summary>
+    [Group]
+    public class UnitConverterCommands : MewdekoSubmodule<ConverterService>
+    {
+        /// <summary>
+        ///     Lists all available units that can be converted.
+        /// </summary>
+        /// <returns>A task that represents the asynchronous operation.</returns>
+        [Cmd]
+        [Aliases]
+        public async Task ConvertList()
+        {
+            var units = Service.Units;
+            var res = units.GroupBy(x => x.UnitType)
+                .Aggregate(new EmbedBuilder().WithTitle(Strings.Convertlist(ctx.Guild.Id))
+                        .WithOkColor(),
+                    (embed, g) => embed.AddField(efb =>
+                        efb.WithName(g.Key.ToTitleCase())
+                            .WithValue(string.Join(", ", g.Select(x => x.Triggers.FirstOrDefault())
+                                .OrderBy(x => x)))));
+            await ctx.Channel.EmbedAsync(res).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        ///     Converts a specified value from one unit to another.
+        /// </summary>
+        /// <param name="origin">The original unit of the value.</param>
+        /// <param name="target">The target unit to convert to.</param>
+        /// <param name="value">The value to be converted.</param>
+        /// <returns>A task that represents the asynchronous operation.</returns>
+        [Cmd]
+        [Aliases]
+        [Priority(0)]
+        public async Task ConvertUnits(string origin, string target, decimal value)
+        {
+            var originUnit = Array.Find(Service.Units, x =>
+                x.Triggers.Select(y => y.ToUpperInvariant()).Contains(origin.ToUpperInvariant()));
+            var targetUnit = Array.Find(Service.Units, x =>
+                x.Triggers.Select(y => y.ToUpperInvariant()).Contains(target.ToUpperInvariant()));
+            if (originUnit == null || targetUnit == null)
+            {
+                await ReplyErrorAsync(Strings.ConvertNotFound(ctx.Guild.Id, Format.Bold(origin), Format.Bold(target)))
+                    .ConfigureAwait(false);
+                return;
+            }
+
+            if (originUnit.UnitType != targetUnit.UnitType)
+            {
+                await ReplyErrorAsync(Strings.ConvertTypeError(ctx.Guild.Id, Format.Bold(originUnit.Triggers.First()),
+                    Format.Bold(targetUnit.Triggers.First()))).ConfigureAwait(false);
+                return;
+            }
+
+            decimal res = 0;
+            if (originUnit.Triggers == targetUnit.Triggers)
+            {
+                res = value;
+            }
+            else
+                switch (originUnit.UnitType)
+                {
+                    case "temperature":
+                        //from Kelvin to target
+                        res = targetUnit.Triggers.First().ToUpperInvariant() switch
+                        {
+                            "C" => res - 273.15m //celcius!
+                            ,
+                            "F" => res * (9m / 5m) - 459.67m,
+                            //don't really care too much about efficiency, so just convert to Kelvin, then to target
+                            _ => originUnit.Triggers.First().ToUpperInvariant() switch
+                            {
+                                "C" => value + 273.15m //celcius!
+                                ,
+                                "F" => (value + 459.67m) * (5m / 9m),
+                                _ => value
+                            }
+                        };
+                        break;
+                    case "currency":
+                        res = value * targetUnit.Modifier / originUnit.Modifier;
+                        break;
+                    default:
+                        res = value * originUnit.Modifier / targetUnit.Modifier;
+                        break;
+                }
+
+            res = Math.Round(res, 4);
+
+            await ctx.Channel
+                .SendConfirmAsync(Strings.Convert(ctx.Guild.Id, value, originUnit.Triggers.Last(), res,
+                    targetUnit.Triggers.Last())).ConfigureAwait(false);
+        }
+    }
+}

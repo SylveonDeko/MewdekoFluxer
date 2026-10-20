@@ -1,0 +1,146 @@
+﻿using System.Net.Http;
+using Discord.Interactions;
+using Mewdeko.Common.Attributes.InteractionCommands;
+using Mewdeko.Services.Settings;
+using Image = Discord.Image;
+
+namespace Mewdeko.Modules.Server_Management;
+
+/// <summary>
+///     A module for stealing emotes and stickers from messages and adding them to the server.
+/// </summary>
+/// <param name="httpFactory">The httpfactory factory.</param>
+/// <param name="config">The bot configuration settings.</param>
+/// <param name="logger">The logger instance for structured logging.</param>
+public class EmoteStealer(IHttpClientFactory httpFactory, BotConfigService config, ILogger<EmoteStealer> logger)
+    : MewdekoSlashCommandModule
+{
+    /// <summary>
+    ///     Steals emotes from a message and adds them to the server's emote collection.
+    /// </summary>
+    /// <param name="message">The message containing emotes to be stolen.</param>
+    /// <remarks>
+    ///     This command requires the "Manage Emojis and Stickers" permission.
+    ///     It goes through all the emotes in the specified message, downloads them, and attempts to add them to the guild.
+    ///     Errors are logged, and a summary of successful and failed additions is provided.
+    /// </remarks>
+    [MessageCommand("Steal Emotes")]
+    [RequireBotPermission(GuildPermission.ManageEmojisAndStickers)]
+    [SlashUserPerm(GuildPermission.ManageEmojisAndStickers)]
+    [CheckPermissions]
+    public async Task Steal(IMessage message)
+    {
+        await ctx.Interaction.DeferAsync(true).ConfigureAwait(false);
+        await ctx.Interaction.FollowupAsync(Strings.EmoteUploadLimitWarning(ctx.Guild.Id));
+        var eb = new EmbedBuilder
+        {
+            Description = Strings.AddingEmotes(ctx.Guild.Id, config.Data.LoadingEmote), Color = Mewdeko.OkColor
+        };
+        var tags = message.Tags.Where(x => x.Type == TagType.Emoji).Select(x => (Emote)x.Value).Distinct();
+        if (!tags.Any())
+        {
+            await ctx.Interaction.SendEphemeralFollowupErrorAsync(Strings.NoEmotesInMessage(ctx.Guild.Id), Config)
+                .ConfigureAwait(false);
+            return;
+        }
+
+        var errored = new List<string>();
+        var emotes = new List<string>();
+        var msg = await ctx.Interaction.FollowupAsync(embed: eb.Build()).ConfigureAwait(false);
+        foreach (var i in tags)
+        {
+            using var http = httpFactory.CreateClient();
+            using var sr = await http.GetAsync(i.Url, HttpCompletionOption.ResponseHeadersRead)
+                .ConfigureAwait(false);
+            var imgData = await sr.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
+            var imgStream = imgData.ToStream();
+            await using var _ = imgStream.ConfigureAwait(false);
+            {
+                try
+                {
+                    var emote = await ctx.Guild.CreateEmoteAsync(i.Name, new Image(imgStream)).ConfigureAwait(false);
+                    emotes.Add($"{emote} {Format.Code(emote.Name)}");
+                }
+                catch (Exception)
+                {
+                    errored.Add($"{i.Name}\n{i.Url}");
+                }
+            }
+        }
+
+        var b = new EmbedBuilder
+        {
+            Color = Mewdeko.OkColor
+        };
+        if (emotes.Count > 0) b.WithDescription(Strings.EmotesAdded(ctx.Guild.Id, string.Join("\n", emotes)));
+        if (errored.Count > 0) b.AddField("Errored Emotes", string.Join("\n\n", errored));
+        await msg.ModifyAsync(x => x.Embed = b.Build()).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    ///     Steals stickers from a message and adds them to the server's sticker collection.
+    /// </summary>
+    /// <param name="message">The message containing stickers to be stolen.</param>
+    /// <remarks>
+    ///     Similar to the emote stealing function, this command requires "Manage Emojis and Stickers" permission.
+    ///     It processes all the stickers in the provided message, attempting to add each to the server.
+    ///     Successes and failures are reported, with errors logged for troubleshooting.
+    /// </remarks>
+    [MessageCommand("Steal Sticker")]
+    [RequireBotPermission(GuildPermission.ManageEmojisAndStickers)]
+    [SlashUserPerm(GuildPermission.ManageEmojisAndStickers)]
+    [CheckPermissions]
+    public async Task StealSticker(IMessage message)
+    {
+        await ctx.Interaction.DeferAsync(true).ConfigureAwait(false);
+        await ctx.Interaction.FollowupAsync(
+            "If the message below loads infinitely, discord has limited the servers stickers upload limit. And no, this cant be circumvented with other bots (to my knowledge).");
+        var eb = new EmbedBuilder
+        {
+            Description = Strings.AddingStickers(ctx.Guild.Id, config.Data.LoadingEmote), Color = Mewdeko.OkColor
+        };
+        var tags = message.Stickers.Select(x => x as SocketUnknownSticker).Distinct();
+        if (!tags.Any())
+        {
+            await ctx.Interaction.SendEphemeralFollowupErrorAsync(Strings.NoStickersInMessage(ctx.Guild.Id), Config)
+                .ConfigureAwait(false);
+            return;
+        }
+
+        var errored = new List<string>();
+        var emotes = new List<string>();
+        await ctx.Interaction.FollowupAsync(embed: eb.Build(), ephemeral: true).ConfigureAwait(false);
+        foreach (var i in tags)
+        {
+            using var http = httpFactory.CreateClient();
+            using var sr = await http.GetAsync(i.GetStickerUrl(), HttpCompletionOption.ResponseHeadersRead)
+                .ConfigureAwait(false);
+            var imgData = await sr.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
+            var imgStream = imgData.ToStream();
+            await using var _ = imgStream.ConfigureAwait(false);
+            {
+                try
+                {
+                    var emote = await ctx.Guild.CreateStickerAsync(i.Name, new Image(imgStream), [
+                            "Mewdeko"
+                        ], i.Description)
+                        .ConfigureAwait(false);
+                    emotes.Add($"{emote.Name} [Url]({emote.GetStickerUrl()})");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex.ToString());
+                    errored.Add($"{i.Name} | [Url]({i.GetStickerUrl()})");
+                }
+            }
+        }
+
+        var b = new EmbedBuilder
+        {
+            Color = Mewdeko.OkColor
+        };
+        if (emotes.Count > 0) b.WithDescription(Strings.AddedStickers(ctx.Guild.Id, string.Join("\n", emotes)));
+        if (errored.Count > 0) b.AddField("Errored Stickers", string.Join("\n\n", errored));
+        await ctx.Interaction.ModifyOriginalResponseAsync(x => x.Embed = b.Build()).ConfigureAwait(false);
+    }
+}

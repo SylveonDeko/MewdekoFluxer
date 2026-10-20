@@ -1,0 +1,544 @@
+﻿using System.IO;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
+using DataModel;
+using Discord.Commands;
+using LinqToDB;
+using LinqToDB.Async;
+
+namespace Mewdeko.Modules.Administration.Services;
+
+/// <summary>
+///     Service responsible for providing data to the admin module.
+/// </summary>
+public class AdministrationService : INService
+{
+    private readonly IBotCredentials credentials;
+    private readonly IDataConnectionFactory dbFactory;
+    private readonly GuildSettingsService guildSettings;
+    private readonly IHttpClientFactory httpClientFactory;
+    private readonly DiscordShardedClient shardedClient;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="AdministrationService" /> class with the specified dependencies.
+    /// </summary>
+    /// <param name="cmdHandler">The command handler.</param>
+    /// <param name="dbFactory">The database service.</param>
+    /// <param name="guildSettings">The guild settings service.</param>
+    /// <param name="bot">The bot instance.</param>
+    /// <param name="httpClientFactory">The HTTP client factory for making REST requests.</param>
+    /// <param name="credentials">The bot credentials for authorization.</param>
+    /// <param name="shardedClient">The Discord sharded client.</param>
+    public AdministrationService(CommandHandler cmdHandler,
+        GuildSettingsService guildSettings, Mewdeko bot, IDataConnectionFactory dbFactory,
+        IHttpClientFactory httpClientFactory, IBotCredentials credentials, DiscordShardedClient shardedClient)
+    {
+        // Assign the database service and guild settings service
+        this.guildSettings = guildSettings;
+        this.dbFactory = dbFactory;
+        this.httpClientFactory = httpClientFactory;
+        this.credentials = credentials;
+        this.shardedClient = shardedClient;
+
+        // Subscribe to the CommandExecuted event of the command handler
+        cmdHandler.CommandExecuted += DelMsgOnCmd_Handler;
+    }
+
+
+    /// <summary>
+    ///     Sets the staff role for a given guild.
+    /// </summary>
+    /// <param name="guild">The guild to set the staff role for.</param>
+    /// <param name="role">The role to set as the staff role.</param>
+    public async Task StaffRoleSet(IGuild guild, ulong role)
+    {
+        // Create a new database context
+        await using var db = await dbFactory.CreateConnectionAsync();
+        // Get the guild configuration for the given guild ID
+        var gc = await guildSettings.GetGuildConfig(guild.Id);
+
+        // Set the staff role
+        gc.StaffRole = role;
+
+        // Update the guild configuration in the cache
+        await guildSettings.UpdateGuildConfig(guild.Id, gc);
+    }
+
+    /// <summary>
+    ///     Toggles the opt-out status for a given guild.
+    /// </summary>
+    /// <param name="guild">The guild to toggle the opt-out status for.</param>
+    /// <returns>A boolean indicating the new opt-out status.</returns>
+    public async Task<bool> ToggleOptOut(IGuild guild)
+    {
+        // Create a new database context
+        var gc = await guildSettings.GetGuildConfig(guild.Id);
+
+        // Toggle the opt-out status
+        gc.StatsOptOut = !gc.StatsOptOut;
+
+        // Update the guild configuration in the cache
+        await guildSettings.UpdateGuildConfig(guild.Id, gc);
+
+        // Return the boolean equivalent of the new opt-out status
+        return gc.StatsOptOut;
+    }
+
+
+    /// <summary>
+    ///     Deletes the statistics data for a given guild.
+    /// </summary>
+    /// <param name="guild">The guild to delete the statistics data for.</param>
+    /// <returns>A boolean indicating whether any data was deleted.</returns>
+    public async Task<bool> DeleteStatsData(IGuild guild)
+    {
+        await using var dbContext = await dbFactory.CreateConnectionAsync();
+        var toRemove = dbContext.CommandStats.Where(x => x.GuildId == guild.Id);
+        if (!toRemove.Any())
+            return false;
+        await toRemove.DeleteAsync();
+        return true;
+    }
+
+    /// <summary>
+    ///     Sets the member role for a given guild.
+    /// </summary>
+    /// <param name="guild">The guild to set the member role for.</param>
+    /// <param name="role">The role to set as the member role.</param>
+    public async Task MemberRoleSet(IGuild guild, ulong role)
+    {
+        var gc = await guildSettings.GetGuildConfig(guild.Id);
+        gc.MemberRole = role;
+        await guildSettings.UpdateGuildConfig(guild.Id, gc);
+    }
+
+    /// <summary>
+    ///     Gets the staff role for a given guild.
+    /// </summary>
+    /// <param name="id">The ID of the guild to get the staff role for.</param>
+    /// <returns>The ID of the staff role.</returns>
+    public async Task<ulong> GetStaffRole(ulong id)
+    {
+        return (await guildSettings.GetGuildConfig(id)).StaffRole;
+    }
+
+    /// <summary>
+    ///     Gets the member role for a given guild.
+    /// </summary>
+    /// <param name="id">The ID of the guild to get the member role for.</param>
+    /// <returns>The ID of the member role.</returns>
+    public async Task<ulong> GetMemberRole(ulong id)
+    {
+        return (await guildSettings.GetGuildConfig(id)).MemberRole;
+    }
+
+    /// <summary>
+    ///     Gets the DeleteMessageOnCommand data for a given guild.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild to get the data for.</param>
+    /// <returns>A tuple containing a boolean indicating the DeleteMessageOnCommand status and a collection of channels.</returns>
+    public async Task<(bool DelMsgOnCmd, IEnumerable<DelMsgOnCmdChannel> channels)> GetDelMsgOnCmdData(ulong guildId)
+    {
+        await using var dbContext = await dbFactory.CreateConnectionAsync();
+        var conf = await guildSettings.GetGuildConfig(guildId);
+        var dconf = await dbContext.DelMsgOnCmdChannels.Where(x => x.GuildId == guildId).ToListAsync();
+
+        return (conf.DeleteMessageOnCommand, dconf);
+    }
+
+    /// <summary>
+    ///     Handles the deletion of messages on command execution.
+    /// </summary>
+    /// <param name="msg">The user message that triggered the command.</param>
+    /// <param name="cmd">The executed command.</param>
+    /// <returns>A completed task.</returns>
+    private async Task DelMsgOnCmd_Handler(IUserMessage msg, CommandInfo cmd)
+    {
+        if (msg.Channel is not ITextChannel channel)
+            return;
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var conf = await guildSettings.GetGuildConfig(channel.GuildId);
+
+        var exists = await db.DelMsgOnCmdChannels.FirstOrDefaultAsync(x => x.ChannelId == channel.Id);
+        if (exists is not null)
+        {
+            // If the state is true and the command is not 'Purge' or 'pick', delete the message
+            if (exists.State && cmd.Name != "Purge" && cmd.Name != "pick")
+            {
+                try
+                {
+                    await msg.DeleteAsync().ConfigureAwait(false);
+                }
+                catch
+                {
+                    // ignored
+                }
+            }
+        }
+        else if (conf.DeleteMessageOnCommand && cmd.Name != "Purge")
+        {
+            try
+            {
+                await msg.DeleteAsync().ConfigureAwait(false);
+            }
+            catch
+            {
+                // ignored
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Toggles the DeleteMessageOnCommand setting for a given guild.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild to toggle the setting for.</param>
+    /// <returns>A boolean indicating the new state of the DeleteMessageOnCommand setting.</returns>
+    public async Task<bool> ToggleDeleteMessageOnCommand(ulong guildId)
+    {
+        var conf = await guildSettings.GetGuildConfig(guildId);
+
+        // Toggle the value using a ternary operator
+        conf.DeleteMessageOnCommand = !conf.DeleteMessageOnCommand;
+
+        await guildSettings.UpdateGuildConfig(guildId, conf);
+
+        return conf.DeleteMessageOnCommand;
+    }
+
+
+    /// <summary>
+    ///     Sets the DeleteMessageOnCommand state for a specific channel in a guild.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild to set the state for.</param>
+    /// <param name="chId">The ID of the channel to set the state for.</param>
+    /// <param name="newState">The new state to set.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task SetDelMsgOnCmdState(ulong guildId, ulong chId, Administration.State newState)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var settingsTable = db.DelMsgOnCmdChannels;
+
+        if (newState == Administration.State.Inherit)
+        {
+            await settingsTable
+                .Where(x => x.GuildId == guildId && x.ChannelId == chId)
+                .DeleteAsync();
+        }
+        else
+        {
+            var targetState = newState == Administration.State.Enable;
+
+            var updatedRows = await settingsTable
+                .Where(x => x.GuildId == guildId && x.ChannelId == chId)
+                .Set(x => x.State, targetState)
+                .UpdateAsync();
+
+            if (updatedRows == 0)
+            {
+                await db.InsertAsync(new DelMsgOnCmdChannel
+                {
+                    GuildId = guildId, ChannelId = chId, State = targetState
+                });
+            }
+        }
+    }
+
+
+    /// <summary>
+    ///     Sets the deafen status for a list of users in a guild.
+    /// </summary>
+    /// <param name="value">
+    ///     The deafen status to set. If true, the users will be deafened. If false, the users will be
+    ///     undeafened.
+    /// </param>
+    /// <param name="users">The users to set the deafen status for.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public static async Task DeafenUsers(bool value, params IGuildUser[] users)
+    {
+        if (users.Length == 0)
+            return;
+        foreach (var u in users)
+        {
+            try
+            {
+                await u.ModifyAsync(usr => usr.Deaf = value).ConfigureAwait(false);
+            }
+            catch
+            {
+                // ignored
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Edits a message in a text channel.
+    /// </summary>
+    /// <param name="context">The command context.</param>
+    /// <param name="chanl">The text channel where the message is located.</param>
+    /// <param name="messageId">The ID of the message to edit.</param>
+    /// <param name="text">The new text for the message. If null, the message content will be removed.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public static async Task EditMessage(ICommandContext context, ITextChannel chanl, ulong messageId, string? text)
+    {
+        var msg = await chanl.GetMessageAsync(messageId).ConfigureAwait(false);
+
+        if (msg is not IUserMessage umsg || msg.Author.Id != context.Client.CurrentUser.Id)
+            return;
+
+        var rep = new ReplacementBuilder()
+            .WithDefault(context)
+            .Build();
+
+        if (SmartEmbed.TryParse(rep.Replace(text), context.Guild?.Id, out var embed, out var plainText,
+                out var components))
+        {
+            await umsg.ModifyAsync(x =>
+            {
+                x.Embeds = embed;
+                x.Content = plainText?.SanitizeMentions();
+                x.Components = components.Build();
+            }).ConfigureAwait(false);
+        }
+        else
+        {
+            await umsg.ModifyAsync(x =>
+            {
+                x.Content = text.SanitizeMentions();
+                x.Embed = null;
+                x.Components = null;
+            }).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    ///     Sets the bot's guild-specific avatar, banner, and/or bio in database and Discord API.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <param name="avatarUrl">Optional URL or base64 data for avatar image</param>
+    /// <param name="bannerUrl">Optional URL or base64 data for banner image</param>
+    /// <param name="bio">Optional bio text</param>
+    /// <returns>A task representing the asynchronous operation</returns>
+    public async Task SetGuildProfile(ulong guildId, string? avatarUrl, string? bannerUrl, string? bio)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+
+        // Get or create profile record
+        var profile = await db.GuildBotProfiles
+            .FirstOrDefaultAsync(x => x.GuildId == guildId)
+            .ConfigureAwait(false);
+
+        if (profile == null)
+        {
+            profile = new GuildBotProfile
+            {
+                GuildId = guildId, DateAdded = DateTime.UtcNow
+            };
+            await db.InsertAsync(profile).ConfigureAwait(false);
+
+            // Re-fetch to get the ID
+            profile = await db.GuildBotProfiles
+                .FirstOrDefaultAsync(x => x.GuildId == guildId)
+                .ConfigureAwait(false);
+        }
+
+        // Update database
+        if (!string.IsNullOrWhiteSpace(avatarUrl))
+            profile.AvatarUrl = avatarUrl;
+
+        if (!string.IsNullOrWhiteSpace(bannerUrl))
+            profile.BannerUrl = bannerUrl;
+
+        if (bio != null)
+            profile.Bio = bio;
+
+        profile.DateUpdated = DateTime.UtcNow;
+
+        await db.GuildBotProfiles
+            .Where(x => x.GuildId == guildId)
+            .Set(x => x.AvatarUrl, profile.AvatarUrl)
+            .Set(x => x.BannerUrl, profile.BannerUrl)
+            .Set(x => x.Bio, profile.Bio)
+            .Set(x => x.DateUpdated, profile.DateUpdated)
+            .UpdateAsync()
+            .ConfigureAwait(false);
+
+        using var httpClient = httpClientFactory.CreateClient();
+
+        var payload = new Dictionary<string, object?>();
+
+        // Process avatar
+        if (!string.IsNullOrWhiteSpace(avatarUrl))
+        {
+            var avatarData = avatarUrl.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase)
+                ? avatarUrl
+                : await DownloadAndConvertImage(httpClient, avatarUrl).ConfigureAwait(false);
+            payload["avatar"] = avatarData;
+        }
+
+        // Process banner
+        if (!string.IsNullOrWhiteSpace(bannerUrl))
+        {
+            var bannerData = bannerUrl.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase)
+                ? bannerUrl
+                : await DownloadAndConvertImage(httpClient, bannerUrl).ConfigureAwait(false);
+            payload["banner"] = bannerData;
+        }
+
+        // Add bio
+        if (bio != null)
+            payload["bio"] = bio;
+
+        // Only make Discord API call if there's something to update
+        if (payload.Count > 0)
+        {
+            var jsonContent = JsonSerializer.Serialize(payload);
+            using var request = new HttpRequestMessage(HttpMethod.Patch,
+                $"https://discord.com/api/v10/guilds/{guildId}/members/@me")
+            {
+                Content = new StringContent(jsonContent, Encoding.UTF8, "application/json")
+            };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bot", credentials.Token);
+
+            using var response = await httpClient.SendAsync(request).ConfigureAwait(false);
+
+            response.EnsureSuccessStatusCode();
+        }
+    }
+
+    /// <summary>
+    ///     Resets parts of the bot's guild-specific profile back to its global profile, on Discord and in the
+    ///     database. The stored record is removed once nothing custom is left on it.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <param name="avatar">Whether to reset the avatar</param>
+    /// <param name="banner">Whether to reset the banner</param>
+    /// <param name="bio">Whether to reset the bio</param>
+    /// <returns>A task representing the asynchronous operation</returns>
+    public async Task ResetGuildProfile(ulong guildId, bool avatar, bool banner, bool bio)
+    {
+        if (!avatar && !banner && !bio)
+            return;
+
+        var payload = new Dictionary<string, object?>();
+        if (avatar)
+            payload["avatar"] = null;
+        if (banner)
+            payload["banner"] = null;
+        if (bio)
+            payload["bio"] = null;
+
+        using var httpClient = httpClientFactory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Patch,
+            $"https://discord.com/api/v10/guilds/{guildId}/members/@me")
+        {
+            Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json")
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bot", credentials.Token);
+
+        using var response = await httpClient.SendAsync(request).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+
+        await using var db = await dbFactory.CreateConnectionAsync();
+
+        var profile = await db.GuildBotProfiles
+            .FirstOrDefaultAsync(x => x.GuildId == guildId)
+            .ConfigureAwait(false);
+        if (profile == null)
+            return;
+
+        if (avatar)
+            profile.AvatarUrl = null;
+        if (banner)
+            profile.BannerUrl = null;
+        if (bio)
+            profile.Bio = null;
+
+        if (profile.AvatarUrl == null && profile.BannerUrl == null && profile.Bio == null)
+        {
+            await db.GuildBotProfiles
+                .Where(x => x.GuildId == guildId)
+                .DeleteAsync()
+                .ConfigureAwait(false);
+            return;
+        }
+
+        await db.GuildBotProfiles
+            .Where(x => x.GuildId == guildId)
+            .Set(x => x.AvatarUrl, profile.AvatarUrl)
+            .Set(x => x.BannerUrl, profile.BannerUrl)
+            .Set(x => x.Bio, profile.Bio)
+            .Set(x => x.DateUpdated, DateTime.UtcNow)
+            .UpdateAsync()
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    ///     Gets the bot's current guild profile information from the database.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <returns>A dictionary containing the bot's guild profile data</returns>
+    public async Task<Dictionary<string, object?>> GetGuildProfile(ulong guildId)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+
+        var profile = await db.GuildBotProfiles
+            .FirstOrDefaultAsync(x => x.GuildId == guildId)
+            .ConfigureAwait(false);
+
+        var result = new Dictionary<string, object?>();
+
+        if (profile != null)
+        {
+            result["avatar"] = profile.AvatarUrl;
+            result["banner"] = profile.BannerUrl;
+            result["bio"] = profile.Bio;
+        }
+
+        // Get current nickname from Discord.Net
+        var guild = shardedClient.GetGuild(guildId);
+        var botMember = guild?.GetUser(shardedClient.CurrentUser.Id);
+        result["nick"] = botMember?.Nickname;
+
+        // The stored avatar URL is whatever was submitted when the profile was
+        // set and may have expired (Discord attachment links do), so the live
+        // guild avatar Discord serves is preferred when one is applied.
+        var liveAvatar = botMember?.GetGuildAvatarUrl(size: 256);
+        if (!string.IsNullOrWhiteSpace(liveAvatar))
+            result["avatar"] = liveAvatar;
+
+        return result;
+    }
+
+    /// <summary>
+    ///     Downloads an image from a user-supplied URL and converts it to a base64 data URI.
+    ///     The client must carry no credentials, since the URL is untrusted and receives every header sent.
+    /// </summary>
+    /// <param name="httpClient">An HTTP client with no default authorization headers</param>
+    /// <param name="imageUrl">The absolute http or https URL of the image</param>
+    /// <returns>A base64-encoded data URI string</returns>
+    /// <exception cref="ArgumentException">Thrown when the URL is not an absolute http or https URL</exception>
+    private static async Task<string> DownloadAndConvertImage(HttpClient httpClient, string imageUrl)
+    {
+        if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
+            throw new ArgumentException("Image URL must be an absolute http or https URL.", nameof(imageUrl));
+
+        var imageBytes = await httpClient.GetByteArrayAsync(imageUrl).ConfigureAwait(false);
+        var base64 = Convert.ToBase64String(imageBytes);
+
+        // Determine the image type from the URL or default to PNG
+        var extension = Path.GetExtension(imageUrl).ToLowerInvariant();
+        var mimeType = extension switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".gif" => "image/gif",
+            ".webp" => "image/webp",
+            _ => "image/png"
+        };
+
+        return $"data:{mimeType};base64,{base64}";
+    }
+}
