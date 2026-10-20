@@ -1013,7 +1013,7 @@ public partial class Music(
 
         if (amount is < 0 or > 5)
         {
-            await ReplyErrorAsync(Strings.AutoplayDisabled(ctx.Guild.Id)).ConfigureAwait(false);
+            await ReplyErrorAsync(Strings.MusicAutoPlayInvalid(ctx.Guild.Id)).ConfigureAwait(false);
             return;
         }
 
