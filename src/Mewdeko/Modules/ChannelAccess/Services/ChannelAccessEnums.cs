@@ -75,7 +75,7 @@ public enum AccessExpiryBehavior
 public enum AccessVoteResult
 {
     /// <summary>
-    ///     The vote was recorded.
+    ///     The vote was recorded or already stood.
     /// </summary>
     Recorded,
 
@@ -83,11 +83,6 @@ public enum AccessVoteResult
     ///     The vote replaced the voter's previous vote.
     /// </summary>
     Changed,
-
-    /// <summary>
-    ///     The voter clicked the option they had already picked, so the vote was removed.
-    /// </summary>
-    Removed,
 
     /// <summary>
     ///     The voter is not allowed to vote on this application.

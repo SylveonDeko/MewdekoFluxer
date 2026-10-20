@@ -1,7 +1,7 @@
 channelaccessapply:
   args:
     - channel
-  desc: 'Posts the apply button for a gated channel so you can fill in the application form'
+  desc: 'Starts an application for a gated channel, asking the questions in your DMs'
   params:
     - desc: The channel to apply for.
       name: channel
@@ -53,6 +53,15 @@ channelaccessblacklistremove:
       name: channel
       optional: true
       type: ITextChannel
+channelaccessbreakdown:
+  args:
+    - applicationId
+  desc: 'Shows who voted which way on an application'
+  params:
+    - desc: The application id.
+      name: applicationId
+      optional: false
+      type: int
 channelaccessconfig:
   args:
     - channel
@@ -103,7 +112,7 @@ channelaccesspanel:
   args:
     - channel
     - target
-  desc: 'Posts a button people can click to apply for a gated channel'
+  desc: 'Posts a panel people can react to in order to apply for a gated channel'
   params:
     - desc: The gated channel.
       name: channel

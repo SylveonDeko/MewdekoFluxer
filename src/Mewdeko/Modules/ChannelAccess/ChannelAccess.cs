@@ -136,7 +136,7 @@ public class ChannelAccess : MewdekoModuleBase<ChannelAccessService>
     }
 
     /// <summary>
-    ///     Posts a button people can click to apply for a gated channel.
+    ///     Posts a panel people can react to in order to apply for a gated channel.
     /// </summary>
     /// <param name="channel">The gated channel.</param>
     /// <param name="target">Where to post the panel. Defaults to the current channel.</param>
@@ -257,7 +257,7 @@ public class ChannelAccess : MewdekoModuleBase<ChannelAccessService>
     }
 
     /// <summary>
-    ///     Posts the apply button for a gated channel so you can fill in the application form.
+    ///     Starts an application for a gated channel. The questions are asked in your DMs and your replies are the answers.
     /// </summary>
     /// <param name="channel">The channel to apply for.</param>
     /// <example>.caapply #inner-circle</example>
@@ -280,8 +280,8 @@ public class ChannelAccess : MewdekoModuleBase<ChannelAccessService>
             return;
         }
 
-        await ctx.Channel.SendMessageAsync(Strings.ChannelAccessApplyPrompt(ctx.Guild.Id, channel.Mention),
-            components: Service.BuildPanelComponents(config));
+        if (!await Service.StartApplicationAsync(config, (IGuildUser)ctx.User))
+            await ErrorAsync(Strings.ChannelAccessApplyDmClosed(ctx.Guild.Id, ctx.User.Mention));
     }
 
     /// <summary>
@@ -404,6 +404,58 @@ public class ChannelAccess : MewdekoModuleBase<ChannelAccessService>
             .WithOkColor()
             .WithTitle(Strings.ChannelAccessPendingTitle(ctx.Guild.Id))
             .WithDescription(string.Join("\n", lines));
+
+        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+    }
+
+    /// <summary>
+    ///     Shows who voted which way on an application, unless the gate hides vote details.
+    /// </summary>
+    /// <param name="applicationId">The application id.</param>
+    /// <example>.cabreakdown 12</example>
+    [Cmd]
+    [Aliases]
+    [RequireContext(ContextType.Guild)]
+    public async Task ChannelAccessBreakdown(int applicationId)
+    {
+        var application = await Service.GetApplicationAsync(applicationId);
+        if (application is null || application.GuildId != ctx.Guild.Id)
+        {
+            await ErrorAsync(Strings.ChannelAccessApplicationNotFound(ctx.Guild.Id));
+            return;
+        }
+
+        var config = await Service.GetConfigByIdAsync(application.ConfigId);
+        if (config is null)
+            return;
+
+        var user = (IGuildUser)ctx.User;
+        if (!Service.CanVote(config, user))
+        {
+            await ErrorAsync(Strings.ChannelAccessVoteNotEligible(ctx.Guild.Id));
+            return;
+        }
+
+        var votes = await Service.GetVotesAsync(applicationId);
+        if (votes.Count == 0)
+        {
+            await ErrorAsync(Strings.ChannelAccessNoVotes(ctx.Guild.Id));
+            return;
+        }
+
+        if (config.AnonymousVotes && !user.GuildPermissions.ManageRoles)
+        {
+            await ErrorAsync(Strings.ChannelAccessVotesHidden(ctx.Guild.Id));
+            return;
+        }
+
+        var embed = new EmbedBuilder()
+            .WithOkColor()
+            .WithTitle(Strings.ChannelAccessBreakdownTitle(ctx.Guild.Id, applicationId))
+            .WithDescription(string.Join("\n", votes
+                .OrderByDescending(x => x.Vote)
+                .Take(50)
+                .Select(x => $"{x.Vote switch { 1 => "✅", -1 => "❌", _ => "🤷" }} <@{x.UserId}>")));
 
         await ctx.Channel.SendMessageAsync(embed: embed.Build());
     }

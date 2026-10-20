@@ -440,6 +440,9 @@ channelaccessblacklistadd:
 channelaccessblacklistremove:
   - channelaccessblacklistremove
   - cablremove
+channelaccessbreakdown:
+  - channelaccessbreakdown
+  - cabreakdown
 channelaccessconfig:
   - channelaccessconfig
   - caconfig

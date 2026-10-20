@@ -14,14 +14,17 @@ namespace Mewdeko.Modules.ChannelAccess.Services;
 public class ChannelAccessService : INService, IReadyExecutor, IDisposable
 {
     /// <summary>
-    ///     The maximum number of application questions a gate can have, capped by Discord's modal limit.
+    ///     The maximum number of application questions a gate can have, kept short so applying stays quick.
     /// </summary>
     public const int MaxQuestions = 5;
 
+    private readonly ConcurrentDictionary<ulong, byte> activeApplicants = new();
     private readonly DiscordShardedClient client;
     private readonly IDataConnectionFactory dbFactory;
+    private readonly EventHandler eventHandler;
     private readonly ILogger<ChannelAccessService> logger;
     private readonly GeneratedBotStrings strings;
+    private readonly ConcurrentDictionary<ulong, byte> trackedMessages = new();
     private readonly SemaphoreSlim voteLock = new(1, 1);
     private Timer? expiryTimer;
 
@@ -30,34 +33,55 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
     /// </summary>
     /// <param name="client">The Discord client instance.</param>
     /// <param name="dbFactory">The database connection factory.</param>
+    /// <param name="eventHandler">The event handler used for reactions and replies.</param>
     /// <param name="strings">The localization service.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     public ChannelAccessService(
         DiscordShardedClient client,
         IDataConnectionFactory dbFactory,
+        EventHandler eventHandler,
         GeneratedBotStrings strings,
         ILogger<ChannelAccessService> logger)
     {
         this.client = client;
         this.dbFactory = dbFactory;
+        this.eventHandler = eventHandler;
         this.strings = strings;
         this.logger = logger;
+        eventHandler.Subscribe("ReactionAdded", "ChannelAccessService", OnReactionAddedAsync);
+        eventHandler.Subscribe("ReactionRemoved", "ChannelAccessService", OnReactionRemovedAsync);
     }
 
     /// <inheritdoc />
     public void Dispose()
     {
+        eventHandler.Unsubscribe("ReactionAdded", "ChannelAccessService", OnReactionAddedAsync);
+        eventHandler.Unsubscribe("ReactionRemoved", "ChannelAccessService", OnReactionRemovedAsync);
         expiryTimer?.Dispose();
         voteLock.Dispose();
         GC.SuppressFinalize(this);
     }
 
     /// <inheritdoc />
-    public Task OnReadyAsync()
+    public async Task OnReadyAsync()
     {
+        await using (var db = await dbFactory.CreateConnectionAsync())
+        {
+            var panelIds = await db.ChannelAccessConfigs
+                .Where(x => x.PanelMessageId != null)
+                .Select(x => x.PanelMessageId!.Value)
+                .ToListAsync();
+            var applicationIds = await db.ChannelAccessApplications
+                .Where(x => x.Status == (int)AccessApplicationStatus.Pending && x.MessageId != null)
+                .Select(x => x.MessageId!.Value)
+                .ToListAsync();
+
+            foreach (var id in panelIds.Concat(applicationIds))
+                trackedMessages.TryAdd(id, 0);
+        }
+
         expiryTimer = new Timer(_ => _ = ProcessExpiredApplicationsAsync(), null, TimeSpan.FromMinutes(1),
             TimeSpan.FromMinutes(1));
-        return Task.CompletedTask;
     }
 
     #region Helpers
@@ -445,14 +469,17 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
         }
 
         var embed = await BuildApplicationEmbedAsync(config, application, user);
-        var components = BuildVoteComponents(config, application);
         var ping = config.PingRoleId is { } pingRole and not 0 ? $"<@&{pingRole}>" : null;
 
-        var message = await review.SendMessageAsync(ping, embed: embed.Build(), components: components,
+        var message = await review.SendMessageAsync(ping, embed: embed.Build(),
             allowedMentions: new AllowedMentions
             {
                 RoleIds = config.PingRoleId is { } r and not 0 ? [r] : []
             });
+
+        trackedMessages.TryAdd(message.Id, 0);
+        foreach (var emote in GetVoteEmotes(config))
+            await message.AddReactionAsync(emote);
 
         application.MessageChannelId = review.Id;
         application.MessageId = message.Id;
@@ -638,8 +665,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
             }
             else if (existing.Vote == vote)
             {
-                await db.ChannelAccessVotes.Where(x => x.Id == existing.Id).DeleteAsync();
-                result = AccessVoteResult.Removed;
+                result = AccessVoteResult.Recorded;
             }
             else
             {
@@ -668,6 +694,322 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
         finally
         {
             voteLock.Release();
+        }
+    }
+
+    /// <summary>
+    ///     Clears a member's vote when they take back the reaction that cast it.
+    /// </summary>
+    /// <param name="applicationId">The application being voted on.</param>
+    /// <param name="userId">The voter.</param>
+    /// <param name="vote">The vote the removed reaction stood for.</param>
+    public async Task RemoveVoteAsync(int applicationId, ulong userId, int vote)
+    {
+        await voteLock.WaitAsync();
+        try
+        {
+            var application = await GetApplicationAsync(applicationId);
+            if (application is null || application.Status != (int)AccessApplicationStatus.Pending)
+                return;
+
+            await using (var db = await dbFactory.CreateConnectionAsync())
+            {
+                var removed = await db.ChannelAccessVotes
+                    .Where(x => x.ApplicationId == applicationId && x.UserId == userId && x.Vote == vote)
+                    .DeleteAsync();
+                if (removed == 0)
+                    return;
+            }
+
+            await RefreshApplicationMessageAsync(application);
+        }
+        finally
+        {
+            voteLock.Release();
+        }
+    }
+
+    #endregion
+
+    #region Reactions
+
+    private static readonly Emoji ApplyEmoji = new("📝");
+    private static readonly Emoji ApproveEmoji = new("✅");
+    private static readonly Emoji DenyEmoji = new("❌");
+    private static readonly Emoji AbstainEmoji = new("🤷");
+
+    private static List<IEmote> GetVoteEmotes(ChannelAccessConfig config)
+    {
+        List<IEmote> emotes = [ApproveEmoji, DenyEmoji];
+        if (config.AllowAbstain)
+            emotes.Add(AbstainEmoji);
+
+        return emotes;
+    }
+
+    private static int? GetVoteFromEmote(ChannelAccessConfig config, IEmote emote)
+    {
+        if (emote.Name == ApproveEmoji.Name)
+            return 1;
+
+        if (emote.Name == DenyEmoji.Name)
+            return -1;
+
+        return emote.Name == AbstainEmoji.Name && config.AllowAbstain ? 0 : null;
+    }
+
+    private async Task OnReactionAddedAsync(Cacheable<IUserMessage, ulong> message,
+        Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
+    {
+        if (!trackedMessages.ContainsKey(message.Id) || reaction.UserId == client.CurrentUser.Id ||
+            reaction.User.IsSpecified && reaction.User.Value.IsBot)
+            return;
+
+        try
+        {
+            await using var db = await dbFactory.CreateConnectionAsync();
+            var panel = await db.ChannelAccessConfigs.FirstOrDefaultAsync(x => x.PanelMessageId == message.Id);
+            if (panel is not null)
+            {
+                await HandlePanelReactionAsync(panel, message, reaction);
+                return;
+            }
+
+            var application = await db.ChannelAccessApplications.FirstOrDefaultAsync(x => x.MessageId == message.Id);
+            if (application is not null)
+                await HandleVoteReactionAsync(application, message, reaction);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed handling a channel access reaction on message {MessageId}", message.Id);
+        }
+    }
+
+    private async Task OnReactionRemovedAsync(Cacheable<IUserMessage, ulong> message,
+        Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
+    {
+        if (!trackedMessages.ContainsKey(message.Id) || reaction.UserId == client.CurrentUser.Id)
+            return;
+
+        try
+        {
+            await using var db = await dbFactory.CreateConnectionAsync();
+            var application = await db.ChannelAccessApplications.FirstOrDefaultAsync(x => x.MessageId == message.Id);
+            if (application is null)
+                return;
+
+            var config = await GetConfigByIdAsync(application.ConfigId);
+            if (config is not null && GetVoteFromEmote(config, reaction.Emote) is { } vote)
+                await RemoveVoteAsync(application.Id, reaction.UserId, vote);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed handling a removed channel access reaction on message {MessageId}",
+                message.Id);
+        }
+    }
+
+    private async Task HandlePanelReactionAsync(ChannelAccessConfig config, Cacheable<IUserMessage, ulong> message,
+        SocketReaction reaction)
+    {
+        if (reaction.Emote.Name != ApplyEmoji.Name)
+            return;
+
+        var panelMessage = await message.GetOrDownloadAsync();
+        await TryRemoveReactionAsync(panelMessage, reaction.Emote, reaction.UserId);
+
+        if (client.GetGuild(config.GuildId)?.GetUser(reaction.UserId) is not { } member)
+            return;
+
+        var (canApply, reason) = await CanApplyAsync(config, member);
+        if (!canApply)
+        {
+            try
+            {
+                await member.SendMessageAsync(reason);
+            }
+            catch
+            {
+            }
+
+            return;
+        }
+
+        if (await StartApplicationAsync(config, member))
+            return;
+
+        if (client.GetGuild(config.GuildId)?.GetTextChannel(panelMessage.Channel.Id) is not { } panelChannel)
+            return;
+
+        var notice = await panelChannel.SendMessageAsync(strings.ChannelAccessApplyDmClosed(config.GuildId,
+                member.Mention),
+            allowedMentions: new AllowedMentions { UserIds = [member.Id] });
+        _ = Task.Delay(TimeSpan.FromSeconds(15)).ContinueWith(_ => notice.DeleteAsync());
+    }
+
+    private async Task HandleVoteReactionAsync(ChannelAccessApplication application,
+        Cacheable<IUserMessage, ulong> message, SocketReaction reaction)
+    {
+        var config = await GetConfigByIdAsync(application.ConfigId);
+        if (config is null || GetVoteFromEmote(config, reaction.Emote) is not { } vote)
+            return;
+
+        var reviewMessage = await message.GetOrDownloadAsync();
+        if (client.GetGuild(config.GuildId)?.GetUser(reaction.UserId) is not { } member)
+        {
+            await TryRemoveReactionAsync(reviewMessage, reaction.Emote, reaction.UserId);
+            return;
+        }
+
+        var result = await CastVoteAsync(application.Id, member, vote);
+        switch (result)
+        {
+            case AccessVoteResult.Recorded:
+                break;
+            case AccessVoteResult.Changed:
+                foreach (var emote in GetVoteEmotes(config).Where(x => x.Name != reaction.Emote.Name))
+                    await TryRemoveReactionAsync(reviewMessage, emote, reaction.UserId);
+                break;
+            default:
+                await TryRemoveReactionAsync(reviewMessage, reaction.Emote, reaction.UserId);
+                break;
+        }
+    }
+
+    private async Task TryRemoveReactionAsync(IUserMessage message, IEmote emote, ulong userId)
+    {
+        try
+        {
+            await message.RemoveReactionAsync(emote, userId);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Could not remove a reaction from channel access message {MessageId}", message.Id);
+        }
+    }
+
+    #endregion
+
+    #region Applying
+
+    /// <summary>
+    ///     Starts the application conversation with a member in their DMs: each question is asked in turn and the
+    ///     reply to it is the answer, then the application is submitted for voting.
+    /// </summary>
+    /// <param name="config">The gate being applied to.</param>
+    /// <param name="user">The applicant.</param>
+    /// <returns>False if the applicant's DMs could not be reached.</returns>
+    public async Task<bool> StartApplicationAsync(ChannelAccessConfig config, IGuildUser user)
+    {
+        if (!activeApplicants.TryAdd(user.Id, 0))
+            return true;
+
+        try
+        {
+            var questions = await GetQuestionsAsync(config.Id);
+            var dm = await user.CreateDMChannelAsync();
+            await dm.SendMessageAsync(strings.ChannelAccessApplyIntro(config.GuildId, $"<#{config.ChannelId}>",
+                questions.Count));
+
+            _ = Task.Run(() => RunApplicationAsync(config, user, dm, questions));
+            return true;
+        }
+        catch (Discord.Net.HttpException)
+        {
+            activeApplicants.TryRemove(user.Id, out _);
+            return false;
+        }
+    }
+
+    private async Task RunApplicationAsync(ChannelAccessConfig config, IGuildUser user, IDMChannel dm,
+        List<ChannelAccessQuestion> questions)
+    {
+        try
+        {
+            var answers = new List<(int? QuestionId, string Question, string Answer)>();
+            for (var i = 0; i < questions.Count; i++)
+            {
+                var question = questions[i];
+                var prompt = strings.ChannelAccessApplyQuestion(config.GuildId, i + 1, questions.Count,
+                    question.Question);
+                if (!question.Required)
+                    prompt += $"\n{strings.ChannelAccessApplyOptionalHint(config.GuildId)}";
+
+                await dm.SendMessageAsync(prompt);
+
+                string answer;
+                while (true)
+                {
+                    var reply = await WaitForReplyAsync(dm.Id, user.Id, TimeSpan.FromMinutes(5));
+                    if (reply is null)
+                    {
+                        await dm.SendMessageAsync(strings.ChannelAccessApplyTimeout(config.GuildId));
+                        return;
+                    }
+
+                    reply = reply.Trim();
+                    if (!question.Required && reply.Equals("skip", StringComparison.OrdinalIgnoreCase))
+                    {
+                        answer = strings.ChannelAccessNoAnswer(config.GuildId);
+                        break;
+                    }
+
+                    if (reply.Length < Math.Max(1, question.MinLength) ||
+                        question.MaxLength > 0 && reply.Length > question.MaxLength)
+                    {
+                        await dm.SendMessageAsync(strings.ChannelAccessApplyLength(config.GuildId,
+                            Math.Max(1, question.MinLength), question.MaxLength));
+                        continue;
+                    }
+
+                    answer = reply;
+                    break;
+                }
+
+                answers.Add((question.Id, question.Question, answer));
+            }
+
+            var application = await SubmitApplicationAsync(config, user, answers);
+            await dm.SendMessageAsync(application is null
+                ? strings.ChannelAccessApplyFailed(config.GuildId)
+                : strings.ChannelAccessApplied(config.GuildId));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed submitting channel access application in guild {GuildId}", config.GuildId);
+            try
+            {
+                await dm.SendMessageAsync(strings.ChannelAccessApplyFailed(config.GuildId));
+            }
+            catch
+            {
+            }
+        }
+        finally
+        {
+            activeApplicants.TryRemove(user.Id, out _);
+        }
+    }
+
+    private async Task<string?> WaitForReplyAsync(ulong channelId, ulong userId, TimeSpan timeout)
+    {
+        var reply = new TaskCompletionSource<string>();
+        eventHandler.Subscribe("MessageReceived", "ChannelAccessService", OnMessage);
+        try
+        {
+            return await Task.WhenAny(reply.Task, Task.Delay(timeout)) == reply.Task ? await reply.Task : null;
+        }
+        finally
+        {
+            eventHandler.Unsubscribe("MessageReceived", "ChannelAccessService", OnMessage);
+        }
+
+        Task OnMessage(SocketMessage arg)
+        {
+            if (arg.Author.Id == userId && arg.Channel.Id == channelId)
+                reply.TrySetResult(arg.Content);
+
+            return Task.CompletedTask;
         }
     }
 
@@ -788,7 +1130,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
     }
 
     /// <summary>
-    ///     Rewrites an application's message so the tally and buttons match the current state.
+    ///     Rewrites an application's message so the tally matches the current state, and clears the vote reactions once it is closed.
     /// </summary>
     /// <param name="application">The application whose message should be refreshed.</param>
     public async Task RefreshApplicationMessageAsync(ChannelAccessApplication application)
@@ -811,15 +1153,14 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
 
             var applicant = guild.GetUser(application.UserId) as IGuildUser;
             var embed = await BuildApplicationEmbedAsync(config, application, applicant);
-            var components = application.Status == (int)AccessApplicationStatus.Pending
-                ? BuildVoteComponents(config, application)
-                : new ComponentBuilder().Build();
 
-            await message.ModifyAsync(m =>
+            await message.ModifyAsync(m => m.Embed = embed.Build());
+
+            if (application.Status != (int)AccessApplicationStatus.Pending)
             {
-                m.Embed = embed.Build();
-                m.Components = components;
-            });
+                trackedMessages.TryRemove(message.Id, out _);
+                await message.RemoveAllReactionsAsync();
+            }
         }
         catch (Exception ex)
         {
@@ -930,6 +1271,12 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
             tally += $" • 🤷 **{abstains}**";
         embed.AddField("Votes", tally);
 
+        if (status == AccessApplicationStatus.Pending)
+            embed.AddField(strings.ChannelAccessHowToVote(config.GuildId),
+                config.AllowAbstain
+                    ? strings.ChannelAccessVoteInstructionsAbstain(config.GuildId)
+                    : strings.ChannelAccessVoteInstructions(config.GuildId));
+
         if (status == AccessApplicationStatus.Pending && application.ExpiresAt is { } expires)
         {
             embed.WithFooter(strings.ChannelAccessVotingCloses(config.GuildId))
@@ -946,27 +1293,6 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
         }
 
         return embed;
-    }
-
-    /// <summary>
-    ///     Builds the vote buttons for an open application.
-    /// </summary>
-    /// <param name="config">The gate the application belongs to.</param>
-    /// <param name="application">The open application.</param>
-    /// <returns>The built component set.</returns>
-    public MessageComponent BuildVoteComponents(ChannelAccessConfig config, ChannelAccessApplication application)
-    {
-        var builder = new ComponentBuilder()
-            .WithButton("Approve", $"chanacc:vote:{application.Id}:1", ButtonStyle.Success, new Emoji("✅"))
-            .WithButton("Deny", $"chanacc:vote:{application.Id}:-1", ButtonStyle.Danger, new Emoji("❌"));
-
-        if (config.AllowAbstain)
-            builder.WithButton("Abstain", $"chanacc:vote:{application.Id}:0", ButtonStyle.Secondary, new Emoji("🤷"));
-
-        builder.WithButton("Breakdown", $"chanacc:breakdown:{application.Id}", ButtonStyle.Secondary,
-            new Emoji("📊"));
-
-        return builder.Build();
     }
 
     /// <summary>
@@ -989,25 +1315,15 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
             .WithDescription(strings.ChannelAccessPanelBody(config.GuildId))
             .Build();
 
-        var message = await target.SendMessageAsync(embed: embed, components: BuildPanelComponents(config));
+        var message = await target.SendMessageAsync(embed: embed);
+        await message.AddReactionAsync(ApplyEmoji);
+        trackedMessages.TryAdd(message.Id, 0);
 
         config.PanelChannelId = target.Id;
         config.PanelMessageId = message.Id;
         await UpdateConfigAsync(config);
 
         return message.Id;
-    }
-
-    /// <summary>
-    ///     Builds the apply panel that admins post in a public channel.
-    /// </summary>
-    /// <param name="config">The gate the panel applies to.</param>
-    /// <returns>The button row for the panel message.</returns>
-    public MessageComponent BuildPanelComponents(ChannelAccessConfig config)
-    {
-        return new ComponentBuilder()
-            .WithButton("Apply for access", $"chanacc:apply:{config.Id}", ButtonStyle.Primary, new Emoji("📝"))
-            .Build();
     }
 
     #endregion
