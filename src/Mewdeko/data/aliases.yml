@@ -4258,3 +4258,11 @@ achexcluderole:
   - achexcluderole
 achexcludechannel:
   - achexcludechannel
+importxp:
+  - importxp
+importcurrency:
+  - importcurrency
+importmee6settings:
+  - importmee6settings
+importundo:
+  - importundo
