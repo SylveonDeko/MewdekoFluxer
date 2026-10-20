@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using DataModel;
 using Discord.Net;
 using Discord.Rest;
@@ -12,7 +13,7 @@ namespace Mewdeko.Modules.OwnerOnly.Services;
 
 /// <summary>
 ///     Asks the owner of a server why Mewdeko was removed, right after the bot leaves or is
-///     kicked, and records whatever they answer.
+///     kicked, and records whatever they reply in the direct message.
 /// </summary>
 public class GuildLeaveFeedbackService : INService, IReadyExecutor
 {
@@ -23,8 +24,16 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
     private static readonly TimeSpan PromptCooldown = TimeSpan.FromDays(30);
 
     /// <summary>
-    ///     The reason keys offered in the select menu, in display order. The value is used as the
-    ///     select menu option value, the stored reason, and the suffix of the localization key.
+    ///     How long after the prompt a direct message reply still counts as the answer.
+    /// </summary>
+    private static readonly TimeSpan ReplyWindow = TimeSpan.FromDays(7);
+
+    private static readonly Regex ReasonReplyRegex =
+        new(@"^(\d{1,2})\b[\s.:)-]*(.*)$", RegexOptions.Singleline | RegexOptions.Compiled);
+
+    /// <summary>
+    ///     The reason keys offered in the prompt, in display order. The position is the number to reply with and the key is
+    ///     the stored reason and the suffix of the localization key.
     /// </summary>
     public static readonly IReadOnlyList<string> ReasonKeys =
     [
@@ -101,6 +110,7 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
     public Task OnReadyAsync()
     {
         handler.Subscribe("LeftGuild", "GuildLeaveFeedbackService", OnLeftGuild);
+        handler.Subscribe("MessageReceived", "GuildLeaveFeedbackService", OnMessageReceived);
         return Task.CompletedTask;
     }
 
@@ -160,32 +170,20 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
         if (owner is null)
             return;
 
+        var reasonList = string.Join("\n",
+            ReasonKeys.Select((key, index) => $"{index + 1}. {GetReasonLabel(key, guild.Id)}"));
+
         var eb = new EmbedBuilder()
             .WithOkColor()
             .WithTitle(strings.LeaveFeedbackTitle(guild.Id))
             .WithDescription(strings.LeaveFeedbackDesc(guild.Id, guild.Name))
+            .AddField(strings.LeaveFeedbackReasonsTitle(guild.Id), reasonList)
+            .AddField(strings.LeaveFeedbackHowToReply(guild.Id), strings.LeaveFeedbackInstructions(guild.Id))
             .WithFooter(strings.LeaveFeedbackFooter(guild.Id));
-
-        var menu = new SelectMenuBuilder()
-            .WithCustomId($"leavefb:reason:{record.Id}")
-            .WithPlaceholder(strings.LeaveFeedbackPlaceholder(guild.Id))
-            .WithMinValues(1)
-            .WithMaxValues(1);
-
-        foreach (var key in ReasonKeys)
-            menu.AddOption(GetReasonLabel(key, guild.Id), key);
-
-        var components = new ComponentBuilder()
-            .WithSelectMenu(menu)
-            .WithButton(strings.LeaveFeedbackWriteButton(guild.Id), $"leavefb:comment:{record.Id}",
-                ButtonStyle.Secondary, row: 1)
-            .WithButton(strings.LeaveFeedbackDismissButton(guild.Id), $"leavefb:dismiss:{record.Id}",
-                ButtonStyle.Secondary, row: 1)
-            .Build();
 
         try
         {
-            await owner.SendMessageAsync(embed: eb.Build(), components: components).ConfigureAwait(false);
+            await owner.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
         }
         catch (HttpException)
         {
@@ -345,18 +343,72 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
         return await db.GuildLeaveFeedbacks.Where(x => x.Id == id).DeleteAsync().ConfigureAwait(false) > 0;
     }
 
-    /// <summary>
-    ///     Loads a feedback record, making sure it belongs to the user acting on it.
-    /// </summary>
-    /// <param name="id">The feedback record id from the component custom id.</param>
-    /// <param name="userId">The user who pressed the component.</param>
-    /// <returns>The record, or null if it does not exist or belongs to someone else.</returns>
-    public async Task<GuildLeaveFeedback?> GetForUser(int id, ulong userId)
+    private Task OnMessageReceived(SocketMessage message)
     {
-        await using var db = await dbFactory.CreateConnectionAsync().ConfigureAwait(false);
-        return await db.GuildLeaveFeedbacks.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == userId)
-            .ConfigureAwait(false);
+        if (message.Author.IsBot || message.Channel is not IDMChannel || string.IsNullOrWhiteSpace(message.Content))
+            return Task.CompletedTask;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await HandleReply(message).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to handle a leave feedback reply from {UserId}", message.Author.Id);
+            }
+        });
+        return Task.CompletedTask;
     }
+
+    private async Task HandleReply(SocketMessage message)
+    {
+        if (message.Content.StartsWith(bss.Data.Prefix, StringComparison.InvariantCulture))
+            return;
+
+        await using var db = await dbFactory.CreateConnectionAsync().ConfigureAwait(false);
+
+        var cutoff = DateTime.UtcNow - ReplyWindow;
+        var record = await db.GuildLeaveFeedbacks
+            .Where(x => x.OwnerId == message.Author.Id && x.AnsweredAt == null && !x.Dismissed &&
+                        x.DateAdded > cutoff)
+            .OrderByDescending(x => x.DateAdded)
+            .FirstOrDefaultAsync().ConfigureAwait(false);
+        if (record is null)
+            return;
+
+        var content = message.Content.Trim();
+        if (content.Equals("skip", StringComparison.OrdinalIgnoreCase))
+        {
+            await Dismiss(record.Id).ConfigureAwait(false);
+            await message.Channel.SendMessageAsync(embed: new EmbedBuilder()
+                .WithOkColor()
+                .WithDescription(strings.LeaveFeedbackDismissed(record.GuildId))
+                .Build()).ConfigureAwait(false);
+            return;
+        }
+
+        var comment = content;
+        var match = ReasonReplyRegex.Match(content);
+        if (match.Success && int.Parse(match.Groups[1].Value) is var number && number >= 1 &&
+            number <= ReasonKeys.Count)
+        {
+            await SetReason(record.Id, ReasonKeys[number - 1]).ConfigureAwait(false);
+            comment = match.Groups[2].Value.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(comment))
+            await SetComment(record.Id, comment.TrimTo(2000)).ConfigureAwait(false);
+
+        await message.Channel.SendMessageAsync(embed: new EmbedBuilder()
+            .WithOkColor()
+            .WithDescription(strings.LeaveFeedbackSubmitted(record.GuildId))
+            .Build()).ConfigureAwait(false);
+
+        await Report(record.Id, message.Author).ConfigureAwait(false);
+    }
+
 
     /// <summary>
     ///     Stores the reason the owner selected.
