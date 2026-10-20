@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using DataModel;
 using LinqToDB;
 using LinqToDB.Async;
+using Mewdeko.Common.ModuleBehaviors;
 using Mewdeko.Database.DbContextStuff;
 using Mewdeko.Database.Enums;
 using Mewdeko.Modules.Forms.Common;
@@ -15,11 +16,12 @@ namespace Mewdeko.Modules.Forms.Services;
 /// <summary>
 ///     Service for managing custom forms with conditional logic and Discord integration.
 /// </summary>
-public partial class FormsService : INService
+public partial class FormsService : INService, IReadyExecutor, IUnloadableService
 {
     private readonly DiscordShardedClient client;
     private readonly IAnalyticsCollector collector;
     private readonly IDataConnectionFactory dbFactory;
+    private readonly EventHandler eventHandler;
     private readonly GuildSettingsService guildSettings;
     private readonly IHttpClientFactory httpFactory;
     private readonly ILogger<FormsService> logger;
@@ -30,6 +32,7 @@ public partial class FormsService : INService
     /// </summary>
     /// <param name="client">The Discord client instance.</param>
     /// <param name="dbFactory">Provider for database connections.</param>
+    /// <param name="eventHandler">The event handler that delivers the reactions reviewers decide with.</param>
     /// <param name="guildSettings">Provides the guild's own defaults, such as the review button emotes.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     /// <param name="strings">The localization strings provider.</param>
@@ -38,6 +41,7 @@ public partial class FormsService : INService
     public FormsService(
         DiscordShardedClient client,
         IDataConnectionFactory dbFactory,
+        EventHandler eventHandler,
         GuildSettingsService guildSettings,
         ILogger<FormsService> logger,
         GeneratedBotStrings strings,
@@ -46,11 +50,13 @@ public partial class FormsService : INService
     {
         this.client = client;
         this.dbFactory = dbFactory;
+        this.eventHandler = eventHandler;
         this.guildSettings = guildSettings;
         this.logger = logger;
         this.strings = strings;
         this.collector = collector;
         this.httpFactory = httpFactory;
+        eventHandler.Subscribe("ReactionAdded", "FormsService", OnReviewReactionAddedAsync);
     }
 
     #region Discord Integration
@@ -110,10 +116,7 @@ public partial class FormsService : INService
                 }
                 : AllowedMentions.None;
 
-            var components = await BuildReviewComponentsAsync(form, response.Id);
-
-            var msg = await channel.SendMessageAsync(content, embed: embed, allowedMentions: mentions,
-                components: components);
+            var msg = await channel.SendMessageAsync(content, embed: embed, allowedMentions: mentions);
 
             // Update response with message ID
             await using var db = await dbFactory.CreateConnectionAsync();
@@ -122,7 +125,7 @@ public partial class FormsService : INService
                 .Set(r => r.MessageId, msg.Id)
                 .UpdateAsync();
 
-            if (components != null)
+            if (await AddReviewReactionsAsync(form, msg))
                 await SetReviewMessageAsync(response.Id, msg.Id);
 
             logger.LogInformation("Logged form submission {ResponseId} to channel {ChannelId}",

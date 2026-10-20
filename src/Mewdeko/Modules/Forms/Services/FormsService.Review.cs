@@ -10,52 +10,209 @@ namespace Mewdeko.Modules.Forms.Services;
 /// </summary>
 /// <remarks>
 ///     Reviewing a queue is moderator work, and handing somebody the whole dashboard so they can
-///     press approve on a form is more access than the job needs. The buttons sit on the submission
-///     message itself, where the people doing the reviewing already are.
+///     press approve on a form is more access than the job needs. The review emotes sit on the
+///     submission message itself, where the people doing the reviewing already are.
 /// </remarks>
 public partial class FormsService
 {
-    /// <summary>
-    ///     The prefix every form review component id starts with.
-    /// </summary>
-    public const string ReviewComponentPrefix = "form_review";
+    private static readonly TimeSpan RejectReasonTimeout = TimeSpan.FromMinutes(2);
+
+    private readonly ConcurrentDictionary<ulong, byte> reviewMessages = new();
 
     /// <summary>
-    ///     The emote a review button falls back to when neither the form nor the guild names one.
+    ///     The emote a review reaction falls back to when neither the form nor the guild names one.
     /// </summary>
     private const string DefaultApproveEmote = "✅";
 
     private const string DefaultRejectEmote = "❌";
 
-    /// <summary>
-    ///     Builds the approve and reject buttons for a response, or nothing when the form does not
-    ///     review its responses.
-    /// </summary>
-    /// <param name="form">The form the response belongs to.</param>
-    /// <param name="responseId">The response the buttons decide.</param>
-    /// <returns>The components to attach to the submission message, or null when there are none.</returns>
-    public async Task<MessageComponent?> BuildReviewComponentsAsync(Form form, int responseId)
+    /// <inheritdoc />
+    public async Task OnReadyAsync()
     {
-        if (!ReviewsResponses(form))
-            return null;
+        await using var db = await dbFactory.CreateConnectionAsync();
 
-        var (approve, reject) = await GetReviewEmotesAsync(form);
+        var pending = await db.FormResponseWorkflows
+            .Where(w => w.ReviewMessageId != null && w.Status == (int)ResponseStatus.Pending)
+            .Select(w => w.ReviewMessageId!.Value)
+            .ToListAsync();
 
-        return new ComponentBuilder()
-            .WithButton("Approve", $"{ReviewComponentPrefix}:approve:{responseId}", ButtonStyle.Success, approve)
-            .WithButton("Reject", $"{ReviewComponentPrefix}:reject:{responseId}", ButtonStyle.Danger, reject)
-            .Build();
+        foreach (var messageId in pending)
+            reviewMessages.TryAdd(messageId, 0);
     }
 
     /// <summary>
-    ///     Works out which emotes a form's review buttons carry.
+    ///     Unloads the service and unsubscribes from events.
+    /// </summary>
+    public Task Unload()
+    {
+        eventHandler.Unsubscribe("ReactionAdded", "FormsService", OnReviewReactionAddedAsync);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    ///     Adds the approve and reject reactions to a submission message, or nothing when the form
+    ///     does not review its responses.
+    /// </summary>
+    /// <param name="form">The form the response belongs to.</param>
+    /// <param name="message">The submission message reviewers react to.</param>
+    /// <returns>True when the reactions were added.</returns>
+    public async Task<bool> AddReviewReactionsAsync(Form form, IUserMessage message)
+    {
+        if (!ReviewsResponses(form))
+            return false;
+
+        var (approve, reject) = await GetReviewEmotesAsync(form);
+
+        await message.AddReactionAsync(approve);
+        await message.AddReactionAsync(reject);
+        return true;
+    }
+
+    private async Task OnReviewReactionAddedAsync(Cacheable<IUserMessage, ulong> cachedMessage,
+        Cacheable<IMessageChannel, ulong> cachedChannel, SocketReaction reaction)
+    {
+        if (!reviewMessages.ContainsKey(cachedMessage.Id) || reaction.UserId == client.CurrentUser.Id ||
+            reaction.User.IsSpecified && reaction.User.Value.IsBot)
+            return;
+
+        try
+        {
+            await using var db = await dbFactory.CreateConnectionAsync();
+            var workflow = await db.FormResponseWorkflows
+                .FirstOrDefaultAsync(w => w.ReviewMessageId == cachedMessage.Id);
+            if (workflow == null)
+                return;
+
+            var response = await GetResponseDetailsAsync(workflow.ResponseId);
+            var form = response == null ? null : await GetFormAsync(response.FormId);
+            if (form == null)
+                return;
+
+            var (approve, reject) = await GetReviewEmotesAsync(form);
+            var approving = Equals(reaction.Emote, approve);
+            if (!approving && !Equals(reaction.Emote, reject))
+                return;
+
+            var message = await cachedMessage.GetOrDownloadAsync();
+            var reviewer = client.GetGuild(form.GuildId)?.GetUser(reaction.UserId);
+            if (reviewer == null)
+                return;
+
+            if (!CanReview(form, reviewer))
+            {
+                await message.RemoveReactionAsync(reaction.Emote, reaction.UserId);
+                await NotifyReviewerAsync(message.Channel, reviewer,
+                    strings.FormsReviewNeedRole(form.GuildId, form.ReviewerRoleId is { } roleId and > 0
+                        ? $"<@&{roleId}>"
+                        : strings.FormsReviewManageServer(form.GuildId)));
+                return;
+            }
+
+            if ((ResponseStatus)workflow.Status is ResponseStatus.Approved or ResponseStatus.Rejected)
+            {
+                await message.RemoveReactionAsync(reaction.Emote, reaction.UserId);
+                await NotifyReviewerAsync(message.Channel, reviewer,
+                    strings.FormsReviewDecided(form.GuildId, response!.Id,
+                        ((ResponseStatus)workflow.Status).ToString().ToLowerInvariant()));
+                return;
+            }
+
+            if (approving)
+                await ApproveFromReactionAsync(form, response!.Id, message, reviewer);
+            else
+                await RejectFromReactionAsync(form, response!.Id, message, reviewer, reaction.Emote);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not handle a form review reaction on message {MessageId}",
+                cachedMessage.Id);
+        }
+    }
+
+    private async Task ApproveFromReactionAsync(Form form, int responseId, IUserMessage message,
+        IGuildUser reviewer)
+    {
+        var (success, inviteCode) = await ApproveResponseAsync(responseId, reviewer.Id, null);
+        if (!success)
+        {
+            await NotifyReviewerAsync(message.Channel, reviewer,
+                strings.FormsReviewApproveFailed(form.GuildId));
+            return;
+        }
+
+        await SettleReviewMessageAsync(form, responseId, true, reviewer.Id, null);
+        await NotifyReviewerAsync(message.Channel, reviewer, string.IsNullOrWhiteSpace(inviteCode)
+            ? strings.FormsReviewApproved(form.GuildId, responseId)
+            : strings.FormsReviewApprovedInvite(form.GuildId, responseId, inviteCode));
+    }
+
+    private async Task RejectFromReactionAsync(Form form, int responseId, IUserMessage message,
+        IGuildUser reviewer, IEmote emote)
+    {
+        var prompt = await message.Channel.SendMessageAsync(
+            strings.FormsReviewReasonPrompt(form.GuildId, reviewer.Mention, responseId),
+            allowedMentions: new AllowedMentions { UserIds = [reviewer.Id] });
+
+        var reason = (await WaitForReplyAsync(message.Channel.Id, reviewer.Id, RejectReasonTimeout))?.Trim();
+        _ = prompt.DeleteAsync();
+
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            await message.RemoveReactionAsync(emote, reviewer.Id);
+            await NotifyReviewerAsync(message.Channel, reviewer,
+                strings.FormsReviewReasonTimeout(form.GuildId, responseId));
+            return;
+        }
+
+        if (!await RejectResponseAsync(responseId, reviewer.Id, reason))
+        {
+            await NotifyReviewerAsync(message.Channel, reviewer, strings.FormsReviewRejectFailed(form.GuildId));
+            return;
+        }
+
+        await SettleReviewMessageAsync(form, responseId, false, reviewer.Id, reason);
+        await NotifyReviewerAsync(message.Channel, reviewer, strings.FormsReviewRejected(form.GuildId, responseId));
+    }
+
+    private static async Task NotifyReviewerAsync(IMessageChannel channel, IGuildUser reviewer, string text)
+    {
+        var line = $"{reviewer.Mention} {text}";
+        var notice = await channel.SendMessageAsync(line,
+            allowedMentions: new AllowedMentions { UserIds = [reviewer.Id] });
+        _ = Task.Delay(TimeSpan.FromSeconds(15)).ContinueWith(_ => notice.DeleteAsync());
+    }
+
+    private async Task<string?> WaitForReplyAsync(ulong channelId, ulong userId, TimeSpan timeout)
+    {
+        var reply = new TaskCompletionSource<string>();
+        eventHandler.Subscribe("MessageReceived", "FormsService", OnMessage);
+        try
+        {
+            return await Task.WhenAny(reply.Task, Task.Delay(timeout)) == reply.Task ? await reply.Task : null;
+        }
+        finally
+        {
+            eventHandler.Unsubscribe("MessageReceived", "FormsService", OnMessage);
+        }
+
+        Task OnMessage(SocketMessage arg)
+        {
+            if (arg.Author.Id == userId && arg.Channel.Id == channelId)
+                reply.TrySetResult(arg.Content);
+
+            return Task.CompletedTask;
+        }
+    }
+
+    /// <summary>
+    ///     Works out which emotes a form's review reactions carry.
     /// </summary>
     /// <remarks>
     ///     The form's own choice wins, then the guild's default, then a plain tick and cross. An
     ///     emote that no longer parses, usually a custom one from a server the bot has left, falls
-    ///     back rather than breaking the buttons on every future submission.
+    ///     back rather than breaking the reactions on every future submission.
     /// </remarks>
-    /// <param name="form">The form whose buttons are being built.</param>
+    /// <param name="form">The form whose reactions are being added.</param>
     /// <returns>The approve and reject emotes.</returns>
     public async Task<(IEmote Approve, IEmote Reject)> GetReviewEmotesAsync(Form form)
     {
@@ -84,7 +241,7 @@ public partial class FormsService
     }
 
     /// <summary>
-    ///     Reads a guild's default review button emotes.
+    ///     Reads a guild's default review reaction emotes.
     /// </summary>
     /// <param name="guildId">The guild.</param>
     /// <returns>The stored emotes, null where the guild has not set one.</returns>
@@ -96,16 +253,16 @@ public partial class FormsService
     }
 
     /// <summary>
-    ///     Sets a guild's default review button emotes.
+    ///     Sets a guild's default review reaction emotes.
     /// </summary>
     /// <param name="guildId">The guild.</param>
-    /// <param name="approve">Emote for the approve button, or null or empty to clear it.</param>
-    /// <param name="reject">Emote for the reject button, or null or empty to clear it.</param>
+    /// <param name="approve">Emote for the approve reaction, or null or empty to clear it.</param>
+    /// <param name="reject">Emote for the reject reaction, or null or empty to clear it.</param>
     /// <returns>An error message when an emote cannot be used, otherwise null.</returns>
     public async Task<string?> SetGuildReviewEmotesAsync(ulong guildId, string? approve, string? reject)
     {
         // A stored emote that does not parse would leave every future submission with broken
-        // buttons, and the failure would surface far from the setting that caused it.
+        // reactions, and the failure would surface far from the setting that caused it.
         if (Unusable(approve, out var approveError))
             return approveError;
 
@@ -153,10 +310,10 @@ public partial class FormsService
     /// </summary>
     /// <remarks>
     ///     A form may name the role that reviews it. When it does not, the fallback is Manage
-    ///     Server, so a review button is never open to whoever happens to see the channel.
+    ///     Server, so a review reaction is never open to whoever happens to see the channel.
     /// </remarks>
     /// <param name="form">The form the response belongs to.</param>
-    /// <param name="user">The person who pressed the button.</param>
+    /// <param name="user">The person who reacted.</param>
     /// <returns>True when they may decide it.</returns>
     public static bool CanReview(Form form, IGuildUser user)
     {
@@ -254,7 +411,7 @@ public partial class FormsService
     }
 
     /// <summary>
-    ///     Records which Discord message carries a response's review buttons.
+    ///     Records which Discord message carries a response's review reactions.
     /// </summary>
     /// <param name="responseId">The response.</param>
     /// <param name="messageId">The message.</param>
@@ -266,11 +423,13 @@ public partial class FormsService
             .Where(w => w.ResponseId == responseId)
             .Set(w => w.ReviewMessageId, messageId)
             .UpdateAsync();
+
+        reviewMessages.TryAdd(messageId, 0);
     }
 
     /// <summary>
     ///     Settles the submission message after a decision: notes the outcome on the embed and takes
-    ///     the buttons away, so a decided response cannot be decided again from a stale message.
+    ///     the reactions away, so a decided response cannot be decided again from a stale message.
     /// </summary>
     /// <param name="form">The form the response belongs to.</param>
     /// <param name="responseId">The response that was decided.</param>
@@ -320,12 +479,9 @@ public partial class FormsService
 
             if (workflow.DmFailed)
                 embed.AddField("Note", "The submitter could not be messaged, so they have not been told.");
-
-            await message.ModifyAsync(m =>
-            {
-                m.Embed = embed.Build();
-                m.Components = new ComponentBuilder().Build();
-            });
+            reviewMessages.TryRemove(messageId, out _);
+            await message.ModifyAsync(m => m.Embed = embed.Build());
+            await message.RemoveAllReactionsAsync();
         }
         catch (Exception ex)
         {
