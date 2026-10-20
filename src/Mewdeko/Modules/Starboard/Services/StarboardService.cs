@@ -1,5 +1,4 @@
 ﻿using System.IO;
-using System.Net.Http;
 using System.Text.RegularExpressions;
 using DataModel;
 using LinqToDB;
@@ -147,12 +146,6 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     /// <returns>A list of starboard configurations.</returns>
     public List<DataModel.Starboard> GetStarboards(ulong guildId)
         => starboardConfigs.Where(x => x.GuildId == guildId).ToList();
-
-    /// <summary>
-    ///     Matches the author link line a starboard repost starts its container with.
-    /// </summary>
-    private static readonly Regex RepostAuthorRegex =
-        new(@"^\[\*\*(.+?)\*\*\]\(https://discord\.com/users/(\d+)\)$", RegexOptions.Compiled);
 
     /// <summary>
     ///     Matches a Discord message jump link and captures its channel and message ids.
@@ -304,7 +297,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
             if (repost == null)
                 return null;
 
-            (content, authorName, authorAvatarUrl, imageUrl) = await ParseRepost(guild, repost);
+            (content, authorName, authorAvatarUrl, imageUrl) = ParseRepost(repost);
         }
 
         var starboardEmotes = ParseEmotes(starboardConfig.Emote);
@@ -354,20 +347,16 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     }
 
     /// <summary>
-    ///     Finds the source channel id in a starboard repost by reading its jump link, from the link button on
-    ///     Components V2 reposts or from the embed on legacy reposts. Returns 0 when none is found.
+    ///     Finds the source channel id in a starboard repost by reading its jump link from the embed. Returns 0
+    ///     when none is found.
     /// </summary>
     private static ulong FindJumpChannelId(IMessage? repost, ulong messageId)
     {
         if (repost == null)
             return 0;
 
-        var sources = repost.Components
-            .OfType<ActionRowComponent>()
-            .SelectMany(row => row.Components.OfType<ButtonComponent>())
-            .Select(button => button.Url)
-            .Concat(repost.Embeds.SelectMany(e =>
-                new[] { e.Url, e.Description }.Concat(e.Fields.Select(f => f.Value))))
+        var sources = repost.Embeds
+            .SelectMany(e => new[] { e.Url, e.Description }.Concat(e.Fields.Select(f => f.Value)))
             .Append(repost.Content);
 
         foreach (var source in sources)
@@ -409,97 +398,26 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     }
 
     /// <summary>
-    ///     Reads content, author and image back out of a starboard repost. Handles Components V2 reposts (a
-    ///     container of an author link, the content and a media gallery), legacy embed reposts and legacy plain
-    ///     text reposts.
+    ///     Reads content, author and image back out of a starboard repost embed.
     /// </summary>
-    private async Task<(string? Content, string AuthorName, string? AuthorAvatarUrl, string? ImageUrl)>
-        ParseRepost(SocketGuild guild, IMessage repost)
+    private static (string? Content, string AuthorName, string? AuthorAvatarUrl, string? ImageUrl)
+        ParseRepost(IMessage repost)
     {
-        if (repost.Embeds.Count > 0)
-        {
-            var embed = repost.Embeds.First();
-            var embedImage = embed.Image.HasValue ? embed.Image.Value.Url :
-                embed.Thumbnail.HasValue ? embed.Thumbnail.Value.Url : null;
-            return (embed.Description, embed.Author?.Name ?? "Unknown User", embed.Author?.IconUrl, embedImage);
-        }
+        var embed = repost.Embeds.FirstOrDefault();
+        if (embed == null)
+            return (repost.Content, "Unknown User", null, null);
 
-        var textParts = new List<string>();
-        string? imageUrl = null;
-        string? authorName = null;
-        ulong authorId = 0;
-
-        var containers = repost.Components.OfType<ContainerComponent>().ToList();
-        foreach (var child in containers.SelectMany(c => c.Components))
-        {
-            switch (child)
-            {
-                case TextDisplayComponent text when authorName == null && RepostAuthorRegex.IsMatch(text.Content):
-                    var authorMatch = RepostAuthorRegex.Match(text.Content);
-                    authorName = authorMatch.Groups[1].Value;
-                    ulong.TryParse(authorMatch.Groups[2].Value, out authorId);
-                    break;
-                case TextDisplayComponent text:
-                    if (!string.IsNullOrWhiteSpace(text.Content))
-                        textParts.Add(text.Content);
-                    break;
-                case MediaGalleryComponent gallery when imageUrl == null:
-                    imageUrl = gallery.Items.Select(item => item.Media.Url)
-                        .FirstOrDefault(url => !string.IsNullOrWhiteSpace(url));
-                    break;
-            }
-        }
-
-        if (containers.Count == 0 && !string.IsNullOrWhiteSpace(repost.Content))
-        {
-            var legacyMatch = Regex.Match(repost.Content, @"\[\*\*(.+?)\*\*\]\(https://discord\.com/users/(\d+)\)");
-            if (legacyMatch.Success)
-            {
-                authorName = legacyMatch.Groups[1].Value;
-                ulong.TryParse(legacyMatch.Groups[2].Value, out authorId);
-                textParts.Add(repost.Content.Replace(legacyMatch.Value, "").Trim());
-            }
-        }
-
-        string? authorAvatarUrl = null;
-        if (authorId != 0)
-        {
-            var member = guild.GetUser(authorId);
-            if (member != null)
-            {
-                authorName = member.DisplayName;
-                authorAvatarUrl = member.GetGuildAvatarUrl() ?? member.GetDisplayAvatarUrl();
-            }
-            else
-            {
-                try
-                {
-                    var user = await client.Rest.GetUserAsync(authorId);
-                    if (user != null)
-                    {
-                        authorName = user.GlobalName ?? user.Username;
-                        authorAvatarUrl = user.GetDisplayAvatarUrl();
-                    }
-                }
-                catch (Discord.Net.HttpException)
-                {
-                    authorAvatarUrl = CDN.GetDefaultUserAvatarUrl(authorId);
-                }
-            }
-        }
-
-        var content = textParts.Count > 0 ? string.Join('\n', textParts) : null;
-        return (content, authorName ?? "Unknown User", authorAvatarUrl, imageUrl);
+        var embedImage = embed.Image.HasValue ? embed.Image.Value.Url :
+            embed.Thumbnail.HasValue ? embed.Thumbnail.Value.Url : null;
+        return (embed.Description, embed.Author?.Name ?? "Unknown User", embed.Author?.IconUrl, embedImage);
     }
 
     /// <summary>
-    ///     Sums the bolded reaction counts on a repost stars line, which is the first top level text display on
-    ///     Components V2 reposts and the message content on legacy ones.
+    ///     Sums the bolded reaction counts on a repost stars line, which is the message content.
     /// </summary>
     private static int ParseRepostStarCount(IMessage repost)
     {
-        var starsLine = repost.Components.OfType<TextDisplayComponent>().FirstOrDefault()?.Content
-                        ?? repost.Content;
+        var starsLine = repost.Content;
         if (string.IsNullOrWhiteSpace(starsLine))
             return 0;
 
@@ -884,53 +802,20 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     }
 
     /// <summary>
-    ///     Creates a ComponentsV2 message for starboard posts with individual reaction counters and media gallery support.
+    ///     Builds a starboard post: the star counts as message text and an embed with the author, content, first
+    ///     image, a markdown jump link and any other attachments as links.
     /// </summary>
-    private async Task<(ComponentBuilderV2 Components, List<FileAttachment> Files)> CreateStarboardComponentsV2(
-        IUserMessage message, string content,
-        List<string> starboardEmotes, string authorName, bool allowBots)
+    private async Task<(string Stars, Discord.Embed Embed)> CreateStarboardPostAsync(IUserMessage message, string? content,
+        List<string> starboardEmotes, bool allowBots, ulong guildId)
     {
-        var builder = new ComponentBuilderV2();
-
-        // Handle media attachments
-        var attachments = message.Attachments.ToList();
-        var imageUrls = new List<string>();
-        var videoUrls = new List<string>();
-        var otherFiles = new List<IAttachment>();
-
-        foreach (var attachment in attachments)
-        {
-            var extension = Path.GetExtension(attachment.Filename).ToLowerInvariant();
-
-            if (IsImageExtension(extension))
-            {
-                imageUrls.Add(attachment.ProxyUrl);
-            }
-            else if (IsVideoExtension(extension))
-            {
-                videoUrls.Add(attachment.ProxyUrl);
-            }
-            else
-            {
-                otherFiles.Add(attachment);
-            }
-        }
-
-        // Create container components
-        var containerComponents = new List<IMessageComponentBuilder>();
-
-        // Get individual reaction counts for each starboard emote
-        var reactionCountsText = new List<string>();
-
+        var reactionCounts = new List<string>();
         foreach (var emote in starboardEmotes.Select(emoteString => emoteString.ToIEmote()))
         {
             try
             {
                 var count = await CountStarsAsync(message, emote, allowBots);
                 if (count > 0)
-                {
-                    reactionCountsText.Add($"{emote} **{count}**");
-                }
+                    reactionCounts.Add($"{emote} **{count}**");
             }
             catch
             {
@@ -938,73 +823,27 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
             }
         }
 
-        // Add username as a clickable link to user profile
-        containerComponents.Add(
-            new TextDisplayBuilder($"[**{authorName}**](https://discord.com/users/{message.Author.Id})"));
+        var embed = new EmbedBuilder()
+            .WithOkColor()
+            .WithAuthor(message.Author)
+            .WithTimestamp(message.Timestamp)
+            .AddField(strings.StarboardSource(guildId),
+                strings.StarboardJumpToMessage(guildId, message.GetJumpUrl()));
 
-        // Add message content if available
         if (!string.IsNullOrWhiteSpace(content))
-        {
-            containerComponents.Add(new TextDisplayBuilder(content));
-        }
+            embed.WithDescription(content);
 
-        // Add media gallery for images and videos
-        var allMediaUrls = imageUrls.Concat(videoUrls).ToList();
-        if (allMediaUrls.Count > 0)
-        {
-            var mediaItems =
-                allMediaUrls.Select(url => new MediaGalleryItemProperties(new UnfurledMediaItemProperties(url)));
-            containerComponents.Add(new MediaGalleryBuilder(mediaItems));
-        }
+        var image = message.Attachments.FirstOrDefault(a => IsImageExtension(Path.GetExtension(a.Filename).ToLowerInvariant()));
+        if (image != null)
+            embed.WithImageUrl(image.ProxyUrl);
 
-        // Download non-media files to re-upload with starboard post
-        var filesToUpload = new List<FileAttachment>();
+        var otherFiles = message.Attachments.Where(a => a != image).Take(5)
+            .Select(a => $"[{a.Filename}]({a.Url})").ToList();
         if (otherFiles.Count > 0)
-        {
-            using var httpClient = new HttpClient();
-            // Add user agent to mimic browser requests
-            httpClient.DefaultRequestHeaders.Add("User-Agent",
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+            embed.AddField(strings.StarboardAttachments(guildId), string.Join("\n", otherFiles));
 
-            foreach (var file in otherFiles.Take(3)) // Limit to 3 files to avoid size issues
-            {
-                try
-                {
-                    // Use the original URL instead of ProxyUrl for better compatibility
-                    var downloadUrl = file.Url ?? file.ProxyUrl;
-                    var fileData = await httpClient.GetByteArrayAsync(downloadUrl);
-                    filesToUpload.Add(new FileAttachment(new MemoryStream(fileData), file.Filename));
-
-                    // Add file component referencing the file we'll upload
-                    containerComponents.Add(new FileComponentBuilder
-                    {
-                        File = new UnfurledMediaItemProperties($"attachment://{file.Filename}")
-                    });
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning($"Failed to download file {file.Filename} for starboard: {ex.Message}");
-                    // If download fails, just show the filename as text
-                    containerComponents.Add(new TextDisplayBuilder($"📎 **{file.Filename}** ({file.Size} bytes)"));
-                }
-            }
-        }
-
-        // Stars count display outside container
-        var starsDisplay = string.Join(" ", reactionCountsText);
-
-        // Wrap with stars count outside container, username+thumbnail section inside container
-        var componentsBuilder = builder
-            .WithTextDisplay(!string.IsNullOrWhiteSpace(starsDisplay) ? starsDisplay : "✨")
-            .WithContainer(containerComponents)
-            .WithActionRow([
-                new ButtonBuilder()
-                    .WithLabel("Jump to Message")
-                    .WithStyle(ButtonStyle.Link)
-                    .WithUrl(message.GetJumpUrl())
-            ]);
-
-        return (componentsBuilder, filesToUpload);
+        var stars = reactionCounts.Count > 0 ? string.Join(" ", reactionCounts) : "✨";
+        return (stars, embed.Build());
     }
 
     /// <summary>
@@ -1015,18 +854,6 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
         return extension switch
         {
             ".jpg" or ".jpeg" or ".png" or ".gif" or ".webp" or ".bmp" or ".tiff" or ".svg" => true,
-            _ => false
-        };
-    }
-
-    /// <summary>
-    ///     Checks if a file extension is for a video.
-    /// </summary>
-    private static bool IsVideoExtension(string extension)
-    {
-        return extension switch
-        {
-            ".mp4" or ".webm" or ".mov" or ".avi" or ".mkv" or ".flv" or ".wmv" or ".m4v" => true,
             _ => false
         };
     }
@@ -1353,163 +1180,53 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
             return;
         }
 
+        IUserMessage? existingPost = null;
         if (maybePost != null)
         {
             if (starboard.RepostThreshold > 0)
             {
-                var messages = await starboardChannel.GetMessagesAsync(starboard.RepostThreshold).FlattenAsync();
-                var post = messages.FirstOrDefault(x => x.Id == maybePost.PostId);
+                var recent = await starboardChannel.GetMessagesAsync(starboard.RepostThreshold).FlattenAsync();
+                existingPost = recent.FirstOrDefault(x => x.Id == maybePost.PostId) as IUserMessage;
 
-                if (post != null)
+                if (existingPost == null)
                 {
-                    var post2 = post as IUserMessage;
-                    var eb1 = new EmbedBuilder()
-                        .WithOkColor()
-                        .WithAuthor(newMessage.Author)
-                        .WithDescription(content)
-                        .WithTimestamp(newMessage.Timestamp);
-
-                    if (imageurl is not null)
-                        eb1.WithImageUrl(imageurl);
-
-                    var (updateComponentsV2, files) = await CreateStarboardComponentsV2(newMessage, content,
-                        starboardEmotes, newMessage.Author.ToString(), starboard.AllowBots);
-
-                    // If we have files, we need to delete and recreate the message
-                    if (files.Count > 0)
-                    {
-                        await post2.DeleteAsync();
-                        var newPost = await starboardChannel.SendFilesAsync(files,
-                            components: updateComponentsV2.Build(),
-                            allowedMentions: AllowedMentions.None);
-                        await AddStarboardPost(newMessage.Id, newPost.Id, starboard.Id, totalStars);
-                    }
-                    else
-                    {
-                        await post2.ModifyAsync(x =>
-                        {
-                            x.Content = null;
-                            x.Components = updateComponentsV2.Build();
-                            x.AllowedMentions = AllowedMentions.None;
-                        });
-                    }
-                }
-                else
-                {
-                    var tryGetOldPost = await starboardChannel.GetMessageAsync(maybePost.PostId);
-                    if (tryGetOldPost != null)
+                    var stalePost = await starboardChannel.GetMessageAsync(maybePost.PostId);
+                    if (stalePost != null)
                     {
                         try
                         {
-                            await tryGetOldPost.DeleteAsync();
+                            await stalePost.DeleteAsync();
                         }
                         catch
                         {
                             // ignored
                         }
                     }
-
-                    var (newComponentsV2, files) = await CreateStarboardComponentsV2(newMessage, content,
-                        starboardEmotes, newMessage.Author.ToString(), starboard.AllowBots);
-
-                    IUserMessage msg1;
-                    if (files.Count > 0)
-                    {
-                        msg1 = await starboardChannel.SendFilesAsync(
-                            files,
-                            components: newComponentsV2.Build(),
-                            allowedMentions: AllowedMentions.None);
-                    }
-                    else
-                    {
-                        msg1 = await starboardChannel.SendMessageAsync(components: newComponentsV2.Build(),
-                            allowedMentions: AllowedMentions.None);
-                    }
-
-                    await AddStarboardPost(message.Id, msg1.Id, starboard.Id, totalStars);
                 }
             }
             else
             {
-                var tryGetOldPost = await starboardChannel.GetMessageAsync(maybePost.PostId);
-                if (tryGetOldPost != null)
-                {
-                    var toModify = tryGetOldPost as IUserMessage;
-                    var eb1 = new EmbedBuilder()
-                        .WithOkColor()
-                        .WithAuthor(newMessage.Author)
-                        .WithDescription(content)
-                        .WithTimestamp(newMessage.Timestamp);
-
-                    if (imageurl is not null)
-                        eb1.WithImageUrl(imageurl);
-
-                    var (modifyComponentsV2, files) = await CreateStarboardComponentsV2(newMessage, content,
-                        starboardEmotes, newMessage.Author.ToString(), starboard.AllowBots);
-
-                    // If we have files, we need to delete and recreate the message
-                    if (files.Count > 0)
-                    {
-                        await toModify.DeleteAsync();
-                        var newPost = await starboardChannel.SendFilesAsync(files,
-                            components: modifyComponentsV2.Build(),
-                            allowedMentions: AllowedMentions.None);
-                        await AddStarboardPost(newMessage.Id, newPost.Id, starboard.Id, totalStars);
-                    }
-                    else
-                    {
-                        await toModify.ModifyAsync(x =>
-                        {
-                            x.Content = null;
-                            x.Components = modifyComponentsV2.Build();
-                            x.AllowedMentions = AllowedMentions.None;
-                        });
-                    }
-                }
-                else
-                {
-                    var (elseComponentsV2, files) = await CreateStarboardComponentsV2(newMessage, content,
-                        starboardEmotes, newMessage.Author.ToString(), starboard.AllowBots);
-
-                    IUserMessage msg1;
-                    if (files.Count > 0)
-                    {
-                        msg1 = await starboardChannel.SendFilesAsync(
-                            files,
-                            components: elseComponentsV2.Build(),
-                            allowedMentions: AllowedMentions.None);
-                    }
-                    else
-                    {
-                        msg1 = await starboardChannel.SendMessageAsync(components: elseComponentsV2.Build(),
-                            allowedMentions: AllowedMentions.None);
-                    }
-
-                    await AddStarboardPost(message.Id, msg1.Id, starboard.Id, totalStars);
-                }
+                existingPost = await starboardChannel.GetMessageAsync(maybePost.PostId) as IUserMessage;
             }
         }
-        else
+
+        var (stars, embed) = await CreateStarboardPostAsync(newMessage, content, starboardEmotes,
+            starboard.AllowBots, textChannel.GuildId);
+
+        if (existingPost != null)
         {
-            var (finalComponentsV2, files) = await CreateStarboardComponentsV2(newMessage, content, starboardEmotes,
-                newMessage.Author.ToString(), starboard.AllowBots);
-
-            IUserMessage msg;
-            if (files.Count > 0)
+            await existingPost.ModifyAsync(x =>
             {
-                msg = await starboardChannel.SendFilesAsync(
-                    files,
-                    components: finalComponentsV2.Build(),
-                    allowedMentions: AllowedMentions.None);
-            }
-            else
-            {
-                msg = await starboardChannel.SendMessageAsync(components: finalComponentsV2.Build(),
-                    allowedMentions: AllowedMentions.None);
-            }
-
-            await AddStarboardPost(message.Id, msg.Id, starboard.Id, totalStars);
+                x.Content = stars;
+                x.Embed = embed;
+                x.AllowedMentions = AllowedMentions.None;
+            });
+            return;
         }
+
+        var sent = await starboardChannel.SendMessageAsync(stars, embed: embed,
+            allowedMentions: AllowedMentions.None);
+        await AddStarboardPost(newMessage.Id, sent.Id, starboard.Id, totalStars);
     }
 
     private async Task OnMessageDeletedAsync(Cacheable<IMessage, ulong> arg1, Cacheable<IMessageChannel, ulong> arg2)
