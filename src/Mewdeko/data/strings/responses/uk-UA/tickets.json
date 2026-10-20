@@ -54,7 +54,6 @@
   "ticket_locked": "🔒 Цей квиток заблоковано",
   "ticket_not_found": "Квиток не знайдено",
   "ticket_panel_created": "{0} Панель Квитків Створено!",
-  "ticket_panel_created_in": "Панель квитків успішно створено у {0}",
   "ticket_panel_creation_failed": "Не вдалося створити панель квитків.",
   "ticket_panel_deleted": "Панель квитків #{0} було видалено",
   "ticket_panel_deleted_with_references": "Панель {0} успішно видалено! Очищено посилання з {1} активних квитків та {2} видалених квитків.",

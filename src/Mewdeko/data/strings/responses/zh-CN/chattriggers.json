@@ -1,5 +1,4 @@
 {
-  "chat_trigger_edit": "编辑聊天触发器",
   "chat_trigger_id": "#{0}",
   "ct_clear": "清除聊天触发器",
   "ct_clear_done": "这将删除此服务器上的所有聊天触发器。",
@@ -8,7 +7,6 @@
   "ct_crossposting_channel": "到 <#{0}>",
   "ct_crossposting_webhook": "到 webhook",
   "ct_custom_prefix": "自定义前缀",
-  "ct_default_description": "描述",
   "ct_interaction_description": "应用命令描述",
   "ct_interaction_errors_desc": "运行 /triggers interactions errors 查看遇到的错误。",
   "ct_interaction_errors_info_desc": "更新应用命令聊天触发器时遇到了以下错误。如需帮助解决，请前往[官方支持服务器](https://discord.gg/Mewdeko)。",

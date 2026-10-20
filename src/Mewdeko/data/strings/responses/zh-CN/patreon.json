@@ -33,7 +33,6 @@
   "patreon_help_advanced_commands_list": "`patreon sync` - 从 API 同步支持者数据\n`patreon supporters` - 列出活跃支持者\n`patreon link` - 将 Discord 用户关联到 Patreon\n`patreon rolesync` - 切换身份组同步\n`patreon tiermap` - 将等级映射到 Discord 身份组\n`patreon syncall` - 同步所有支持者身份组\n`patreon stats` - 显示支持者统计\n`patreon goals` - 显示活动目标\n`patreon top` - 显示顶级支持者",
   "patreon_help_basic_commands": "基本命令",
   "patreon_help_basic_commands_list": "`patreon channel` - 设置公告频道\n`patreon message` - 设置自定义消息\n`patreon day` - 设置公告日\n`patreon toggle` - 启用/禁用公告\n`patreon config` - 显示当前设置\n`patreon announce` - 手动发送公告",
-  "patreon_help_commands": "可用命令",
   "patreon_help_description": "管理每月 Patreon 支持者公告，支持自定义消息和排程。",
   "patreon_help_placeholders": "可用占位符",
   "patreon_help_title": "Patreon 模块帮助",

@@ -33,7 +33,6 @@
   "patreon_help_advanced_commands_list": "`patreon sync` - Synchroniser les données des supporters depuis l'API\n`patreon supporters` - Lister les supporters actifs\n`patreon link` - Lier un utilisateur Discord à Patreon\n`patreon rolesync` - Activer/désactiver la synchronisation des rôles\n`patreon tiermap` - Associer un niveau à un rôle Discord\n`patreon syncall` - Synchroniser tous les rôles des supporters\n`patreon stats` - Afficher les statistiques des supporters\n`patreon goals` - Afficher les objectifs de la campagne\n`patreon top` - Afficher les meilleurs supporters",
   "patreon_help_basic_commands": "Commandes de base",
   "patreon_help_basic_commands_list": "`patreon channel` - Définir le salon d'annonce\n`patreon message` - Définir un message personnalisé\n`patreon day` - Définir le jour d'annonce\n`patreon toggle` - Activer/désactiver les annonces\n`patreon config` - Afficher les paramètres actuels\n`patreon announce` - Envoyer une annonce manuelle",
-  "patreon_help_commands": "Commandes disponibles",
   "patreon_help_description": "Gérez les annonces mensuelles de supporters Patreon avec des messages personnalisables et une planification.",
   "patreon_help_placeholders": "Variables disponibles",
   "patreon_help_title": "Aide du module Patreon",

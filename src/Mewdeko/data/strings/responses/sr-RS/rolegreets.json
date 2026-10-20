@@ -4,7 +4,6 @@
   "rolegreet_button_regular": "Regularno",
   "rolegreet_confirm_remove": "Da li ste sigurni da želite ukloniti sve RoleGreet-ove za ovu ulogu?",
   "rolegreet_confirm_removed": "RoleGreet-ovi uklonjeni!",
-  "rolegreet_delete_disabled": "RoleGreet #{0} se više neće brisati",
   "rolegreet_delete_success": "Uspešno ažuriran RoleGreet #{0} da se briše nakon {1}",
   "rolegreet_disable_status": "RoleGreet {0} postavljen na {1}",
   "rolegreet_greetbots_set": "RoleGreet {0} GreetBots postavljen na {1}",

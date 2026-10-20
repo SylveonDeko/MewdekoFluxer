@@ -1,5 +1,4 @@
 {
-  "chat_trigger_edit": "Izmena Okidača Ćaskanja",
   "chat_trigger_id": "#{0}",
   "ct_clear": "Brisanje okidača ćaskanja",
   "ct_clear_done": "Ovo će obrisati sve okidače ćaskanja na ovom serveru.",
@@ -8,7 +7,6 @@
   "ct_crossposting_channel": "Na <#{0}>",
   "ct_crossposting_webhook": "Na veb-kuku",
   "ct_custom_prefix": "Prilagođeni Prefiks",
-  "ct_default_description": "opis",
   "ct_interaction_description": "Opis Komande Aplikacije",
   "ct_interaction_errors_desc": "Pokrenite /triggers interactions errors da vidite greške koje su se pojavile.",
   "ct_interaction_errors_info_desc": "Sledeće greške su se pojavile prilikom ažuriranja okidača ćaskanja vaše aplikacije. Ako vam je potrebna pomoć u rešavanju bilo koje od njih, posetite [zvanični server za podršku](https://discord.gg/Mewdeko).",

@@ -6,7 +6,6 @@
   "suggest_button_emote_default": "提案ボタンの絵文字をデフォルトに戻しました。",
   "suggest_button_label_default": "提案ボタンのラベルをデフォルトに戻しました。",
   "suggest_button_type_set": "提案ボタン{0}が `{1}` になります",
-  "suggest_channel_not_set": "提案チャンネルが設定されていません！",
   "suggestion_accepted": "提案#{0}が承認されました",
   "suggestion_channel_set": "提案チャンネルを{0}に設定しました",
   "suggestion_considered": "提案#{0}が検討中です",

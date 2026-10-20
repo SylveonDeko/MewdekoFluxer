@@ -1,7 +1,4 @@
 {
-  "help_page_of": "{0}/{1}",
-  "help_all_commands": "All commands",
-  "help_back": "Back",
   "help_categories_description": "Do `{0}cmds modulename` to list a module's commands.\nDo `{0}h commandname` for help on a single command, or `{0}searchcmd term` to search every command.",
   "help_categories_title": "Command Categories",
   "help_category_counts": "{0} modules, {1} commands",
@@ -20,7 +17,6 @@
   "help_error": "There was an issue sending the help command, please check console and report to the support server.",
   "help_module_list_hint": "Do `{0}h commandname` for details on any command.",
   "help_module_overview": "{0}\n\nDo `{1}cmds {2} sectionname` to list one section, `{1}cmds {2} all` to list everything, or `{1}cmds {2} term` to search it.",
-  "help_run_cmd": "Run Command",
   "help_search_label": "Search term",
   "help_search_modal_title": "Search commands",
   "help_search_no_results": "Nothing in {0} matched `{1}`.",

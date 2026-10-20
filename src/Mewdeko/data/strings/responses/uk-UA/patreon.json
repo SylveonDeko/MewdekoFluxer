@@ -33,7 +33,6 @@
   "patreon_help_advanced_commands_list": "`patreon sync` - Синхронізувати дані патронів з API\n`patreon supporters` - Список активних патронів\n`patreon link` - Прив'язати користувача Discord до Patreon\n`patreon rolesync` - Перемкнути синхронізацію ролей\n`patreon tiermap` - Мапінг рівня до ролі Discord\n`patreon syncall` - Синхронізувати всі ролі патронів\n`patreon stats` - Показати статистику патронів\n`patreon goals` - Показати цілі кампанії\n`patreon top` - Показати кращих патронів",
   "patreon_help_basic_commands": "Основні Команди",
   "patreon_help_basic_commands_list": "`patreon channel` - Встановити канал анонсів\n`patreon message` - Встановити користувацьке повідомлення\n`patreon day` - Встановити день анонсу\n`patreon toggle` - Увімкнути/вимкнути анонси\n`patreon config` - Показати поточні налаштування\n`patreon announce` - Надіслати ручний анонс",
-  "patreon_help_commands": "Доступні Команди",
   "patreon_help_description": "Керування щомісячними анонсами патронів Patreon з налаштовуваними повідомленнями та плануванням.",
   "patreon_help_placeholders": "Доступні Заповнювачі",
   "patreon_help_title": "Довідка Модуля Patreon",

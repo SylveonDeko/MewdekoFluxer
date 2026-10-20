@@ -30,6 +30,5 @@
   "nunchi_round_started": "Kolo hry Nunchi začalo s {0} uživateli. Začni počítat od čísla {1}.",
   "nunchi_next_number": "Číslo registrováno. Poslední číslo bylo {0}.",
   "nunchi_failed_to_start": "Hru Nunchi se nepodařilo spustit z důvodu nedostatku účastníků.",
-  "nunchi_created": "Hra Nunchi byla vytvořena. Čekám na připojení uživatelů.",
-  "poll_closed": "Hlasování uzavřeno!"
+  "nunchi_created": "Hra Nunchi byla vytvořena. Čekám na připojení uživatelů."
 }

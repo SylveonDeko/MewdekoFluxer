@@ -4,7 +4,6 @@
   "rolegreet_button_regular": "Звичайний",
   "rolegreet_confirm_remove": "Ви впевнені, що хочете видалити всі RoleGreets для цієї ролі?",
   "rolegreet_confirm_removed": "RoleGreets видалено!",
-  "rolegreet_delete_disabled": "RoleGreet #{0} більше не буде видалятися",
   "rolegreet_delete_success": "RoleGreet #{0} успішно оновлено для видалення через {1}",
   "rolegreet_disable_status": "RoleGreet {0} встановлено на {1}",
   "rolegreet_greetbots_set": "RoleGreet {0} GreetBots встановлено на {1}",

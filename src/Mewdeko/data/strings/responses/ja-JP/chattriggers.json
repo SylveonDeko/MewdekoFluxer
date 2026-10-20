@@ -1,5 +1,4 @@
 {
-  "chat_trigger_edit": "チャットトリガーを編集",
   "chat_trigger_id": "#{0}",
   "ct_clear": "チャットトリガーをすべて削除",
   "ct_clear_done": "このサーバーのチャットトリガーをすべて削除します。",
@@ -8,7 +7,6 @@
   "ct_crossposting_channel": "<#{0}>に投稿",
   "ct_crossposting_webhook": "webhookに投稿",
   "ct_custom_prefix": "カスタムプレフィックス",
-  "ct_default_description": "説明",
   "ct_interaction_description": "アプリケーションコマンドの説明",
   "ct_interaction_errors_desc": "/triggers interactions errors を実行してエラーを確認してください。",
   "ct_interaction_errors_info_desc": "アプリケーションコマンドのチャットトリガー更新中に以下のエラーが発生しました。解決方法については[公式サポートサーバー](https://discord.gg/Mewdeko)にお立ち寄りください。",

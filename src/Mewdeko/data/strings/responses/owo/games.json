@@ -30,6 +30,5 @@
   "nunchi_round_started": "Nunchi round started with {0} users. Start counting from the number {1}.",
   "nunchi_next_number": "Number registered. Last number was {0}.",
   "nunchi_failed_to_start": "",
-  "nunchi_created": "",
-  "poll_closed": ""
+  "nunchi_created": ""
 }

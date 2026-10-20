@@ -1,6 +1,4 @@
 {
-  "help_all_commands": "Alle commando's",
-  "help_back": "Terug",
   "help_categories_description": "Kies hieronder een categorie om de modules te bekijken.\nGebruik `{0}h commandonaam` voor hulp bij één commando, of `{0}searchcmd term` om alle commando's te doorzoeken.",
   "help_categories_title": "Commandocategorieën",
   "help_category_counts": "{0} modules, {1} commando's",
@@ -19,7 +17,6 @@
   "help_error": "Er was een probleem bij het verzenden van het help-commando, controleer de console en meld het bij de supportserver.",
   "help_module_list_hint": "Gebruik `{0}h commandonaam` voor details over een commando.",
   "help_module_overview": "{0}\n\nKies hieronder een onderdeel, of gebruik **Alle commando's** om alles te tonen.",
-  "help_run_cmd": "Commando uitvoeren",
   "help_search_label": "Zoekterm",
   "help_search_modal_title": "Commando's zoeken",
   "help_search_no_results": "Niets in {0} komt overeen met `{1}`.",

@@ -63,7 +63,6 @@
   "user_voice_mute_time": "{0} heeft been **voice muted** voor {1}.",
   "warn_expire_reset": "Warnings zal geen longer expire.",
   "warn_log_description": "Username: {0}#{1}\nID of Warned Gebruiker: {2}\nWarn Number: {3}\nPunishment: {4} {5}\n\nReason: {6}\n\nContext: {7}",
-  "warn_log_title": "Warned door: {0}",
   "warn_punish_removed": "Gebruikers zal geen longer be punished voor {0} warnings.",
   "warn_punish_set_timed": "I zal apply {0} punishment voor {2} naar Gebruikers met {1} warnings."
 }

@@ -30,6 +30,5 @@
   "nunchi_round_started": "Nunchi startet med {0} spillere. Start med å telle fra {1}",
   "nunchi_next_number": "Tall registrert. Siste nummer var {0}.",
   "nunchi_failed_to_start": "Nunchi kunne ikke starte fordi det ikke var nok deltakere.",
-  "nunchi_created": "Nunchi startet. Venter på spillere.",
-  "poll_closed": "Avstemming avsluttet!"
+  "nunchi_created": "Nunchi startet. Venter på spillere."
 }

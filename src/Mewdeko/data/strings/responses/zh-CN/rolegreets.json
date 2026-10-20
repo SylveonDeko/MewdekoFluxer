@@ -4,7 +4,6 @@
   "rolegreet_button_regular": "普通",
   "rolegreet_confirm_remove": "您确定要删除此身份组的所有 RoleGreet 吗？",
   "rolegreet_confirm_removed": "RoleGreet 已删除！",
-  "rolegreet_delete_disabled": "RoleGreet #{0} 不再自动删除",
   "rolegreet_delete_success": "已成功更新 RoleGreet #{0}，将在 {1} 后删除",
   "rolegreet_disable_status": "RoleGreet {0} 已设为 {1}",
   "rolegreet_greetbots_set": "RoleGreet {0} 的 GreetBots 已设为 {1}",

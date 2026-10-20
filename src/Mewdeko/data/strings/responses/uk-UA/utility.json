@@ -70,7 +70,6 @@
   "invite_filter_unexpected": "Несподівана помилка під час фільтрації запрошення в каналі {0}",
   "invite_leaderboard_title": "Таблиця Лідерів Запрошень",
   "invite_link_text": "[Mewdeko](https://discord.com/oauth2/authorize?client_id=752236274261426212&scope=bot&permissions=66186303)\n[Mewdeko Nightly](https://discord.com/oauth2/authorize?client_id=964590728397344868&scope=bot&permissions=66186303)",
-  "invite_me": "Запросити Мене!",
   "invite_settings": "Відстеження запрошень {0}, видалення при виході {1}, мінімальний вік облікового запису {2}.",
   "invite_tracking_disabled": "Відстеження запрошень вимкнено.",
   "invite_tracking_enabled": "Відстеження запрошень увімкнено.",

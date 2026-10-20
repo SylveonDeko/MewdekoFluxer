@@ -30,6 +30,5 @@
   "nunchi_round_started": "Round de nunchi iniciado com {0} participantes. Comecem a contar do número {1}.",
   "nunchi_next_number": "Número registrado. O último número era {0}.",
   "nunchi_failed_to_start": "Não há participantes suficientes para iniciar uma partida de Nunchi.",
-  "nunchi_created": "Partida de nunchi criada. Aguardando jogadores se juntarem à partida.",
-  "poll_closed": "Enquete encerrada!"
+  "nunchi_created": "Partida de nunchi criada. Aguardando jogadores se juntarem à partida."
 }

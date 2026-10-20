@@ -4,7 +4,6 @@
   "rolegreet_button_regular": "Regular",
   "rolegreet_confirm_remove": "Are you sure you want to remove all RoleGreets for this role?",
   "rolegreet_confirm_removed": "RoleGreets removed!",
-  "rolegreet_delete_disabled": "RoleGreet #{0} will no longer delete",
   "rolegreet_delete_success": "Successfully updated RoleGreet #{0} to delete after {1}",
   "rolegreet_disable_status": "RoleGreet {0} set to {1}",
   "rolegreet_greetbots_set": "RoleGreet {0} GreetBots set to {1}",

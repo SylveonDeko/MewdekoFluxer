@@ -1,6 +1,5 @@
 {
   "giveaway_already_entered": "Gebruiker heeft Al entered this giveaway.",
-  "giveaway_checking_emote": "Checking emote...",
   "giveaway_emote_set": "Giveaway emote set naar {0}! Just keep in mind this doesn't update until de next giveaway.",
   "giveaway_ended": "Giveaway heeft ended!",
   "giveaway_ended_footer": "Ended at {0}",
@@ -31,8 +30,6 @@
   "giveaway_dm_status": "Giveaway DMs set naar {0}! Just keep in mind this doesn't update until de next giveaway.",
   "giveaway_embed_color_set": "Giveaway embed color set! Just keep in mind this doesn't update until de next giveaway.",
   "giveaway_ended_content": "{0} **Giveaway Ended!** {0}",
-  "giveaway_entry_failed": "Giveaway entry Mislukt:\n{0}",
-  "giveaway_entry_successful": "Giveaway entry successful!",
   "giveaway_guild_not_found": "de Server voor this giveaway could not be found.",
   "giveaway_invalid_color": "That's not een valid color! Please use proper hex (starts met #) of use html color names!",
   "giveaway_invalid_emote": "I'm unable naar use that emote voor giveaways! Most likely because I'm not in een Server met it.",

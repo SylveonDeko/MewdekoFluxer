@@ -6,7 +6,6 @@
   "suggest_button_emote_default": "已成功将建议按钮表情恢复为默认。",
   "suggest_button_label_default": "已成功将建议按钮标签恢复为默认。",
   "suggest_button_type_set": "建议按钮 {0} 现为 `{1}`",
-  "suggest_channel_not_set": "未设置建议频道！",
   "suggestion_accepted": "建议 #{0} 已接受",
   "suggestion_channel_set": "您的建议频道已设为 {0}",
   "suggestion_considered": "建议 #{0} 正在考虑",

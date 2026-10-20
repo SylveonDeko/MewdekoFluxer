@@ -1,6 +1,4 @@
 {
-  "help_all_commands": "كل الأوامر",
-  "help_back": "رجوع",
   "help_categories_description": "اختر فئة بالأسفل لتصفح وحداتها.\nاستخدم `{0}h اسم_الأمر` للحصول على مساعدة حول أمر واحد، أو `{0}searchcmd كلمة` للبحث في كل الأوامر.",
   "help_categories_title": "فئات الأوامر",
   "help_category_counts": "{0} وحدات، {1} أمر",
@@ -19,7 +17,6 @@
   "help_error": "There was an issue sending the help command, please check console and report to the support server.",
   "help_module_list_hint": "استخدم `{0}h اسم_الأمر` لعرض تفاصيل أي أمر.",
   "help_module_overview": "{0}\n\nاختر قسمًا بالأسفل، أو استخدم **كل الأوامر** لعرض كل شيء.",
-  "help_run_cmd": "Run Command",
   "help_search_label": "كلمة البحث",
   "help_search_modal_title": "البحث في الأوامر",
   "help_search_no_results": "لا يوجد شيء في {0} يطابق `{1}`.",

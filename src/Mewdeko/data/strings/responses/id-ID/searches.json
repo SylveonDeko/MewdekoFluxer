@@ -22,6 +22,5 @@
   "stream_role_wl_add": "Pengguna {0} akan mendapatkan peran stream bahkan jika mereka tidak memiliki kata kunci di judul stream.",
   "stream_role_wl_add_fail": "Pengguna {0} sudah di whitelist.",
   "stream_role_wl_rem": "Pengguna {0} sudah tidak di whitelist.",
-  "stream_role_wl_rem_fail": "Pengguna {0} tidak di whitelist.",
-  "define": "Jelaskan:"
+  "stream_role_wl_rem_fail": "Pengguna {0} tidak di whitelist."
 }

@@ -1,7 +1,4 @@
 {
-  "role_state_deleted_success": "{0} Successfully deleted {1}'s Role State!",
-  "role_state_remove_failed": "{0} Remove failed because:\n{1}",
-  "role_state_removed_success": "{0} Successfully removed those roles from {1}'s Role State!.",
   "role_states_config_enabled": "`Enabled:` {0}\n",
   "role_states_deleted_success_final": "{0} Successfully deleted {1}'s Role State!",
   "role_states_disabled": "{0} Role States are now disabled!",
@@ -23,7 +20,6 @@
   "role_states_transfer_failed": "Failed to transfer role states. See details below:",
   "role_states_transferred": "Successfully transferred {0} role states to {1}.",
   "role_states_user_deleted": "User role state for {0} has been deleted!",
-  "role_states_user_field": "User Role States",
   "role_states_user_title": "User Role States",
   "role_states_users_added_to_deny": "{0} Successfully added {1} user(s) to the deny list.",
   "role_states_users_removed_from_deny": "{0} Successfully removed {1} user(s) from the deny list.",

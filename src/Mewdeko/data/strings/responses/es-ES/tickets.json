@@ -54,7 +54,6 @@
   "ticket_locked": "🔒 Este ticket ha sido bloqueado",
   "ticket_not_found": "Ticket no encontrado",
   "ticket_panel_created": "¡{0} Panel de Tickets Creado!",
-  "ticket_panel_created_in": "Panel de tickets creado con éxito en {0}",
   "ticket_panel_creation_failed": "Fallo al crear el panel de tickets.",
   "ticket_panel_deleted": "El panel de tickets #{0} ha sido eliminado",
   "ticket_panel_deleted_with_references": "¡Panel {0} eliminado con éxito! Referencias borradas de {1} tickets activos y {2} tickets eliminados.",

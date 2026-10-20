@@ -51,7 +51,6 @@
   "anti_post_channel_add_failed": "Mislukt naar add Kanaal. Make sure Anti-Post-Kanaal protection is Ingeschakeld first met `.antipostchannel <action>`.",
   "mass_post_detected_dm": "je hebben been detected posting similar content across multiple Kanalen in **{0}**.",
   "auto_close_disabled": "Auto-close uitgeschakeld",
-  "auto_command_removed": "Auto command heeft been Verwijderd",
   "auto_publish_already_set": "{0} is Al set as an auto publish Kanaal.",
   "auto_publish_not_enabled": "Auto publish is not Ingeschakeld voor any Kanalen.",
   "auto_publish_not_set": "{0} is not an auto publish Kanaal.",

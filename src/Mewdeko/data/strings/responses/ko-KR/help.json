@@ -1,6 +1,4 @@
 {
-  "help_all_commands": "모든 명령어",
-  "help_back": "뒤로",
   "help_categories_description": "아래에서 카테고리를 선택해 모듈을 살펴보세요.\n개별 명령어 도움말은 `{0}h 명령어이름`, 전체 명령어 검색은 `{0}searchcmd 검색어` 를 사용하세요.",
   "help_categories_title": "명령어 카테고리",
   "help_category_counts": "모듈 {0}개, 명령어 {1}개",
@@ -19,7 +17,6 @@
   "help_error": "도움말 명령어를 보내는 중 문제가 발생했습니다. 콘솔을 확인하고 지원 서버에 보고해 주세요.",
   "help_module_list_hint": "아무 명령어의 자세한 정보는 `{0}h 명령어이름` 으로 확인하세요.",
   "help_module_overview": "{0}\n\n아래에서 섹션을 고르거나, **모든 명령어** 로 전부 나열하세요.",
-  "help_run_cmd": "명령어 실행",
   "help_search_label": "검색어",
   "help_search_modal_title": "명령어 검색",
   "help_search_no_results": "{0} 에서 `{1}` 과(와) 일치하는 항목이 없습니다.",

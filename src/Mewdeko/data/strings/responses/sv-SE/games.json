@@ -30,6 +30,5 @@
   "nunchi_round_started": "Nunchi runda startade med {0} deltagare. Börja räkna från nummer {1}.",
   "nunchi_next_number": "Nummer registrerat. Senaste numret var {0}",
   "nunchi_failed_to_start": "Nunchi startas inte eftersom det inte fanns tillräckligt många deltagare",
-  "nunchi_created": "Nunchi skapat. Väntar på att deltagare ska ansluta",
-  "poll_closed": "Lottningen är stängd!"
+  "nunchi_created": "Nunchi skapat. Väntar på att deltagare ska ansluta"
 }

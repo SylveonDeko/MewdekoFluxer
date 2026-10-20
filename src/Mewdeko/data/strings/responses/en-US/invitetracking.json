@@ -78,7 +78,6 @@
   "invite_mass_ban_confirm": "Ban **{0}** members invited by {1}?",
   "invite_mass_ban_reason": "Mass ban by {0} (invite tracking)",
   "invite_mass_ban_done": "Banned **{0}** members. **{1}** failed.",
-  "invite_mass_ban_target": "Provide an inviter or an invite code.",
   "invite_log_joined_bot": "{0} was added as a bot.",
   "invite_log_joined_vanity": "{0} joined through the vanity URL.",
   "invite_log_joined_by": "{0} was invited by {1} using `{2}`{3}.",

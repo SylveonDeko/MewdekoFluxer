@@ -33,7 +33,6 @@
   "patreon_help_advanced_commands_list": "`patreon sync` - Sync supporter data from API\n`patreon supporters` - List active supporters\n`patreon link` - Link Discord user to Patreon\n`patreon rolesync` - Toggle role synchronization\n`patreon tiermap` - Map tier to Discord role\n`patreon syncall` - Sync all supporter roles\n`patreon stats` - Show supporter statistics\n`patreon goals` - Show campaign goals\n`patreon top` - Show top supporters",
   "patreon_help_basic_commands": "Basic Commands",
   "patreon_help_basic_commands_list": "`patreon channel` - Set announcement channel\n`patreon message` - Set custom message\n`patreon day` - Set announcement day\n`patreon toggle` - Enable/disable announcements\n`patreon config` - Show current settings\n`patreon announce` - Send manual announcement",
-  "patreon_help_commands": "Available Commands",
   "patreon_help_description": "Manage monthly Patreon supporter announcements with customizable messages and scheduling.",
   "patreon_help_placeholders": "Available Placeholders",
   "patreon_help_title": "Patreon Module Help",

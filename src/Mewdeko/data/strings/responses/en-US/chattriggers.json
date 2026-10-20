@@ -1,5 +1,4 @@
 {
-  "chat_trigger_edit": "Chat Trigger Edit",
   "chat_trigger_id": "#{0}",
   "ct_active_hours": "Active Hours",
   "ct_allow_bots": "Responds To Bots",
@@ -28,7 +27,6 @@
   "ct_currency_cost": "Currency Cost",
   "ct_currency_reward": "Currency Reward",
   "ct_custom_prefix": "Custom Prefix",
-  "ct_default_description": "description",
   "ct_delete_response_after": "Deletes Response After",
   "ct_disabled": "Chat trigger {0} is now disabled.",
   "ct_disabled_word": "disabled",

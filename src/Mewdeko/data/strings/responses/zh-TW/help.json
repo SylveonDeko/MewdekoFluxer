@@ -1,6 +1,4 @@
 {
-  "help_all_commands": "全部指令",
-  "help_back": "返回",
   "help_categories_description": "在下方選擇一個分類來瀏覽它的模組。\n使用 `{0}h 指令名稱` 查看單一指令的說明，或使用 `{0}searchcmd 關鍵字` 搜尋所有指令。",
   "help_categories_title": "指令分類",
   "help_category_counts": "{0} 個模組，{1} 條指令",
@@ -19,7 +17,6 @@
   "help_error": "傳送幫助命令時發生錯誤，請檢查主控台並向支援伺服器回報。",
   "help_module_list_hint": "使用 `{0}h 指令名稱` 查看任一指令的詳細資訊。",
   "help_module_overview": "{0}\n\n在下方選擇一個區塊，或使用 **全部指令** 列出所有內容。",
-  "help_run_cmd": "執行命令",
   "help_search_label": "搜尋字詞",
   "help_search_modal_title": "搜尋指令",
   "help_search_no_results": "{0} 中沒有符合 `{1}` 的內容。",

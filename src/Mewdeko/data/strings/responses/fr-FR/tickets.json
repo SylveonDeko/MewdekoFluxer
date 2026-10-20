@@ -54,7 +54,6 @@
   "ticket_locked": "🔒 Ce ticket a été verrouillé",
   "ticket_not_found": "Ticket introuvable",
   "ticket_panel_created": "{0} Panel de tickets créé !",
-  "ticket_panel_created_in": "Panel de tickets créé avec succès dans {0}",
   "ticket_panel_creation_failed": "Impossible de créer le panel de tickets.",
   "ticket_panel_deleted": "Panel de tickets #{0} supprimé",
   "ticket_panel_deleted_with_references": "Panel {0} supprimé avec succès ! Références effacées de {1} tickets actifs et {2} tickets supprimés.",

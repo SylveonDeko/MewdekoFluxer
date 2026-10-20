@@ -60,7 +60,6 @@
   "warn_invite_disabled": "초대장 게시에 대한 경고가 비활성화되었습니다!",
   "warn_invite_enabled": "초대장 게시에 대한 경고가 활성화되었습니다!",
   "warn_log_description": "사용자 이름: {0}#{1}\n경고받은 사용자 ID: {2}\n경고 번호: {3}\n처벌: {4} {5}\n\n사유: {6}\n\n맥락: {7}",
-  "warn_log_title": "경고 발급자: {0}",
   "warn_punish_list": "경고 처벌 목록",
   "warn_punish_rem": "{0}개의 경고를 받은 사용자에 대한 처벌을 하지 않습니다.",
   "warn_punish_removed": "사용자가 {0}개의 경고에 대해 더 이상 처벌받지 않습니다.",

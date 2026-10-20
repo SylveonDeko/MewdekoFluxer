@@ -23,7 +23,6 @@
   "stream_role_wl_add_fail": "L'utente {0} è già sulla whitelist.",
   "stream_role_wl_rem": "{0} non è più nella lista bianca.",
   "stream_role_wl_rem_fail": "{0} non è nella lista bianca.",
-  "define": "Definisci:",
   "anime_air_end_date": "Air End Date",
   "anime_air_start_date": "Air Start Date",
   "anime_alternative_names": "Alternative Names",

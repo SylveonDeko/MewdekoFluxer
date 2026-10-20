@@ -30,6 +30,5 @@
   "nunchi_round_started": "The nunchi round has started with {0} users! Start counting from the number {1}. I suggest not being stupid but i know that's gonna be hard for you :D",
   "nunchi_next_number": "Number registered. Last number was {0}. SIGH.",
   "nunchi_failed_to_start": "Not enough people joined the nunchi game because they saw you enter it. Now the game failed to start. Good job BAKA.",
-  "nunchi_created": "I've created a Nunchi game... b-but DEFINITELY NOT for you BAKA! It's for the others that will join now!",
-  "poll_closed": "This poll is now closed. You're too late, b-baka."
+  "nunchi_created": "I've created a Nunchi game... b-but DEFINITELY NOT for you BAKA! It's for the others that will join now!"
 }

@@ -22,6 +22,5 @@
   "stream_role_wl_add": "Usuário {0} receberá o cargo de stream mesmo se não possuir a palavra-chave no título da stream.",
   "stream_role_wl_add_fail": "Usuário {0} já está na lista branca.",
   "stream_role_wl_rem": "Usuário {0} não está mais na lista branca.",
-  "stream_role_wl_rem_fail": "Usuário {0} não está na lista branca.",
-  "define": "Definição:"
+  "stream_role_wl_rem_fail": "Usuário {0} não está na lista branca."
 }

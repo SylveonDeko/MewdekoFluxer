@@ -55,7 +55,6 @@
   "auto_close_disabled": "Cierre automático deshabilitado",
   "auto_close_set": "Tiempo de cierre automático establecido en {0} horas",
   "auto_close_time_set": "Tiempo de cierre automático establecido en {0} horas para este botón.",
-  "auto_command_removed": "Comando automático ha sido eliminado",
   "auto_publish_already_set": "{0} ya está configurado como un canal de publicación automática.",
   "auto_publish_not_enabled": "La publicación automática no está habilitada para ningún canal.",
   "auto_publish_not_set": "{0} no es un canal de publicación automática.",

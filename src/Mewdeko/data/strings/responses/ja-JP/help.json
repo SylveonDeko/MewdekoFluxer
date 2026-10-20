@@ -1,6 +1,4 @@
 {
-  "help_all_commands": "すべてのコマンド",
-  "help_back": "戻る",
   "help_categories_description": "下からカテゴリを選んでモジュールを閲覧してください。\n個別のコマンドのヘルプは `{0}h コマンド名`、全コマンドの検索は `{0}searchcmd 検索語` を使います。",
   "help_categories_title": "コマンドカテゴリ",
   "help_category_counts": "{0} モジュール、{1} コマンド",
@@ -19,7 +17,6 @@
   "help_error": "ヘルプコマンドの送信中に問題が発生しました。コンソールを確認し、サポートサーバーに報告してください。",
   "help_module_list_hint": "任意のコマンドの詳細は `{0}h コマンド名` で確認できます。",
   "help_module_overview": "{0}\n\n下からセクションを選ぶか、**すべてのコマンド** ですべて表示します。",
-  "help_run_cmd": "コマンドを実行",
   "help_search_label": "検索語",
   "help_search_modal_title": "コマンドを検索",
   "help_search_no_results": "{0} には `{1}` に一致するものがありません。",

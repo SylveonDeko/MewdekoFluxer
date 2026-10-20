@@ -54,7 +54,6 @@
   "ticket_locked": "🔒 Ovaj tiket je zaključan",
   "ticket_not_found": "Tiket nije pronađen",
   "ticket_panel_created": "{0} Panel Tiketa Kreiran!",
-  "ticket_panel_created_in": "Uspešno kreiran panel tiketa u {0}",
   "ticket_panel_creation_failed": "Neuspešno kreiranje panela tiketa.",
   "ticket_panel_deleted": "Panel tiketa #{0} je obrisan",
   "ticket_panel_deleted_with_references": "Panel {0} uspešno obrisan! Obrisane reference iz {1} aktivnih tiketa i {2} obrisanih tiketa.",

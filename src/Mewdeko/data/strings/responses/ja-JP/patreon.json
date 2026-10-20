@@ -33,7 +33,6 @@
   "patreon_help_advanced_commands_list": "`patreon sync` - APIからサポーターデータを同期\n`patreon supporters` - アクティブなサポーターを一覧表示\n`patreon link` - DiscordユーザーとPatreonをリンク\n`patreon rolesync` - ロール同期のトグル\n`patreon tiermap` - ティアをDiscordロールにマップ\n`patreon syncall` - すべてのサポーターロールを同期\n`patreon stats` - サポーター統計を表示\n`patreon goals` - キャンペーン目標を表示\n`patreon top` - トップサポーターを表示",
   "patreon_help_basic_commands": "基本コマンド",
   "patreon_help_basic_commands_list": "`patreon channel` - アナウンスチャンネルを設定\n`patreon message` - カスタムメッセージを設定\n`patreon day` - アナウンス日を設定\n`patreon toggle` - アナウンスの有効/無効\n`patreon config` - 現在の設定を表示\n`patreon announce` - 手動でアナウンスを送信",
-  "patreon_help_commands": "利用可能なコマンド",
   "patreon_help_description": "カスタムメッセージとスケジュールで毎月のPatreonサポーターアナウンスを管理します。",
   "patreon_help_placeholders": "利用可能なプレースホルダー",
   "patreon_help_title": "Patreonモジュールのヘルプ",

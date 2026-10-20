@@ -1,7 +1,4 @@
 {
-  "role_state_deleted_success": "¡{0} El Estado de Rol de{1} eliminado con éxito!",
-  "role_state_remove_failed": "Fallo al eliminar el estado de rol {0} porque:\n{1}",
-  "role_state_removed_success": "¡{0} Roles eliminados con éxito del Estado de Rol de {1}!",
   "role_states_config_enabled": "`Habilitado:` {0}\n",
   "role_states_deleted_success_final": "¡{0} El Estado de Rol de {1} eliminado con éxito!",
   "role_states_disabled": "¡{0} Los Estados de Rol están ahora deshabilitados!",
@@ -29,6 +26,5 @@
   "role_states_will_clear_on_ban": "¡Los estados de rol se borrarán al banear!",
   "role_states_will_not_clear_on_ban": "¡Los estados de rol no se borrarán al banear!",
   "role_states_will_skip_auto_assign": "¡Los roles de asignación automática se omitirán para los usuarios con estados de rol guardados!",
-  "role_states_will_not_skip_auto_assign": "¡Los roles de asignación automática ya no se omitirán para los usuarios con estados de rol guardados!",
-  "role_states_user_field": "Estados de Rol de Usuario"
+  "role_states_will_not_skip_auto_assign": "¡Los roles de asignación automática ya no se omitirán para los usuarios con estados de rol guardados!"
 }

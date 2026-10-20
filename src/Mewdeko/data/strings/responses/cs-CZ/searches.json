@@ -22,6 +22,5 @@
   "stream_role_wl_add": "Uživatel {0} získá streamovací roli, i když nemá klíčové slovo v názvu streamu.",
   "stream_role_wl_add_fail": "Uživatel {0} již je na bílé listině.",
   "stream_role_wl_rem": "Uživatel {0} již není na bílé listině.",
-  "stream_role_wl_rem_fail": "Uživatel {0} není na bílé listině.",
-  "define": "Definuj:"
+  "stream_role_wl_rem_fail": "Uživatel {0} není na bílé listině."
 }

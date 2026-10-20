@@ -54,7 +54,6 @@
   "ticket_locked": "🔒 此工单已锁定",
   "ticket_not_found": "未找到工单",
   "ticket_panel_created": "{0} 工单面板已创建！",
-  "ticket_panel_created_in": "已成功在 {0} 创建工单面板",
   "ticket_panel_creation_failed": "创建工单面板失败。",
   "ticket_panel_deleted": "工单面板 #{0} 已删除",
   "ticket_panel_deleted_with_references": "面板 {0} 删除成功！已清除 {1} 个活动工单和 {2} 个已删除工单的引用。",

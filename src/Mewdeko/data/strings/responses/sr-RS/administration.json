@@ -52,7 +52,6 @@
   "auto_close_disabled": "Automatsko zatvaranje onemogućeno",
   "auto_close_set": "Vreme automatskog zatvaranja postavljeno na {0} sati",
   "auto_close_time_set": "Vreme automatskog zatvaranja postavljeno na {0} sati za ovo dugme.",
-  "auto_command_removed": "Automatska komanda je uklonjena",
   "auto_publish_already_set": "{0} je već postavljen kao kanal za automatsko objavljivanje.",
   "auto_publish_not_enabled": "Automatsko objavljivanje nije omogućeno ni za jedan kanal.",
   "auto_publish_not_set": "{0} nije kanal za automatsko objavljivanje.",

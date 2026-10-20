@@ -6,7 +6,6 @@
   "suggest_button_emote_default": "Émoji du bouton de suggestion réinitialisé par défaut.",
   "suggest_button_label_default": "Étiquette du bouton de suggestion réinitialisée par défaut.",
   "suggest_button_type_set": "Le {0} du bouton de suggestion sera maintenant `{1}`",
-  "suggest_channel_not_set": "Le salon de suggestions n'est pas défini !",
   "suggestion_accepted": "Suggestion #{0} acceptée",
   "suggestion_channel_set": "Votre salon de suggestions a été défini à {0}",
   "suggestion_considered": "Suggestion #{0} prise en considération",

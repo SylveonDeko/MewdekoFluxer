@@ -66,7 +66,6 @@
   "ticket_link_failed": "Mislukt naar link ticket naar case",
   "ticket_linked_to_case": "Ticket linked naar case #{0}",
   "ticket_panel_created": "{0} Ticket Panel Gemaakt!",
-  "ticket_panel_created_in": "Met succes Gemaakt ticket panel in {0}",
   "ticket_panel_creation_failed": "Mislukt naar create ticket panel.",
   "ticket_panel_deleted_with_references": "Panel {0} Verwijderd Met succes! Gewist references van {1} active tickets en {2} Verwijderd tickets.",
   "ticket_panels": "Ticket Panels",

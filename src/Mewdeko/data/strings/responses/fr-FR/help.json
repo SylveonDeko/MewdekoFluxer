@@ -1,6 +1,4 @@
 {
-  "help_all_commands": "Toutes les commandes",
-  "help_back": "Retour",
   "help_categories_description": "Choisis une catégorie ci-dessous pour parcourir ses modules.\nFais `{0}h nomcommande` pour l'aide sur une commande précise, ou `{0}searchcmd terme` pour chercher dans toutes les commandes.",
   "help_categories_title": "Catégories de commandes",
   "help_category_counts": "{0} modules, {1} commandes",
@@ -19,7 +17,6 @@
   "help_error": "Un problème s'est produit lors de l'envoi de la commande d'aide, veuillez vérifier la console et signaler au serveur de support.",
   "help_module_list_hint": "Fais `{0}h nomcommande` pour les détails d'une commande.",
   "help_module_overview": "{0}\n\nChoisis une section ci-dessous, ou utilise **Toutes les commandes** pour tout lister.",
-  "help_run_cmd": "Exécuter la commande",
   "help_search_label": "Terme de recherche",
   "help_search_modal_title": "Rechercher des commandes",
   "help_search_no_results": "Rien dans {0} ne correspond à `{1}`.",

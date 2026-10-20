@@ -60,7 +60,6 @@
   "warn_invite_disabled": "Upozorenje na objavu poziva je sada onemogućeno!",
   "warn_invite_enabled": "Upozorenje na objavu poziva je sada omogućeno!",
   "warn_log_description": "Korisničko ime: {0}#{1}\nID Upozorenog Korisnika: {2}\nBroj Upozorenja: {3}\nKazna: {4} {5}\n\nRazlog: {6}\n\nKontekst: {7}",
-  "warn_log_title": "Upozorenje od: {0}",
   "warn_punish_list": "Lista kazni za upozorenja",
   "warn_punish_rem": "Imajući {0} upozorenja više neće pokrenuti kaznu.",
   "warn_punish_removed": "Korisnici više neće biti kažnjeni za {0} upozorenja.",

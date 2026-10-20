@@ -1,5 +1,4 @@
 {
-  "role_state_deleted_success": "{0} Met succes Verwijderd {1}'s Rol State!",
   "role_states_config_enabled": "`ingeschakeld:` {0}\n",
   "role_states_deleted_success_final": "{0} Met succes Verwijderd {1}'s Rol State!",
   "role_states_disabled": "{0} Rol States zijn nu Uitgeschakeld!",
@@ -12,9 +11,6 @@
   "role_states_user_deleted": "Gebruiker Rol state voor {0} heeft been Verwijderd!",
   "role_states_user_title": "gebruiker rol States",
   "role_states_users_removed_from_deny": "{0} Met succes Verwijderd {1} Gebruiker(s) van de deny list.",
-  "role_states_user_field": "gebruiker rol States",
-  "role_state_remove_failed": "{0} Remove Mislukt because:\n{1}",
-  "role_state_removed_success": "{0} Met succes Verwijderd those Rollen from {1}'s Rol State!.",
   "role_states_ignore_bots": "{0} Rol States zal ignore bots!",
   "role_states_no_state_for_user": "There is geen Rol state voor {0}!",
   "role_states_no_valid_roles": "{0} There zijn geen valid Rollen specified!",

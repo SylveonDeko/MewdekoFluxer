@@ -30,6 +30,5 @@
   "nunchi_round_started": "Nunchi runde started med {0} brugere. Begynd at tælle fra tallet {1}.",
   "nunchi_next_number": "Nummer registreret. Sidste nummer var {0}.",
   "nunchi_failed_to_start": "Nunchi kunne ikke startes fordi der ikke var nok deltagere.",
-  "nunchi_created": "Nunchi spil oprettet. Venter på brugere der vil deltage.",
-  "poll_closed": ""
+  "nunchi_created": "Nunchi spil oprettet. Venter på brugere der vil deltage."
 }

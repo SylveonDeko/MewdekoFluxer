@@ -1,5 +1,4 @@
 {
-  "chat_trigger_edit": "Редагування Тригера Чату",
   "chat_trigger_id": "#{0}",
   "ct_clear": "Очистити тригери чату",
   "ct_clear_done": "Це призведе до видалення всіх тригерів чату на цьому сервері.",
@@ -8,7 +7,6 @@
   "ct_crossposting_channel": "На <#{0}>",
   "ct_crossposting_webhook": "На вебхук",
   "ct_custom_prefix": "Спеціальний Префікс",
-  "ct_default_description": "опис",
   "ct_interaction_description": "Опис Команди Програми",
   "ct_interaction_errors_desc": "Запустіть /triggers interactions errors, щоб побачити знайдені помилки.",
   "ct_interaction_errors_info_desc": "Наступні помилки були виявлені під час оновлення тригерів чату команди вашої програми. Якщо вам потрібна допомога у їх вирішенні, будь ласка, зайдіть на [офіційний сервер підтримки](https://discord.gg/Mewdeko).",

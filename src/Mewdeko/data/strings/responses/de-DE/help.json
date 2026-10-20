@@ -1,6 +1,4 @@
 {
-  "help_all_commands": "Alle Befehle",
-  "help_back": "Zurück",
   "help_categories_description": "Wähle unten eine Kategorie, um ihre Module zu durchsuchen.\nNutze `{0}h Befehlsname` für Hilfe zu einem einzelnen Befehl oder `{0}searchcmd Begriff`, um alle Befehle zu durchsuchen.",
   "help_categories_title": "Befehlskategorien",
   "help_category_counts": "{0} Module, {1} Befehle",
@@ -19,7 +17,6 @@
   "help_error": "Es gab ein Problem beim Senden des Hilfebefehls, bitte überprüfe die Konsole und melde es dem Support-Server.",
   "help_module_list_hint": "Nutze `{0}h Befehlsname` für Details zu einem Befehl.",
   "help_module_overview": "{0}\n\nWähle unten einen Bereich oder nutze **Alle Befehle**, um alles aufzulisten.",
-  "help_run_cmd": "Befehl ausführen",
   "help_search_label": "Suchbegriff",
   "help_search_modal_title": "Befehle suchen",
   "help_search_no_results": "Nichts in {0} passt zu `{1}`.",

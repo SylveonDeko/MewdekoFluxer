@@ -1,5 +1,4 @@
 {
-  "suggest_channel_not_set": "The suggestions channel is not set!",
   "suggestion_accepted": "Suggestion #{0} Accepted",
   "suggestion_channel_set": "Your Suggestion channel has been set to {0}",
   "suggestion_considered": "Suggestion #{0} Considered",

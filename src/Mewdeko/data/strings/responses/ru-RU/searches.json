@@ -23,7 +23,6 @@
   "stream_role_wl_add_fail": "Пользователь {0} уже в белом списке.",
   "stream_role_wl_rem": "Пользователь {0} больше не в белом списке.",
   "stream_role_wl_rem_fail": "Пользователь {0} не в белом списке.",
-  "define": "Определить:",
   "anime_air_end_date": "Air End Date",
   "anime_air_start_date": "Air Start Date",
   "anime_alternative_names": "Alternative Names",

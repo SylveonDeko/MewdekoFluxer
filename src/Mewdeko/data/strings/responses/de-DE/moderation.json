@@ -60,7 +60,6 @@
   "warn_invite_disabled": "Warnung bei Einladungslink ist jetzt deaktiviert!",
   "warn_invite_enabled": "Warnung bei Einladungslink ist jetzt aktiviert!",
   "warn_log_description": "Benutzername: {0}#{1}\nID des verwarnten Benutzers: {2}\nVerwarnungsnummer: {3}\nStrafe: {4} {5}\n\nGrund: {6}\n\nKontext: {7}",
-  "warn_log_title": "Verwarnt von: {0}",
   "warn_punish_list": "Verwarnungsstrafliste",
   "warn_punish_rem": "{0} Verwarnungen werden keine Strafe mehr auslösen.",
   "warn_punish_removed": "Benutzer werden nicht mehr für {0} Verwarnungen bestraft.",

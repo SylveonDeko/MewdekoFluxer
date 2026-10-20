@@ -70,7 +70,6 @@
   "invite_filter_unexpected": "Unerwarteter Fehler beim Filtern der Einladung in Kanal {0}",
   "invite_leaderboard_title": "Einladungs-Bestenliste",
   "invite_link_text": "[Mewdeko](https://discord.com/oauth2/authorize?client_id=752236274261426212&scope=bot&permissions=66186303)\n[Mewdeko Nightly](https://discord.com/oauth2/authorize?client_id=964590728397344868&scope=bot&permissions=66186303)",
-  "invite_me": "Lade mich ein!",
   "invite_settings": "Einladungs-Tracking ist {0}, entfernen bei Verlassen ist {1}, Mindestalter des Kontos ist {2}.",
   "invite_tracking_disabled": "Einladungs-Tracking wurde deaktiviert.",
   "invite_tracking_enabled": "Einladungs-Tracking wurde aktiviert.",

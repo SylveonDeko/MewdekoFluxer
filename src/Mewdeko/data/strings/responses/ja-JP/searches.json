@@ -23,7 +23,6 @@
   "stream_role_wl_add_fail": "ユーザー {0} はすでにホワイトリストに登録されています。",
   "stream_role_wl_rem": "ユーザー {0} はホワイトリストから削除されました。",
   "stream_role_wl_rem_fail": "ユーザー {0} はホワイトリストに登録されていません。",
-  "define": "定義:",
   "anime_air_end_date": "Air End Date",
   "anime_air_start_date": "Air Start Date",
   "anime_alternative_names": "Alternative Names",

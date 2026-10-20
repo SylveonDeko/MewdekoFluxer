@@ -22,6 +22,5 @@
   "stream_role_wl_add": "Kullanıcı {0}, yayın başlığında anahtar kelime olmasa da yayın rolünü alacak.",
   "stream_role_wl_add_fail": "{0} kullanıcısı zaten beyaz listeye alındı.",
   "stream_role_wl_rem": "{0} kullanıcısı artık beyaz listede değil.",
-  "stream_role_wl_rem_fail": "{0} kullanıcısı beyaz listeye alınmadı.",
-  "define": "Tanımla:"
+  "stream_role_wl_rem_fail": "{0} kullanıcısı beyaz listeye alınmadı."
 }

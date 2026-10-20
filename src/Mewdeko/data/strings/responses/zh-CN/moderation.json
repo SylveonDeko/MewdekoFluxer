@@ -60,7 +60,6 @@
   "warn_invite_disabled": "发布邀请时警告现已禁用！",
   "warn_invite_enabled": "发布邀请时警告现已启用！",
   "warn_log_description": "用户名：{0}#{1}\n被警告用户 ID：{2}\n警告编号：{3}\n惩罚：{4} {5}\n\n原因：{6}\n\n上下文：{7}",
-  "warn_log_title": "警告者：{0}",
   "warn_punish_list": "警告惩罚列表",
   "warn_punish_rem": "拥有 {0} 个警告将不再触发惩罚。",
   "warn_punish_removed": "用户拥有 {0} 个警告时将不再受到惩罚。",

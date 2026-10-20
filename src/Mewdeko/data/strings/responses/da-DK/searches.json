@@ -22,6 +22,5 @@
   "stream_role_wl_add": "Bruger {0} vil modtage stream-rollen selvom de ikke har nøgleordet i streamnavnet.",
   "stream_role_wl_add_fail": "Bruger {0} er allerede positivlistet.",
   "stream_role_wl_rem": "Bruger {0} er ikke længere positivlistet.",
-  "stream_role_wl_rem_fail": "Bruger {0} er ikke positivlistet.",
-  "define": "Definer:"
+  "stream_role_wl_rem_fail": "Bruger {0} er ikke positivlistet."
 }

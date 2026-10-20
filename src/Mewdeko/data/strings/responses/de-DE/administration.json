@@ -52,7 +52,6 @@
   "auto_close_disabled": "Automatisches Schließen deaktiviert",
   "auto_close_set": "Automatisches Schließen auf {0} Stunden gesetzt",
   "auto_close_time_set": "Automatische Schließzeit für diesen Button auf {0} Stunden gesetzt.",
-  "auto_command_removed": "Auto-Befehl wurde entfernt",
   "auto_publish_already_set": "{0} ist bereits als Auto-Publish-Kanal gesetzt.",
   "auto_publish_not_enabled": "Auto-Veröffentlichung ist für keine Kanäle aktiviert.",
   "auto_publish_not_set": "{0} ist kein Auto-Publish-Kanal.",

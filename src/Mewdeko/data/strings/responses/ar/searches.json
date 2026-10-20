@@ -23,7 +23,6 @@
   "stream_role_wl_add_fail": "المستخدم {0} موجود في القائمة البيضاء.",
   "stream_role_wl_rem": "المستخدم {0} لم يغد في القائمة البيضاء.",
   "stream_role_wl_rem_fail": "المستخدم {0} ليس في القائمة البيضاء.",
-  "define": "تحديد:",
   "anime_air_end_date": "Air End Date",
   "anime_air_start_date": "Air Start Date",
   "anime_alternative_names": "Alternative Names",

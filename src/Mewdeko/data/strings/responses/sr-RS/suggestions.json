@@ -6,7 +6,6 @@
   "suggest_button_emote_default": "Uspešno postavljen emot dugmeta za predlog nazad na podrazumevani.",
   "suggest_button_label_default": "Uspešno postavljena oznaka dugmeta za predlog nazad na podrazumevanu.",
   "suggest_button_type_set": "Dugme za Predlog {0} će sada biti `{1}`",
-  "suggest_channel_not_set": "Kanal za predloge nije postavljen!",
   "suggestion_accepted": "Predlog #{0} Prihvaćen",
   "suggestion_channel_set": "Vaš kanal za predloge je postavljen na {0}",
   "suggestion_considered": "Predlog #{0} Razmatran",

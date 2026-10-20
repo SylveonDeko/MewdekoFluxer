@@ -55,7 +55,6 @@
   "auto_close_disabled": "自动关闭已禁用",
   "auto_close_set": "自动关闭时间已设为 {0} 小时",
   "auto_close_time_set": "此按钮的自动关闭时间已设为 {0} 小时。",
-  "auto_command_removed": "自动命令已移除",
   "auto_publish_already_set": "{0} 已被设为自动发布频道。",
   "auto_publish_not_enabled": "未为任何频道启用自动发布。",
   "auto_publish_not_set": "{0} 不是自动发布频道。",

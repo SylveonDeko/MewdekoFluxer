@@ -16,7 +16,6 @@
   "rep_check": "{0} has {1} reputation (Rank #{2})",
   "rep_check_none": "{0} has no reputation yet.",
   "rep_command_bypass_added": "Added bypass roles for **{0}**: {1}",
-  "rep_command_bypass_removed": "Removed bypass role from **{0}**: {1}",
   "rep_command_no_requirements": "Command **{0}** has no reputation requirements.",
   "rep_command_requirement_added": "Command requirement added: **{0}** now requires **{1}** {2} reputation.",
   "rep_command_requirement_added_channels": "Command requirement added: **{0}** now requires **{1}** {2} reputation in channels: {3}.",

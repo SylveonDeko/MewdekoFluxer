@@ -54,7 +54,6 @@
   "ticket_locked": "🔒 This ticket has been locked",
   "ticket_not_found": "Ticket not found",
   "ticket_panel_created": "{0} Ticket Panel Created!",
-  "ticket_panel_created_in": "Successfully created ticket panel in {0}",
   "ticket_panel_creation_failed": "Failed to create ticket panel.",
   "ticket_panel_deleted": "Ticket panel #{0} has been deleted",
   "ticket_panel_deleted_with_references": "Panel {0} deleted successfully! Cleared references from {1} active tickets and {2} deleted tickets.",

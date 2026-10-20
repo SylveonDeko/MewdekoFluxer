@@ -60,7 +60,6 @@
   "warn_invite_disabled": "¡Advertencia por publicación de invitación está ahora deshabilitada!",
   "warn_invite_enabled": "¡Advertencia por publicación de invitación está ahora habilitada!",
   "warn_log_description": "Nombre de usuario: {0}#{1}\nID del Usuario Advertido: {2}\nNúmero de Advertencia: {3}\nSanción: {4} {5}\n\nRazón: {6}\n\nContexto: {7}",
-  "warn_log_title": "Advertido por: {0}",
   "warn_punish_list": "Lista de sanciones de advertencia",
   "warn_punish_rem": "Tener {0} advertencias ya no activará una sanción.",
   "warn_punish_removed": "Los usuarios ya no serán sancionados por {0} advertencias.",

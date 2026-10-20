@@ -108,12 +108,9 @@
   "roll": "You rolled {0}.",
   "won": "",
   "take": "successfully took {0} from {1}",
-  "transactions": "Transactions of user {0}",
   "command_not_found": "",
   "desc": "",
   "cant_dm": "I can't dm you. Make sure your DMs are open. Go to **options (cog button) -> Privacy & Safety -> Allow direct messages from server members**",
-  "donate": "You can support the Mewdeko project on \nPatreon <{0}> or\nPaypal <{1}>\nDon't forget to leave your discord name or id in the message.\n\n**Thank you** ♥️",
-  "guide": "**List of commands**: <{0}>\n**Hosting guides and docs can be found here**: <{1}>",
   "usage": "",
   "options": "",
   "tag": "",
@@ -279,7 +276,6 @@
   "result": "",
   "roles": "",
   "shard": "",
-  "shard_stats": "",
   "showemojis": "**Name:** {0} **Link:** {1}",
   "showemojis_none": "",
   "text_channels": "",
@@ -389,6 +385,5 @@
   "trigger": "",
   "response": "",
   "created_by": "Created by {0}",
-  "moved": "",
-  "not_an_easter_egg": "<:ChannelCategory:1290520763857633352>"
+  "moved": ""
 }

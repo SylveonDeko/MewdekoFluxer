@@ -1,7 +1,4 @@
 {
-  "role_state_deleted_success": "{0} Successfully deleted {1}'s Role State!",
-  "role_state_remove_failed": "{0} Remove failed because:\n{1}",
-  "role_state_removed_success": "{0} Successfully removed those roles from {1}'s Role State!.",
   "role_states_config_enabled": "`Enabled:` {0}\n",
   "role_states_deleted_success_final": "{0} Successfully deleted {1}'s Role State!",
   "role_states_disabled": "{0} Role States are now disabled!",
@@ -29,6 +26,5 @@
   "role_states_will_clear_on_ban": "Role states will clear on ban!",
   "role_states_will_not_clear_on_ban": "Role states will not clear on ban!",
   "role_states_will_skip_auto_assign": "Auto-assign roles will be skipped for users with saved role states!",
-  "role_states_will_not_skip_auto_assign": "Auto-assign roles will no longer be skipped for users with saved role states!",
-  "role_states_user_field": "User Role States"
+  "role_states_will_not_skip_auto_assign": "Auto-assign roles will no longer be skipped for users with saved role states!"
 }

@@ -70,7 +70,6 @@
   "invite_filter_unexpected": "在频道 {0} 中过滤邀请时出现意外错误",
   "invite_leaderboard_title": "邀请排行榜",
   "invite_link_text": "[Mewdeko](https://discord.com/oauth2/authorize?client_id=752236274261426212&scope=bot&permissions=66186303)\n[Mewdeko Nightly](https://discord.com/oauth2/authorize?client_id=964590728397344868&scope=bot&permissions=66186303)",
-  "invite_me": "邀请我！",
   "invite_settings": "邀请追踪为 {0}，离开时移除为 {1}，最低账户年龄为 {2}。",
   "invite_tracking_disabled": "邀请追踪已禁用。",
   "invite_tracking_enabled": "邀请追踪已启用。",

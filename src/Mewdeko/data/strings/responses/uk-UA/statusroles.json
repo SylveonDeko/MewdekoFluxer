@@ -1,5 +1,4 @@
 {
-  "status_role_channel_set": "Канал встановлено на {0}",
   "status": "Статус",
   "status_addrole_successfully_removed": "{0} Успішно видалено наступні ролі з AddRoles\n{1}",
   "status_addroles_none_removed": "{0} Ролей AddRoles не видалено, жодна з наданих ролей не є у списку.",
@@ -9,7 +8,6 @@
   "status_remove_added_now": "{0} RemoveAdded тепер `{1}`",
   "status_removerole_none_removed": "{0} Ролей RemoveRoles не видалено, жодна з наданих ролей не є у списку.",
   "status_removerole_successfully_removed": "{0} Успішно видалено наступні ролі з RemoveRoles\n{1}",
-  "status_role_config_added": "Конфігурацію Ролі Статусу додано! Будь ласка, налаштуйте її за допомогою інших команд.",
   "status_role_exists": "{0} Ця Роль Статусу вже існує!",
   "status_role_text_select": "{0} Будь ласка, виберіть, що ви хочете зробити з поточним текстом Ролі Статусу",
   "status_roles_added": "{0} Наявність цього статусу тепер додасть наступні ролі:\n{1}",

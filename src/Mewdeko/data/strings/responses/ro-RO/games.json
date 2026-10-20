@@ -30,6 +30,5 @@
   "nunchi_round_started": "Runda Nunchi a început cu {0} jucatori. Începeți numărătoarea de la numarul {1}",
   "nunchi_next_number": "Numar înregistrat. Ultimul număr a fost {0}.",
   "nunchi_failed_to_start": "Runda de Nunchi nu a început pentru că nu au fost destui participanți.",
-  "nunchi_created": "Jocul de Nunchi a fost creat. Așteptăm ca jucătorii să intre.",
-  "poll_closed": "Sondaj închis!"
+  "nunchi_created": "Jocul de Nunchi a fost creat. Așteptăm ca jucătorii să intre."
 }

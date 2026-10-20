@@ -1,5 +1,4 @@
 {
-  "chat_trigger_edit": "Edição de Chat Trigger",
   "chat_trigger_id": "#{0}",
   "ct_clear": "Limpar chat triggers",
   "ct_clear_done": "Isso irá deletar todos os chat triggers desse servidor.",
@@ -8,7 +7,6 @@
   "ct_crossposting_channel": "Para <#{0}>",
   "ct_crossposting_webhook": "Para um webhook",
   "ct_custom_prefix": "Prefixo Personalizado",
-  "ct_default_description": "descrição",
   "ct_interaction_description": "Descrição do Comando de Aplicativo",
   "ct_interaction_errors_desc": "Execute /triggers interactions errors para ver os erros encontrados.",
   "ct_interaction_errors_info_desc": "Os seguintes erros foram encontrados ao atualizar seus chat triggers de comando de aplicativo. Se precisar de ajuda para resolvê-los, visite o [servidor de suporte oficial](https://discord.gg/Mewdeko).",

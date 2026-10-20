@@ -22,6 +22,5 @@
   "stream_role_wl_add": "Användare {0} kommer få strömningrollen även om nyckelordet inte återfanns i titeln",
   "stream_role_wl_add_fail": "Användare {0} är redan vitlistad",
   "stream_role_wl_rem": "Användare {0} är inte längre vitlistad",
-  "stream_role_wl_rem_fail": "Användare {0} är inte vitlistad",
-  "define": "Definera:"
+  "stream_role_wl_rem_fail": "Användare {0} är inte vitlistad"
 }

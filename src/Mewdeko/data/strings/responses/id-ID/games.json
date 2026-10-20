@@ -30,6 +30,5 @@
   "nunchi_round_started": "Ronde Nunchi dimulai dengan {0} pengguna. Memulai menghitung dari nomor {1}.",
   "nunchi_next_number": "Nomor terdaftar. Nomor terakhir adalah {0}.",
   "nunchi_failed_to_start": "Nunchi gagal dimulai karena pemain tidak mencukupi",
-  "nunchi_created": "Permainan Nunchi telah dibuat. menunggu pemain untuk bergabung",
-  "poll_closed": "Poll Ditutup!"
+  "nunchi_created": "Permainan Nunchi telah dibuat. menunggu pemain untuk bergabung"
 }

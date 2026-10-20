@@ -30,6 +30,5 @@
   "nunchi_round_started": "Nunchi turu {0} kullanıcılarıyla başladı. {1} numarasından saymaya başlayın.",
   "nunchi_next_number": "Numara kaydedildi. Son sayı {0} idi.",
   "nunchi_failed_to_start": "Nunchi başlayamadı, çünkü yeterli katılımcı yoktu.",
-  "nunchi_created": "Nunchi oyunu kuruldu. Kullanıcıların katılmasını bekliyorum.",
-  "poll_closed": "Anket Kapandı!"
+  "nunchi_created": "Nunchi oyunu kuruldu. Kullanıcıların katılmasını bekliyorum."
 }

@@ -1,6 +1,4 @@
 {
-  "help_all_commands": "全部命令",
-  "help_back": "返回",
   "help_categories_description": "在下方选择一个分类来浏览它的模块。\n使用 `{0}h 命令名` 查看单个命令的帮助，或使用 `{0}searchcmd 关键词` 搜索所有命令。",
   "help_categories_title": "命令分类",
   "help_category_counts": "{0} 个模块，{1} 条命令",
@@ -19,7 +17,6 @@
   "help_error": "发送帮助命令时出错，请检查控制台并向支持服务器报告。",
   "help_module_list_hint": "使用 `{0}h 命令名` 查看任意命令的详细信息。",
   "help_module_overview": "{0}\n\n在下方选择一个分区，或使用 **全部命令** 列出所有内容。",
-  "help_run_cmd": "运行命令",
   "help_search_label": "搜索词",
   "help_search_modal_title": "搜索命令",
   "help_search_no_results": "{0} 中没有匹配 `{1}` 的内容。",

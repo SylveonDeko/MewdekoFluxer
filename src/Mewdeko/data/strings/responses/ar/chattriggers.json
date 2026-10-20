@@ -1,5 +1,4 @@
 {
-  "chat_trigger_edit": "تعديل Chat Trigger",
   "chat_trigger_id": "#{0}",
   "ct_clear": "مسح Chat Triggers",
   "ct_clear_done": "سيؤدي هذا إلى حذف جميع chat triggers على هذا السيرفر.",
@@ -8,7 +7,6 @@
   "ct_crossposting_channel": "إلى <#{0}>",
   "ct_crossposting_webhook": "إلى webhook",
   "ct_custom_prefix": "بادئة مخصصة",
-  "ct_default_description": "وصف",
   "ct_interaction_description": "وصف أمر التطبيق",
   "ct_interaction_errors_desc": "قم بتشغيل /triggers interactions errors لرؤية الأخطاء التي تم اكتشافها.",
   "ct_interaction_errors_info_desc": "تمت مصادفة الأخطاء التالية عند تحديث chat triggers لأوامر التطبيق الخاصة بك. إذا كنت تحتاج مساعدة في حل أي منها، يرجى التوجه إلى [سيرفر الدعم الرسمي](https://discord.gg/Mewdeko).",

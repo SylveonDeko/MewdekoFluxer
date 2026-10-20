@@ -6,7 +6,6 @@
   "suggest_button_emote_default": "Емодзі кнопки пропозиції успішно скинуто до стандартного.",
   "suggest_button_label_default": "Мітку кнопки пропозиції успішно скинуто до стандартного.",
   "suggest_button_type_set": "Тип Кнопки Пропозиції {0} тепер буде `{1}`",
-  "suggest_channel_not_set": "Канал пропозицій не встановлено!",
   "suggestion_accepted": "Пропозицію #{0} Прийнято",
   "suggestion_channel_set": "Ваш Канал Пропозицій встановлено на {0}",
   "suggestion_considered": "Пропозицію #{0} Розглянуто",

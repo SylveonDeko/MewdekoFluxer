@@ -1,7 +1,4 @@
 {
-  "role_state_deleted_success": "{0} 已成功删除 {1} 的身份组状态！",
-  "role_state_remove_failed": "{0} 移除失败，原因：\n{1}",
-  "role_state_removed_success": "{0} 已成功从 {1} 的身份组状态中移除这些身份组！",
   "role_states_config_enabled": "`已启用：` {0}\n",
   "role_states_deleted_success_final": "{0} 已成功删除 {1} 的身份组状态！",
   "role_states_disabled": "{0} 身份组状态现已禁用！",
@@ -29,6 +26,5 @@
   "role_states_will_clear_on_ban": "封禁时将清除身份组状态！",
   "role_states_will_not_clear_on_ban": "封禁时将不会清除身份组状态！",
   "role_states_will_skip_auto_assign": "对于已保存身份组状态的用户，将跳过自动分配身份组！",
-  "role_states_will_not_skip_auto_assign": "对于已保存身份组状态的用户，将不再跳过自动分配身份组！",
-  "role_states_user_field": "用户身份组状态"
+  "role_states_will_not_skip_auto_assign": "对于已保存身份组状态的用户，将不再跳过自动分配身份组！"
 }

@@ -33,7 +33,6 @@
   "patreon_help_advanced_commands_list": "`patreon sync` - Unterstützerdaten aus API synchronisieren\n`patreon supporters` - Aktive Unterstützer auflisten\n`patreon link` - Discord-Benutzer mit Patreon verknüpfen\n`patreon rolesync` - Rollensynchronisierung umschalten\n`patreon tiermap` - Tier einer Discord-Rolle zuordnen\n`patreon syncall` - Alle Unterstützerrollen synchronisieren\n`patreon stats` - Unterstützerstatistiken anzeigen\n`patreon goals` - Kampagnenziele anzeigen\n`patreon top` - Top-Unterstützer anzeigen",
   "patreon_help_basic_commands": "Grundlegende Befehle",
   "patreon_help_basic_commands_list": "`patreon channel` - Ankündigungskanal setzen\n`patreon message` - Benutzerdefinierte Nachricht setzen\n`patreon day` - Ankündigungstag setzen\n`patreon toggle` - Ankündigungen aktivieren/deaktivieren\n`patreon config` - Aktuelle Einstellungen anzeigen\n`patreon announce` - Manuelle Ankündigung senden",
-  "patreon_help_commands": "Verfügbare Befehle",
   "patreon_help_description": "Verwalte monatliche Patreon-Unterstützer-Ankündigungen mit anpassbaren Nachrichten und Zeitplanung.",
   "patreon_help_placeholders": "Verfügbare Platzhalter",
   "patreon_help_title": "Patreon-Modul-Hilfe",

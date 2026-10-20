@@ -6,7 +6,6 @@
   "suggest_button_emote_default": "Emote del botón de sugerencia restablecido con éxito al predeterminado.",
   "suggest_button_label_default": "Etiqueta del botón de sugerencia restablecida con éxito al predeterminado.",
   "suggest_button_type_set": "El Tipo de Botón de Sugerencia {0} será ahora `{1}`",
-  "suggest_channel_not_set": "¡El canal de sugerencias no está establecido!",
   "suggestion_accepted": "Sugerencia #{0} Aceptada",
   "suggestion_channel_set": "Tu canal de sugerencias ha sido establecido en {0}",
   "suggestion_considered": "Sugerencia #{0} Considerada",

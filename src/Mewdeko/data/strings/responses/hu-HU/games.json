@@ -29,6 +29,5 @@
   "nunchi_round_started": "Nunchi kör elkezdődött {0} játékossal. Kezdjétek a számolást {1} számtól.",
   "nunchi_next_number": "Number registered. Last number was {0}.",
   "nunchi_failed_to_start": "Nunchi kör elindítása sikertelen nem elég résztvevő miatt.",
-  "nunchi_created": "Nunchi játék elkészült. Várakozás játékosok csatlakozására.",
-  "poll_closed": "Szavazás zárva!"
+  "nunchi_created": "Nunchi játék elkészült. Várakozás játékosok csatlakozására."
 }

@@ -64,6 +64,5 @@
   "warn_invite_disabled": "Warn on invite post is now disabled!",
   "warn_invite_enabled": "Warn on invite post is now enabled!",
   "warn_log_description": "Username: {0}#{1}\nID of Warned User: {2}\nWarn Number: {3}\nPunishment: {4} {5}\n\nReason: {6}\n\nContext: {7}",
-  "warn_log_title": "Warned by: {0}",
   "warn_punish_removed": "Users will no longer be punished for {0} warnings."
 }

@@ -22,6 +22,5 @@
   "stream_role_wl_add": "User {0} gets the stream role even if they don't have the keyword in the stream title. Because i'm nice. No other reason. Get down on your knees and thank me.",
   "stream_role_wl_add_fail": "User {0} is already whitelisted. Your memory sucks.",
   "stream_role_wl_rem": "User {0} is no longer whitelisted. Never liked them anyways.",
-  "stream_role_wl_rem_fail": "User {0} != whitelisted. They are a baka after all.",
-  "define": "Define:"
+  "stream_role_wl_rem_fail": "User {0} != whitelisted. They are a baka after all."
 }

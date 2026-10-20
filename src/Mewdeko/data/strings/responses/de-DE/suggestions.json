@@ -6,7 +6,6 @@
   "suggest_button_emote_default": "Vorschlag-Button-Emote erfolgreich auf Standard zurückgesetzt.",
   "suggest_button_label_default": "Vorschlag-Button-Beschriftung erfolgreich auf Standard zurückgesetzt.",
   "suggest_button_type_set": "Vorschlag-Button {0} wird jetzt `{1}` sein",
-  "suggest_channel_not_set": "Der Vorschlagskanal ist nicht gesetzt!",
   "suggestion_accepted": "Vorschlag #{0} akzeptiert",
   "suggestion_channel_set": "Dein Vorschlagskanal wurde auf {0} gesetzt",
   "suggestion_considered": "Vorschlag #{0} überdacht",

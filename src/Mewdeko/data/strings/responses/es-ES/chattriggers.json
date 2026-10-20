@@ -1,5 +1,4 @@
 {
-  "chat_trigger_edit": "Edición de Activador de Chat",
   "chat_trigger_id": "#{0}",
   "ct_clear": "Borrar activadores de chat",
   "ct_clear_done": "Esto eliminará todos los activadores de chat en este servidor.",
@@ -8,7 +7,6 @@
   "ct_crossposting_channel": "A <#{0}>",
   "ct_crossposting_webhook": "A un webhook",
   "ct_custom_prefix": "Prefijo Personalizado",
-  "ct_default_description": "descripción",
   "ct_interaction_description": "Descripción del Comando de Aplicación",
   "ct_interaction_errors_desc": "Ejecuta /triggers interactions errors para ver los errores encontrados.",
   "ct_interaction_errors_info_desc": "Se encontraron los siguientes errores al actualizar tus activadores de chat de comandos de aplicación. Si necesitas ayuda para resolverlos, visita el [servidor de soporte oficial](https://discord.gg/Mewdeko).",

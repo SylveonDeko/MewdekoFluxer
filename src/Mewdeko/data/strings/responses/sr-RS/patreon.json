@@ -33,7 +33,6 @@
   "patreon_help_advanced_commands_list": "`patreon sync` - Sinhronizacija podataka podržavalaca sa API-ja\n`patreon supporters` - Lista aktivnih podržavalaca\n`patreon link` - Povezivanje Discord korisnika sa Patreonom\n`patreon rolesync` - Uključivanje/isključivanje sinhronizacije uloga\n`patreon tiermap` - Mapiranje tier-a na Discord ulogu\n`patreon syncall` - Sinhronizacija uloga svih podržavalaca\n`patreon stats` - Prikaz statistike podržavalaca\n`patreon goals` - Prikaz ciljeva kampanje\n`patreon top` - Prikaz top podržavalaca",
   "patreon_help_basic_commands": "Osnovne Komande",
   "patreon_help_basic_commands_list": "`patreon channel` - Postavljanje kanala za obaveštenja\n`patreon message` - Postavljanje prilagođene poruke\n`patreon day` - Postavljanje dana obaveštenja\n`patreon toggle` - Omogući/onemogući obaveštenja\n`patreon config` - Prikaz trenutnih podešavanja\n`patreon announce` - Slanje ručnog obaveštenja",
-  "patreon_help_commands": "Dostupne Komande",
   "patreon_help_description": "Upravljajte mesečnim Patreon obaveštenjima o podržavaocima sa prilagodljivim porukama i rasporedom.",
   "patreon_help_placeholders": "Dostupni Placeholderi",
   "patreon_help_title": "Patreon Modul Pomoć",

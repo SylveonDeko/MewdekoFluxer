@@ -23,7 +23,6 @@
   "stream_role_wl_add_fail": "{0}은(는) 이미 화이트리스트에 추가되었습니다.",
   "stream_role_wl_rem": "사용자 {0}은(는) 더 이상 화이트리스트에 속해있지 않습니다.",
   "stream_role_wl_rem_fail": "사용자 {0}은(는) 화이트리스트에 속해있지 않습니다.",
-  "define": "정의:",
   "anime_air_end_date": "Air End Date",
   "anime_air_start_date": "Air Start Date",
   "anime_alternative_names": "Alternative Names",

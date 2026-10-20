@@ -77,7 +77,6 @@
   "ticket_open_error": "An error occurred while creating your ticket.",
   "ticket_opened": "Your ticket has been created: {0}",
   "ticket_panel_created": "{0} Ticket Panel Created!",
-  "ticket_panel_created_in": "Successfully created ticket panel in {0}",
   "ticket_panel_creation_failed": "Failed to create ticket panel.",
   "ticket_panel_default_description": "React below to open a ticket.",
   "ticket_panel_default_title": "Support Tickets",

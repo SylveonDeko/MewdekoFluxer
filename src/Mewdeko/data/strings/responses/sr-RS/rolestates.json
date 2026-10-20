@@ -1,7 +1,4 @@
 {
-  "role_state_deleted_success": "{0} Uspešno obrisano stanje uloge korisnika {1}!",
-  "role_state_remove_failed": "{0} Uklanjanje neuspešno jer:\n{1}",
-  "role_state_removed_success": "{0} Uspešno uklonjene te uloge iz stanja uloge korisnika {1}.",
   "role_states_config_enabled": "`Omogućeno:` {0}\n",
   "role_states_deleted_success_final": "{0} Uspešno obrisano stanje uloge korisnika {1}!",
   "role_states_disabled": "{0} Stanja uloga su sada onemogućena!",
@@ -27,6 +24,5 @@
   "role_states_users_added_to_deny": "{0} Uspešno dodato {1} korisnika(e) na listu zabranjenih.",
   "role_states_users_removed_from_deny": "{0} Uspešno uklonjeno {1} korisnika(e) sa liste zabranjenih.",
   "role_states_will_clear_on_ban": "Stanja uloga će se obrisati pri banovanju!",
-  "role_states_will_not_clear_on_ban": "Stanja uloga se neće obrisati pri banovanju!",
-  "role_states_user_field": "Stanja Uloga Korisnika"
+  "role_states_will_not_clear_on_ban": "Stanja uloga se neće obrisati pri banovanju!"
 }

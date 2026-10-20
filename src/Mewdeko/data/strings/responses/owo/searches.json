@@ -22,6 +22,5 @@
   "stream_role_wl_add": "User {0} will receive the stream role even if they don't have the keyword in the stream title.",
   "stream_role_wl_add_fail": "User {0} is already whitelisted.",
   "stream_role_wl_rem": "User {0} is no longer whitelisted.",
-  "stream_role_wl_rem_fail": "User {0} is not whitelisted.",
-  "define": ""
+  "stream_role_wl_rem_fail": "User {0} is not whitelisted."
 }

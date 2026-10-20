@@ -55,7 +55,6 @@
   "auto_close_disabled": "자동 닫기가 비활성화되었습니다",
   "auto_close_set": "자동 닫기 시간이 {0}시간으로 설정되었습니다",
   "auto_close_time_set": "이 버튼의 자동 닫기 시간이 {0}시간으로 설정되었습니다.",
-  "auto_command_removed": "자동 명령어가 제거되었습니다",
   "auto_publish_already_set": "{0}은(는) 이미 자동 게시 채널로 설정되어 있습니다.",
   "auto_publish_not_enabled": "어떤 채널에서도 자동 게시가 활성화되지 않았습니다.",
   "auto_publish_not_set": "{0}은(는) 자동 게시 채널이 아닙니다.",

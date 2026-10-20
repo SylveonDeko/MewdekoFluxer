@@ -6,7 +6,6 @@
   "suggest_button_emote_default": "Emoji do botão de sugestão redefinido para o padrão com sucesso.",
   "suggest_button_label_default": "Rótulo do botão de sugestão redefinido para o padrão com sucesso.",
   "suggest_button_type_set": "O botão de sugestão {0} agora será `{1}`",
-  "suggest_channel_not_set": "O canal de sugestões não está definido!",
   "suggestion_accepted": "Sugestão #{0} Aceita",
   "suggestion_channel_set": "Seu canal de sugestões foi definido como {0}",
   "suggestion_considered": "Sugestão #{0} Em Consideração",

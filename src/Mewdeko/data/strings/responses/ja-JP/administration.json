@@ -84,7 +84,6 @@
   "auto_close_disabled": "Auto-close disabled",
   "auto_close_set": "Auto-close time set to {0} hours",
   "auto_close_time_set": "Auto-close time set to {0} hours for this button.",
-  "auto_command_removed": "Auto command has been removed",
   "auto_publish_already_set": "{0} is already set as an auto publish channel.",
   "auto_publish_not_enabled": "Auto publish is not enabled for any channels.",
   "auto_publish_not_set": "{0} is not an auto publish channel.",

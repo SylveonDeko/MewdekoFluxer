@@ -54,7 +54,6 @@
   "ticket_locked": "🔒 Dieses Ticket wurde gesperrt",
   "ticket_not_found": "Ticket nicht gefunden",
   "ticket_panel_created": "{0} Ticket-Panel erstellt!",
-  "ticket_panel_created_in": "Ticket-Panel in {0} erfolgreich erstellt",
   "ticket_panel_creation_failed": "Ticket-Panel konnte nicht erstellt werden.",
   "ticket_panel_deleted": "Ticket-Panel #{0} wurde gelöscht",
   "ticket_panel_deleted_with_references": "Panel {0} erfolgreich gelöscht! Referenzen von {1} aktiven Tickets und {2} gelöschten Tickets gelöscht.",

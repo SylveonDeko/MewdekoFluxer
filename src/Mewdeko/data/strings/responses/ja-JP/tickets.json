@@ -54,7 +54,6 @@
   "ticket_locked": "🔒 このチケットはロックされました",
   "ticket_not_found": "チケットが見つかりません",
   "ticket_panel_created": "{0} チケットパネルを作成しました！",
-  "ticket_panel_created_in": "{0}にチケットパネルを正常に作成しました",
   "ticket_panel_creation_failed": "チケットパネルの作成に失敗しました。",
   "ticket_panel_deleted": "チケットパネル#{0}が削除されました",
   "ticket_panel_deleted_with_references": "パネル{0}を正常に削除しました！{1}件のアクティブチケットと{2}件の削除済みチケットの参照をクリアしました。",

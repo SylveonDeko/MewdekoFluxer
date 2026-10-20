@@ -1,5 +1,4 @@
 {
-  "chat_trigger_edit": "Chat Trigger Edit",
   "chat_trigger_id": "#{0}",
   "ct_clear": "모든 채팅 트리거를 제거했습니다.",
   "ct_clear_done": "This will delete all chat triggers on this server.",
@@ -8,7 +7,6 @@
   "ct_crossposting_channel": "To <#{0}>",
   "ct_crossposting_webhook": "To a webhook",
   "ct_custom_prefix": "Custom Prefix",
-  "ct_default_description": "description",
   "ct_interaction_description": "Application Command Description",
   "ct_interaction_errors_desc": "Run /triggers interactions errors to see the errors that have been encountered.",
   "ct_interaction_errors_info_desc": "The following errors were encountered when updating your application command chat triggers. If you need help resolving any of them, please stop by the [official support server](https://discord.gg/Mewdeko).",
