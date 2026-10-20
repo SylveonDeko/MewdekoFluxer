@@ -46,6 +46,8 @@
   "manga_volumes": "Volumes",
   "mal_specify_one": "Provide either a MyAnimeList username or a user, not both.",
   "pokemon_not_found": "Seems like that Pokemon wasn't found. Please try again with a different query!",
+  "rain": "Rain",
+  "solar_radiation": "Solar Radiation",
   "stream_message_reset": "Announcement message for {0} stream has been reset.",
   "stream_message_set": "Announcement message when {0} stream goes online has been set.",
   "stream_no": "No such stream.",
@@ -76,5 +78,7 @@
   "stream_template_title": "Stream Notification Template",
   "stream_tracked": "I will notify this channel whenever this stream comes online.",
   "weather_attribution": "Powered by Open-Meteo.com",
+  "weather_title": "{0} Weather for {1}",
+  "weather_updated": "{0} • Updated at {1}",
   "wiki_page_not_found": "Page not found."
 }

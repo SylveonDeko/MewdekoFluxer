@@ -63,7 +63,6 @@ public partial class Searches(
             .ConfigureAwait(false);
         var image = await martineApi.RedditApi.GetRandomMeme(Toptype.year).ConfigureAwait(false);
 
-        var button = new ComponentBuilder().WithButton("Another!", $"meme:{ctx.User.Id}");
         var em = new EmbedBuilder
         {
             Author = new EmbedAuthorBuilder
@@ -79,11 +78,7 @@ public partial class Searches(
             ImageUrl = image.Data.ImageUrl,
             Color = Mewdeko.OkColor
         };
-        await msg.ModifyAsync(x =>
-        {
-            x.Embed = em.Build();
-            x.Components = button.Build();
-        }).ConfigureAwait(false);
+        await msg.ModifyAsync(x => x.Embed = em.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -113,7 +108,6 @@ public partial class Searches(
             return;
         }
 
-        var button = new ComponentBuilder().WithButton("Another!", $"randomreddit:{subreddit}.{ctx.User.Id}");
         RedditPost image;
         try
         {
@@ -142,11 +136,7 @@ public partial class Searches(
             ImageUrl = image.Data.ImageUrl,
             Color = Mewdeko.OkColor
         };
-        await msg.ModifyAsync(x =>
-        {
-            x.Embed = em.Build();
-            x.Components = button.Build();
-        }).ConfigureAwait(false);
+        await msg.ModifyAsync(x => x.Embed = em.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -173,12 +163,11 @@ public partial class Searches(
     }
 
     /// <summary>
-    ///     Displays interactive weather information for a specified location.
+    ///     Displays weather information for a specified location.
     /// </summary>
     /// <param name="query">The location query to search for weather information.</param>
     /// <remarks>
-    ///     This command displays interactive weather information using Components V2,
-    ///     including current conditions, hourly forecasts, and 7-day outlook.
+    ///     This command shows the current conditions and a 7-day outlook in a single embed.
     /// </remarks>
     /// <example>
     ///     <code>.weather New York</code>
@@ -202,184 +191,113 @@ public partial class Searches(
             return;
         }
 
-        var component = BuildWeatherComponent(data);
-        await ctx.Channel.SendMessageAsync(components: component.Build(), flags: MessageFlags.ComponentsV2,
+        await ctx.Channel.SendMessageAsync(embed: BuildWeatherEmbed(data).Build(),
                 allowedMentions: AllowedMentions.None)
             .ConfigureAwait(false);
     }
 
     /// <summary>
-    ///     Builds the weather component with Components V2.
+    ///     Builds the weather embed with the current conditions and the 7-day outlook.
     /// </summary>
     /// <param name="weatherData">The weather data to display.</param>
-    private ComponentBuilderV2 BuildWeatherComponent(OpenMeteoWeatherResponse weatherData)
+    private EmbedBuilder BuildWeatherEmbed(OpenMeteoWeatherResponse weatherData)
     {
         var current = weatherData.Current;
         var emoji = WeatherCodeInterpreter.GetEmoji(current.WeatherCode);
         var condition = WeatherCodeInterpreter.GetDescription(current.WeatherCode);
 
-        var builder = new ComponentBuilderV2();
-
         var locationDisplay = current.Country == current.LocationName
             ? current.LocationName
             : $"{current.LocationName}, {current.Country}";
 
-        // Header container with location and current conditions
-        builder.WithContainer([
-            new TextDisplayBuilder($"# {emoji} Weather for {locationDisplay}"),
-            new TextDisplayBuilder($"-# {condition} • Updated at {DateTime.Parse(current.Time):HH:mm}")
-        ], Mewdeko.OkColor);
-
-        // Interactive controls - single select menu with combined options
-        var weatherOptions = new List<SelectMenuOptionBuilder>
-        {
-            new(Strings.CurrentConditions(ctx.Guild.Id), "current:0",
-                Strings.LiveWeatherData(ctx.Guild.Id), isDefault: true)
-        };
-
-        // Add daily options
-        for (var i = 0; i < Math.Min(weatherData.Daily.Time.Count, 7); i++)
-        {
-            var date = DateTime.Parse(weatherData.Daily.Time[i]);
-            var label = i == 0 ? $"{Strings.Today(ctx.Guild.Id)} ({date:MMM dd})" :
-                i == 1 ? $"{Strings.Tomorrow(ctx.Guild.Id)} ({date:MMM dd})" : date.ToString("ddd, MMM dd");
-            var tempMax = weatherData.Daily.TemperatureMax[i];
-            var tempMin = weatherData.Daily.TemperatureMin[i];
-
-            weatherOptions.Add(new SelectMenuOptionBuilder()
-                .WithLabel(label)
-                .WithDescription(
-                    $"{Strings.High(ctx.Guild.Id)}: {tempMax:F1}°C, {Strings.Low(ctx.Guild.Id)}: {tempMin:F1}°C")
-                .WithValue($"daily:{i}"));
-        }
-
-        // Add hourly forecast option
-        weatherOptions.Add(new SelectMenuOptionBuilder(Strings.HourlyForecast(ctx.Guild.Id), "hourly:0",
-            Strings.DetailedHourlyConditions(ctx.Guild.Id)));
-
-        builder.WithActionRow([
-            new SelectMenuBuilder($"weather_main_select:{current.LocationName}", weatherOptions,
-                Strings.SelectForecastPeriod(ctx.Guild.Id))
-        ]);
-
-        // Current weather data in container
-        BuildCurrentWeatherContainer(builder, current);
-
-        // 7-day summary container
-        BuildWeeklySummaryContainer(builder, weatherData);
-
-        builder.WithSeparator()
-            .WithTextDisplay($"-# {Strings.WeatherAttribution(ctx.Guild.Id)}");
-
-        return builder;
+        return new EmbedBuilder()
+            .WithOkColor()
+            .WithTitle(Strings.WeatherTitle(ctx.Guild.Id, emoji, locationDisplay))
+            .WithDescription(
+                $"{Strings.WeatherUpdated(ctx.Guild.Id, condition, $"{DateTime.Parse(current.Time):HH:mm}")}\n\n{BuildCurrentWeatherText(current)}")
+            .AddField(Strings.ForecastOutlook(ctx.Guild.Id), BuildWeeklySummaryText(weatherData))
+            .WithFooter(Strings.WeatherAttribution(ctx.Guild.Id));
     }
 
     /// <summary>
-    ///     Builds the current weather container.
+    ///     Builds the current conditions text, one group of related readings per paragraph.
     /// </summary>
-    private void BuildCurrentWeatherContainer(ComponentBuilderV2 builder, CurrentWeather current)
+    private string BuildCurrentWeatherText(CurrentWeather current)
     {
         var f = (double c) => c * 1.8 + 32;
 
-        // Primary conditions container
-        var primaryConditions = new List<TextDisplayBuilder>
+        var primary = new List<string>
         {
-            new($"🌡️ **{current.Temperature:F1}°C** ({f(current.Temperature):F1}°F)"),
-            new(
-                $"🤔 {Strings.FeelsLike(ctx.Guild.Id)}: {current.ApparentTemperature:F1}°C ({f(current.ApparentTemperature):F1}°F)"),
-            new($"💧 {Strings.Humidity(ctx.Guild.Id)}: {current.RelativeHumidity}%")
+            $"🌡️ **{current.Temperature:F1}°C** ({f(current.Temperature):F1}°F)",
+            $"🤔 {Strings.FeelsLike(ctx.Guild.Id)}: {current.ApparentTemperature:F1}°C ({f(current.ApparentTemperature):F1}°F)",
+            $"💧 {Strings.Humidity(ctx.Guild.Id)}: {current.RelativeHumidity}%"
         };
 
         if (current.DewPoint.HasValue)
-            primaryConditions.Add(
-                new TextDisplayBuilder($"💦 {Strings.Dewpoint(ctx.Guild.Id)}: {current.DewPoint:F1}°C"));
+            primary.Add($"💦 {Strings.Dewpoint(ctx.Guild.Id)}: {current.DewPoint:F1}°C");
 
-        builder.WithContainer(primaryConditions.ToArray(), new Color(52, 152, 219));
-
-        // Wind and atmospheric conditions
-        var windComponents = new List<TextDisplayBuilder>
+        var wind = new List<string>
         {
-            new($"💨 {Strings.WindSpeed(ctx.Guild.Id)}: {current.WindSpeed:F1} km/h ({current.WindDirection}°)")
+            $"💨 {Strings.WindSpeed(ctx.Guild.Id)}: {current.WindSpeed:F1} km/h ({current.WindDirection}°)"
         };
 
         if (current.WindGusts.HasValue)
-            windComponents.Add(
-                new TextDisplayBuilder($"💨 {Strings.WindGusts(ctx.Guild.Id)}: {current.WindGusts:F1} km/h"));
+            wind.Add($"💨 {Strings.WindGusts(ctx.Guild.Id)}: {current.WindGusts:F1} km/h");
 
-        windComponents.Add(
-            new TextDisplayBuilder($"📊 {Strings.Pressure(ctx.Guild.Id)}: {current.SurfacePressure:F1} hPa"));
-        windComponents.Add(new TextDisplayBuilder($"☁️ {Strings.CloudCover(ctx.Guild.Id)}: {current.CloudCover}%"));
+        wind.Add($"📊 {Strings.Pressure(ctx.Guild.Id)}: {current.SurfacePressure:F1} hPa");
+        wind.Add($"☁️ {Strings.CloudCover(ctx.Guild.Id)}: {current.CloudCover}%");
 
         if (current.Visibility.HasValue)
-            windComponents.Add(
-                new TextDisplayBuilder($"👁️ {Strings.Visibility(ctx.Guild.Id)}: {current.Visibility / 1000:F1} km"));
+            wind.Add($"👁️ {Strings.Visibility(ctx.Guild.Id)}: {current.Visibility / 1000:F1} km");
 
-        builder.WithContainer(windComponents.ToArray(), new Color(155, 89, 182));
-
-        // Precipitation and weather phenomena
-        var precipComponents = new List<TextDisplayBuilder>();
+        var precipitation = new List<string>();
 
         if (current.Precipitation is > 0)
-            precipComponents.Add(new TextDisplayBuilder($"🌧️ Precipitation: {current.Precipitation:F1} mm"));
+            precipitation.Add($"🌧️ {Strings.Precipitation(ctx.Guild.Id)}: {current.Precipitation:F1} mm");
 
         if (current.Rain is > 0)
-            precipComponents.Add(new TextDisplayBuilder($"☔ Rain: {current.Rain:F1} mm"));
+            precipitation.Add($"☔ {Strings.Rain(ctx.Guild.Id)}: {current.Rain:F1} mm");
 
         if (current.Snowfall is > 0)
-            precipComponents.Add(
-                new TextDisplayBuilder($"❄️ {Strings.Snowfall(ctx.Guild.Id)}: {current.Snowfall:F1} cm"));
+            precipitation.Add($"❄️ {Strings.Snowfall(ctx.Guild.Id)}: {current.Snowfall:F1} cm");
 
         if (current.Cape.HasValue)
-            precipComponents.Add(new TextDisplayBuilder($"⛈️ {Strings.Cape(ctx.Guild.Id)}: {current.Cape:F0} J/kg"));
+            precipitation.Add($"⛈️ {Strings.Cape(ctx.Guild.Id)}: {current.Cape:F0} J/kg");
 
         if (current.FreezingLevelHeight.HasValue)
-            precipComponents.Add(
-                new TextDisplayBuilder(
-                    $"🧊 {Strings.FreezingLevel(ctx.Guild.Id)}: {current.FreezingLevelHeight / 1000:F1} km"));
+            precipitation.Add($"🧊 {Strings.FreezingLevel(ctx.Guild.Id)}: {current.FreezingLevelHeight / 1000:F1} km");
 
-        if (precipComponents.Count > 0)
-            builder.WithContainer(precipComponents.ToArray(), new Color(52, 73, 94));
-
-        // Solar and environmental data
-        var solarComponents = new List<TextDisplayBuilder>();
+        var solar = new List<string>();
 
         if (current.UvIndex.HasValue)
-            solarComponents.Add(new TextDisplayBuilder($"☀️ {Strings.UvIndex(ctx.Guild.Id)}: {current.UvIndex:F1}"));
+            solar.Add($"☀️ {Strings.UvIndex(ctx.Guild.Id)}: {current.UvIndex:F1}");
 
         if (current.SolarRadiation.HasValue)
-            solarComponents.Add(new TextDisplayBuilder($"🌞 Solar Radiation: {current.SolarRadiation:F0} W/m²"));
+            solar.Add($"🌞 {Strings.SolarRadiation(ctx.Guild.Id)}: {current.SolarRadiation:F0} W/m²");
 
         if (current.Evapotranspiration.HasValue)
-            solarComponents.Add(
-                new TextDisplayBuilder(
-                    $"🌱 {Strings.Evapotranspiration(ctx.Guild.Id)}: {current.Evapotranspiration:F2} mm"));
+            solar.Add($"🌱 {Strings.Evapotranspiration(ctx.Guild.Id)}: {current.Evapotranspiration:F2} mm");
 
-        if (solarComponents.Count > 0)
-            builder.WithContainer(solarComponents.ToArray(), new Color(241, 196, 15));
-
-        // Soil conditions
-        var soilComponents = new List<TextDisplayBuilder>();
+        var soil = new List<string>();
 
         if (current.SoilTemperature0cm.HasValue)
-            soilComponents.Add(
-                new TextDisplayBuilder(
-                    $"🌡️ {Strings.SoilTemperature(ctx.Guild.Id)}: {current.SoilTemperature0cm:F1}°C"));
+            soil.Add($"🌡️ {Strings.SoilTemperature(ctx.Guild.Id)}: {current.SoilTemperature0cm:F1}°C");
 
         if (current.SoilMoisture0to1cm.HasValue)
-            soilComponents.Add(
-                new TextDisplayBuilder(
-                    $"💧 {Strings.SoilMoisture(ctx.Guild.Id)}: {current.SoilMoisture0to1cm * 100:F1}%"));
+            soil.Add($"💧 {Strings.SoilMoisture(ctx.Guild.Id)}: {current.SoilMoisture0to1cm * 100:F1}%");
 
-        if (soilComponents.Count > 0)
-            builder.WithContainer(soilComponents.ToArray(), new Color(139, 69, 19));
+        return string.Join("\n\n",
+            new[] { primary, wind, precipitation, solar, soil }
+                .Where(group => group.Count > 0)
+                .Select(group => string.Join("\n", group)));
     }
 
     /// <summary>
-    ///     Builds the weekly summary container.
+    ///     Builds the text of the 7-day outlook, one line per day.
     /// </summary>
-    private void BuildWeeklySummaryContainer(ComponentBuilderV2 builder, OpenMeteoWeatherResponse weatherData)
+    private string BuildWeeklySummaryText(OpenMeteoWeatherResponse weatherData)
     {
-        var weeklyComponents = new List<TextDisplayBuilder>();
+        var lines = new List<string>();
 
         for (var i = 0; i < Math.Min(weatherData.Daily.Time.Count, 7); i++)
         {
@@ -389,18 +307,19 @@ public partial class Searches(
             var precipitation = weatherData.Daily.PrecipitationSum[i];
             var uv = weatherData.Daily.UvIndexMax[i];
 
-            var dayLabel = i == 0 ? "Today" : i == 1 ? "Tomorrow" : date.ToString("ddd");
+            var dayLabel = i switch
+            {
+                0 => Strings.Today(ctx.Guild.Id),
+                1 => Strings.Tomorrow(ctx.Guild.Id),
+                _ => date.ToString("ddd")
+            };
             var precipText = precipitation > 0 ? $" • {precipitation:F1}mm" : "";
-            var uvText = uv > 5 ? $" • UV: {uv:F1}" : "";
+            var uvText = uv > 5 ? $" • {Strings.UvIndex(ctx.Guild.Id)}: {uv:F1}" : "";
 
-            weeklyComponents.Add(
-                new TextDisplayBuilder($"`{dayLabel,-9}` {tempMax:F1}°/{tempMin:F1}°C{precipText}{uvText}"));
+            lines.Add($"`{dayLabel,-9}` {tempMax:F1}°/{tempMin:F1}°C{precipText}{uvText}");
         }
 
-        builder.WithContainer([
-            new TextDisplayBuilder("## 7-Day Outlook"),
-            ..weeklyComponents
-        ], new Color(46, 204, 113)); // Green for weekly forecast
+        return string.Join("\n", lines);
     }
 
     /// <summary>
@@ -443,63 +362,54 @@ public partial class Searches(
             return;
         }
 
-        // If only one candidate, show it directly
         if (candidates.Count == 1)
         {
-            var data = candidates[0];
-            var timeString = data.Time.ToString("h:mm:ss tt");
-            var eb = new EmbedBuilder()
-                .WithOkColor()
-                .WithTitle(Strings.TimeNew(ctx.Guild.Id))
-                .WithDescription(Format.Code(timeString))
-                .AddField(Strings.Location(ctx.Guild.Id), string.Join('\n', data.Address.Split(", ")), true)
-                .AddField(Strings.Timezone(ctx.Guild.Id), data.TimeZoneName, true);
-
-            await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+            await ctx.Channel.SendMessageAsync(embed: BuildTimeEmbed(candidates[0].Time, candidates[0].Address,
+                candidates[0].TimeZoneName).Build()).ConfigureAwait(false);
             return;
         }
 
-        // Multiple candidates - show select menu
-        await ShowTimezoneSelectMenu(candidates, query);
+        await ShowTimezoneChoices(candidates, query).ConfigureAwait(false);
     }
 
-    private async Task ShowTimezoneSelectMenu(
+    private static readonly string[] TimezoneChoiceEmotes =
+        ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣"];
+
+    private EmbedBuilder BuildTimeEmbed(DateTime time, string address, string timeZoneName)
+    {
+        var timeString = time.ToString("h:mm:ss tt");
+        return new EmbedBuilder()
+            .WithOkColor()
+            .WithTitle(Strings.TimeNew(ctx.Guild.Id))
+            .WithDescription(Format.Code(timeString))
+            .AddField(Strings.Location(ctx.Guild.Id), string.Join('\n', address.Split(", ")), true)
+            .AddField(Strings.Timezone(ctx.Guild.Id), timeZoneName, true);
+    }
+
+    private async Task ShowTimezoneChoices(
         List<(string Address, DateTime Time, string TimeZoneName, string TimezoneId)> candidates, string originalQuery)
     {
-        var options = new List<SelectMenuOptionBuilder>();
-
-        for (var i = 0; i < Math.Min(candidates.Count, 25); i++) // Discord limit is 25 options
-        {
-            var candidate = candidates[i];
-            var timeString = candidate.Time.ToString("h:mm tt");
-            var description = $"{timeString} • {candidate.Address}";
-
-            options.Add(new SelectMenuOptionBuilder()
-                .WithLabel(candidate.TimeZoneName.Length > 100
-                    ? candidate.TimeZoneName[..97] + Strings.Ellipsis(ctx.Guild.Id)
-                    : candidate.TimeZoneName)
-                .WithDescription(description.Length > 100
-                    ? description[..97] + Strings.Ellipsis(ctx.Guild.Id)
-                    : description)
-                .WithValue($"timezone_select:{candidate.TimezoneId}"));
-        }
-
-        var selectMenu = new SelectMenuBuilder()
-            .WithCustomId($"timezone_select_menu:{originalQuery}")
-            .WithPlaceholder(Strings.TimezoneSelectPlaceholder(ctx.Guild.Id, candidates.Count, originalQuery))
-            .WithMinValues(1)
-            .WithMaxValues(1)
-            .WithOptions(options);
-
-        var component = new ComponentBuilder()
-            .WithSelectMenu(selectMenu);
+        var shown = candidates.Take(TimezoneChoiceEmotes.Length).ToList();
+        var lines = shown.Select((candidate, i) =>
+            $"{TimezoneChoiceEmotes[i]} {candidate.TimeZoneName} • {candidate.Time:h:mm tt} • {candidate.Address}");
 
         var embed = new EmbedBuilder()
             .WithOkColor()
             .WithTitle(Strings.MultipleTimezonesFound(ctx.Guild.Id))
-            .WithDescription(Strings.TimezoneDisambiguationDescription(ctx.Guild.Id, candidates.Count, originalQuery));
+            .WithDescription(
+                $"{Strings.TimezoneDisambiguationDescription(ctx.Guild.Id, candidates.Count, originalQuery)}\n\n{string.Join("\n", lines)}");
 
-        await ctx.Channel.SendMessageAsync(embed: embed.Build(), components: component.Build()).ConfigureAwait(false);
+        var shownAt = DateTime.UtcNow;
+        var msg = await ctx.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+        var picked = await Interactive.WaitForReactionAsync(msg, ctx.User.Id,
+            shown.Select((_, i) => (IEmote)new Emoji(TimezoneChoiceEmotes[i])).ToList()).ConfigureAwait(false);
+
+        if (picked is not { } index)
+            return;
+
+        var choice = shown[index];
+        await msg.ModifyAsync(x => x.Embed = BuildTimeEmbed(choice.Time.Add(DateTime.UtcNow - shownAt),
+            choice.Address, choice.TimeZoneName).Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -668,7 +578,6 @@ public partial class Searches(
         try
         {
             var image = await Service.GetRandomImageAsync(tag).ConfigureAwait(false);
-            var button = new ComponentBuilder().WithButton("Another!", $"randomimage:{tag}.{ctx.User.Id}");
 
             var em = new EmbedBuilder()
                 .WithOkColor()
@@ -677,11 +586,7 @@ public partial class Searches(
                 .WithFooter(Strings.RedditUpvotesFooter(ctx.Guild.Id, image.Data.Upvotes, image.Data.Subreddit.Name))
                 .WithImageUrl(image.Data.ImageUrl);
 
-            await msg.ModifyAsync(x =>
-            {
-                x.Embed = em.Build();
-                x.Components = button.Build();
-            }).ConfigureAwait(false);
+            await msg.ModifyAsync(x => x.Embed = em.Build()).ConfigureAwait(false);
 
             return msg;
         }
