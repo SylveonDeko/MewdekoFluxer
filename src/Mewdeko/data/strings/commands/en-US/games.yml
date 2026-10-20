@@ -339,6 +339,24 @@ pollc:
       name: input
       optional: false
       type: string
+pollclose:
+  args:
+    - 3
+  desc: 'Closes a poll now and shows its final results on the poll message.'
+  params:
+    - desc: The poll ID shown in the poll footer.
+      name: pollId
+      optional: false
+      type: int
+polldelete:
+  args:
+    - 3
+  desc: 'Deletes a poll, its votes and its message after asking first.'
+  params:
+    - desc: The poll ID shown in the poll footer.
+      name: pollId
+      optional: false
+      type: int
 pollm:
   args:
     - input
@@ -348,6 +366,15 @@ pollm:
       name: input
       optional: false
       type: string
+pollstats:
+  args:
+    - 3
+  desc: 'Shows the vote counts and timing of a poll.'
+  params:
+    - desc: The poll ID shown in the poll footer.
+      name: pollId
+      optional: false
+      type: int
 polltemplate:
   args:
     - templateName

@@ -5,8 +5,6 @@ using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.ModuleBehaviors;
 using Mewdeko.Modules.Games.Common;
-using Mewdeko.Services.Strings;
-using Embed = Discord.Embed;
 
 namespace Mewdeko.Modules.Games.Services;
 
@@ -18,27 +16,28 @@ public class PollSchedulerService : INService, IReadyExecutor, IDisposable
     private readonly DiscordShardedClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly ILogger<PollSchedulerService> logger;
+    private readonly PollMessageService pollMessages;
     private readonly PollService pollService;
     private readonly Timer schedulerTimer;
     private readonly SemaphoreSlim semaphore = new(1, 1);
-    private readonly GeneratedBotStrings strings;
 
     /// <summary>
     /// Initializes a new instance of the PollSchedulerService class.
     /// </summary>
     /// <param name="dbFactory">The database connection factory.</param>
     /// <param name="pollService">The poll service.</param>
+    /// <param name="pollMessages">The service that posts poll messages.</param>
     /// <param name="client">The Discord client.</param>
     /// <param name="logger">The logger instance.</param>
-    /// <param name="strings">The strings service.</param>
     public PollSchedulerService(IDataConnectionFactory dbFactory, PollService pollService,
-        DiscordShardedClient client, ILogger<PollSchedulerService> logger, GeneratedBotStrings strings)
+        PollMessageService pollMessages,
+        DiscordShardedClient client, ILogger<PollSchedulerService> logger)
     {
         this.dbFactory = dbFactory;
         this.pollService = pollService;
+        this.pollMessages = pollMessages;
         this.client = client;
         this.logger = logger;
-        this.strings = strings;
 
         // Check for scheduled polls every minute
         schedulerTimer = new Timer(ProcessScheduledPolls, null, TimeSpan.Zero, TimeSpan.FromMinutes(1));
@@ -278,31 +277,24 @@ public class PollSchedulerService : INService, IReadyExecutor, IDisposable
                 return;
             }
 
-            // Create the poll
-            var poll = await pollService.CreatePollAsync(
-                scheduledPoll.GuildId,
-                scheduledPoll.ChannelId,
-                0, // Message ID will be set later
-                scheduledPoll.CreatorId,
-                scheduledPoll.Question,
-                options,
-                (PollType)scheduledPoll.Type,
-                settings);
+            settings ??= new PollSettings();
+            var problem = await pollMessages.GetPostProblemAsync(channel, settings, options);
+            if (problem is not null)
+            {
+                logger.LogWarning("Scheduled poll {ScheduledPollId} cannot be posted: {Problem}", scheduledPoll.Id,
+                    problem);
+                await MarkScheduledPollAsExecuted(scheduledPoll.Id, null);
+                return;
+            }
 
-            // Build and send the poll message
-            var embed = await BuildScheduledPollEmbed(scheduledPoll, options, (PollType)scheduledPoll.Type, poll.Id);
-            var components = BuildScheduledPollComponents(poll.Id, options, (PollType)scheduledPoll.Type);
+            var poll = await pollMessages.PostPollAsync(channel, scheduledPoll.CreatorId, scheduledPoll.Question,
+                options, (PollType)scheduledPoll.Type, settings);
 
-            var message = await channel.SendMessageAsync(embed: embed, components: components);
-
-            // Update the poll with the message ID
-            await pollService.UpdatePollMessageIdAsync(poll.Id, message.Id);
-
-            // Set expiration if specified
             if (scheduledPoll.DurationMinutes.HasValue)
             {
                 await pollService.SetPollExpirationAsync(poll.Id,
                     TimeSpan.FromMinutes(scheduledPoll.DurationMinutes.Value));
+                await pollMessages.RefreshPollMessageAsync(poll.Id);
             }
 
             // Mark the scheduled poll as executed
@@ -345,166 +337,6 @@ public class PollSchedulerService : INService, IReadyExecutor, IDisposable
         {
             logger.LogError(ex, "Failed to mark scheduled poll {ScheduledPollId} as executed", scheduledPollId);
         }
-    }
-
-    /// <summary>
-    /// Builds the embed for a scheduled poll.
-    /// </summary>
-    /// <param name="scheduledPoll">The scheduled poll.</param>
-    /// <param name="options">The poll options.</param>
-    /// <param name="pollType">The poll type.</param>
-    /// <param name="pollId">The created poll ID.</param>
-    /// <returns>The built embed.</returns>
-    private async Task<Embed> BuildScheduledPollEmbed(ScheduledPoll scheduledPoll,
-        List<PollOptionData> options, PollType pollType, int pollId)
-    {
-        await Task.CompletedTask;
-
-        var typeIcon = pollType switch
-        {
-            PollType.YesNo => "✅❌",
-            PollType.SingleChoice => "📊",
-            PollType.MultiChoice => "☑️",
-            PollType.Anonymous => "🔒",
-            PollType.RoleRestricted => "👥",
-            _ => "📊"
-        };
-
-        var embed = new EmbedBuilder()
-            .WithTitle(strings.PollTitleFormat(scheduledPoll.GuildId, typeIcon, scheduledPoll.Question))
-            .WithColor(GetPollColor(pollType))
-            .WithTimestamp(DateTimeOffset.UtcNow)
-            .WithFooter(strings.PollScheduledFooter(scheduledPoll.GuildId, pollId));
-
-        for (var i = 0; i < options.Count; i++)
-        {
-            var option = options[i];
-            var optionText = $"{i + 1}. {option.Text}";
-            if (!string.IsNullOrEmpty(option.Emote))
-                optionText = $"{option.Emote} {optionText}";
-
-            embed.AddField(optionText, "0 votes (0%)", true);
-        }
-
-        return embed.Build();
-    }
-
-    /// <summary>
-    /// Builds the components for a scheduled poll.
-    /// </summary>
-    /// <param name="pollId">The poll ID.</param>
-    /// <param name="options">The poll options.</param>
-    /// <param name="pollType">The poll type.</param>
-    /// <returns>The built message component.</returns>
-    private static MessageComponent BuildScheduledPollComponents(int pollId,
-        List<PollOptionData> options, PollType pollType)
-    {
-        var builder = new ComponentBuilder();
-
-        if (options.Count <= 5)
-        {
-            // Use buttons for 2-5 options
-            for (var i = 0; i < options.Count; i++)
-            {
-                var option = options[i];
-                var label = $"{i + 1}";
-                if (option.Text.Length <= 12)
-                    label = $"{i + 1}. {option.Text}";
-
-                if (label.Length > 80) label = label[..77] + "...";
-
-                IEmote? emote = null;
-                if (!string.IsNullOrEmpty(option.Emote))
-                {
-                    try
-                    {
-                        emote = Emote.Parse(option.Emote);
-                    }
-                    catch
-                    {
-                        emote = new Emoji(option.Emote);
-                    }
-                }
-
-                var style = GetButtonStyle(i);
-                builder.WithButton(label, $"poll:vote:{pollId}:{i}", style, emote);
-            }
-        }
-        else
-        {
-            // Use select menu for 6+ options
-            var selectMenuBuilder = new SelectMenuBuilder()
-                .WithCustomId($"poll:select:{pollId}")
-                .WithPlaceholder("Choose your option(s)...")
-                .WithMinValues(1)
-                .WithMaxValues(pollType == PollType.MultiChoice ? Math.Min(options.Count, 25) : 1);
-
-            for (var i = 0; i < Math.Min(options.Count, 25); i++)
-            {
-                var option = options[i];
-                var label = $"{i + 1}. {option.Text}";
-                if (label.Length > 100) label = label[..97] + "...";
-
-                IEmote? emote = null;
-                if (!string.IsNullOrEmpty(option.Emote))
-                {
-                    try
-                    {
-                        emote = Emote.Parse(option.Emote);
-                    }
-                    catch
-                    {
-                        emote = new Emoji(option.Emote);
-                    }
-                }
-
-                selectMenuBuilder.AddOption(label, i.ToString(), emote: emote);
-            }
-
-            builder.WithSelectMenu(selectMenuBuilder);
-        }
-
-        // Add management buttons on second row
-        builder.WithButton("📊 Stats", $"poll:manage:{pollId}:stats", ButtonStyle.Secondary)
-            .WithButton("🔒 Close", $"poll:manage:{pollId}:close", ButtonStyle.Secondary)
-            .WithButton("🗑️ Delete", $"poll:manage:{pollId}:delete", ButtonStyle.Danger);
-
-        return builder.Build();
-    }
-
-    /// <summary>
-    /// Gets the color for a poll type.
-    /// </summary>
-    /// <param name="pollType">The poll type.</param>
-    /// <returns>The color for the poll type.</returns>
-    private static Color GetPollColor(PollType pollType)
-    {
-        return pollType switch
-        {
-            PollType.YesNo => Color.Green,
-            PollType.SingleChoice => Color.Blue,
-            PollType.MultiChoice => Color.Purple,
-            PollType.Anonymous => Color.DarkGrey,
-            PollType.RoleRestricted => Color.Orange,
-            _ => Color.Blue
-        };
-    }
-
-    /// <summary>
-    /// Gets the button style based on option index.
-    /// </summary>
-    /// <param name="index">The option index.</param>
-    /// <returns>The button style.</returns>
-    private static ButtonStyle GetButtonStyle(int index)
-    {
-        return index switch
-        {
-            0 => ButtonStyle.Primary,
-            1 => ButtonStyle.Secondary,
-            2 => ButtonStyle.Success,
-            3 => ButtonStyle.Danger,
-            _ => ButtonStyle.Secondary
-        };
     }
 
     /// <summary>

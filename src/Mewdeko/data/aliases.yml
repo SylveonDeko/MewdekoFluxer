@@ -1908,8 +1908,14 @@ polla:
   - polla
 pollc:
   - pollc
+pollclose:
+  - pollclose
+polldelete:
+  - polldelete
 pollm:
   - pollm
+pollstats:
+  - pollstats
 polltemplate:
   - polltemplate
   - ptemplate

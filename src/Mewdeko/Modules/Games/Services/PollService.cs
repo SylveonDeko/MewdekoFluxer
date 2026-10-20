@@ -93,8 +93,8 @@ public class PollService : INService, IReadyExecutor
         if (options?.Count < 1)
             throw new ArgumentException("Poll must have at least one option", nameof(options));
 
-        if (options.Count > 25)
-            throw new ArgumentException("Poll cannot have more than 25 options", nameof(options));
+        if (options.Count > PollMessageService.MaxOptions)
+            throw new ArgumentException("Poll cannot have more than 20 options", nameof(options));
 
         try
         {
@@ -236,13 +236,17 @@ public class PollService : INService, IReadyExecutor
     }
 
     /// <summary>
-    /// Processes a vote attempt for a poll.
+    /// Records a member adding or taking back a reaction on a poll option.
     /// </summary>
-    /// <param name="pollId">The ID of the poll being voted on.</param>
+    /// <param name="pollId">The ID of the poll.</param>
     /// <param name="userId">The Discord user ID of the voter.</param>
-    /// <param name="optionIndices">The selected option indices.</param>
-    /// <returns>A tuple indicating success and the vote result type.</returns>
-    public async Task<(bool Success, VoteResult Result)> ProcessVoteAsync(int pollId, ulong userId, int[] optionIndices)
+    /// <param name="optionIndex">The index of the option the reaction stands for.</param>
+    /// <param name="add">True when the reaction was added, false when it was taken back.</param>
+    /// <returns>
+    /// The result, and the indices of earlier picks that a single choice vote replaced, whose reactions should go.
+    /// </returns>
+    public async Task<(VoteResult Result, int[] Dropped)> ApplyVoteAsync(int pollId, ulong userId, int optionIndex,
+        bool add)
     {
         try
         {
@@ -250,10 +254,10 @@ public class PollService : INService, IReadyExecutor
 
             var poll = await GetPollAsync(pollId);
             if (poll == null)
-                return (false, VoteResult.InvalidOption);
+                return (VoteResult.InvalidOption, []);
 
             if (!poll.IsActive || (poll.ExpiresAt.HasValue && poll.ExpiresAt.Value <= DateTime.UtcNow))
-                return (false, VoteResult.PollClosed);
+                return (VoteResult.PollClosed, []);
 
             PollSettings settings;
             try
@@ -268,87 +272,105 @@ public class PollService : INService, IReadyExecutor
                 settings = new PollSettings();
             }
 
-            // Validate option indices
-            var validIndices = optionIndices.Where(i => i >= 0 && i < poll.PollOptions.Count()).ToArray();
-            if (validIndices.Length == 0)
-                return (false, VoteResult.InvalidOption);
+            if (optionIndex < 0 || optionIndex >= poll.PollOptions.Count())
+                return (VoteResult.InvalidOption, []);
 
-            // Check role restrictions
-            if (settings.AllowedRoles?.Count > 0)
+            if (add && settings.AllowedRoles?.Count > 0)
             {
-                try
-                {
-                    var guild = client.GetGuild(poll.GuildId);
-                    var user = guild?.GetUser(userId);
-                    if (user == null ||
-                        !settings.AllowedRoles.Any(roleId => user.Roles.Select(x => x.Id).Contains(roleId)))
-                        return (false, VoteResult.NotAllowed);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, "Failed to check role restrictions for poll {PollId} and user {UserId}",
-                        pollId, userId);
-                    return (false, VoteResult.NotAllowed);
-                }
+                var user = client.GetGuild(poll.GuildId)?.GetUser(userId);
+                if (user == null || !settings.AllowedRoles.Any(roleId => user.Roles.Any(r => r.Id == roleId)))
+                    return (VoteResult.NotAllowed, []);
             }
 
-            // Check existing vote
-            var existingVote = await db.PollVotes
-                .FirstOrDefaultAsync(v => v.PollId == pollId && v.UserId == userId);
-
-            if (existingVote != null)
+            var existingVote = await db.PollVotes.FirstOrDefaultAsync(v => v.PollId == pollId && v.UserId == userId);
+            int[] existing;
+            try
             {
+                existing = existingVote == null
+                    ? []
+                    : JsonSerializer.Deserialize<int[]>(existingVote.OptionIndices) ?? [];
+            }
+            catch (JsonException ex)
+            {
+                logger.LogWarning(ex, "Failed to deserialize existing vote indices for poll {PollId}, treating as empty",
+                    pollId);
+                existing = [];
+            }
+
+            var isMulti = settings.AllowMultipleVotes || poll.Type == (int)PollType.MultiChoice;
+            VoteResult result;
+            int[] updated;
+            int[] dropped = [];
+
+            if (!add)
+            {
+                if (!existing.Contains(optionIndex))
+                    return (VoteResult.Success, []);
                 if (!settings.AllowVoteChanges)
-                    return (false, VoteResult.AlreadyVoted);
+                    return (VoteResult.AlreadyVoted, []);
 
-                int[] existingIndices;
-                try
-                {
-                    existingIndices = JsonSerializer.Deserialize<int[]>(existingVote.OptionIndices) ??
-                                      [];
-                }
-                catch (JsonException ex)
-                {
-                    logger.LogWarning(ex,
-                        "Failed to deserialize existing vote indices for poll {PollId}, treating as empty", pollId);
-                    existingIndices = [];
-                }
+                updated = existing.Where(i => i != optionIndex).ToArray();
+                result = VoteResult.Removed;
+            }
+            else if (existing.Contains(optionIndex))
+            {
+                if (!settings.IsAnonymous)
+                    return (VoteResult.Success, []);
+                if (!settings.AllowVoteChanges)
+                    return (VoteResult.AlreadyVoted, []);
 
-                if (existingIndices.SequenceEqual(validIndices))
-                {
-                    // Remove vote (user clicked same option)
-                    await db.PollVotes
-                        .Where(v => v.Id == existingVote.Id)
-                        .DeleteAsync();
-                    return (true, VoteResult.Removed);
-                }
+                updated = existing.Where(i => i != optionIndex).ToArray();
+                result = VoteResult.Removed;
+            }
+            else if (existing.Length > 0 && !settings.AllowVoteChanges)
+            {
+                return (VoteResult.AlreadyVoted, []);
+            }
+            else if (isMulti)
+            {
+                if (settings.MaxSelections is > 0 && existing.Length >= settings.MaxSelections)
+                    return (VoteResult.NotAllowed, []);
 
-                // Update existing vote
-                existingVote.OptionIndices = JsonSerializer.Serialize(validIndices);
+                updated = [.. existing, optionIndex];
+                result = existing.Length == 0 ? VoteResult.Success : VoteResult.Changed;
+            }
+            else
+            {
+                updated = [optionIndex];
+                dropped = existing;
+                result = existing.Length == 0 ? VoteResult.Success : VoteResult.Changed;
+            }
+
+            if (existingVote == null)
+            {
+                await db.InsertAsync(new PollVote
+                {
+                    PollId = pollId,
+                    UserId = userId,
+                    OptionIndices = JsonSerializer.Serialize(updated),
+                    VotedAt = DateTime.UtcNow,
+                    IsAnonymous = settings.IsAnonymous
+                });
+                collector.Feature("poll", poll.GuildId);
+            }
+            else if (updated.Length == 0)
+            {
+                await db.PollVotes.Where(v => v.Id == existingVote.Id).DeleteAsync();
+            }
+            else
+            {
+                existingVote.OptionIndices = JsonSerializer.Serialize(updated);
                 existingVote.VotedAt = DateTime.UtcNow;
                 await db.UpdateAsync(existingVote);
-                return (true, VoteResult.Changed);
             }
 
-            // Create new vote
-            var newVote = new PollVote
-            {
-                PollId = pollId,
-                UserId = userId,
-                OptionIndices = JsonSerializer.Serialize(validIndices),
-                VotedAt = DateTime.UtcNow,
-                IsAnonymous = settings.IsAnonymous
-            };
-
-            await db.InsertAsync(newVote);
-            collector.Feature("poll", poll.GuildId);
-            return (true, VoteResult.Success);
+            return (result, dropped);
         }
         catch (Exception ex)
         {
             collector.Feature("poll", null, false, ex.GetType().Name);
             logger.LogError(ex, "Failed to process vote for poll {PollId} by user {UserId}", pollId, userId);
-            return (false, VoteResult.InvalidOption);
+            return (VoteResult.InvalidOption, []);
         }
     }
 

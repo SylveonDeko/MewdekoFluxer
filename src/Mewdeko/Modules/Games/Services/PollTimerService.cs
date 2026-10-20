@@ -2,7 +2,6 @@ using System.Threading;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.ModuleBehaviors;
-using Mewdeko.Services.Strings;
 using Poll = DataModel.Poll;
 
 namespace Mewdeko.Modules.Games.Services;
@@ -12,30 +11,24 @@ namespace Mewdeko.Modules.Games.Services;
 /// </summary>
 public class PollTimerService : INService, IReadyExecutor, IDisposable
 {
-    private readonly DiscordShardedClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly ILogger<PollTimerService> logger;
-    private readonly PollService pollService;
+    private readonly PollMessageService pollMessages;
     private readonly SemaphoreSlim semaphore = new(1, 1);
-    private readonly GeneratedBotStrings strings;
     private readonly Timer timer;
 
     /// <summary>
     /// Initializes a new instance of the PollTimerService class.
     /// </summary>
     /// <param name="dbFactory">The database connection factory.</param>
-    /// <param name="pollService">The poll service.</param>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="pollMessages">The service that closes polls and updates their messages.</param>
     /// <param name="logger">The logger instance.</param>
-    /// <param name="strings">The strings service.</param>
-    public PollTimerService(IDataConnectionFactory dbFactory, PollService pollService,
-        DiscordShardedClient client, ILogger<PollTimerService> logger, GeneratedBotStrings strings)
+    public PollTimerService(IDataConnectionFactory dbFactory, PollMessageService pollMessages,
+        ILogger<PollTimerService> logger)
     {
         this.dbFactory = dbFactory;
-        this.pollService = pollService;
-        this.client = client;
+        this.pollMessages = pollMessages;
         this.logger = logger;
-        this.strings = strings;
 
         // Check for expired polls every 5 minutes
         timer = new Timer(CheckExpiredPolls, null, TimeSpan.Zero, TimeSpan.FromMinutes(5));
@@ -245,14 +238,10 @@ public class PollTimerService : INService, IReadyExecutor, IDisposable
             {
                 try
                 {
-                    // Close the poll in the database
-                    var success = await pollService.ClosePollAsync(poll.Id, 0); // System closure
+                    var success = await pollMessages.CloseAsync(poll.Id, 0);
 
                     if (success)
                     {
-                        // Update the poll message to show it's expired
-                        await UpdateExpiredPollMessage(poll);
-
                         logger.LogInformation("Automatically closed expired poll {PollId} in guild {GuildId}",
                             poll.Id, poll.GuildId);
                     }
@@ -274,68 +263,6 @@ public class PollTimerService : INService, IReadyExecutor, IDisposable
         finally
         {
             semaphore.Release();
-        }
-    }
-
-    /// <summary>
-    /// Updates the poll message to indicate it has expired.
-    /// </summary>
-    /// <param name="poll">The expired poll.</param>
-    private async Task UpdateExpiredPollMessage(Poll poll)
-    {
-        try
-        {
-            var guild = client.GetGuild(poll.GuildId);
-            if (guild == null) return;
-
-            var channel = guild.GetTextChannel(poll.ChannelId);
-            if (channel == null) return;
-
-            var message = await channel.GetMessageAsync(poll.MessageId) as IUserMessage;
-            if (message == null) return;
-
-            // Get current vote counts
-            var stats = await pollService.GetPollStatsAsync(poll.Id);
-
-            // Build the final results embed
-            var embed = new EmbedBuilder()
-                .WithTitle($"⏰ {poll.Question} (EXPIRED)")
-                .WithColor(Color.DarkGrey)
-                .WithTimestamp(DateTimeOffset.UtcNow)
-                .WithFooter(strings.PollExpiredFooter(poll.GuildId, poll.Id));
-
-            // Add final results
-            foreach (var option in poll.PollOptions.OrderBy(o => o.Index))
-            {
-                var voteCount = stats?.OptionVotes.GetValueOrDefault(option.Index, 0) ?? 0;
-                var percentage = stats?.TotalVotes > 0 ? (double)voteCount / stats.TotalVotes * 100 : 0;
-
-                var optionText = $"{option.Index + 1}. {option.Text}";
-                if (!string.IsNullOrEmpty(option.Emote))
-                    optionText = $"{option.Emote} {optionText}";
-
-                embed.AddField(optionText, $"{voteCount} votes ({percentage:F1}%)", true);
-            }
-
-            if (stats?.TotalVotes > 0)
-            {
-                embed.AddField("Final Results",
-                    $"Total Votes: {stats.TotalVotes}\nUnique Voters: {stats.UniqueVoters}");
-            }
-            else
-            {
-                embed.AddField("Final Results", "No votes were cast");
-            }
-
-            await message.ModifyAsync(msg =>
-            {
-                msg.Embed = embed.Build();
-                msg.Components = new ComponentBuilder().Build(); // Remove all components
-            });
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to update expired poll message for poll {PollId}", poll.Id);
         }
     }
 

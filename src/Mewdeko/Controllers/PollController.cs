@@ -8,7 +8,6 @@ using Mewdeko.Modules.Games.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Embed = Discord.Embed;
 using Poll = DataModel.Poll;
 
 namespace Mewdeko.Controllers;
@@ -23,6 +22,7 @@ public class PollController : Controller
 {
     private readonly DiscordShardedClient client;
     private readonly ILogger<PollController> logger;
+    private readonly PollMessageService pollMessages;
     private readonly PollService pollService;
     private readonly PollSchedulerService schedulerService;
     private readonly PollTemplateService templateService;
@@ -34,14 +34,16 @@ public class PollController : Controller
     /// <param name="pollService">The poll service for managing polls.</param>
     /// <param name="templateService">The template service for managing templates.</param>
     /// <param name="schedulerService">The poll scheduler service.</param>
+    /// <param name="pollMessages">The service that posts poll messages and counts reactions.</param>
     /// <param name="client">The Discord client.</param>
     /// <param name="logger">The logger instance.</param>
     /// <param name="auditContext">Records before/after state for the dashboard audit log.</param>
     public PollController(PollService pollService, PollTemplateService templateService,
-        PollSchedulerService schedulerService, DiscordShardedClient client, ILogger<PollController> logger,
-        IDashboardAuditContext auditContext)
+        PollSchedulerService schedulerService, PollMessageService pollMessages, DiscordShardedClient client,
+        ILogger<PollController> logger, IDashboardAuditContext auditContext)
     {
         this.pollService = pollService;
+        this.pollMessages = pollMessages;
         this.templateService = templateService;
         this.schedulerService = schedulerService;
         this.client = client;
@@ -139,12 +141,6 @@ public class PollController : Controller
             if (channel == null)
                 return BadRequest("Channel not found");
 
-            // Create poll message first
-            var embed = await BuildPollEmbed(request, guildId);
-            var components = BuildPollComponents(0, request.Options, request.Type); // Temporary ID
-
-            var message = await channel.SendMessageAsync(embed: embed, components: components);
-
             // Convert request to poll options
             var pollOptions = request.Options.Select((opt, _) => new PollOptionData
             {
@@ -163,17 +159,12 @@ public class PollController : Controller
                 ShowProgressBars = request.ShowProgressBars
             };
 
-            var poll = await pollService.CreatePollAsync(guildId, request.ChannelId, message.Id,
-                request.UserId, request.Question, pollOptions, request.Type, settings);
+            var problem = await pollMessages.GetPostProblemAsync(channel, settings, pollOptions);
+            if (problem is not null)
+                return BadRequest(problem);
 
-            // Update message with correct poll ID
-            var updatedEmbed = await BuildPollEmbed(request, guildId, poll.Id);
-            var updatedComponents = BuildPollComponents(poll.Id, request.Options, request.Type);
-            await message.ModifyAsync(msg =>
-            {
-                msg.Embed = updatedEmbed;
-                msg.Components = updatedComponents;
-            });
+            var poll = await pollMessages.PostPollAsync(channel, request.UserId, request.Question, pollOptions,
+                request.Type, settings);
 
             var response = await MapToPollResponse(poll, channel.Name, "Dashboard User", null);
             return Ok(response);
@@ -217,6 +208,8 @@ public class PollController : Controller
             if (!updateSuccess)
                 return BadRequest("Failed to update poll");
 
+            await pollMessages.RefreshPollMessageAsync(pollId);
+
             // Get updated poll data
             poll = await pollService.GetPollAsync(pollId);
             auditContext.RecordAfter(poll);
@@ -252,12 +245,9 @@ public class PollController : Controller
                 return NotFound("Poll not found");
 
             auditContext.RecordBefore(poll);
-            var success = await pollService.ClosePollAsync(pollId, request.UserId);
+            var success = await pollMessages.CloseAsync(pollId, request.UserId);
             if (!success)
                 return BadRequest("Failed to close poll");
-
-            // Update poll message to show closed status
-            await UpdatePollMessage(poll, "Poll Closed");
 
             return Ok(new
             {
@@ -1097,125 +1087,6 @@ public class PollController : Controller
     private async Task<List<Poll>> GetAllPollsForGuild(ulong guildId)
     {
         return await pollService.GetAllPollsAsync(guildId);
-    }
-
-    /// <summary>
-    /// Builds the poll embed for display.
-    /// </summary>
-    /// <param name="request">The poll request.</param>
-    /// <param name="guildId">The guild ID.</param>
-    /// <param name="pollId">The poll ID (optional).</param>
-    /// <returns>The built embed.</returns>
-    private async Task<Embed> BuildPollEmbed(CreatePollRequest request, ulong guildId, int? pollId = null)
-    {
-        await Task.CompletedTask;
-
-        var embed = new EmbedBuilder()
-            .WithTitle($"📊 {request.Question}")
-            .WithColor(Color.Blue)
-            .WithTimestamp(DateTimeOffset.UtcNow);
-
-        for (var i = 0; i < request.Options.Count; i++)
-        {
-            var option = request.Options[i];
-            var optionText = $"{i + 1}. {option.Text}";
-            if (!string.IsNullOrEmpty(option.Emote))
-                optionText = $"{option.Emote} {optionText}";
-
-            embed.AddField(optionText, "0 votes (0%)", true);
-        }
-
-        if (pollId.HasValue)
-            embed.WithFooter($"Poll ID: {pollId.Value}");
-
-        return embed.Build();
-    }
-
-    /// <summary>
-    /// Builds the interactive components for the poll.
-    /// </summary>
-    /// <param name="pollId">The poll ID.</param>
-    /// <param name="options">The poll options.</param>
-    /// <param name="pollType">The poll type.</param>
-    /// <returns>The built message component.</returns>
-    private static MessageComponent BuildPollComponents(int pollId, List<PollOptionRequest> options, PollType pollType)
-    {
-        var builder = new ComponentBuilder();
-
-        if (options.Count <= 5)
-        {
-            // Use buttons for 2-5 options
-            for (var i = 0; i < options.Count; i++)
-            {
-                var option = options[i];
-                var label = $"{i + 1}. {option.Text}";
-                if (label.Length > 80) label = label[..77] + "...";
-
-                var emote = !string.IsNullOrEmpty(option.Emote) ? Emote.Parse(option.Emote) : null;
-                builder.WithButton(label, $"poll:vote:{pollId}:{i}", emote: emote);
-            }
-        }
-        else
-        {
-            // Use select menu for 6+ options
-            var selectMenuBuilder = new SelectMenuBuilder()
-                .WithCustomId($"poll:select:{pollId}")
-                .WithPlaceholder("Choose your option(s)...")
-                .WithMinValues(1)
-                .WithMaxValues(pollType == PollType.MultiChoice ? Math.Min(options.Count, 25) : 1);
-
-            for (var i = 0; i < Math.Min(options.Count, 25); i++)
-            {
-                var option = options[i];
-                var label = $"{i + 1}. {option.Text}";
-                if (label.Length > 100) label = label[..97] + "...";
-
-                var emote = !string.IsNullOrEmpty(option.Emote) ? Emote.Parse(option.Emote) : null;
-                selectMenuBuilder.AddOption(label, i.ToString(), emote: emote);
-            }
-
-            builder.WithSelectMenu(selectMenuBuilder);
-        }
-
-        // Add management buttons
-        builder.WithButton("Close", $"poll:manage:{pollId}:close", ButtonStyle.Secondary)
-            .WithButton("Stats", $"poll:manage:{pollId}:stats", ButtonStyle.Secondary)
-            .WithButton("Delete", $"poll:manage:{pollId}:delete", ButtonStyle.Danger);
-
-        return builder.Build();
-    }
-
-    /// <summary>
-    /// Updates the poll message with new status.
-    /// </summary>
-    /// <param name="poll">The poll entity.</param>
-    /// <param name="statusMessage">The status message to display.</param>
-    private async Task UpdatePollMessage(Poll poll, string statusMessage)
-    {
-        try
-        {
-            var guild = client.GetGuild(poll.GuildId);
-            var channel = guild?.GetTextChannel(poll.ChannelId);
-            var message = await channel?.GetMessageAsync(poll.MessageId) as IUserMessage;
-
-            if (message != null)
-            {
-                var embed = message.Embeds.FirstOrDefault()?.ToEmbedBuilder()
-                    .WithColor(Color.Red)
-                    .WithFooter($"{statusMessage} • Poll ID: {poll.Id}")
-                    .Build();
-
-                await message.ModifyAsync(msg =>
-                {
-                    msg.Embed = embed;
-                    msg.Components = new ComponentBuilder().Build(); // Remove components
-                });
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to update poll message for poll {PollId}", poll.Id);
-        }
     }
 
     /// <summary>

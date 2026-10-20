@@ -48,8 +48,8 @@ public class PollTemplateService : INService
         if (options?.Count < 1)
             throw new ArgumentException("Template must have at least one option", nameof(options));
 
-        if (options.Count > 25)
-            throw new ArgumentException("Template cannot have more than 25 options", nameof(options));
+        if (options.Count > PollMessageService.MaxOptions)
+            throw new ArgumentException("Template cannot have more than 20 options", nameof(options));
 
         try
         {
@@ -214,8 +214,8 @@ public class PollTemplateService : INService
 
             if (options?.Count > 0)
             {
-                if (options.Count > 25)
-                    throw new ArgumentException("Template cannot have more than 25 options", nameof(options));
+                if (options.Count > PollMessageService.MaxOptions)
+                    throw new ArgumentException("Template cannot have more than 20 options", nameof(options));
 
                 var newOptionsJson = JsonSerializer.Serialize(options);
                 if (!string.Equals(template.Options, newOptionsJson))
