@@ -4904,3 +4904,20 @@ invitemassbancode:
       name: reason
       optional: true
       type: string
+timestamp:
+  args:
+    - 'Europe/London 2026-01-01T18:00 ShortDateTime'
+  desc: 'Converts a local time to a Discord timestamp that shows in each viewer''s own timezone.'
+  params:
+    - desc: 'The timezone ID the time is given in.'
+      name: tz
+      optional: false
+      type: string
+    - desc: 'The local time to convert.'
+      name: time
+      optional: false
+      type: DateTime
+    - desc: 'The style the timestamp is shown in.'
+      name: format
+      optional: true
+      type: TimestampTagStyles

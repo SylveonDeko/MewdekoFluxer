@@ -77,6 +77,35 @@ public partial class Reputation
             await SuccessAsync(message).ConfigureAwait(false);
         }
 
+        /// <summary>
+        ///     Lists every channel with specific reputation settings.
+        /// </summary>
+        /// <returns>A task that represents the asynchronous operation.</returns>
+        [Cmd]
+        [Aliases]
+        [RequireContext(ContextType.Guild)]
+        [UserPerm(GuildPermission.Administrator)]
+        public async Task RepChannelList()
+        {
+            var channelConfigs = await Service.GetChannelConfigsAsync(ctx.Guild.Id);
+
+            if (channelConfigs.Count == 0)
+            {
+                await ReplyErrorAsync(Strings.RepChannelListEmpty(ctx.Guild.Id)).ConfigureAwait(false);
+                return;
+            }
+
+            var description = string.Join("\n", channelConfigs.Select(x =>
+                Strings.RepChannelListEntry(ctx.Guild.Id, $"<#{x.ChannelId}>", x.State, x.Multiplier)));
+
+            var eb = new EmbedBuilder()
+                .WithOkColor()
+                .WithTitle(Strings.RepRestrictedChannels(ctx.Guild.Id))
+                .WithDescription(description);
+
+            await ctx.Channel.EmbedAsync(eb).ConfigureAwait(false);
+        }
+
         #endregion
 
         #region Milestone Management
@@ -1297,6 +1326,35 @@ public partial class Reputation
             {
                 await ReplyErrorAsync(Strings.InvalidInput(ctx.Guild.Id)).ConfigureAwait(false);
             }
+        }
+
+        /// <summary>
+        ///     Lists the reputation events that are currently running.
+        /// </summary>
+        /// <returns>A task that represents the asynchronous operation.</returns>
+        [Cmd]
+        [Aliases]
+        [RequireContext(ContextType.Guild)]
+        [UserPerm(GuildPermission.Administrator)]
+        public async Task RepEventList()
+        {
+            var activeEvents = await Service.GetActiveEventsAsync(ctx.Guild.Id);
+
+            if (activeEvents.Count == 0)
+            {
+                await ReplyErrorAsync(Strings.RepEventListEmpty(ctx.Guild.Id)).ConfigureAwait(false);
+                return;
+            }
+
+            var description = string.Join("\n", activeEvents.Select(x =>
+                Strings.RepEventListEntry(ctx.Guild.Id, x.Name, x.Multiplier, $"{x.EndTime:yyyy-MM-dd HH:mm}")));
+
+            var eb = new EmbedBuilder()
+                .WithOkColor()
+                .WithTitle(Strings.RepEventListTitle(ctx.Guild.Id))
+                .WithDescription(description);
+
+            await ctx.Channel.EmbedAsync(eb).ConfigureAwait(false);
         }
 
         #endregion

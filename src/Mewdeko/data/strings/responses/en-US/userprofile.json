@@ -1,0 +1,9 @@
+{
+  "pronouns_report_cleared_reason": "Pronouns Cleared Reason",
+  "pronouns_report_never_cleared": "Never Cleared",
+  "pronouns_report_nothing": "That user has no pronoun overwrite that can be reported.",
+  "pronouns_report_pronouns": "Pronouns",
+  "pronouns_report_reported_user": "Reported User",
+  "pronouns_report_reporter": "Reporter",
+  "pronouns_report_user_entry": "{0} ({1}, <@{1}>)"
+}

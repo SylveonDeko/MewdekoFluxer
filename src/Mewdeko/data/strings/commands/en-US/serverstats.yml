@@ -296,3 +296,8 @@ serverreportnow:
       name: frequency
       optional: true
       type: ReportFrequency
+serverreportshow:
+  args:
+    - ''
+  desc: 'Shows whether server reports are enabled, where they are posted and how often.'
+  params: [ ]

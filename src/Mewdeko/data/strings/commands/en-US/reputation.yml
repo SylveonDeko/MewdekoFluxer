@@ -607,3 +607,13 @@ toprep:
       name: page
       optional: true
       type: int
+repchannellist:
+  args:
+    - ''
+  desc: 'Lists every channel with specific reputation settings.'
+  params: [ ]
+repeventlist:
+  args:
+    - ''
+  desc: 'Lists the reputation events that are currently running.'
+  params: [ ]

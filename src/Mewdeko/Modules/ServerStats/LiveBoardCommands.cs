@@ -130,6 +130,29 @@ public class LiveBoardCommands(ServerReportService reports) : MewdekoModuleBase<
     }
 
     /// <summary>
+    ///     Shows whether server reports are enabled, where they are posted and how often.
+    /// </summary>
+    [Cmd]
+    [Aliases]
+    [RequireContext(ContextType.Guild)]
+    [UserPerm(GuildPermission.ManageGuild)]
+    public async Task ServerReportShow()
+    {
+        var settings = await reports.GetSettingsAsync(ctx.Guild.Id);
+        var lastSent = settings.LastSentAt.HasValue
+            ? TimestampTag.FromDateTime(settings.LastSentAt.Value, TimestampTagStyles.Relative).ToString()
+            : Strings.None(ctx.Guild.Id);
+        var eb = new EmbedBuilder()
+            .WithOkColor()
+            .WithTitle(Strings.ReportSettingsTitle(ctx.Guild.Id))
+            .WithDescription(Strings.ReportSettingsValue(ctx.Guild.Id,
+                settings.Enabled ? Strings.Yes(ctx.Guild.Id) : Strings.No(ctx.Guild.Id),
+                settings.ChannelId.HasValue ? $"<#{settings.ChannelId}>" : Strings.None(ctx.Guild.Id),
+                ((ReportFrequency)settings.Frequency).ToString(), lastSent));
+        await ctx.Channel.SendMessageAsync(embed: eb.Build());
+    }
+
+    /// <summary>
     ///     Posts a server report right now, to the configured channel or the current one.
     /// </summary>
     /// <param name="frequency">The period to cover, or the configured one.</param>

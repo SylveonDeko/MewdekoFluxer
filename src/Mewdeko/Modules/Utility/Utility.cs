@@ -1831,6 +1831,27 @@ public partial class Utility(
     }
 
     /// <summary>
+    ///     Converts a local time to a Discord timestamp that shows in each viewer's own timezone.
+    /// </summary>
+    /// <param name="tz">The timezone ID the time is given in.</param>
+    /// <param name="time">The local time to convert.</param>
+    /// <param name="format">The style the timestamp is shown in.</param>
+    [Cmd]
+    [Aliases]
+    public async Task Timestamp(string tz, DateTime time, TimestampTagStyles format = TimestampTagStyles.ShortDateTime)
+    {
+        if (!TimeZoneInfo.TryFindSystemTimeZoneById(tz, out var timezone))
+        {
+            await ReplyErrorAsync(Strings.TimezoneNotFound(ctx.Guild.Id)).ConfigureAwait(false);
+            return;
+        }
+
+        var utc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(time, DateTimeKind.Unspecified), timezone);
+        var tag = TimestampTag.FromDateTimeOffset(utc, format);
+        await ReplyConfirmAsync($"{tag} (`{tag}`)").ConfigureAwait(false);
+    }
+
+    /// <summary>
     ///     Shows the bot's ping.
     /// </summary>
     [Cmd]

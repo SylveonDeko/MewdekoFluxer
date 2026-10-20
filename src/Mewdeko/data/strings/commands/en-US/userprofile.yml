@@ -499,3 +499,12 @@ userstatsoptout:
     - ''
   desc: 'Toggles the user''s opt-out status for command statistics collection.'
   params: [ ]
+pronounsreport:
+  args:
+    - '@user'
+  desc: 'Reports another user''s pronoun overwrite to the bot owners for review.'
+  params:
+    - desc: 'The user whose pronouns are being reported.'
+      name: user
+      optional: false
+      type: IUser

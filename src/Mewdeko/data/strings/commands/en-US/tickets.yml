@@ -2295,3 +2295,86 @@ ticketuserstats:
       name: user
       optional: true
       type: user
+ticketviewcase:
+  args:
+    - '[number]'
+  desc: 'Shows one case with its notes and linked tickets, or lists the open cases when no id is given.'
+  params:
+    - desc: 'The case id, or omitted to list open cases.'
+      name: caseId
+      optional: true
+      type: int
+ticketnotecase:
+  args:
+    - 'number text'
+  desc: 'Adds a note to a case.'
+  params:
+    - desc: 'The case id.'
+      name: caseId
+      optional: false
+      type: int
+    - desc: 'The note text.'
+      name: content
+      optional: false
+      type: string
+ticketclosecase:
+  args:
+    - number
+  desc: 'Closes an open case.'
+  params:
+    - desc: 'The case id.'
+      name: caseId
+      optional: false
+      type: int
+ticketreopencase:
+  args:
+    - number
+  desc: 'Reopens a closed case.'
+  params:
+    - desc: 'The case id.'
+      name: caseId
+      optional: false
+      type: int
+ticketupdatecase:
+  args:
+    - 'number text text'
+  desc: 'Changes the title and description of a case.'
+  params:
+    - desc: 'The case id.'
+      name: caseId
+      optional: false
+      type: int
+    - desc: 'The new title.'
+      name: title
+      optional: false
+      type: string
+    - desc: 'The new description.'
+      name: description
+      optional: false
+      type: string
+ticketlinktickets:
+  args:
+    - 'number number number'
+  desc: 'Links any number of tickets to a case by their ids.'
+  params:
+    - desc: 'The case id.'
+      name: caseId
+      optional: false
+      type: int
+    - desc: 'The ticket ids.'
+      name: ticketIds
+      optional: false
+      type: int[]
+ticketunlinktickets:
+  args:
+    - 'number number number'
+  desc: 'Unlinks any number of tickets from their case by their ids.'
+  params:
+    - desc: 'The case id.'
+      name: caseId
+      optional: false
+      type: int
+    - desc: 'The ticket ids.'
+      name: ticketIds
+      optional: false
+      type: int[]

@@ -92,6 +92,7 @@
   "report_channel_set": "Server reports will be posted in {0}.",
   "report_frequency_set": "Server reports will be posted **{0}**.",
   "report_settings_title": "Server Report Settings",
+  "report_settings_value": "**Enabled:** {0}\n**Channel:** {1}\n**Frequency:** {2}\n**Last sent:** {3}",
   "report_title": "{0} Server Report ({1})",
   "report_growth": "Growth",
   "report_growth_value": "📥 {0} joined · 📤 {1} left · net {2}\n🔁 Retention {3}",

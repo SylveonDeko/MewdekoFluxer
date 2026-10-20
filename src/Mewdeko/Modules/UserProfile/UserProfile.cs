@@ -5,6 +5,7 @@ using LinqToDB.Async;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.UserProfile.Common;
 using Mewdeko.Modules.UserProfile.Services;
+using Mewdeko.Services.Impl;
 using SkiaSharp;
 
 namespace Mewdeko.Modules.UserProfile;
@@ -13,7 +14,8 @@ namespace Mewdeko.Modules.UserProfile;
 ///     Handles text commands for user profiles, providing functionalities to view and manage user profile details.
 /// </summary>
 /// <param name="dbFactory">The database connection factory.</param>
-public class UserProfile(IDataConnectionFactory dbFactory) : MewdekoModuleBase<UserProfileService>
+/// <param name="creds">The bot credentials holding the pronoun report channel.</param>
+public class UserProfile(IDataConnectionFactory dbFactory, BotCredentials creds) : MewdekoModuleBase<UserProfileService>
 {
     /// <summary>
     ///     Shows the user's profile or another user's profile if specified.
@@ -268,6 +270,55 @@ public class UserProfile(IDataConnectionFactory dbFactory) : MewdekoModuleBase<U
         user.Pronouns = pronouns;
         await dbContext.UpdateAsync(user);
         await ConfirmAsync(Strings.PronounsInternalUpdate(ctx.Guild.Id, user.Pronouns)).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    ///     Reports another user's pronoun overwrite to the bot owners for review.
+    /// </summary>
+    /// <param name="user">The user whose pronouns are being reported.</param>
+    [Cmd]
+    [Aliases]
+    [RequireContext(ContextType.Guild)]
+    public async Task PronounsReport(IUser user)
+    {
+        await using var dbContext = await dbFactory.CreateConnectionAsync();
+
+        await using var _ = dbContext.ConfigureAwait(false);
+        var reporter = await dbContext.GetOrCreateUser(ctx.User).ConfigureAwait(false);
+        if (await PronounsDisabled(reporter).ConfigureAwait(false)) return;
+
+        var reported = await dbContext.DiscordUsers.FirstOrDefaultAsync(x => x.UserId == user.Id)
+            .ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(reported?.Pronouns))
+        {
+            await ReplyErrorAsync(Strings.PronounsReportNothing(ctx.Guild.Id)).ConfigureAwait(false);
+            return;
+        }
+
+        var channel = await ctx.Client.GetChannelAsync(creds.PronounAbuseReportChannelId).ConfigureAwait(false);
+        if (channel is not ITextChannel reportChannel)
+        {
+            await ReplyErrorAsync(Strings.PronounsReportNothing(ctx.Guild.Id)).ConfigureAwait(false);
+            return;
+        }
+
+        var eb = new EmbedBuilder()
+            .WithAuthor(ctx.User)
+            .WithTitle(Strings.PronounAbuseReport(ctx.Guild.Id))
+            .AddField(Strings.PronounsReportReportedUser(ctx.Guild.Id),
+                Strings.PronounsReportUserEntry(ctx.Guild.Id, reported.Username, reported.UserId))
+            .AddField(Strings.PronounsReportReporter(ctx.Guild.Id),
+                Strings.PronounsReportUserEntry(ctx.Guild.Id, reporter.Username, reporter.UserId))
+            .AddField(Strings.PronounsReportClearedReason(ctx.Guild.Id),
+                string.IsNullOrWhiteSpace(reported.PronounsClearedReason)
+                    ? Strings.PronounsReportNeverCleared(ctx.Guild.Id)
+                    : reported.PronounsClearedReason)
+            .AddField(Strings.PronounsReportPronouns(ctx.Guild.Id), reported.Pronouns)
+            .WithFooter(Strings.ReportedInGuild(ctx.Guild.Id, ctx.Guild.Id))
+            .WithErrorColor();
+
+        await reportChannel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+        await ReplyConfirmAsync(Strings.PronounsReported(ctx.Guild.Id)).ConfigureAwait(false);
     }
 
     private async Task<bool> PronounsDisabled(DiscordUser user)

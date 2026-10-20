@@ -11,7 +11,8 @@ namespace Mewdeko.Modules.Tickets;
 ///     and administrative functions.
 /// </summary>
 /// <param name="logger">The logger instance for structured logging.</param>
-public partial class Tickets(ILogger<Tickets> logger) : MewdekoModuleBase<TicketService>
+/// <param name="interactivity">The service used to send paginated lists.</param>
+public partial class Tickets(ILogger<Tickets> logger, InteractiveService interactivity) : MewdekoModuleBase<TicketService>
 {
     /// <summary>
     ///     Creates a ticket panel
@@ -409,6 +410,229 @@ public partial class Tickets(ILogger<Tickets> logger) : MewdekoModuleBase<Ticket
             await ctx.Channel.SendConfirmAsync(Strings.TicketUnlinkedFromCase(ctx.Guild.Id));
         else
             await ctx.Channel.SendErrorAsync(Strings.TicketUnlinkFailed(ctx.Guild.Id), Config);
+    }
+
+    /// <summary>
+    ///     Shows one case with its notes and linked tickets, or lists the open cases when no id is given.
+    /// </summary>
+    [Cmd]
+    [Aliases]
+    [RequireContext(ContextType.Guild)]
+    [UserPerm(GuildPermission.ManageMessages)]
+    public async Task TicketViewCase(int? caseId = null)
+    {
+        if (!caseId.HasValue)
+        {
+            await ListCases();
+            return;
+        }
+
+        var ticketCase = await Service.GetCaseAsync(caseId.Value);
+        if (ticketCase == null || ticketCase.GuildId != ctx.Guild.Id)
+        {
+            await ctx.Channel.SendErrorAsync(Strings.TicketCaseNotFound(ctx.Guild.Id), Config);
+            return;
+        }
+
+        var creator = await ctx.Guild.GetUserAsync(ticketCase.CreatedBy);
+        var eb = new EmbedBuilder()
+            .WithTitle(Strings.TicketCase(ctx.Guild.Id, ticketCase.Id, ticketCase.Title))
+            .WithDescription(ticketCase.Description)
+            .AddField(Strings.TicketCaseCreator(ctx.Guild.Id), creator?.Mention ?? Strings.Unknown(ctx.Guild.Id), true)
+            .AddField(Strings.CreatedAt(ctx.Guild.Id), ticketCase.CreatedAt.ToString("g"), true)
+            .AddField(Strings.TicketCaseStatus(ctx.Guild.Id),
+                ticketCase.ClosedAt.HasValue ? Strings.Closed(ctx.Guild.Id) : Strings.Open(ctx.Guild.Id), true)
+            .WithOkColor();
+
+        if (ticketCase.Tickets?.Any() == true)
+        {
+            eb.AddField(Strings.TicketCaseLinkedTickets(ctx.Guild.Id),
+                string.Join("\n", ticketCase.Tickets.Select(t => $"#{t.Id}")));
+        }
+
+        if (ticketCase.CaseNotes?.Any() == true)
+        {
+            eb.AddField(Strings.TicketCaseNotes(ctx.Guild.Id),
+                string.Join("\n\n", ticketCase.CaseNotes
+                    .OrderByDescending(n => n.CreatedAt)
+                    .Take(5)
+                    .Select(n => Strings.TicketCaseNoteEntry(ctx.Guild.Id, n.Content, n.AuthorId,
+                        n.CreatedAt.ToString("g")))));
+        }
+
+        await ctx.Channel.SendMessageAsync(embed: eb.Build());
+    }
+
+    /// <summary>
+    ///     Adds a note to a case.
+    /// </summary>
+    [Cmd]
+    [Aliases]
+    [RequireContext(ContextType.Guild)]
+    [UserPerm(GuildPermission.ManageMessages)]
+    public async Task TicketNoteCase(int caseId, [Remainder] string content)
+    {
+        var ticketCase = await Service.GetCaseAsync(caseId);
+        if (ticketCase == null || ticketCase.GuildId != ctx.Guild.Id)
+        {
+            await ctx.Channel.SendErrorAsync(Strings.TicketCaseNotFound(ctx.Guild.Id), Config);
+            return;
+        }
+
+        await Service.AddCaseNoteAsync(caseId, ctx.User.Id, content);
+        await ctx.Channel.SendConfirmAsync(Strings.TicketCaseNoteAdded(ctx.Guild.Id, caseId));
+    }
+
+    /// <summary>
+    ///     Closes an open case.
+    /// </summary>
+    [Cmd]
+    [Aliases]
+    [RequireContext(ContextType.Guild)]
+    [UserPerm(GuildPermission.ManageMessages)]
+    public async Task TicketCloseCase(int caseId)
+    {
+        var ticketCase = await Service.GetCaseAsync(caseId);
+        if (ticketCase == null || ticketCase.GuildId != ctx.Guild.Id)
+        {
+            await ctx.Channel.SendErrorAsync(Strings.TicketCaseNotFound(ctx.Guild.Id), Config);
+            return;
+        }
+
+        if (ticketCase.ClosedAt.HasValue)
+        {
+            await ctx.Channel.SendErrorAsync(Strings.TicketCaseAlreadyClosed(ctx.Guild.Id), Config);
+            return;
+        }
+
+        await Service.CloseCaseAsync(ticketCase);
+        await ctx.Channel.SendConfirmAsync(Strings.TicketCaseClosed(ctx.Guild.Id, caseId));
+    }
+
+    /// <summary>
+    ///     Reopens a closed case.
+    /// </summary>
+    [Cmd]
+    [Aliases]
+    [RequireContext(ContextType.Guild)]
+    [UserPerm(GuildPermission.ManageMessages)]
+    public async Task TicketReopenCase(int caseId)
+    {
+        var ticketCase = await Service.GetCaseAsync(caseId);
+        if (ticketCase == null || ticketCase.GuildId != ctx.Guild.Id)
+        {
+            await ctx.Channel.SendErrorAsync(Strings.TicketCaseNotFound(ctx.Guild.Id), Config);
+            return;
+        }
+
+        if (!ticketCase.ClosedAt.HasValue)
+        {
+            await ctx.Channel.SendErrorAsync(Strings.TicketCaseAlreadyOpen(ctx.Guild.Id), Config);
+            return;
+        }
+
+        await Service.ReopenCaseAsync(ticketCase);
+        await ctx.Channel.SendConfirmAsync(Strings.TicketCaseReopened(ctx.Guild.Id, caseId));
+    }
+
+    /// <summary>
+    ///     Changes the title and description of a case.
+    /// </summary>
+    [Cmd]
+    [Aliases]
+    [RequireContext(ContextType.Guild)]
+    [UserPerm(GuildPermission.ManageMessages)]
+    public async Task TicketUpdateCase(int caseId, string title, [Remainder] string description)
+    {
+        var ticketCase = await Service.GetCaseAsync(caseId);
+        if (ticketCase == null || ticketCase.GuildId != ctx.Guild.Id)
+        {
+            await ctx.Channel.SendErrorAsync(Strings.TicketCaseNotFound(ctx.Guild.Id), Config);
+            return;
+        }
+
+        await Service.UpdateCaseAsync(caseId, title, description);
+        await ctx.Channel.SendConfirmAsync(Strings.TicketCaseUpdated(ctx.Guild.Id, caseId));
+    }
+
+    /// <summary>
+    ///     Links any number of tickets to a case by their ids.
+    /// </summary>
+    [Cmd]
+    [Aliases]
+    [RequireContext(ContextType.Guild)]
+    [UserPerm(GuildPermission.ManageMessages)]
+    public async Task TicketLinkTickets(int caseId, params int[] ticketIds)
+    {
+        var ticketCase = await Service.GetCaseAsync(caseId);
+        if (ticketCase == null || ticketCase.GuildId != ctx.Guild.Id)
+        {
+            await ctx.Channel.SendErrorAsync(Strings.TicketCaseNotFound(ctx.Guild.Id), Config);
+            return;
+        }
+
+        var tickets = (await Service.GetTicketsAsync(ticketIds)).Where(t => t.GuildId == ctx.Guild.Id).ToList();
+        await Service.LinkTicketsToCase(caseId, tickets);
+        await ctx.Channel.SendConfirmAsync(Strings.TicketCaseTicketsLinked(ctx.Guild.Id, tickets.Count, caseId));
+    }
+
+    /// <summary>
+    ///     Unlinks any number of tickets from their case by their ids.
+    /// </summary>
+    [Cmd]
+    [Aliases]
+    [RequireContext(ContextType.Guild)]
+    [UserPerm(GuildPermission.ManageMessages)]
+    public async Task TicketUnlinkTickets(int caseId, params int[] ticketIds)
+    {
+        var ticketCase = await Service.GetCaseAsync(caseId);
+        if (ticketCase == null || ticketCase.GuildId != ctx.Guild.Id)
+        {
+            await ctx.Channel.SendErrorAsync(Strings.TicketCaseNotFound(ctx.Guild.Id), Config);
+            return;
+        }
+
+        var tickets = (await Service.GetTicketsAsync(ticketIds)).Where(t => t.GuildId == ctx.Guild.Id).ToList();
+        await Service.UnlinkTicketsFromCase(tickets);
+        await ctx.Channel.SendConfirmAsync(Strings.TicketCaseTicketsUnlinked(ctx.Guild.Id, tickets.Count, caseId));
+    }
+
+    private async Task ListCases()
+    {
+        var cases = await Service.GetGuildCasesAsync(ctx.Guild.Id);
+        if (cases.Count == 0)
+        {
+            await ctx.Channel.SendErrorAsync(Strings.TicketCasesEmpty(ctx.Guild.Id), Config);
+            return;
+        }
+
+        var paginator = new LazyPaginatorBuilder()
+            .AddUser(ctx.User)
+            .WithPageFactory(PageFactory)
+            .WithFooter(PaginatorFooter.PageNumber)
+            .WithMaxPageIndex((cases.Count - 1) / 10)
+            .WithActionOnCancellation(ActionOnStop.DeleteMessage)
+            .Build();
+
+        await interactivity.SendPaginatorAsync(paginator, Context.Channel, TimeSpan.FromMinutes(60));
+
+        async Task<PageBuilder> PageFactory(int page)
+        {
+            var pageBuilder = new PageBuilder()
+                .WithTitle(Strings.Cases(ctx.Guild.Id))
+                .WithOkColor();
+
+            foreach (var ticketCase in cases.Skip(page * 10).Take(10))
+            {
+                var creator = await ctx.Guild.GetUserAsync(ticketCase.CreatedBy);
+                pageBuilder.AddField(Strings.TicketCase(ctx.Guild.Id, ticketCase.Id, ticketCase.Title),
+                    Strings.TicketCaseListEntry(ctx.Guild.Id, creator?.Mention ?? Strings.Unknown(ctx.Guild.Id),
+                        ticketCase.ClosedAt.HasValue ? Strings.Closed(ctx.Guild.Id) : Strings.Open(ctx.Guild.Id),
+                        ticketCase.Tickets?.Count() ?? 0, ticketCase.CaseNotes?.Count() ?? 0));
+            }
+
+            return pageBuilder;
+        }
     }
 
     /// <summary>

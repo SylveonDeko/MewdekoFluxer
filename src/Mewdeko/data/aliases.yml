@@ -4383,3 +4383,39 @@ polltemplatedelete:
 serverrecover:
   - serverrecover
   - serverrecovery
+repchannellist:
+  - repchannellist
+  - repchannels
+repeventlist:
+  - repeventlist
+  - repevents
+serverreportshow:
+  - serverreportshow
+  - reportshow
+ticketviewcase:
+  - ticketviewcase
+  - tviewcase
+ticketnotecase:
+  - ticketnotecase
+  - tnotecase
+ticketclosecase:
+  - ticketclosecase
+  - tclosecase
+ticketreopencase:
+  - ticketreopencase
+  - treopencase
+ticketupdatecase:
+  - ticketupdatecase
+  - tupdatecase
+ticketlinktickets:
+  - ticketlinktickets
+  - tlinktickets
+ticketunlinktickets:
+  - ticketunlinktickets
+  - tunlinktickets
+timestamp:
+  - timestamp
+  - tstamp
+pronounsreport:
+  - pronounsreport
+  - reportpronouns
