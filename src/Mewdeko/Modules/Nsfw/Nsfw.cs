@@ -89,32 +89,12 @@ public class Nsfw(
                 var imgData = await sr.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
                 var imgStream = imgData.ToStream();
                 await using var _ = imgStream.ConfigureAwait(false);
-                await ctx.Channel.SendFileAsync(imgStream, "boobs.mp4", embed: eb.Build(),
-                    components: Config.ShowInviteButton
-                        ? new ComponentBuilder()
-                            .WithButton(style: ButtonStyle.Link,
-                                url:
-                                "https://discord.com/oauth2/authorize?client_id=752236274261426212&permissions=8&response_type=code&redirect_uri=https%3A%2F%2Fmewdeko.tech&scope=bot%20applications.commands",
-                                label: "Invite Me!",
-                                emote: "<a:HaneMeow:968564817784877066>".ToIEmote())
-                            .WithButton("Support Us!", style: ButtonStyle.Link, url: "https://ko-fi.com/Mewdeko")
-                            .Build()
-                        : null).ConfigureAwait(false);
+                await ctx.Channel.SendFileAsync(imgStream, "boobs.mp4", embed: eb.Build()).ConfigureAwait(false);
                 await msg.DeleteAsync();
             }
             else
             {
-                await ctx.Channel.SendMessageAsync(embed: eb.Build(),
-                    components: Config.ShowInviteButton
-                        ? new ComponentBuilder()
-                            .WithButton(style: ButtonStyle.Link,
-                                url:
-                                "https://discord.com/oauth2/authorize?client_id=752236274261426212&permissions=8&response_type=code&redirect_uri=https%3A%2F%2Fmewdeko.tech&scope=bot%20applications.commands",
-                                label: "Invite Me!",
-                                emote: "<a:HaneMeow:968564817784877066>".ToIEmote())
-                            .WithButton("Support Us!", style: ButtonStyle.Link, url: "https://ko-fi.com/Mewdeko")
-                            .Build()
-                        : null).ConfigureAwait(false);
+                await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
                 await msg.DeleteAsync();
             }
         }
@@ -583,16 +563,7 @@ public class Nsfw(
                 return;
             }
 
-            await ctx.Channel.SendMessageAsync(string.Join("\n", linksEnum.Select(x => x.Url)),
-                components: Config.ShowInviteButton
-                    ? new ComponentBuilder()
-                        .WithButton(style: ButtonStyle.Link,
-                            url:
-                            "https://discord.com/oauth2/authorize?client_id=752236274261426212&permissions=8&response_type=code&redirect_uri=https%3A%2F%2Fmewdeko.tech&scope=bot%20applications.commands",
-                            label: "Invite Me!",
-                            emote: "<a:HaneMeow:968564817784877066>".ToIEmote())
-                        .WithButton("Support Us!", style: ButtonStyle.Link, url: "https://ko-fi.com/Mewdeko").Build()
-                    : null).ConfigureAwait(false);
+            await ctx.Channel.SendMessageAsync(string.Join("\n", linksEnum.Select(x => x.Url))).ConfigureAwait(false);
         }
         finally
         {
@@ -628,16 +599,7 @@ public class Nsfw(
                 return;
             }
 
-            await ctx.Channel.SendMessageAsync(string.Join("\n", linksEnum.Select(x => x.Url)),
-                components: Config.ShowInviteButton
-                    ? new ComponentBuilder()
-                        .WithButton(style: ButtonStyle.Link,
-                            url:
-                            "https://discord.com/oauth2/authorize?client_id=752236274261426212&permissions=8&response_type=code&redirect_uri=https%3A%2F%2Fmewdeko.tech&scope=bot%20applications.commands",
-                            label: "Invite Me!",
-                            emote: "<a:HaneMeow:968564817784877066>".ToIEmote())
-                        .WithButton("Support Us!", style: ButtonStyle.Link, url: "https://ko-fi.com/Mewdeko").Build()
-                    : null).ConfigureAwait(false);
+            await ctx.Channel.SendMessageAsync(string.Join("\n", linksEnum.Select(x => x.Url))).ConfigureAwait(false);
         }
         finally
         {
@@ -902,16 +864,7 @@ public class Nsfw(
                     .WithDescription($"[link]({data.Url})")
                     .WithFooter(
                         $"{data.Rating} ({data.Provider}) | {string.Join(" | ", data.Tags.Where(x => !string.IsNullOrWhiteSpace(x)).Take(5))}")
-                    .Build(),
-                components: Config.ShowInviteButton
-                    ? new ComponentBuilder()
-                        .WithButton(style: ButtonStyle.Link,
-                            url:
-                            "https://discord.com/oauth2/authorize?client_id=752236274261426212&permissions=8&response_type=code&redirect_uri=https%3A%2F%2Fmewdeko.tech&scope=bot%20applications.commands",
-                            label: "Invite Me!",
-                            emote: "<a:HaneMeow:968564817784877066>".ToIEmote())
-                        .WithButton("Support Us!", style: ButtonStyle.Link, url: "https://ko-fi.com/Mewdeko").Build()
-                    : null).ConfigureAwait(false);
+                    .Build()).ConfigureAwait(false);
         }
         else
         {
@@ -931,17 +884,7 @@ public class Nsfw(
                             $"The file is too large to be uploaded ({fileSize / 1048576.0:F2}MB). [View it here instead]({data.Url})")
                         .WithFooter(
                             $"{data.Rating} ({data.Provider}) | {string.Join(" | ", data.Tags.Where(x => !string.IsNullOrWhiteSpace(x)).Take(5))}")
-                        .Build(),
-                    components: Config.ShowInviteButton
-                        ? new ComponentBuilder()
-                            .WithButton(style: ButtonStyle.Link,
-                                url:
-                                "https://discord.com/oauth2/authorize?client_id=752236274261426212&permissions=8&response_type=code&redirect_uri=https%3A%2F%2Fmewdeko.tech&scope=bot%20applications.commands",
-                                label: "Invite Me!",
-                                emote: "<a:HaneMeow:968564817784877066>".ToIEmote())
-                            .WithButton("Support Us!", style: ButtonStyle.Link, url: "https://ko-fi.com/Mewdeko")
-                            .Build()
-                        : null).ConfigureAwait(false);
+                        .Build()).ConfigureAwait(false);
                 return;
             }
 
@@ -956,17 +899,7 @@ public class Nsfw(
                             $"The file is too large to be uploaded ({imgData.Length / 1048576.0:F2}MB). [View it here instead]({data.Url})")
                         .WithFooter(
                             $"{data.Rating} ({data.Provider}) | {string.Join(" | ", data.Tags.Where(x => !string.IsNullOrWhiteSpace(x)).Take(5))}")
-                        .Build(),
-                    components: Config.ShowInviteButton
-                        ? new ComponentBuilder()
-                            .WithButton(style: ButtonStyle.Link,
-                                url:
-                                "https://discord.com/oauth2/authorize?client_id=752236274261426212&permissions=8&response_type=code&redirect_uri=https%3A%2F%2Fmewdeko.tech&scope=bot%20applications.commands",
-                                label: "Invite Me!",
-                                emote: "<a:HaneMeow:968564817784877066>".ToIEmote())
-                            .WithButton("Support Us!", style: ButtonStyle.Link, url: "https://ko-fi.com/Mewdeko")
-                            .Build()
-                        : null).ConfigureAwait(false);
+                        .Build()).ConfigureAwait(false);
                 return;
             }
 
@@ -977,16 +910,7 @@ public class Nsfw(
                     .WithDescription($"[link]({data.Url})")
                     .WithFooter(
                         $"{data.Rating} ({data.Provider}) | {string.Join(" | ", data.Tags.Where(x => !string.IsNullOrWhiteSpace(x)).Take(5))}")
-                    .Build(),
-                components: Config.ShowInviteButton
-                    ? new ComponentBuilder()
-                        .WithButton(style: ButtonStyle.Link,
-                            url:
-                            "https://discord.com/oauth2/authorize?client_id=752236274261426212&permissions=8&response_type=code&redirect_uri=https%3A%2F%2Fmewdeko.tech&scope=bot%20applications.commands",
-                            label: "Invite Me!",
-                            emote: "<a:HaneMeow:968564817784877066>".ToIEmote())
-                        .WithButton("Support Us!", style: ButtonStyle.Link, url: "https://ko-fi.com/Mewdeko").Build()
-                    : null).ConfigureAwait(false);
+                    .Build()).ConfigureAwait(false);
         }
     }
 }
