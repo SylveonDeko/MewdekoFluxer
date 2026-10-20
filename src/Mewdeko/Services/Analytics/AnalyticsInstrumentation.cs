@@ -24,7 +24,6 @@ public sealed class AnalyticsInstrumentation : INService, IReadyExecutor, IDispo
     private static readonly TimeSpan ProcessInterval = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan FleetInterval = TimeSpan.FromSeconds(60);
 
-    private readonly InteractionAckTracker ackTracker;
     private readonly DiscordShardedClient client;
     private readonly IAnalyticsCollector collector;
     private readonly IDataConnectionFactory dbFactory;
@@ -47,17 +46,15 @@ public sealed class AnalyticsInstrumentation : INService, IReadyExecutor, IDispo
     /// <param name="collector">The collector to emit into.</param>
     /// <param name="client">The Discord client.</param>
     /// <param name="dbFactory">The database connection factory, traced for query timings.</param>
-    /// <param name="ackTracker">Tracks interaction acknowledgements observed on the REST client.</param>
     /// <param name="services">The service provider, used to find the optional audio service.</param>
     /// <param name="logger">Records hook failures.</param>
     public AnalyticsInstrumentation(IAnalyticsCollector collector, DiscordShardedClient client,
-        IDataConnectionFactory dbFactory, InteractionAckTracker ackTracker, IServiceProvider services,
+        IDataConnectionFactory dbFactory, IServiceProvider services,
         ILogger<AnalyticsInstrumentation> logger)
     {
         this.collector = collector;
         this.client = client;
         this.dbFactory = dbFactory;
-        this.ackTracker = ackTracker;
         this.services = services;
         this.logger = logger;
     }
@@ -358,15 +355,6 @@ public sealed class AnalyticsInstrumentation : INService, IReadyExecutor, IDispo
         var route = TemplateRoute(endpoint);
         collector.Counter("rest.count", 1, ("method", method), ("route", route), ("status", "2xx"));
         collector.Duration("rest.duration", milliseconds, ("route", route));
-
-        if (endpoint.StartsWith("interactions/", StringComparison.Ordinal))
-        {
-            var start = "interactions/".Length;
-            var end = endpoint.IndexOf('/', start);
-            if (end > start && ulong.TryParse(endpoint.AsSpan(start, end - start), out var interactionId))
-                ackTracker.Acknowledge(interactionId);
-        }
-
         return Task.CompletedTask;
     }
 

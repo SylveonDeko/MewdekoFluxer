@@ -1,5 +1,4 @@
 ﻿using Discord.Commands;
-using Discord.Interactions;
 using LinqToDB.Async;
 using Mewdeko.Common.Collections;
 using Mewdeko.Common.ModuleBehaviors;
@@ -14,16 +13,13 @@ public class CmdCdService : ILateBlocker, INService
 {
     private readonly IDataConnectionFactory dbFactory;
 
-    private readonly SlashCommandIdentityService identity;
-
     /// <summary>
     ///     Initializes a new instance of the <see cref="CmdCdService" /> class.
     /// </summary>
     /// <param name="dbFactory">The database connection factory.</param>
-    public CmdCdService(IDataConnectionFactory dbFactory, SlashCommandIdentityService identity)
+    public CmdCdService(IDataConnectionFactory dbFactory)
     {
         this.dbFactory = dbFactory;
-        this.identity = identity;
     }
 
     /// <summary>
@@ -61,30 +57,6 @@ public class CmdCdService : ILateBlocker, INService
         var guild = ctx.Guild;
         var user = ctx.User;
         var commandName = command.MethodName().ToLowerInvariant();
-
-        return await TryBlock(guild, user, commandName);
-    }
-
-    /// <summary>
-    ///     Attempts to block a command execution based on the command's cooldown status for a given user in the context of
-    ///     interaction-based commands.
-    /// </summary>
-    /// <param name="client">The Discord client instance.</param>
-    /// <param name="ctx">The interaction context which includes information about the user, guild, and channel.</param>
-    /// <param name="command">Information about the interaction command being executed.</param>
-    /// <returns>A task that resolves to true if the command execution should be blocked due to cooldown; otherwise, false.</returns>
-    /// <remarks>
-    ///     This method performs a similar function to
-    ///     <see cref="TryBlockLate(DiscordShardedClient, ICommandContext, string, CommandInfo)" />
-    ///     but is tailored for interactions such as slash commands. It checks if the interaction command is on cooldown for
-    ///     the user.
-    /// </remarks>
-    public async Task<bool> TryBlockLate(DiscordShardedClient client, IInteractionContext ctx,
-        ICommandInfo command)
-    {
-        var guild = ctx.Guild;
-        var user = ctx.User;
-        var commandName = identity.Resolve(command).MethodName;
 
         return await TryBlock(guild, user, commandName);
     }

@@ -1,5 +1,3 @@
-using Discord.Interactions;
-
 namespace Mewdeko.Modules.RoleMenus.Common;
 
 /// <summary>
@@ -10,13 +8,11 @@ public enum RoleMenuStyle
     /// <summary>
     ///     One dropdown listing every option.
     /// </summary>
-    [ChoiceDisplay("Dropdown")]
     Dropdown = 0,
 
     /// <summary>
     ///     One button per option, in rows of five.
     /// </summary>
-    [ChoiceDisplay("Buttons")]
     Buttons = 1
 }
 
@@ -28,13 +24,11 @@ public enum RoleMenuMode
     /// <summary>
     ///     Members can pick any number of roles, within the menu's limits.
     /// </summary>
-    [ChoiceDisplay("Pick any")]
     Multi = 0,
 
     /// <summary>
     ///     Members hold one role at a time. Picking another swaps it.
     /// </summary>
-    [ChoiceDisplay("Pick one")]
     Exclusive = 1
 }
 
@@ -46,13 +40,11 @@ public enum RoleMenuReplyMode
     /// <summary>
     ///     A private note lists the roles that were added and removed.
     /// </summary>
-    [ChoiceDisplay("Private confirmation")]
     Private = 0,
 
     /// <summary>
     ///     No note unless something went wrong.
     /// </summary>
-    [ChoiceDisplay("No confirmation")]
     Silent = 1
 }
 
@@ -64,25 +56,21 @@ public enum RoleMenuButtonColor
     /// <summary>
     ///     Discord's primary blurple button.
     /// </summary>
-    [ChoiceDisplay("Blurple")]
     Blurple = 1,
 
     /// <summary>
     ///     Discord's secondary grey button.
     /// </summary>
-    [ChoiceDisplay("Grey")]
     Grey = 2,
 
     /// <summary>
     ///     Discord's green success button.
     /// </summary>
-    [ChoiceDisplay("Green")]
     Green = 3,
 
     /// <summary>
     ///     Discord's red danger button.
     /// </summary>
-    [ChoiceDisplay("Red")]
     Red = 4
 }
 

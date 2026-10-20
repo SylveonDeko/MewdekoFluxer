@@ -1,5 +1,4 @@
 ﻿using Discord.Commands;
-using Discord.Interactions;
 using Mewdeko.Common.ModuleBehaviors;
 using Mewdeko.Services.Settings;
 
@@ -12,16 +11,13 @@ public class GlobalPermissionService : ILateBlocker, INService
 {
     private readonly BotConfigService bss;
 
-    private readonly SlashCommandIdentityService identity;
-
     /// <summary>
     ///     Initializes a new instance of the <see cref="GlobalPermissionService" /> class.
     /// </summary>
     /// <param name="bss">The bot configuration service.</param>
-    public GlobalPermissionService(BotConfigService bss, SlashCommandIdentityService identity)
+    public GlobalPermissionService(BotConfigService bss)
     {
         this.bss = bss;
-        this.identity = identity;
     }
 
     /// <summary>
@@ -69,24 +65,6 @@ public class GlobalPermissionService : ILateBlocker, INService
         return Task.FromResult(commandName != "resetglobalperms" &&
                                (settings.Blocked.Commands.Contains(commandName) ||
                                 settings.Blocked.Modules.Contains(moduleName.ToLowerInvariant())));
-    }
-
-    /// <summary>
-    ///     Attempts to block the execution of a slash command based on global permissions settings.
-    /// </summary>
-    /// <param name="client">The Discord client instance.</param>
-    /// <param name="ctx">The interaction context.</param>
-    /// <param name="command">The slash command being executed.</param>
-    /// <returns>A task that resolves to true if the command should be blocked; otherwise, false.</returns>
-    public Task<bool> TryBlockLate(DiscordShardedClient client, IInteractionContext ctx,
-        ICommandInfo command)
-    {
-        var settings = bss.Data;
-        var resolved = identity.Resolve(command);
-
-        return Task.FromResult(resolved.Alias != "resetglobalperms" &&
-                               (settings.Blocked.Commands.Contains(resolved.Alias) ||
-                                settings.Blocked.Modules.Contains(resolved.ModuleName.ToLowerInvariant())));
     }
 
     /// <summary>

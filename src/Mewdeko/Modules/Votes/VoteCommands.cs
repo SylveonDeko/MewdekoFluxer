@@ -217,7 +217,7 @@ public class Vote(InteractiveService interactivity) : MewdekoModuleBase<VoteServ
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
-    [Discord.Interactions.RequireContext(Discord.Interactions.ContextType.Guild)]
+    [RequireContext(ContextType.Guild)]
     public async Task VoteRoleEdit(IRole role, StoopidTime time)
     {
         var update = await Service.UpdateTimer(ctx.Guild.Id, role.Id, (int)time.Time.TotalSeconds);

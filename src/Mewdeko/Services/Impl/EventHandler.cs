@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using System.Threading;
-using Discord.Interactions;
 using Discord.Rest;
 using Mewdeko.Services.Analytics;
 using Serilog;
@@ -23,7 +22,6 @@ public sealed class EventHandler : IDisposable
 
     // Metrics tracking with bounded collections
     private readonly ConcurrentDictionary<string, EventMetrics> eventMetrics = new();
-    private readonly InteractionService interaction;
     private readonly ILogger<EventHandler> logger;
     private readonly BatchedEventProcessor<SocketMessage> messageProcessor;
     private readonly Timer metricsResetTimer;
@@ -54,18 +52,15 @@ public sealed class EventHandler : IDisposable
     /// <param name="logger">The logger instance for structured logging.</param>
     /// <param name="options">Configuration options for the event handler.</param>
     /// <exception cref="ArgumentNullException">Thrown when any parameter is null.</exception>
-    /// <param name="interaction">The interaction service.</param>
     /// <param name="collector">The analytics collector that counts and times events.</param>
     public EventHandler(
         DiscordShardedClient client,
-        InteractionService interaction,
         PerformanceMonitorService perfService,
         ILogger<EventHandler> logger,
         EventHandlerOptions options,
         IAnalyticsCollector collector)
     {
         this.client = client ?? throw new ArgumentNullException(nameof(client));
-        this.interaction = interaction;
         this.collector = collector;
         this.perfService = perfService ?? throw new ArgumentNullException(nameof(perfService));
         this.logger = logger;
@@ -101,13 +96,8 @@ public sealed class EventHandler : IDisposable
         switch (eventType)
         {
             // Single parameter events
-            case "ApplicationCommandCreated":
-            case "ApplicationCommandDeleted":
-            case "ApplicationCommandUpdated":
             case "AutoModRuleCreated":
             case "AutoModRuleDeleted":
-            case "AutocompleteExecuted":
-            case "ButtonExecuted":
             case "ChannelCreated":
             case "ChannelDestroyed":
             case "EntitlementCreated":
@@ -121,27 +111,21 @@ public sealed class EventHandler : IDisposable
             case "GuildUnavailable":
             case "IntegrationCreated":
             case "IntegrationUpdated":
-            case "InteractionCreated":
             case "InviteCreated":
             case "JoinedGuild":
             case "LeftGuild":
-            case "MessageCommandExecuted":
             case "MessageReceived":
-            case "ModalSubmitted":
             case "Ready":
             case "RecipientAdded":
             case "RecipientRemoved":
             case "RoleCreated":
             case "RoleDeleted":
-            case "SelectMenuExecuted":
-            case "SlashCommandExecuted":
             case "StageEnded":
             case "StageStarted":
             case "SubscriptionCreated":
             case "ThreadCreated":
             case "ThreadMemberJoined":
             case "ThreadMemberLeft":
-            case "UserCommandExecuted":
             case "UserJoined":
             case "VoiceServerUpdated":
             case "GuildMembersDownloaded":
@@ -873,7 +857,6 @@ public sealed class EventHandler : IDisposable
         client.ReactionAdded += ClientOnReactionAdded;
         client.ReactionRemoved += ClientOnReactionRemoved;
         client.ReactionsCleared += ClientOnReactionsCleared;
-        client.InteractionCreated += ClientOnInteractionCreated;
         client.UserIsTyping += ClientOnUserIsTyping;
         client.PresenceUpdated += ClientOnPresenceUpdated;
         client.JoinedGuild += ClientOnJoinedGuild;
@@ -897,7 +880,6 @@ public sealed class EventHandler : IDisposable
         client.LeftGuild += ClientOnLeftGuild;
         client.InviteCreated += ClientOnInviteCreated;
         client.InviteDeleted += ClientOnInviteDeleted;
-        client.ModalSubmitted += ClientOnModalSubmitted;
     }
 
     private void StartBatchProcessors()
@@ -948,8 +930,6 @@ public sealed class EventHandler : IDisposable
 
                 try
                 {
-                    if (eventType.ToLower().Contains("intera"))
-                        Log.Information($"Executing Interaction Handler for {moduleName}");
                     using (perfService.Measure($"Event_{eventType}_{moduleName}"))
                     {
                         await ExecuteHandlerByEventType(eventType, handler, args).ConfigureAwait(false);
@@ -1143,11 +1123,6 @@ public sealed class EventHandler : IDisposable
         return ProcessDirectEvent("ReactionsCleared", (arg1, arg2));
     }
 
-    private Task ClientOnInteractionCreated(SocketInteraction arg)
-    {
-        return ProcessDirectEvent("InteractionCreated", arg);
-    }
-
     private Task ClientOnJoinedGuild(SocketGuild arg)
     {
         return ProcessDirectEvent("JoinedGuild", arg);
@@ -1253,11 +1228,6 @@ public sealed class EventHandler : IDisposable
         return ProcessDirectEvent("InviteDeleted", (arg1, arg2));
     }
 
-    private Task ClientOnModalSubmitted(SocketModal arg)
-    {
-        return ProcessDirectEvent("ModalSubmitted", arg);
-    }
-
     private Task ProcessDirectEvent<T>(string eventType, T args)
     {
         logger.LogDebug("ProcessDirectEvent called for {EventType}, disposed: {Disposed}", eventType, disposed);
@@ -1336,7 +1306,6 @@ public sealed class EventHandler : IDisposable
             SocketGuildChannel guildChannel => guildChannel.Guild,
             SocketMessage { Channel: SocketGuildChannel channel } => channel.Guild,
             SocketRole role => role.Guild,
-            SocketInteraction { Channel: SocketGuildChannel channel } => channel.Guild,
             SocketInvite invite => invite.Guild,
             SocketGuildEvent guildEvent => guildEvent.Guild,
             ValueTuple<SocketAuditLogEntry, SocketGuild> tuple => tuple.Item2,
@@ -1594,7 +1563,6 @@ public sealed class EventHandler : IDisposable
         client.ReactionAdded -= ClientOnReactionAdded;
         client.ReactionRemoved -= ClientOnReactionRemoved;
         client.ReactionsCleared -= ClientOnReactionsCleared;
-        client.InteractionCreated -= ClientOnInteractionCreated;
         client.UserIsTyping -= ClientOnUserIsTyping;
         client.PresenceUpdated -= ClientOnPresenceUpdated;
         client.JoinedGuild -= ClientOnJoinedGuild;
@@ -1618,7 +1586,6 @@ public sealed class EventHandler : IDisposable
         client.LeftGuild -= ClientOnLeftGuild;
         client.InviteCreated -= ClientOnInviteCreated;
         client.InviteDeleted -= ClientOnInviteDeleted;
-        client.ModalSubmitted -= ClientOnModalSubmitted;
     }
 
     #endregion

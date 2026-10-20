@@ -3,7 +3,6 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json.Serialization;
 using Discord.Commands;
-using Discord.Interactions;
 using Discord.Rest;
 using Fergun.Interactive;
 using Lavalink4NET;
@@ -441,7 +440,6 @@ public class Program
             ReturnAfterSendingPaginator = true
         }));
         services.AddSingleton(new NekosBestApi("Mewdeko"));
-        services.AddSingleton(p => new InteractionService(p.GetRequiredService<DiscordShardedClient>()));
         services.AddSingleton<Localization>();
         services.AddSingleton<GeneratedBotStrings>();
         services.AddSingleton<BotConfigService>();

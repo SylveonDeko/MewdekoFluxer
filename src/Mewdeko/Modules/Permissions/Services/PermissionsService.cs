@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using DataModel;
 using Discord.Commands;
-using Discord.Interactions;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.Configs;
@@ -28,8 +27,6 @@ public class PermissionService : ILateBlocker, INService, IReadyExecutor
 
     private readonly GuildSettingsService guildSettings;
 
-    private readonly SlashCommandIdentityService identity;
-
     /// <summary>
     ///     Initializes a new instance of the <see cref="PermissionService" /> class.
     /// </summary>
@@ -38,13 +35,10 @@ public class PermissionService : ILateBlocker, INService, IReadyExecutor
     /// <param name="guildSettings">The service for managing guild-specific settings.</param>
     /// <param name="client">The discord socket client</param>
     /// <param name="configService">The service for bot-wide configurations.</param>
-    /// <param name="identity">The resolver mapping slash commands to text command identities.</param>
     public PermissionService(IDataConnectionFactory dbFactory,
         GeneratedBotStrings strings,
-        GuildSettingsService guildSettings, DiscordShardedClient client, BotConfig configService,
-        SlashCommandIdentityService identity)
+        GuildSettingsService guildSettings, DiscordShardedClient client, BotConfig configService)
     {
-        this.identity = identity;
         config = configService;
         this.dbFactory = dbFactory;
         Strings = strings;
@@ -162,44 +156,6 @@ public class PermissionService : ILateBlocker, INService, IReadyExecutor
         }
 
         return false;
-    }
-
-    /// <summary>
-    ///     Attempts to block a slash command execution based on the permissions configured for the guild.
-    /// </summary>
-    /// <param name="client">The Discord client.</param>
-    /// <param name="ctx">The interaction context.</param>
-    /// <param name="command">The slash command information.</param>
-    /// <returns>True if the slash command execution should be blocked, otherwise false.</returns>
-    /// *
-    public async Task<bool> TryBlockLate(DiscordShardedClient client, IInteractionContext ctx, ICommandInfo command)
-    {
-        var guild = ctx.Guild;
-        var resolved = identity.Resolve(command);
-
-        await Task.Yield();
-        if (guild == null)
-            return false;
-
-        var resetCommand = resolved.Alias == "resetperms";
-
-        var pc = await GetCacheFor(guild.Id);
-        if (resetCommand || pc.Permissions.CheckSlashPermissions(resolved.ModuleName, resolved.Alias, ctx.User,
-                ctx.Channel, out var index))
-            return false;
-        try
-        {
-            await ctx.Interaction.SendEphemeralErrorAsync(Strings.PermPrevent(ctx.Guild.Id, index + 1,
-                    Format.Bold(pc.Permissions[index]
-                        .GetCommand(await guildSettings.GetPrefix(guild), (SocketGuild)guild))), config)
-                .ConfigureAwait(false);
-        }
-        catch
-        {
-            // ignored
-        }
-
-        return true;
     }
 
     /// <inheritdoc />

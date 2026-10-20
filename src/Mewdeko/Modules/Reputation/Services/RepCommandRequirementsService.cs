@@ -1,6 +1,5 @@
 using DataModel;
 using Discord.Commands;
-using Discord.Interactions;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.Configs;
@@ -21,7 +20,6 @@ public class RepCommandRequirementsService : INService, ILateBlocker
 
     private readonly BotConfig config;
     private readonly IDataConnectionFactory dbFactory;
-    private readonly SlashCommandIdentityService identity;
     private readonly ILogger<RepCommandRequirementsService> logger;
     private readonly RepService repService;
     private readonly GeneratedBotStrings strings;
@@ -39,9 +37,8 @@ public class RepCommandRequirementsService : INService, ILateBlocker
         IDataConnectionFactory dbFactory,
         GeneratedBotStrings strings,
         RepService repService,
-        ILogger<RepCommandRequirementsService> logger, BotConfig config, SlashCommandIdentityService identity)
+        ILogger<RepCommandRequirementsService> logger, BotConfig config)
     {
-        this.identity = identity;
         this.dbFactory = dbFactory;
         this.strings = strings;
         this.repService = repService;
@@ -107,55 +104,6 @@ public class RepCommandRequirementsService : INService, ILateBlocker
         {
             logger.LogError(ex, "Error checking command requirements for {Command} in guild {GuildId}",
                 command.Name, ctx.Guild.Id);
-            return false; // Allow command on error to prevent blocking legitimate usage
-        }
-    }
-
-    /// <summary>
-    ///     Checks if a user meets the reputation requirements for a slash command.
-    /// </summary>
-    /// <param name="client">The Discord client.</param>
-    /// <param name="ctx">The interaction context.</param>
-    /// <param name="command">The command info.</param>
-    /// <returns>True if the command should be blocked, false if it can proceed.</returns>
-    public async Task<bool> TryBlockLate(DiscordShardedClient client, IInteractionContext ctx, ICommandInfo command)
-    {
-        if (ctx.Guild == null) return false;
-
-        try
-        {
-            var requirement =
-                await GetCommandRequirementInternalAsync(ctx.Guild.Id, identity.Resolve(command).Alias);
-            if (requirement is not { IsActive: true }) return false;
-
-            // Check if user has bypass roles
-            if (await HasBypassRoleAsync(ctx.User as IGuildUser, requirement.BypassRoles))
-                return false;
-
-            // Check if command is restricted to specific channels
-            if (!string.IsNullOrEmpty(requirement.RestrictedChannels) &&
-                !IsChannelInList(ctx.Channel.Id, requirement.RestrictedChannels))
-                return false;
-
-            // Check user's reputation
-            var hasRequirement = await CheckUserReputationRequirementAsync(ctx.Guild.Id, ctx.User.Id,
-                requirement.MinReputation, requirement.RequiredRepType);
-
-            if (!hasRequirement)
-            {
-                var message = requirement.DenialMessage ??
-                              strings.RepCommandRequirementNotMet(ctx.Guild.Id, requirement.MinReputation,
-                                  requirement.RequiredRepType ?? "total");
-                await ctx.Interaction.RespondAsync(message, ephemeral: true);
-                return true; // Block the command
-            }
-
-            return false; // Allow the command
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error checking slash command requirements for {Command} in guild {GuildId}",
-                command.MethodName, ctx.Guild.Id);
             return false; // Allow command on error to prevent blocking legitimate usage
         }
     }

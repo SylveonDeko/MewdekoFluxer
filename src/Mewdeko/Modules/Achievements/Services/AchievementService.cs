@@ -1,6 +1,5 @@
 using System.Threading;
 using DataModel;
-using Discord.Interactions;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.ModuleBehaviors;
@@ -88,7 +87,6 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
     private readonly IDataConnectionFactory dbFactory;
     private readonly EventHandler eventHandler;
     private readonly GuildSettingsService guildSettings;
-    private readonly InteractionService interactionService;
     private readonly InviteCountService inviteCounts;
     private readonly ILogger<AchievementService> logger;
     private readonly MessageCountService messageCounts;
@@ -116,7 +114,6 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
     /// <param name="inviteCounts">Invite tracking, a data source for invite achievements.</param>
     /// <param name="xpService">XP, for levels and XP rewards.</param>
     /// <param name="commandHandler">Text command handler, for command achievements.</param>
-    /// <param name="interactionService">Slash command handler, for command achievements.</param>
     /// <param name="services">Service provider, for the currency service.</param>
     /// <param name="collector">Analytics collector.</param>
     /// <param name="logger">Logger instance.</param>
@@ -131,7 +128,6 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
         InviteCountService inviteCounts,
         XpService xpService,
         CommandHandler commandHandler,
-        InteractionService interactionService,
         IServiceProvider services,
         IAnalyticsCollector collector,
         ILogger<AchievementService> logger)
@@ -146,7 +142,6 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
         this.inviteCounts = inviteCounts;
         this.xpService = xpService;
         this.commandHandler = commandHandler;
-        this.interactionService = interactionService;
         this.services = services;
         this.collector = collector;
         this.logger = logger;

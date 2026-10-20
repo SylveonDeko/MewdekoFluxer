@@ -381,25 +381,10 @@ public partial class Administration
                                      : ""))
                 .Build();
 
-            var msg = await ctx.Channel.SendMessageAsync(
+            await ctx.Channel.SendMessageAsync(
                 embed: eb,
                 components: componentBuilder.Build()
             );
-
-            if (!LogSlashCommands.LogSelectMessages.TryGetValue(Context.Channel.Id, out var oldMsg))
-            {
-                try
-                {
-                    await oldMsg.DeleteAsync();
-                    LogSlashCommands.LogSelectMessages.TryRemove(Context.Channel.Id, out _);
-                }
-                catch
-                {
-                    // ignored
-                }
-            }
-
-            LogSlashCommands.LogSelectMessages[Context.Channel.Id] = msg;
         }
 
         /// <summary>

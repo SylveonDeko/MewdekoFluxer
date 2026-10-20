@@ -547,7 +547,7 @@ public partial class Administration
             if (externalApp != null)
             {
                 embed.AddField("Anti-External-App",
-                    SlashProtection.GetAntiExternalAppString(Strings, ctx.Guild.Id, externalApp).TrimTo(1024), true);
+                    GetAntiExternalAppString(externalApp).TrimTo(1024), true);
             }
 
             await ctx.Channel.EmbedAsync(embed).ConfigureAwait(false);
@@ -1638,6 +1638,26 @@ public partial class Administration
                 add,
                 Format.Bold(stats.Hashes.Count.ToString()),
                 Format.Bold(settings.HashThreshold.ToString()),
+                Format.Bold(stats.Counter.ToString()));
+        }
+
+        /// <summary>
+        ///     Builds the string for the Anti-External-App settings display.
+        /// </summary>
+        private string GetAntiExternalAppString(AntiExternalAppStats stats)
+        {
+            var settings = stats.AntiExternalAppSettings;
+            var add = "";
+            if (settings.PunishDuration > 0)
+                add = $" ({TimeSpan.FromMinutes(settings.PunishDuration).Humanize()})";
+
+            return Strings.AntiExternalAppStats(ctx.Guild.Id,
+                Format.Bold(((PunishmentAction)settings.Action).ToString()),
+                add,
+                Format.Bold(settings.MentionThreshold > 0 ? settings.MentionThreshold.ToString() : "Off"),
+                Format.Bold(settings.BlockInvites ? "Yes" : "No"),
+                Format.Bold(settings.MaxMessages > 0 ? settings.MaxMessages.ToString() : "Off"),
+                Format.Bold(settings.TimeWindowSeconds.ToString()),
                 Format.Bold(stats.Counter.ToString()));
         }
     }

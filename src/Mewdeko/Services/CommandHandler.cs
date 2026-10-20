@@ -4,10 +4,8 @@ using System.Text;
 using System.Threading;
 using DataModel;
 using Discord.Commands;
-using Discord.Interactions;
 using Discord.Net;
 using Discord.Rest;
-using Fergun.Interactive;
 using LinqToDB;
 using Mewdeko.Common.Collections;
 using Mewdeko.Common.ModuleBehaviors;
@@ -22,7 +20,6 @@ using Mewdeko.Services.Settings;
 using Mewdeko.Services.Strings;
 using Microsoft.Extensions.DependencyInjection;
 using ExecuteResult = Discord.Commands.ExecuteResult;
-using IResult = Discord.Interactions.IResult;
 
 namespace Mewdeko.Services;
 
@@ -41,7 +38,6 @@ public class CommandHandler : INService
     /// </summary>
     public readonly IServiceProvider Services;
 
-    private readonly InteractionAckTracker ackTracker;
     private readonly Mewdeko bot;
     private readonly BotConfigService bss;
     private readonly IDataCache cache;
@@ -53,8 +49,6 @@ public class CommandHandler : INService
     private readonly CommandService commandService;
     private readonly IDataConnectionFactory dbFactory;
     private readonly GuildSettingsService gss;
-    private readonly InteractionService interactionService;
-    private readonly InteractiveService interactiveService;
     private readonly Localization localization;
     private readonly ILogger<CommandHandler> logger;
 
@@ -67,29 +61,21 @@ public class CommandHandler : INService
     /// <param name="bss">The bot configuration service.</param>
     /// <param name="bot">The bot instance.</param>
     /// <param name="services">The service provider for dependency injection.</param>
-    /// <param name="interactionService">The service for handling interactions.</param>
     /// <param name="gss">The guild settings service.</param>
     /// <param name="eventHandler">The event handler for discord events.</param>
     /// <param name="cache">The data cache service.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
-    /// <param name="interactiveService">The interactiveservice service.</param>
     /// <param name="collector">The analytics collector that records command executions.</param>
-    /// <param name="ackTracker">Tracks interaction timings shared with the REST hook.</param>
     /// <param name="localization">Resolves the guild locale recorded with each command.</param>
     public CommandHandler(DiscordShardedClient client, IDataConnectionFactory dbFactory, CommandService commandService,
         BotConfigService bss, Mewdeko bot, IServiceProvider services,
-        InteractionService interactionService,
         GuildSettingsService gss, EventHandler eventHandler, IDataCache cache, ILogger<CommandHandler> logger,
-        InteractiveService interactiveService, IAnalyticsCollector collector, InteractionAckTracker ackTracker,
-        Localization localization)
+        IAnalyticsCollector collector, Localization localization)
     {
-        this.interactionService = interactionService;
         this.gss = gss;
         this.cache = cache;
         this.logger = logger;
-        this.interactiveService = interactiveService;
         this.collector = collector;
-        this.ackTracker = ackTracker;
         this.localization = localization;
         this.client = client;
         this.commandService = commandService;
@@ -97,13 +83,6 @@ public class CommandHandler : INService
         this.bot = bot;
         this.dbFactory = dbFactory;
         this.Services = services;
-        eventHandler.Subscribe("InteractionCreated", "CommandHandler", TryRunInteraction);
-        this.interactionService.SlashCommandExecuted += HandleCommands;
-        this.interactionService.ContextCommandExecuted += HandleContextCommands;
-        this.interactionService.ComponentCommandExecuted += HandleComponentExecuted;
-        this.interactionService.ModalCommandExecuted += HandleModalExecuted;
-        this.interactionService.AutocompleteCommandExecuted += HandleAutocompleteCommandExecuted;
-        this.interactionService.AutocompleteHandlerExecuted += HandleAutocompleteHandlerExecuted;
         clearUsersOnShortCooldown = new Timer(_ => UsersOnShortCooldown.Clear(), null, GlobalCommandsCooldown,
             GlobalCommandsCooldown);
         eventHandler.Subscribe("MessageReceived", "CommandHandler", MessageReceivedHandler);
@@ -138,513 +117,6 @@ public class CommandHandler : INService
     ///     Used for xp, for some reason.
     /// </summary>
     public event Func<IUserMessage, Task> OnMessageNoTrigger = delegate { return Task.CompletedTask; };
-
-    private Task HandleContextCommands(ContextCommandInfo info, IInteractionContext ctx, IResult result)
-    {
-        _ = HandleContextCommandsInternal(info, ctx, result);
-        return Task.CompletedTask;
-    }
-
-    private async Task HandleContextCommandsInternal(ContextCommandInfo info, IInteractionContext ctx, IResult result)
-    {
-        var measured = ackTracker.End(ctx.Interaction.Id);
-        await using var dbContext = await dbFactory.CreateConnectionAsync();
-
-        var optedOut = false;
-        if (ctx.Guild is not null)
-        {
-            var gconf = await gss.GetGuildConfig(ctx.Guild.Id);
-            optedOut = gconf.StatsOptOut;
-            if (!optedOut)
-            {
-                var user = await dbContext.GetOrCreateUser(ctx.User);
-                optedOut = user.StatsOptOut;
-                if (!optedOut)
-                {
-                    var comStats = new CommandStat
-                    {
-                        ChannelId = ctx.Channel.Id,
-                        GuildId = ctx.Guild.Id,
-                        IsSlash = true,
-                        NameOrId = info.Name,
-                        UserId = ctx.User.Id,
-                        Module = info.Module.Name
-                    };
-                    await dbContext.InsertAsync(comStats);
-                }
-            }
-        }
-
-        var kind = info?.CommandType == ApplicationCommandType.User ? "user_ctx" : "msg_ctx";
-        EmitInteraction(kind, info?.Module.Name, info?.Name ?? InteractionName(ctx), ctx, result, measured,
-            optedOut);
-
-        if (!result.IsSuccess)
-        {
-            await ctx.Interaction
-                .SendEphemeralErrorAsync($"Command failed for the following reason:\n{result.ErrorReason}",
-                    bss.Data)
-                .ConfigureAwait(false);
-            if (bss.Data.LogCommandExecutions)
-            {
-                logger.LogWarning(
-                    "Slash Command Errored\n\t" + "User: {0}\n\t" + "Server: {1}\n\t" + "Channel: {2}\n\t" +
-                    "Message: {3}\n\t" + "Error: {4}",
-                    $"{ctx.User} [{ctx.User.Id}]", // {0}
-                    ctx.Guild == null ? "PRIVATE" : $"{ctx.Guild.Name} [{ctx.Guild.Id}]", // {1}
-                    ctx.Channel == null ? "PRIVATE" : $"{ctx.Channel.Name} [{ctx.Channel.Id}]", // {2}
-                    info.MethodName, result.ErrorReason);
-            }
-
-            var tofetch = await client.Rest.GetChannelAsync(bss.Data.CommandLogChannel).ConfigureAwait(false);
-            if (tofetch is RestTextChannel restChannel)
-            {
-                var eb = new EmbedBuilder()
-                    .WithErrorColor()
-                    .WithTitle("Slash Command Errored")
-                    .AddField("Reason", result.ErrorReason)
-                    .AddField("Module", info.Module.Name ?? "None")
-                    .AddField("Command", info.Name)
-                    .AddField("User", $"{ctx.User.Mention} `{ctx.User.Id}`")
-                    .AddField("Channel", ctx.Channel == null ? "PRIVATE" : $"{ctx.Channel.Name} `{ctx.Channel.Id}`")
-                    .AddField("Guild", ctx.Guild == null ? "PRIVATE" : $"{ctx.Guild.Name} `{ctx.Guild.Id}`");
-
-                await restChannel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
-            }
-
-            if (ctx.Guild is null)
-                return;
-            {
-                if (info.MethodName.ToLower() is "confess" or "confessreport")
-                    return;
-
-                var gc = await gss.GetGuildConfig(ctx.Guild.Id);
-                if (gc.CommandLogChannel is 0)
-                    return;
-                var channel = await ctx.Guild.GetTextChannelAsync(gc.CommandLogChannel).ConfigureAwait(false);
-                if (channel is null)
-                    return;
-                var eb = new EmbedBuilder()
-                    .WithErrorColor()
-                    .WithTitle("Slash Command Errored")
-                    .AddField("Reason", result.ErrorReason)
-                    .AddField("Module", info.Module.Name ?? "None")
-                    .AddField("Command", info.Name)
-                    .AddField("User", $"{ctx.User} `{ctx.User.Id}`")
-                    .AddField("Channel", $"{ctx.Channel.Name} `{ctx.Channel.Id}`");
-
-                await channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
-            }
-            return;
-        }
-
-        var chan = ctx.Channel as ITextChannel;
-        if (bss.Data.LogCommandExecutions)
-        {
-            logger.LogInformation(
-                "Slash Command Executed" + "\n\t" + "User: {0}\n\t" + "Server: {1}\n\t" + "Channel: {2}\n\t" +
-                "Module: {3}\n\t" + "Command: {4}",
-                $"{ctx.User} [{ctx.User.Id}]", // {0}
-                chan == null ? "PRIVATE" : $"{chan.Guild.Name} [{chan.Guild.Id}]", // {1}
-                chan == null ? "PRIVATE" : $"{chan.Name} [{chan.Id}]", // {2}
-                info.Module.SlashGroupName, info.MethodName); // {3}
-        }
-
-        var tofetch1 = await client.Rest.GetChannelAsync(bss.Data.CommandLogChannel).ConfigureAwait(false);
-        if (tofetch1 is RestTextChannel restChannel1)
-        {
-            var eb = new EmbedBuilder()
-                .WithOkColor()
-                .WithTitle("Slash Command Executed")
-                .AddField("Module", info.Module.Name ?? "None")
-                .AddField("Command", info.Name)
-                .AddField("User", $"{ctx.User} `{ctx.User.Id}`")
-                .AddField("Channel", ctx.Channel == null ? "PRIVATE" : $"{ctx.Channel.Name} `{ctx.Channel.Id}`")
-                .AddField("Guild", ctx.Guild == null ? "PRIVATE" : $"{ctx.Guild.Name} `{ctx.Guild.Id}`");
-
-            await restChannel1.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
-        }
-
-        if (ctx.Guild is null)
-            return;
-        {
-            if (info.MethodName.ToLower() is "confess" or "confessreport")
-                return;
-
-            var gc = await gss.GetGuildConfig(ctx.Guild.Id);
-            if (gc.CommandLogChannel is 0)
-                return;
-            var channel = await ctx.Guild.GetTextChannelAsync(gc.CommandLogChannel).ConfigureAwait(false);
-            if (channel is null)
-                return;
-            var eb = new EmbedBuilder()
-                .WithOkColor()
-                .WithTitle("Slash Command Executed.")
-                .AddField("Module", info.Module.Name ?? "None")
-                .AddField("Command", info.Name)
-                .AddField("User", $"{ctx.User.Mention} `{ctx.User.Id}`")
-                .AddField("Channel", $"{ctx.Channel.Name} `{ctx.Channel.Id}`");
-
-            await channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
-        }
-    }
-
-    /// <summary>
-    ///     Runs the late blockers (guild permissions, cooldowns, global permissions, overrides, and reputation
-    ///     requirements) against an application command before it executes, mirroring the text command pipeline.
-    /// </summary>
-    /// <param name="ctx">The interaction context.</param>
-    /// <param name="interaction">The incoming interaction.</param>
-    /// <returns>True when a blocker refused the command and the interaction has been answered.</returns>
-    private async Task<bool> IsBlockedByLateBlockers(IInteractionContext ctx, SocketInteraction interaction)
-    {
-        ICommandInfo? command = interaction switch
-        {
-            ISlashCommandInteraction slash => interactionService.SearchSlashCommand(slash) is
-            {
-                IsSuccess: true
-            } slashResult
-                ? slashResult.Command
-                : null,
-            IUserCommandInteraction user => interactionService.SearchUserCommand(user) is
-            {
-                IsSuccess: true
-            } userResult
-                ? userResult.Command
-                : null,
-            IMessageCommandInteraction message => interactionService.SearchMessageCommand(message) is
-            {
-                IsSuccess: true
-            } messageResult
-                ? messageResult.Command
-                : null,
-            _ => null
-        };
-
-        if (command is null)
-            return false;
-
-        foreach (var blocker in Services.GetServices<ILateBlocker>())
-        {
-            if (!await blocker.TryBlockLate(client, ctx, command).ConfigureAwait(false))
-                continue;
-
-            if (!interaction.HasResponded)
-            {
-                try
-                {
-                    var strings = Services.GetRequiredService<GeneratedBotStrings>();
-                    await interaction.SendEphemeralErrorAsync(
-                        strings.CommandBlocked((interaction.Channel as IGuildChannel)?.GuildId ?? 0), bss.Data);
-                }
-                catch
-                {
-                }
-            }
-
-            return true;
-        }
-
-        return false;
-    }
-
-    private Task HandleCommands(SlashCommandInfo slashInfo, IInteractionContext ctx, IResult result)
-    {
-        var measured = ackTracker.End(ctx.Interaction.Id);
-        _ = Task.Run(async () =>
-        {
-            await using var dbContext = await dbFactory.CreateConnectionAsync();
-
-            var optedOut = false;
-            if (ctx.Guild is not null)
-            {
-                var gconf = await gss.GetGuildConfig(ctx.Guild.Id);
-                optedOut = gconf.StatsOptOut;
-                if (!optedOut)
-                {
-                    var user = await dbContext.GetOrCreateUser(ctx.User);
-                    optedOut = user.StatsOptOut;
-                    if (!optedOut)
-                    {
-                        var comStats = new CommandStat
-                        {
-                            ChannelId = ctx.Channel.Id,
-                            GuildId = ctx.Guild.Id,
-                            IsSlash = true,
-                            NameOrId = slashInfo.Name,
-                            UserId = ctx.User.Id,
-                            Module = slashInfo.Module.Name
-                        };
-                        await dbContext.InsertAsync(comStats);
-                    }
-                }
-            }
-
-            EmitInteraction("slash", slashInfo?.Module.Name, slashInfo?.Name ?? InteractionName(ctx), ctx, result,
-                measured, optedOut);
-
-            if (!result.IsSuccess)
-            {
-                await ctx.Interaction
-                    .SendEphemeralErrorAsync($"Command failed for the following reason:\n{result.ErrorReason}",
-                        bss.Data)
-                    .ConfigureAwait(false);
-                if (bss.Data.LogCommandExecutions)
-                {
-                    logger.LogWarning(
-                        "Slash Command Errored\n\t" + "User: {0}\n\t" + "Server: {1}\n\t" + "Channel: {2}\n\t" +
-                        "Message: {3}\n\t" + "Error: {4}",
-                        $"{ctx.User} [{ctx.User.Id}]", // {0}
-                        ctx.Guild == null ? "PRIVATE" : $"{ctx.Guild.Name} [{ctx.Guild.Id}]", // {1}
-                        ctx.Channel == null ? "PRIVATE" : $"{ctx.Channel.Name} [{ctx.Channel.Id}]", // {2}
-                        slashInfo.MethodName, result.ErrorReason);
-                }
-
-                var tofetch = await client.Rest.GetChannelAsync(bss.Data.CommandLogChannel).ConfigureAwait(false);
-                if (tofetch is RestTextChannel restChannel)
-                {
-                    var eb = new EmbedBuilder()
-                        .WithErrorColor()
-                        .WithTitle("Slash Command Errored.")
-                        .AddField("Reason", result.ErrorReason)
-                        .AddField("Module", slashInfo.Module.Name ?? "None")
-                        .AddField("Command", slashInfo.Name)
-                        .AddField("User", $"{ctx.User.Mention} `{ctx.User.Id}`")
-                        .AddField("Channel", ctx.Channel == null ? "PRIVATE" : $"{ctx.Channel.Name} `{ctx.Channel.Id}`")
-                        .AddField("Guild", ctx.Guild == null ? "PRIVATE" : $"{ctx.Guild.Name} `{ctx.Guild.Id}`");
-
-                    await restChannel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
-                }
-
-                if (ctx.Guild is null)
-                    return;
-                {
-                    if (slashInfo.MethodName.ToLower() is "confess" or "confessreport")
-                        return;
-
-                    var gc = await gss.GetGuildConfig(ctx.Guild.Id);
-                    if (gc.CommandLogChannel is 0)
-                        return;
-                    var channel = await ctx.Guild.GetTextChannelAsync(gc.CommandLogChannel).ConfigureAwait(false);
-                    if (channel is null)
-                        return;
-                    var eb = new EmbedBuilder()
-                        .WithErrorColor()
-                        .WithTitle("Slash Command Errored.")
-                        .AddField("Reason", result.ErrorReason)
-                        .AddField("Module", slashInfo.Module.Name ?? "None")
-                        .AddField("Command", slashInfo.Name)
-                        .AddField("User", $"{ctx.User.Mention} `{ctx.User.Id}`")
-                        .AddField("Channel", $"{ctx.Channel.Name} `{ctx.Channel.Id}`");
-
-                    await channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
-                }
-                return;
-            }
-
-            var chan = ctx.Channel as ITextChannel;
-            if (bss.Data.LogCommandExecutions)
-            {
-                logger.LogInformation(
-                    "Slash Command Executed" + "\n\t" + "User: {0}\n\t" + "Server: {1}\n\t" + "Channel: {2}\n\t" +
-                    "Module: {3}\n\t" + "Command: {4}",
-                    $"{ctx.User} [{ctx.User.Id}]", // {0}
-                    chan == null ? "PRIVATE" : $"{chan.Guild.Name} [{chan.Guild.Id}]", // {1}
-                    chan == null ? "PRIVATE" : $"{chan.Name} [{chan.Id}]", // {2}
-                    slashInfo.Module.SlashGroupName, slashInfo.MethodName); // {3}
-            }
-
-            var tofetch1 = await client.Rest.GetChannelAsync(bss.Data.CommandLogChannel).ConfigureAwait(false);
-            if (tofetch1 is RestTextChannel restChannel1)
-            {
-                var eb = new EmbedBuilder()
-                    .WithOkColor()
-                    .WithTitle("Slash Command Executed.")
-                    .AddField("Module", slashInfo.Module.Name ?? "None")
-                    .AddField("Command", slashInfo.Name)
-                    .AddField("User", $"{ctx.User.Mention} `{ctx.User.Id}`")
-                    .AddField("Channel", ctx.Channel == null ? "PRIVATE" : $"{ctx.Channel.Name} `{ctx.Channel.Id}`")
-                    .AddField("Guild", ctx.Guild == null ? "PRIVATE" : $"{ctx.Guild.Name} `{ctx.Guild.Id}`");
-
-                await restChannel1.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
-            }
-
-            if (ctx.Guild is null)
-                return;
-            {
-                if (slashInfo.MethodName.ToLower() is "confess" or "confessreport")
-                    return;
-
-                var gc = await gss.GetGuildConfig(ctx.Guild.Id);
-                if (gc.CommandLogChannel is 0)
-                    return;
-                var channel = await ctx.Guild.GetTextChannelAsync(gc.CommandLogChannel).ConfigureAwait(false);
-                if (channel is null)
-                    return;
-                var eb = new EmbedBuilder()
-                    .WithOkColor()
-                    .WithTitle("Slash Command Executed.")
-                    .AddField("Module", slashInfo.Module.Name ?? "None")
-                    .AddField("Command", slashInfo.Name)
-                    .AddField("User", $"{ctx.User.Mention} `{ctx.User.Id}`")
-                    .AddField("Channel", $"{ctx.Channel.Name} `{ctx.Channel.Id}`");
-
-                await channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
-            }
-        });
-        return Task.CompletedTask;
-    }
-
-    private Task HandleComponentExecuted(ComponentCommandInfo info, IInteractionContext ctx, IResult result)
-    {
-        var kind = ctx.Interaction is SocketMessageComponent { Data.Type: ComponentType.Button } ? "button" : "select";
-        return RecordInteractionAsync(kind, info?.Module.Name, info?.Name ?? InteractionName(ctx), ctx, result);
-    }
-
-    private Task HandleModalExecuted(ModalCommandInfo info, IInteractionContext ctx, IResult result)
-    {
-        return RecordInteractionAsync("modal", info?.Module.Name, info?.Name ?? InteractionName(ctx), ctx, result);
-    }
-
-    private Task HandleAutocompleteCommandExecuted(AutocompleteCommandInfo info, IInteractionContext ctx,
-        IResult result)
-    {
-        return RecordInteractionAsync("autocomplete", info?.Module.Name, info?.Name ?? InteractionName(ctx), ctx,
-            result);
-    }
-
-    private Task HandleAutocompleteHandlerExecuted(IAutocompleteHandler handler, IInteractionContext ctx,
-        IResult result)
-    {
-        return RecordInteractionAsync("autocomplete", null, InteractionName(ctx), ctx, result);
-    }
-
-    private async Task RecordInteractionAsync(string kind, string? module, string command, IInteractionContext ctx,
-        IResult result)
-    {
-        var measured = ackTracker.End(ctx.Interaction.Id);
-        var optedOut = false;
-        if (ctx.Guild is not null)
-        {
-            var gconf = await gss.GetGuildConfig(ctx.Guild.Id).ConfigureAwait(false);
-            optedOut = gconf?.StatsOptOut ?? false;
-        }
-
-        EmitInteraction(kind, module, command, ctx, result, measured, optedOut);
-    }
-
-    private void EmitInteraction(string kind, string? module, string command, IInteractionContext ctx,
-        IResult result, (long? AckMs, long DurationMs) measured, bool optedOut)
-    {
-        var guild = ctx.Guild as SocketGuild;
-        var shard = guild is null ? (int?)null : client.GetShardIdFor(guild);
-        var exception = result is Discord.Interactions.ExecuteResult executeResult ? executeResult.Exception : null;
-        string? errorClass = null;
-        if (!result.IsSuccess)
-            errorClass = exception is null ? result.Error?.ToString() : Innermost(exception).GetType().Name;
-
-        var language = ctx.Guild is null
-            ? ctx.Interaction.UserLocale
-            : localization.GetCultureInfo(ctx.Guild.Id)?.Name;
-
-        collector.Command(new CommandSample(kind, module, command, result.IsSuccess, errorClass,
-            result.IsSuccess ? null : result.ErrorReason, measured.DurationMs, measured.AckMs, ctx.Guild?.Id,
-            guild?.MemberCount, shard, language, optedOut));
-
-        if (exception is not null)
-            collector.Error(exception, $"CommandHandler.{kind}", module, ctx.Guild?.Id, shard);
-    }
-
-    private static string InteractionName(IInteractionContext ctx)
-    {
-        return ctx.Interaction switch
-        {
-            SocketCommandBase command => command.CommandName,
-            SocketMessageComponent component => component.Data.CustomId,
-            SocketModal modal => modal.Data.CustomId,
-            SocketAutocompleteInteraction autocomplete => autocomplete.Data.CommandName,
-            _ => ctx.Interaction.Type.ToString()
-        };
-    }
-
-    private static Exception Innermost(Exception exception)
-    {
-        var current = exception;
-        while (current.InnerException is not null)
-            current = current.InnerException;
-        return current;
-    }
-
-    private async Task TryRunInteraction(SocketInteraction interaction)
-    {
-        try
-        {
-            var blacklistService = Services.GetService<BlacklistService>();
-            var cb = new ComponentBuilder().WithButton("Support Server", null, ButtonStyle.Link,
-                url: "https://discord.gg/mewdeko").Build();
-            foreach (var bl in blacklistService.BlacklistEntries)
-            {
-                if ((interaction.Channel as IGuildChannel)?.Guild != null && bl.Type == (int)BlacklistType.Server &&
-                    bl.ItemId == (interaction.Channel as IGuildChannel)?.Guild?.Id)
-                {
-                    await interaction.RespondAsync(
-                        $"*This guild is blacklisted from Mewdeko for **{bl.Reason}**! You can visit the support server below to try and resolve this.*",
-                        components: cb).ConfigureAwait(false);
-                    return;
-                }
-
-                if (bl.Type != (int)BlacklistType.User || bl.ItemId != interaction.User.Id) continue;
-                await interaction.RespondAsync(
-                    $"*You are blacklisted from Mewdeko for **{bl.Reason}**! You can visit the support server below to try and resolve this.*",
-                    ephemeral: true, components: cb).ConfigureAwait(false);
-                return;
-            }
-
-            if (interaction.Type == InteractionType.ApplicationCommand)
-            {
-                var ctS = Services.GetService<ChatTriggersService>();
-                var triggers = await ctS.GetChatTriggersFor((interaction.Channel as IGuildChannel)?.Guild?.Id);
-                var trigger = triggers.FirstOrDefault(x => x.RealName() == interaction.GetRealName());
-                if (trigger is not null)
-                {
-                    await ctS.RunInteractionTrigger(interaction, trigger).ConfigureAwait(false);
-                    return;
-                }
-            }
-
-            // Ignore fergun interactions, getting tired of the cant find interaction handler crap
-            if (interactiveService.IsManaged(interaction))
-                return;
-
-            // i hate discord
-            // if (interaction is IComponentInteraction compInter
-            //     && compInter.Message.Author.IsWebhook
-            //     && !compInter.Data.CustomId.StartsWith("trigger.")) return;
-
-            var ctx = new ShardedInteractionContext(client, interaction);
-            ackTracker.Begin(interaction.Id, interaction.CreatedAt);
-            if (await IsBlockedByLateBlockers(ctx, interaction).ConfigureAwait(false))
-            {
-                ackTracker.End(interaction.Id);
-                return;
-            }
-
-            var result = await interactionService.ExecuteCommandAsync(ctx, Services).ConfigureAwait(false);
-            if (!result.IsSuccess)
-                ackTracker.End(interaction.Id);
-#if DEBUG
-            logger.LogInformation($"Button was executed:{result.IsSuccess}\nReason:{result.ErrorReason}");
-#endif
-        }
-        catch (Exception e)
-        {
-            ackTracker.End(interaction.Id);
-            collector.Error(e, "CommandHandler.TryRunInteraction", null,
-                (interaction.Channel as IGuildChannel)?.GuildId);
-            logger.LogError(e, "Interaction failed to execute");
-            throw;
-        }
-    }
 
     /// <summary>
     ///     Executes an external command within a specific guild and channel context.
@@ -993,6 +465,14 @@ public class CommandHandler : INService
             if (await client.Rest.GetChannelAsync(gc.CommandLogChannel) is ITextChannel commandLogChannel)
                 await commandLogChannel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
         }
+    }
+
+    private static Exception Innermost(Exception exception)
+    {
+        var current = exception;
+        while (current.InnerException is not null)
+            current = current.InnerException;
+        return current;
     }
 
     private int GetPrefixLength(string content, string prefix)

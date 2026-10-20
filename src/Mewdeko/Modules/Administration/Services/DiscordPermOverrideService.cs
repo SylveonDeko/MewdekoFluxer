@@ -1,6 +1,5 @@
 ﻿using DataModel;
 using Discord.Commands;
-using Discord.Interactions;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.Configs;
@@ -63,29 +62,6 @@ public class DiscordPermOverrideService : INService, ILateBlocker
         return !result.IsSuccess;
     }
 
-    /// <summary>
-    ///     Tries to block a command based on the permission overrides for interaction context.
-    /// </summary>
-    /// <param name="client">The Discord client.</param>
-    /// <param name="context">The interaction context.</param>
-    /// <param name="command">The command to block.</param>
-    /// <returns>
-    ///     A task that represents the asynchronous operation. The task result contains a boolean indicating whether the
-    ///     command was blocked.
-    /// </returns>
-    public async Task<bool> TryBlockLate(DiscordShardedClient client, IInteractionContext context,
-        ICommandInfo command)
-    {
-        var alias = services.GetRequiredService<SlashCommandIdentityService>().Resolve(command).Alias;
-        if (!TryGetOverrides(context.Guild?.Id ?? 0, alias, out var perm)) return false;
-        var result = await new Discord.Interactions.RequireUserPermissionAttribute(perm)
-            .CheckRequirementsAsync(context, command, services).ConfigureAwait(false);
-        if (!result.IsSuccess)
-            await context.Interaction.SendEphemeralErrorAsync($"You need `{perm}` to use this command.", botConfig)
-                .ConfigureAwait(false);
-        return !result.IsSuccess;
-    }
-
     private async Task StartService()
     {
         try
@@ -137,25 +113,6 @@ public class DiscordPermOverrideService : INService, ILateBlocker
     {
         var rupa = new RequireUserPermissionAttribute(perms);
         return rupa.CheckPermissionsAsync(ctx, command, services);
-    }
-
-    /// <summary>
-    ///     Executes the permission overrides for a specific command in an interaction context.
-    /// </summary>
-    /// <param name="ctx">The interaction context.</param>
-    /// <param name="command">The command to execute the overrides for.</param>
-    /// <param name="perms">The permissions to check.</param>
-    /// <param name="services">The service provider.</param>
-    /// <returns>
-    ///     A task that represents the asynchronous operation. The task result contains the result of the permission
-    ///     check.
-    /// </returns>
-    public static Task<Discord.Interactions.PreconditionResult> ExecuteOverrides(IInteractionContext ctx,
-        ICommandInfo command,
-        GuildPermission perms, IServiceProvider services)
-    {
-        var rupa = new Discord.Interactions.RequireUserPermissionAttribute(perms);
-        return rupa.CheckRequirementsAsync(ctx, command, services);
     }
 
     /// <summary>

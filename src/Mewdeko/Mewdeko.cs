@@ -4,14 +4,12 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using DataModel;
 using Discord.Commands;
-using Discord.Interactions;
 using Discord.Net;
 using Discord.Rest;
 using Figgle.Fonts;
 using Lavalink4NET;
 using Mewdeko.Common.ModuleBehaviors;
 using Mewdeko.Common.TypeReaders;
-using Mewdeko.Common.TypeReaders.Interactions;
 using Mewdeko.Services.Impl;
 using Mewdeko.Services.Settings;
 using Microsoft.Extensions.DependencyInjection;
@@ -117,7 +115,6 @@ public class Mewdeko : IDisposable
     {
         var sw = new Stopwatch();
         sw.Start();
-        var interactionService = Services.GetService<InteractionService>();
         Type[] allTypes;
         try
         {
@@ -146,14 +143,6 @@ public class Mewdeko : IDisposable
         CommandService.AddTypeReaders<IEmote>(
             new TryParseTypeReader<Emote>(Emote.TryParse),
             new TryParseTypeReader<Emoji>(Emoji.TryParse));
-
-        interactionService.AddTypeConverter<ulong>(new UlongConverter());
-        interactionService.AddTypeConverter<TimeSpan>(new TimeSpanConverter());
-        interactionService.AddTypeConverter<IRole[]>(new RoleArrayConverter());
-        interactionService.AddTypeConverter<IUser[]>(new UserArrayConverter());
-        interactionService.AddTypeConverter<IGuildChannel[]>(new ChannelArrayConverter());
-        interactionService.AddTypeConverter<StatusRole>(new StatusRolesTypeConverter());
-
 
         sw.Stop();
         logger.LogInformation("TypeReaders loaded in {ElapsedTotalSeconds}s", sw.Elapsed.TotalSeconds);
@@ -318,24 +307,15 @@ public class Mewdeko : IDisposable
         logger.LogInformation("Connected in {Elapsed:F2}s", sw.Elapsed.TotalSeconds);
         var commandService = Services.GetService<CommandService>();
         commandService.Log += LogCommandsService;
-        var interactionService = Services.GetRequiredService<InteractionService>();
         try
         {
             await commandService.AddModulesAsync(Assembly.GetExecutingAssembly(), Services);
-            await interactionService.AddModulesAsync(Assembly.GetExecutingAssembly(), Services);
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Failed to add modules to command/interaction service");
+            logger.LogError(e, "Failed to add modules to command service");
             throw;
         }
-#if !DEBUG
-        await RegisterGlobalCommandsWithRetryAsync(interactionService).ConfigureAwait(false);
-#endif
-#if DEBUG
-        if (Client.Guilds.Select(x => x.Id).Contains(Credentials.DebugGuildId))
-            await interactionService.RegisterCommandsToGuildAsync(Credentials.DebugGuildId);
-#endif
 
         _ = Task.Run(HandleStatusChanges);
         _ = Task.Run(ExecuteReadySubscriptions);
@@ -349,32 +329,6 @@ public class Mewdeko : IDisposable
     {
         logger.LogInformation(arg.ToString());
         return Task.CompletedTask;
-    }
-
-    /// <summary>
-    ///     Registers global slash commands, retrying transient Discord failures. A 5xx from Discord here
-    ///     used to escape as an unhandled exception and take the whole process down at startup.
-    /// </summary>
-    /// <param name="interactionService">The interaction service holding the loaded modules.</param>
-    private async Task RegisterGlobalCommandsWithRetryAsync(InteractionService interactionService)
-    {
-        const int attempts = 5;
-        for (var attempt = 1; attempt <= attempts; attempt++)
-        {
-            try
-            {
-                await interactionService.RegisterCommandsGloballyAsync().ConfigureAwait(false);
-                return;
-            }
-            catch (HttpException ex) when ((int)ex.HttpCode >= 500 && attempt < attempts)
-            {
-                var delay = TimeSpan.FromSeconds(10 * attempt);
-                logger.LogWarning(ex,
-                    "Discord returned {Status} registering global commands (attempt {Attempt}/{Attempts}), retrying in {Delay}s",
-                    (int)ex.HttpCode, attempt, attempts, delay.TotalSeconds);
-                await Task.Delay(delay).ConfigureAwait(false);
-            }
-        }
     }
 
     private async Task ExecuteReadySubscriptions()

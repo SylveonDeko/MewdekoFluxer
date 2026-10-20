@@ -1,10 +1,8 @@
 using System.Threading;
 using Discord.Commands;
-using Discord.Interactions;
 using LinqToDB.Async;
 using Mewdeko.Modules.Achievements.Common;
 using Mewdeko.Modules.Xp.Events;
-using IResult = Discord.Interactions.IResult;
 
 namespace Mewdeko.Modules.Achievements.Services;
 
@@ -48,7 +46,6 @@ public sealed partial class AchievementService
         eventHandler.Subscribe("XpLevelChanged", EventModuleName, OnXpLevelChangedAsync);
         eventHandler.Subscribe("LeftGuild", EventModuleName, OnLeftGuildAsync);
         commandHandler.CommandExecuted += OnTextCommandExecutedAsync;
-        interactionService.SlashCommandExecuted += OnSlashCommandExecutedAsync;
     }
 
     private void UnsubscribeEvents()
@@ -62,7 +59,6 @@ public sealed partial class AchievementService
         eventHandler.Unsubscribe("XpLevelChanged", EventModuleName, OnXpLevelChangedAsync);
         eventHandler.Unsubscribe("LeftGuild", EventModuleName, OnLeftGuildAsync);
         commandHandler.CommandExecuted -= OnTextCommandExecutedAsync;
-        interactionService.SlashCommandExecuted -= OnSlashCommandExecutedAsync;
     }
 
     /// <summary>
@@ -480,13 +476,6 @@ public sealed partial class AchievementService
     {
         if (message.Author is SocketGuildUser user && message.Channel is SocketGuildChannel channel)
             MarkDirty(user.Guild.Id, user.Id, AchievementDirty.Commands, channel.Id);
-        return Task.CompletedTask;
-    }
-
-    private Task OnSlashCommandExecutedAsync(SlashCommandInfo command, IInteractionContext context, IResult result)
-    {
-        if (result.IsSuccess && context.Guild is not null)
-            MarkDirty(context.Guild.Id, context.User.Id, AchievementDirty.Commands, context.Channel?.Id ?? 0);
         return Task.CompletedTask;
     }
 

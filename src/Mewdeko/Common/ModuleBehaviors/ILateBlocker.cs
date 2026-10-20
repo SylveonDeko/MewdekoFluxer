@@ -1,5 +1,4 @@
 ﻿using Discord.Commands;
-using Discord.Interactions;
 
 namespace Mewdeko.Common.ModuleBehaviors;
 
@@ -26,17 +25,4 @@ public interface ILateBlocker
     /// </returns>
     public Task<bool> TryBlockLate(DiscordShardedClient client, ICommandContext context,
         string moduleName, CommandInfo command);
-
-    /// <summary>
-    ///     Tries to block the execution of subsequent modules after a command has been executed.
-    /// </summary>
-    /// <param name="client">The Discord client.</param>
-    /// <param name="context">The interaction context.</param>
-    /// <param name="command">The command that was executed.</param>
-    /// <returns>
-    ///     A task that represents the asynchronous operation. The task result contains a boolean indicating whether the
-    ///     module blocked the execution.
-    /// </returns>
-    public Task<bool> TryBlockLate(DiscordShardedClient client, IInteractionContext context,
-        ICommandInfo command);
 }
