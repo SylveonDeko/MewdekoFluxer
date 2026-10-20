@@ -149,14 +149,13 @@ public sealed class MewdekoPlayer : LavalinkPlayer
 
                 break;
             case TrackEndReason.LoadFailed:
-                var components = new ComponentBuilderV2()
-                    .WithContainer([
-                        new TextDisplayBuilder("# ⚠️ Track Load Failed")
-                    ], Mewdeko.ErrorColor)
-                    .WithSeparator()
-                    .WithContainer(new TextDisplayBuilder(Strings.TrackLoadFailed(GuildId, item.Track.Title)));
-                await TrySendAsync(musicChannel, c => c.SendMessageAsync(components: components.Build(),
-                    flags: MessageFlags.ComponentsV2, allowedMentions: AllowedMentions.None));
+                var loadFailedEmbed = new EmbedBuilder()
+                    .WithErrorColor()
+                    .WithTitle(Strings.MusicTrackLoadFailedTitle(GuildId))
+                    .WithDescription(Strings.TrackLoadFailed(GuildId, item.Track.Title))
+                    .Build();
+                await TrySendAsync(musicChannel, c => c.SendMessageAsync(embed: loadFailedEmbed,
+                    allowedMentions: AllowedMentions.None));
                 if (nextTrack is not null)
                 {
                     await PlayAsync(nextTrack.Track, cancellationToken: token);
@@ -198,11 +197,10 @@ public sealed class MewdekoPlayer : LavalinkPlayer
         var currentTrack = await cache.GetCurrentTrack(GuildId);
         var musicChannel = await GetMusicChannel();
 
-        // Create now playing display with integrated control buttons
-        var nowPlayingComponents = await PrettyNowPlayingAsync(queue);
+        var nowPlayingEmbed = await PrettyNowPlayingAsync(queue);
 
-        await TrySendAsync(musicChannel, c => c.SendMessageAsync(components: nowPlayingComponents,
-            flags: MessageFlags.ComponentsV2, allowedMentions: AllowedMentions.None));
+        await TrySendAsync(musicChannel, c => c.SendMessageAsync(embed: nowPlayingEmbed,
+            allowedMentions: AllowedMentions.None));
 
         if (DateTime.Now.Month == 4 && DateTime.Now.Day == 1 && !isAprilFoolsJokeRunning)
         {
@@ -549,100 +547,42 @@ public sealed class MewdekoPlayer : LavalinkPlayer
     }
 
     /// <summary>
-    ///     Gets a pretty now playing message for the player.
+    ///     Gets a pretty now playing embed for the player.
     /// </summary>
-    /// <summary>
-    ///     Gets a pretty now playing message for the player.
-    /// </summary>
-    public async Task<MessageComponent> PrettyNowPlayingAsync(List<MewdekoTrack> queue)
+    public async Task<Discord.Embed> PrettyNowPlayingAsync(List<MewdekoTrack> queue)
     {
         var currentTrack = await cache.GetCurrentTrack(GuildId);
         var position = Position.Value.Position;
         var duration = CurrentTrack.Duration;
-        var (progressBar, percentage) = CreateProgressBar(position, duration);
-        var settings = await GetMusicSettings();
+        var (progressBar, _) = CreateProgressBar(position, duration);
 
         var color = GetColorForPercentage(position.TotalMilliseconds / duration.TotalMilliseconds);
-        var containerComponents = new List<IMessageComponentBuilder>();
+        var stateEmoji = State == PlayerState.Paused ? "⏸️" : "▶️";
 
-        // Clean header without extra emojis
-        containerComponents.Add(new TextDisplayBuilder()
-            .WithContent("# Now Playing"));
+        var activeEffects = GetActiveEffects();
+        var effectsText = activeEffects.Any()
+            ? Strings.MusicNowPlayingEffects(GuildId, string.Join(", ", activeEffects))
+            : "";
+        var repeatEmoji = GetRepeatEmoji(await GetRepeatType().ConfigureAwait(false));
+        var repeatText = repeatEmoji != "" ? Strings.MusicNowPlayingRepeat(GuildId, repeatEmoji) : "";
 
-        containerComponents.Add(new SeparatorBuilder());
+        var statsText = Strings.MusicNowPlayingStats(GuildId, GetVolumeEmoji(), (Volume * 100).ToString("0"), currentTrack.Index,
+            queue.Count, repeatText, effectsText);
 
-        // Main track info section with artwork
-        var trackSection = new SectionBuilder()
-            .WithComponents([
-                new TextDisplayBuilder($"## [{currentTrack.Track.Title}]({currentTrack.Track.Uri})\n" +
-                                       $"{currentTrack.Track.Author}\n" +
-                                       $"🎵 {currentTrack.Track.Provider} • 👤 {currentTrack.Requester.Username}")
-            ]);
+        var eb = new EmbedBuilder()
+            .WithColor(color)
+            .WithTitle(Strings.MusicNowPlayingTitle(GuildId))
+            .WithDescription($"**[{currentTrack.Track.Title}]({currentTrack.Track.Uri})**\n" +
+                             $"{currentTrack.Track.Author}\n" +
+                             $"🎵 {currentTrack.Track.Provider} • 👤 {currentTrack.Requester.Username}\n\n" +
+                             $"{stateEmoji} `{position:mm\\:ss}` {progressBar} `{duration:mm\\:ss}`\n\n" +
+                             statsText)
+            .WithFooter(Strings.MusicNowPlayingControls(GuildId));
 
         if (currentTrack.Track.ArtworkUri != null)
-        {
-            var thumbnailBuilder = new ThumbnailBuilder()
-                .WithMedia(new UnfurledMediaItemProperties
-                {
-                    Url = currentTrack.Track.ArtworkUri.ToString()
-                });
-            trackSection.WithAccessory(thumbnailBuilder);
-        }
+            eb.WithThumbnailUrl(currentTrack.Track.ArtworkUri.ToString());
 
-        containerComponents.Add(trackSection);
-        containerComponents.Add(new SeparatorBuilder());
-
-        // Progress bar section - spans full width
-        containerComponents.Add(new TextDisplayBuilder()
-            .WithContent($"`{position:mm\\:ss}` {progressBar} `{duration:mm\\:ss}`"));
-
-        containerComponents.Add(new SeparatorBuilder());
-
-        // Main playback controls row
-        var isPaused = State == PlayerState.Paused;
-        var mainControlsRow = new ActionRowBuilder()
-            .WithButton(customId: $"music:loop:{GuildId}", emote: new Emoji("🔁"), style: ButtonStyle.Secondary)
-            .WithButton(customId: $"music:prev:{GuildId}", emote: new Emoji("⏮️"), style: ButtonStyle.Secondary)
-            .WithButton(customId: $"music:playpause:{GuildId}", emote: new Emoji(isPaused ? "▶️" : "⏸️"),
-                style: ButtonStyle.Primary)
-            .WithButton(customId: $"music:next:{GuildId}", emote: new Emoji("⏭️"), style: ButtonStyle.Secondary)
-            .WithButton(customId: $"music:stop:{GuildId}", emote: new Emoji("⏹️"), style: ButtonStyle.Danger);
-
-        containerComponents.Add(mainControlsRow);
-        containerComponents.Add(new SeparatorBuilder());
-
-        // Enhanced footer with more detailed information
-        var activeEffects = GetActiveEffects();
-        var effectsText = activeEffects.Any() ? $" • 🎛️ {string.Join(", ", activeEffects)}" : "";
-        var repeatEmoji = GetRepeatEmoji(await GetRepeatType().ConfigureAwait(false));
-        var volumeEmoji = GetVolumeEmoji();
-        var repeatText = repeatEmoji != "" ? $" • {repeatEmoji} Repeat" : "";
-
-        var footerText =
-            $"{volumeEmoji} **{Volume * 100:0}%** • 📑 **{currentTrack.Index}** of **{queue.Count}**{repeatText}{effectsText}";
-
-        containerComponents.Add(new TextDisplayBuilder()
-            .WithContent(footerText));
-
-        // Secondary controls at the bottom
-        containerComponents.Add(new SeparatorBuilder());
-
-        var secondaryControlsRow = new ActionRowBuilder()
-            .WithButton(customId: $"music:volume_down:{GuildId}", emote: new Emoji("🔉"), style: ButtonStyle.Secondary)
-            .WithButton(customId: $"music:volume_up:{GuildId}", emote: new Emoji("🔊"), style: ButtonStyle.Secondary)
-            .WithButton(customId: $"music:queue:{GuildId}", label: "View Queue", style: ButtonStyle.Secondary);
-
-        containerComponents.Add(secondaryControlsRow);
-
-        // Create the main container
-        var mainContainer = new ContainerBuilder()
-            .WithComponents(containerComponents)
-            .WithAccentColor(color);
-
-        var componentsV2 = new ComponentBuilderV2()
-            .AddComponent(mainContainer);
-
-        return componentsV2.Build();
+        return eb.Build();
     }
 
     private string GetVolumeIndicator()
