@@ -616,7 +616,7 @@ public partial class ServerManagement
                 default:
                     await channel.ModifyAsync(x => x.SlowModeInterval = time).ConfigureAwait(false);
                     await channel.SendConfirmAsync(
-                            $"Slowmode enabled in {channel.Mention} for {TimeSpan.FromSeconds(time).Humanize(2, maxUnit: TimeUnit.Hour)}")
+                            Strings.SlowmodeEnabledFor(ctx.Guild.Id, channel.Mention, TimeSpan.FromSeconds(time).Humanize(2, maxUnit: TimeUnit.Hour)))
                         .ConfigureAwait(false);
                     break;
             }

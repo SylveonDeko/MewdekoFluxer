@@ -196,13 +196,13 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
         try
         {
             var emote = await ctx.Guild.CreateEmoteAsync(name, new Image(imgStream)).ConfigureAwait(false);
-            await ctx.Channel.SendConfirmAsync($"{emote} with the name {Format.Code(name)} created!")
+            await ctx.Channel.SendConfirmAsync(Strings.EmoteCreated(ctx.Guild.Id, emote, Format.Code(name)))
                 .ConfigureAwait(false);
         }
         catch (Exception)
         {
             await ctx.Channel.SendErrorAsync(
-                    "The emote could not be added because it is either: Too Big(Over 256kb), is not a direct link, Or exceeds server emoji limit.",
+                    Strings.EmoteAddFailed(ctx.Guild.Id),
                     Config)
                 .ConfigureAwait(false);
         }
@@ -260,7 +260,7 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
             await ctx.Guild.ModifyEmoteAsync(emote1, x => x.Name = name).ConfigureAwait(false);
             var emote2 = await ctx.Guild.GetEmoteAsync(tags.Id).ConfigureAwait(false);
             await ctx.Channel.SendConfirmAsync(
-                    $"{emote1} has been renamed from {Format.Code(ogname)} to {Format.Code(emote2.Name)}")
+                    Strings.EmoteRenamed(ctx.Guild.Id, emote1, Format.Code(ogname), Format.Code(emote2.Name)))
                 .ConfigureAwait(false);
         }
         catch (HttpException)
@@ -283,7 +283,7 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
     {
         var eb = new EmbedBuilder
         {
-            Description = $"{config.Data.LoadingEmote} Adding Emotes...", Color = Mewdeko.OkColor
+            Description = Strings.AddingEmotes(ctx.Guild.Id, config.Data.LoadingEmote), Color = Mewdeko.OkColor
         };
         var errored = new List<string>();
         var emotes = new List<string>();
@@ -316,7 +316,7 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
             Color = Mewdeko.OkColor
         };
         if (emotes.Count > 0) b.WithDescription(Strings.AddedEmotes(ctx.Guild.Id, string.Join("\n", emotes)));
-        if (errored.Count > 0) b.AddField("Errored Emotes", string.Join("\n\n", errored));
+        if (errored.Count > 0) b.AddField(Strings.ErroredEmotes(ctx.Guild.Id, errored.Count), string.Join("\n\n", errored));
         await msg.ModifyAsync(x => x.Embed = b.Build()).ConfigureAwait(false);
     }
 
@@ -335,7 +335,7 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
     {
         var eb = new EmbedBuilder
         {
-            Description = $"{config.Data.LoadingEmote} Adding Emotes to {role.Mention}...", Color = Mewdeko.OkColor
+            Description = Strings.AddingEmotesToRole(ctx.Guild.Id, config.Data.LoadingEmote, role.Mention), Color = Mewdeko.OkColor
         };
         var list = new Optional<IEnumerable<IRole>>([
             role
@@ -375,7 +375,7 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
         if (emotes.Count > 0)
             b.WithDescription(Strings.AddedEmotesToRole(ctx.Guild.Id, emotes.Count, role.Mention,
                 string.Join("\n", emotes)));
-        if (errored.Count > 0) b.AddField($"{errored.Count} Errored Emotes", string.Join("\n\n", errored));
+        if (errored.Count > 0) b.AddField(Strings.ErroredEmotes(ctx.Guild.Id, errored.Count), string.Join("\n\n", errored));
         await msg.ModifyAsync(x => x.Embed = b.Build()).ConfigureAwait(false);
     }
 }
