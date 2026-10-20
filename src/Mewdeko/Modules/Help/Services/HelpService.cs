@@ -554,7 +554,6 @@ public class HelpService : INService, IReadyExecutor
         {
             if (msg.Channel is ITextChannel chan)
             {
-                var cb = new ComponentBuilder();
                 var prefix = await guildSettings.GetPrefix(chan.Guild);
                 var eb = new EmbedBuilder();
                 eb.WithOkColor();
@@ -564,14 +563,7 @@ public class HelpService : INService, IReadyExecutor
                 eb.WithFooter(new EmbedFooterBuilder().WithText(client.CurrentUser.Username)
                     .WithIconUrl(client.CurrentUser.RealAvatarUrl().ToString()));
 
-                if (bss.Data.ShowInviteButton)
-                    cb.WithButton("Invite Me!", style: ButtonStyle.Link,
-                            url:
-                            "https://discord.com/oauth2/authorize?client_id=752236274261426212&permissions=8&response_type=code&redirect_uri=https%3A%2F%2Fmewdeko.tech&scope=bot%20applications.commands")
-                        .WithButton("Support Us!", style: ButtonStyle.Link, url: "https://ko-fi.com/Mewdeko");
-
-                await chan.SendMessageAsync(embed: eb.Build(),
-                    components: bss.Data.ShowInviteButton ? cb.Build() : null).ConfigureAwait(false);
+                await chan.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
             }
         }
     }
@@ -601,11 +593,6 @@ public class HelpService : INService, IReadyExecutor
         eb.WithThumbnailUrl(
             "https://cdn.discordapp.com/emojis/968564817784877066.gif");
         eb.WithOkColor();
-
-        var cb = new ComponentBuilder()
-            .WithButton("Set Up Mewdeko", style: ButtonStyle.Link, url: setupUrl);
-        if (bss.Data.ShowInviteButton)
-            cb.WithButton("Support Us!", style: ButtonStyle.Link, url: "https://ko-fi.com/Mewdeko");
 
         var inviter = await ResolveInviter(guild).ConfigureAwait(false);
         if (inviter is null)

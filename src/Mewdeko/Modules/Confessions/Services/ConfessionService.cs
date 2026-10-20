@@ -34,14 +34,13 @@ public class ConfessionService(
     /// <param name="user">The user who confessed.</param>
     /// <param name="confession">The confession message.</param>
     /// <param name="currentChannel">The current message channel.</param>
-    /// <param name="ctx">The interaction context, if available.</param>
     /// <param name="imageUrl">The URL of the image, if any.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task SendConfession(
         ulong serverId,
         IUser user,
         string confession,
-        IMessageChannel currentChannel, IInteractionContext? ctx = null, string? imageUrl = null)
+        IMessageChannel currentChannel, string? imageUrl = null)
     {
         try
         {
@@ -53,17 +52,9 @@ public class ConfessionService(
                 var current = confessions.LastOrDefault();
                 var currentUser = guild.GetUser(client.CurrentUser.Id);
                 var confessionChannel =
-                    guild.GetTextChannel((await guildSettings.GetGuildConfig(ctx.Guild.Id)).ConfessionChannel);
+                    guild.GetTextChannel((await guildSettings.GetGuildConfig(serverId)).ConfessionChannel);
                 if (confessionChannel is null)
                 {
-                    if (ctx?.Interaction is not null)
-                    {
-                        await ctx.Interaction.SendEphemeralErrorAsync(
-                                strings.ConfessionInvalid(serverId), config)
-                            .ConfigureAwait(false);
-                        return;
-                    }
-
                     await currentChannel.SendErrorAsync(
                             strings.ConfessionInvalid(serverId), config)
                         .ConfigureAwait(false);
@@ -81,15 +72,6 @@ public class ConfessionService(
                 var perms = currentUser.GetPermissions(confessionChannel);
                 if (!perms.EmbedLinks || !perms.SendMessages)
                 {
-                    if (ctx?.Interaction is not null)
-                    {
-                        await ctx.Interaction.SendEphemeralErrorAsync(
-                                strings.ConfessionNoPermission(guild.Id),
-                                config)
-                            .ConfigureAwait(false);
-                        return;
-                    }
-
                     await currentChannel.SendErrorAsync(
                             strings.ConfessionNoPermission(guild.Id),
                             config)
@@ -98,19 +80,7 @@ public class ConfessionService(
                 }
 
                 var msg = await confessionChannel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
-                if (ctx?.Interaction is not null)
-                {
-                    await ctx.Interaction
-                        .SendEphemeralConfirmAsync(
-                            strings.ConfessionSent(serverId))
-                        .ConfigureAwait(false);
-                }
-                else
-                {
-                    await currentChannel.SendConfirmAsync(
-                            strings.ConfessionSent(serverId))
-                        .ConfigureAwait(false);
-                }
+                await currentChannel.SendConfirmAsync(strings.ConfessionSent(serverId)).ConfigureAwait(false);
 
                 var toadd = new Confession
                 {
@@ -144,14 +114,6 @@ public class ConfessionService(
                 var confessionChannel = guild.GetTextChannel(await GetConfessionChannel(guild.Id));
                 if (confessionChannel is null)
                 {
-                    if (ctx is not null)
-                    {
-                        await ctx.Interaction.SendEphemeralErrorAsync(
-                                strings.ConfessionInvalid(serverId), config)
-                            .ConfigureAwait(false);
-                        return;
-                    }
-
                     await currentChannel.SendErrorAsync(
                             strings.ConfessionInvalid(serverId), config)
                         .ConfigureAwait(false);
@@ -169,15 +131,6 @@ public class ConfessionService(
                 var perms = currentUser.GetPermissions(confessionChannel);
                 if (!perms.EmbedLinks || !perms.SendMessages)
                 {
-                    if (ctx is not null)
-                    {
-                        await ctx.Interaction.SendEphemeralErrorAsync(
-                                strings.ConfessionNoPermission(guild.Id),
-                                config)
-                            .ConfigureAwait(false);
-                        return;
-                    }
-
                     await currentChannel.SendErrorAsync(
                             strings.ConfessionNoPermission(guild.Id),
                             config)
@@ -186,19 +139,7 @@ public class ConfessionService(
                 }
 
                 var msg = await confessionChannel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
-                if (ctx is not null)
-                {
-                    await ctx.Interaction
-                        .SendEphemeralConfirmAsync(
-                            strings.ConfessionSent(serverId))
-                        .ConfigureAwait(false);
-                }
-                else
-                {
-                    await currentChannel.SendConfirmAsync(
-                            strings.ConfessionSent(serverId))
-                        .ConfigureAwait(false);
-                }
+                await currentChannel.SendConfirmAsync(strings.ConfessionSent(serverId)).ConfigureAwait(false);
 
                 var toadd = new Confession
                 {

@@ -15,40 +15,6 @@ namespace Mewdeko.Common;
 public static class LeaderboardRenderer
 {
     /// <summary>
-    ///     Custom ID prefix for the button that picks the XP leaderboard.
-    /// </summary>
-    public const string XpButtonId = "lb_pick_xp";
-
-    /// <summary>
-    ///     Custom ID prefix for the button that picks the currency leaderboard.
-    /// </summary>
-    public const string CurrencyButtonId = "lb_pick_currency";
-
-    /// <summary>
-    ///     Builds the prompt asking which leaderboard the caller meant.
-    /// </summary>
-    /// <param name="guildId">The guild the prompt is shown in.</param>
-    /// <param name="userId">The user allowed to answer, encoded into the button IDs.</param>
-    /// <param name="strings">The localized strings provider.</param>
-    /// <returns>The embed and buttons to send.</returns>
-    public static (Discord.Embed Embed, MessageComponent Components) BuildPicker(ulong guildId, ulong userId,
-        GeneratedBotStrings strings)
-    {
-        var embed = new EmbedBuilder()
-            .WithOkColor()
-            .WithTitle(strings.LeaderboardPickTitle(guildId))
-            .WithDescription(strings.LeaderboardPickDescription(guildId))
-            .Build();
-
-        var components = new ComponentBuilder()
-            .WithButton(strings.LeaderboardPickXp(guildId), $"{XpButtonId}_{userId}", ButtonStyle.Primary)
-            .WithButton(strings.LeaderboardPickCurrency(guildId), $"{CurrencyButtonId}_{userId}", ButtonStyle.Secondary)
-            .Build();
-
-        return (embed, components);
-    }
-
-    /// <summary>
     ///     Sends the XP leaderboard as a paginated message.
     /// </summary>
     /// <param name="guild">The guild to rank.</param>

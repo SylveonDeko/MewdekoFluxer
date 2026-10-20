@@ -62,12 +62,7 @@ public static class MessageChannelExtensions
         var eb = new EmbedBuilder().WithErrorColor().WithDescription(error);
         if (fields is not null)
             eb.WithFields(fields);
-        return ch.SendMessageAsync(embed: eb.Build(),
-            components: config.ShowInviteButton
-                ? new ComponentBuilder()
-                    .WithButton("Support Server", style: ButtonStyle.Link, url: "https://discord.gg/mewdeko")
-                    .WithButton("Support Us!", style: ButtonStyle.Link, url: "https://ko-fi.com/Mewdeko").Build()
-                : null);
+        return ch.SendMessageAsync(embed: eb.Build());
     }
 
 
@@ -90,27 +85,6 @@ public static class MessageChannelExtensions
         if (!string.IsNullOrWhiteSpace(footer))
             eb.WithFooter(efb => efb.WithText(footer));
         return ch.SendMessageAsync(embed: eb.Build());
-    }
-
-    /// <summary>
-    ///     Sends a confirmation message to the interaction asynchronously.
-    /// </summary>
-    /// <param name="ch">The interaction to send the message to.</param>
-    /// <param name="title">The optional title of the confirmation message.</param>
-    /// <param name="text">The text content of the confirmation message.</param>
-    /// <param name="url">The optional URL to include in the confirmation message.</param>
-    /// <param name="footer">The optional footer text for the confirmation message.</param>
-    /// <returns>A task representing the asynchronous operation, returning the sent user message.</returns>
-    public static Task<IUserMessage> SendConfirmAsync(this IDiscordInteraction ch, string? title, string? text,
-        string? url = null, string? footer = null)
-    {
-        var eb = new EmbedBuilder().WithOkColor().WithDescription(text)
-            .WithTitle(title);
-        if (url != null && Uri.IsWellFormedUriString(url, UriKind.Absolute))
-            eb.WithUrl(url);
-        if (!string.IsNullOrWhiteSpace(footer))
-            eb.WithFooter(efb => efb.WithText(footer));
-        return ch.FollowupAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -155,13 +129,10 @@ public static class MessageChannelExtensions
     /// </summary>
     /// <param name="ch">The text channel to send the message to.</param>
     /// <param name="text">The text content of the confirmation message.</param>
-    /// <param name="builder">The optional component builder for interactive components.</param>
     /// <returns>A task representing the asynchronous operation, returning the sent user message.</returns>
-    public static Task<IUserMessage> SendConfirmAsync(this ITextChannel ch, string? text,
-        ComponentBuilder? builder = null)
+    public static Task<IUserMessage> SendConfirmAsync(this ITextChannel ch, string? text)
     {
-        return ch.SendMessageAsync(embed: new EmbedBuilder().WithOkColor().WithDescription(text).Build(),
-            components: builder?.Build());
+        return ch.SendMessageAsync(embed: new EmbedBuilder().WithOkColor().WithDescription(text).Build());
     }
 
     /// <summary>
@@ -169,13 +140,10 @@ public static class MessageChannelExtensions
     /// </summary>
     /// <param name="ch">The message channel to send the message to.</param>
     /// <param name="text">The text content of the confirmation message.</param>
-    /// <param name="builder">The optional component builder for interactive components.</param>
     /// <returns>A task representing the asynchronous operation, returning the sent user message.</returns>
-    public static Task<IUserMessage> SendConfirmAsync(this IMessageChannel ch, string? text,
-        ComponentBuilder? builder = null)
+    public static Task<IUserMessage> SendConfirmAsync(this IMessageChannel ch, string? text)
     {
-        return ch.SendMessageAsync(embed: new EmbedBuilder().WithOkColor().WithDescription(text).Build(),
-            components: builder?.Build());
+        return ch.SendMessageAsync(embed: new EmbedBuilder().WithOkColor().WithDescription(text).Build());
     }
 
 

@@ -987,6 +987,7 @@
   "pronouns_cleared_self": "Your pronouns have been reset to the default value (pronoun db).",
   "pronouns_disabled": "You cannot use pronouns commands because {0}. Join the support server for assistance.",
   "pronouns_disabled_user": "This user has been banned from pronouns commands. Their pronouns have been cleared and cannot be recovered.\n Reason: {0}",
+  "pronouns_internal_cleared": "Your pronouns overwrite has been cleared.",
   "pronouns_internal_get": "{0} uses {1} pronouns",
   "pronouns_internal_no_override": "Your pronouns are not overwritten.",
   "pronouns_internal_self": "You use {0} pronouns.",

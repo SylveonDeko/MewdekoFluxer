@@ -278,7 +278,6 @@ public class GiveawayService : INService, IDisposable
     /// <param name="reqroles">Optional: Roles required to enter the giveaway.</param>
     /// <param name="blacklistusers">Optional: Users blacklisted from entering the giveaway.</param>
     /// <param name="blacklistroles">Optional: Roles blacklisted from entering the giveaway.</param>
-    /// <param name="interaction">Optional: The Discord interaction related to the giveaway.</param>
     /// <param name="banner">Optional: The URL of the banner for the giveaway.</param>
     /// <param name="pingRole">Optional: The role to ping for the giveaway.</param>
     /// <param name="useButton">Whether to use a button for entry instead of reaction.</param>
@@ -297,7 +296,6 @@ public class GiveawayService : INService, IDisposable
         string? reqroles = null,
         string? blacklistusers = null,
         string? blacklistroles = null,
-        IDiscordInteraction? interaction = null,
         string? banner = null,
         IRole? pingRole = null,
         bool useButton = false,
@@ -408,10 +406,7 @@ public class GiveawayService : INService, IDisposable
         collector.Feature("giveaway", serverId);
 
         // Send confirmation
-        if (interaction is not null)
-            await interaction.SendConfirmFollowupAsync(strings.GiveawayStarted(guild.Id, chan.Mention));
-        else
-            await currentChannel.SendConfirmAsync(strings.GiveawayStarted(guild.Id, chan.Mention));
+        await currentChannel.SendConfirmAsync(strings.GiveawayStarted(guild.Id, chan.Mention));
     }
 
     /// <summary>

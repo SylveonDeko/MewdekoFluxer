@@ -1462,12 +1462,11 @@ public class SuggestionsService : INService
     /// <param name="suggestion">The ID of the suggestion being denied.</param>
     /// <param name="channel">The text channel where the denial message will be sent.</param>
     /// <param name="reason">The reason for denial. Optional.</param>
-    /// <param name="interaction">The interaction context, if available. Optional.</param>
     /// <returns>A Task representing the asynchronous operation.</returns>
     public async Task SendDenyEmbed(IGuild guild, IUser user, ulong suggestion, ITextChannel? channel = null,
-        string? reason = null, IDiscordInteraction? interaction = null)
+        string? reason = null)
     {
-        await SendStatusEmbed(guild, client, user, suggestion, SuggestState.Denied, channel, reason, interaction);
+        await SendStatusEmbed(guild, client, user, suggestion, SuggestState.Denied, channel, reason);
     }
 
     /// <summary>
@@ -1479,12 +1478,11 @@ public class SuggestionsService : INService
     /// <param name="suggestion">The ID of the suggestion being considered.</param>
     /// <param name="channel">The channel where the consideration message will be sent.</param>
     /// <param name="reason">The reason for consideration. Optional.</param>
-    /// <param name="interaction">The interaction context, if available. Optional.</param>
     /// <returns>A Task representing the asynchronous operation.</returns>
     public async Task SendConsiderEmbed(IGuild guild, IUser user, ulong suggestion, ITextChannel? channel = null,
-        string? reason = null, IDiscordInteraction? interaction = null)
+        string? reason = null)
     {
-        await SendStatusEmbed(guild, client, user, suggestion, SuggestState.Considered, channel, reason, interaction);
+        await SendStatusEmbed(guild, client, user, suggestion, SuggestState.Considered, channel, reason);
     }
 
     /// <summary>
@@ -1497,12 +1495,11 @@ public class SuggestionsService : INService
     /// <param name="suggestion">The ID of the suggestion being implemented.</param>
     /// <param name="channel">The channel where the implementation message will be sent.</param>
     /// <param name="reason">The reason for implementation. Optional.</param>
-    /// <param name="interaction">The interaction context, if available. Optional.</param>
     /// <returns>A Task representing the asynchronous operation.</returns>
     public async Task SendImplementEmbed(IGuild guild, IUser user, ulong suggestion, ITextChannel? channel = null,
-        string? reason = null, IDiscordInteraction? interaction = null)
+        string? reason = null)
     {
-        await SendStatusEmbed(guild, client, user, suggestion, SuggestState.Implemented, channel, reason, interaction);
+        await SendStatusEmbed(guild, client, user, suggestion, SuggestState.Implemented, channel, reason);
     }
 
     /// <summary>
@@ -1514,23 +1511,21 @@ public class SuggestionsService : INService
     /// <param name="suggestion">The ID of the suggestion being accepted.</param>
     /// <param name="channel">The channel where the acceptance message will be sent.</param>
     /// <param name="reason">The reason for acceptance. Optional.</param>
-    /// <param name="interaction">The interaction context, if available. Optional.</param>
     /// <returns>A Task representing the asynchronous operation.</returns>
     public async Task SendAcceptEmbed(IGuild guild, IUser user, ulong suggestion, ITextChannel? channel = null,
-        string? reason = null, IDiscordInteraction? interaction = null)
+        string? reason = null)
     {
-        await SendStatusEmbed(guild, client, user, suggestion, SuggestState.Accepted, channel, reason, interaction);
+        await SendStatusEmbed(guild, client, user, suggestion, SuggestState.Accepted, channel, reason);
     }
 
     private async Task SendStatusEmbed(IGuild guild, DiscordShardedClient client, IUser user, ulong suggestionId,
-        SuggestState state, ITextChannel? channel = null, string? reason = null,
-        IDiscordInteraction? interaction = null)
+        SuggestState state, ITextChannel? channel = null, string? reason = null)
     {
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         var suggest = (await Suggestions(guild.Id, suggestionId))?.FirstOrDefault();
         if (suggest == null)
         {
-            await SendErrorMessage(interaction, channel,
+            await SendErrorMessage(channel,
                 "That suggestion wasn't found! Please check the number and try again.");
             return;
         }
@@ -1540,7 +1535,7 @@ public class SuggestionsService : INService
             !string.IsNullOrWhiteSpace(reason) ? reason : "none", statusConfig);
 
         await UpdateSuggestionMessage(guild, suggest, embed, statusConfig);
-        await NotifyUser(guild, user, suggest, state, reason, interaction, channel);
+        await NotifyUser(guild, user, suggest, state, reason, channel);
         await UpdateSuggestState(suggest, (int)state, user.Id);
         await HandleStatusChannel(guild, client, suggest, embed, state);
     }
@@ -1663,7 +1658,7 @@ public class SuggestionsService : INService
     }
 
     private async Task NotifyUser(IGuild guild, IUser moderator, Suggestion suggest, SuggestState state,
-        string? reason, IDiscordInteraction? interaction, ITextChannel? channel)
+        string? reason, ITextChannel? channel)
     {
         var suggestUser = await guild.GetUserAsync(suggest.UserId);
         var embed = new EmbedBuilder()
@@ -1678,12 +1673,12 @@ public class SuggestionsService : INService
         try
         {
             await suggestUser.SendMessageAsync(embed: embed);
-            await SendConfirmationMessage(interaction, channel,
+            await SendConfirmationMessage(channel,
                 $"Suggestion set as {state.ToString().ToLower()} and the user has been DMed.");
         }
         catch
         {
-            await SendConfirmationMessage(interaction, channel,
+            await SendConfirmationMessage(channel,
                 $"Suggestion set as {state.ToString().ToLower()} but the user had their DMs off.");
         }
     }
@@ -1731,28 +1726,16 @@ public class SuggestionsService : INService
         }
     }
 
-    private async Task SendErrorMessage(IDiscordInteraction? interaction, ITextChannel? channel, string message)
+    private async Task SendErrorMessage(ITextChannel? channel, string message)
     {
-        if (interaction != null)
-        {
-            await interaction.SendEphemeralErrorAsync(message, config);
-        }
-        else if (channel != null)
-        {
+        if (channel != null)
             await channel.SendErrorAsync(message, config);
-        }
     }
 
-    private async Task SendConfirmationMessage(IDiscordInteraction? interaction, ITextChannel? channel, string message)
+    private async Task SendConfirmationMessage(ITextChannel? channel, string message)
     {
-        if (interaction != null)
-        {
-            await interaction.SendConfirmAsync(message);
-        }
-        else if (channel != null)
-        {
+        if (channel != null)
             await channel.SendConfirmAsync(message);
-        }
     }
 
     private Color GetColorForState(SuggestState state)
@@ -1788,34 +1771,22 @@ public class SuggestionsService : INService
     /// <param name="client">The Discord client.</param>
     /// <param name="suggestion">The text of the suggestion being submitted.</param>
     /// <param name="channel">The channel where the suggestion submission confirmation will be sent.</param>
-    /// <param name="interaction">The interaction context, if available. Optional.</param>
     /// <returns>A Task representing the asynchronous operation.</returns>
     public async Task SendSuggestion(
         IGuild guild,
         IGuildUser user,
         DiscordShardedClient client,
         string suggestion,
-        ITextChannel channel,
-        IDiscordInteraction? interaction = null)
+        ITextChannel channel)
     {
         if (await GetSuggestionChannel(guild.Id) == 0)
         {
-            if (interaction is null)
-            {
-                var msg = await channel
-                    .SendErrorAsync(
-                        strings.NoSuggestionChannelSet(guild.Id),
-                        config)
-                    .ConfigureAwait(false);
-                msg.DeleteAfter(3);
-                return;
-            }
-
-            await interaction
-                .SendEphemeralErrorAsync(
+            var msg = await channel
+                .SendErrorAsync(
                     strings.NoSuggestionChannelSet(guild.Id),
                     config)
                 .ConfigureAwait(false);
+            msg.DeleteAfter(3);
             return;
         }
 
@@ -1892,9 +1863,6 @@ public class SuggestionsService : INService
 
             await Sugnum(guild, sugnum1 + 1).ConfigureAwait(false);
             await Suggest(guild, sugnum1, t.Id, user.Id, suggestion).ConfigureAwait(false);
-            if (interaction is not null)
-                await interaction.SendEphemeralFollowupConfirmAsync(strings.SuggestionSent(guild.Id))
-                    .ConfigureAwait(false);
         }
         else
         {
@@ -1943,10 +1911,7 @@ public class SuggestionsService : INService
             await Sugnum(guild, sugnum1 + 1).ConfigureAwait(false);
             await Suggest(guild, sugnum1, msg.Id, user.Id, suggestion).ConfigureAwait(false);
 
-            if (interaction is not null)
-                await interaction.SendEphemeralFollowupConfirmAsync(strings.SuggestionSent(guild.Id));
-            else
-                await channel.SendConfirmAsync(strings.SuggestionSent(guild.Id)).ConfigureAwait(false);
+            await channel.SendConfirmAsync(strings.SuggestionSent(guild.Id)).ConfigureAwait(false);
         }
     }
 

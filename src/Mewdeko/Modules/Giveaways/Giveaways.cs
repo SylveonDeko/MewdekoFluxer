@@ -597,7 +597,7 @@ public partial class Giveaways(
 
         // Start the Giveaway
         await Service.GiveawaysInternal(channel, time, prize, winners, host.Id, ctx.Guild.Id,
-            ctx.Channel as ITextChannel, ctx.Guild, requiredRoles, null, null, null, banner,
+            ctx.Channel as ITextChannel, ctx.Guild, requiredRoles, null, null, banner,
             pingRole, useButton, useCaptcha, messageCount).ConfigureAwait(false);
     }
 

@@ -221,17 +221,12 @@ public class UserProfile(IDataConnectionFactory dbFactory) : MewdekoModuleBase<U
         var dbUser = await dbContext.GetOrCreateUser(user).ConfigureAwait(false);
         if (await PronounsDisabled(dbUser).ConfigureAwait(false)) return;
         var pronouns = await Service.GetPronounsOrUnspecifiedAsync(user.Id).ConfigureAwait(false);
-        var cb = new ComponentBuilder();
-        if (!pronouns.PronounDb)
-            cb.WithButton(Strings.PronounsReportButton(ctx.Guild.Id), $"pronouns_report.{user.Id};",
-                ButtonStyle.Danger);
         await ctx.Channel.SendConfirmAsync(
             pronouns.PronounDb
                 ? pronouns.Pronouns.Contains(' ')
                     ? Strings.PronounsPndbSpecial(ctx.Guild.Id, user.ToString(), pronouns.Pronouns)
                     : Strings.PronounsPndbGet(ctx.Guild.Id, user.ToString(), pronouns.Pronouns)
-                : Strings.PronounsInternalGet(ctx.Guild.Id, user.ToString(), pronouns.Pronouns),
-            cb).ConfigureAwait(false);
+                : Strings.PronounsInternalGet(ctx.Guild.Id, user.ToString(), pronouns.Pronouns)).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -249,19 +244,24 @@ public class UserProfile(IDataConnectionFactory dbFactory) : MewdekoModuleBase<U
         if (await PronounsDisabled(user).ConfigureAwait(false)) return;
         if (string.IsNullOrWhiteSpace(pronouns))
         {
-            var cb = new ComponentBuilder().WithButton(Strings.PronounsOverwriteButton(ctx.Guild.Id),
-                "pronouns_overwrite");
             if (string.IsNullOrWhiteSpace(user.Pronouns))
             {
-                await ctx.Channel.SendConfirmAsync(Strings.PronounsInternalNoOverride(ctx.Guild.Id), cb)
-                    .ConfigureAwait(false);
+                await ConfirmAsync(Strings.PronounsInternalNoOverride(ctx.Guild.Id)).ConfigureAwait(false);
                 return;
             }
 
-            cb.WithButton(Strings.PronounsOverwriteClearButton(ctx.Guild.Id), "pronouns_overwrite_clear",
-                ButtonStyle.Danger);
-            await ctx.Channel.SendConfirmAsync(Strings.PronounsInternalSelf(ctx.Guild.Id, user.Pronouns), cb)
+            var (_, picked) = await PromptReactionChoiceAsync(
+                new EmbedBuilder().WithOkColor()
+                    .WithDescription(Strings.PronounsInternalSelf(ctx.Guild.Id, user.Pronouns)),
+                ctx.User.Id,
+                new ReactionChoice(new Emoji("🗑️"), Strings.PronounsOverwriteClearButton(ctx.Guild.Id), "clear"))
                 .ConfigureAwait(false);
+            if (picked != "clear")
+                return;
+
+            user.Pronouns = "";
+            await dbContext.UpdateAsync(user);
+            await ConfirmAsync(Strings.PronounsInternalCleared(ctx.Guild.Id)).ConfigureAwait(false);
             return;
         }
 

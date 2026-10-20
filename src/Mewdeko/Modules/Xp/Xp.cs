@@ -150,8 +150,29 @@ public class Xp(
     {
         if (page is null && await GuildHasEconomy())
         {
-            var (embed, components) = LeaderboardRenderer.BuildPicker(ctx.Guild.Id, ctx.User.Id, Strings);
-            await ctx.Channel.SendMessageAsync(embed: embed, components: components);
+            var (prompt, picked) = await PromptReactionChoiceAsync(new EmbedBuilder()
+                    .WithOkColor()
+                    .WithTitle(Strings.LeaderboardPickTitle(ctx.Guild.Id))
+                    .WithDescription(Strings.LeaderboardPickDescription(ctx.Guild.Id)),
+                ctx.User.Id,
+                new ReactionChoice(new Emoji("⭐"), Strings.LeaderboardPickXp(ctx.Guild.Id), "xp"),
+                new ReactionChoice(new Emoji("💰"), Strings.LeaderboardPickCurrency(ctx.Guild.Id), "currency"));
+            _ = prompt.DeleteAsync();
+
+            switch (picked)
+            {
+                case "xp":
+                    if (!await LeaderboardRenderer.SendXpAsync(ctx.Guild, ctx.User, ctx.Channel, serv, Service,
+                            Strings))
+                        await ReplyErrorAsync(Strings.XpLeaderboardEmpty(ctx.Guild.Id)).ConfigureAwait(false);
+                    break;
+                case "currency":
+                    if (!await LeaderboardRenderer.SendCurrencyAsync(ctx.Guild, ctx.User, ctx.Channel, serv,
+                            currencyService, Strings))
+                        await ErrorAsync(Strings.LeaderboardEmpty(ctx.Guild.Id)).ConfigureAwait(false);
+                    break;
+            }
+
             return;
         }
 

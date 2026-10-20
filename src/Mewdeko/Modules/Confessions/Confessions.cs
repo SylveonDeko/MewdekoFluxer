@@ -40,12 +40,12 @@ public class Confessions(GuildSettingsService guildSettings) : MewdekoModuleBase
                     return;
                 }
 
-                await Service.SendConfession(serverId, ctx.User, confession, ctx.Channel, null, attachment)
+                await Service.SendConfession(serverId, ctx.User, confession, ctx.Channel, attachment)
                     .ConfigureAwait(false);
             }
             else
             {
-                await Service.SendConfession(serverId, ctx.User, confession, ctx.Channel, null, attachment)
+                await Service.SendConfession(serverId, ctx.User, confession, ctx.Channel, attachment)
                     .ConfigureAwait(false);
             }
         }
