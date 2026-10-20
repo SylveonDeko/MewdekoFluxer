@@ -2,7 +2,6 @@ using System.Net.Http;
 using System.Text.Json;
 using DataModel;
 using Discord.Commands;
-using Mewdeko.Common.Interactive;
 using Lavalink4NET;
 using Lavalink4NET.DiscordNet;
 using Lavalink4NET.Players;

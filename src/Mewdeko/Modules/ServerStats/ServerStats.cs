@@ -1,7 +1,6 @@
 using System.IO;
 using System.Text;
 using Discord.Commands;
-using Mewdeko.Common.Interactive;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.ServerStats.Common;
 using Mewdeko.Modules.ServerStats.Services;

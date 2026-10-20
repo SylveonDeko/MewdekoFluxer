@@ -2,7 +2,6 @@ using System.IO;
 using System.Text;
 using DataModel;
 using Discord.Commands;
-using Mewdeko.Common.Interactive;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Utility.Common;
 using Mewdeko.Modules.Utility.Services;

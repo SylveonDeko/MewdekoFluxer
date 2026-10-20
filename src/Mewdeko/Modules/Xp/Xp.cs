@@ -1,7 +1,6 @@
 using System.Text;
 using Discord.Commands;
 using Discord.Net;
-using Mewdeko.Common.Interactive;
 using Humanizer;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;

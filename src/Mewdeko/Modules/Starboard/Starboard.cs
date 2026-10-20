@@ -1,5 +1,4 @@
 ﻿using Discord.Commands;
-using Mewdeko.Common.Interactive;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Starboard.Services;
 

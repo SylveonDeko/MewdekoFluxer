@@ -1,6 +1,5 @@
 using System.Text;
 using Discord.Commands;
-using Mewdeko.Common.Interactive;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.CoprMonitoring.Common;
 using Mewdeko.Modules.CoprMonitoring.Services;

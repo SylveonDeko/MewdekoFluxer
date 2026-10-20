@@ -2,7 +2,6 @@ using System.Net.Http;
 using System.Text.Json;
 using DataModel;
 using Discord.Commands;
-using Mewdeko.Common.Interactive;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;
 using Mewdeko.Modules.Chat_Triggers.Common;

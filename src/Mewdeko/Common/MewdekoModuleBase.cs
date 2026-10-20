@@ -44,6 +44,11 @@ public abstract class MewdekoModule : ModuleBase
     /// </summary>
     public EventHandler EventHandler { get; set; }
 
+    /// <summary>
+    ///     Gets or sets the service that runs reaction prompts and paginators.
+    /// </summary>
+    public InteractiveService Interactive { get; set; }
+
 
     /// <summary>
     ///     Sends an error message to the channel with localized text.
@@ -125,15 +130,10 @@ public abstract class MewdekoModule : ModuleBase
     public async Task<bool> PromptUserConfirmAsync(EmbedBuilder embed, ulong userid)
     {
         embed.WithOkColor();
-        var buttons = new ComponentBuilder().WithButton("Yes", "yes", ButtonStyle.Success)
-            .WithButton("No", "no", ButtonStyle.Danger);
-        var msg = await ctx.Channel.SendMessageAsync(embed: embed.Build(), components: buttons.Build())
-            .ConfigureAwait(false);
+        var msg = await ctx.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
         try
         {
-            var input = await GetButtonInputAsync(msg.Channel.Id, msg.Id, userid).ConfigureAwait(false);
-
-            return input == "Yes";
+            return await WaitForConfirmAsync(msg, userid).ConfigureAwait(false);
         }
         finally
         {
@@ -178,65 +178,36 @@ public abstract class MewdekoModule : ModuleBase
     public async Task<bool> PromptUserConfirmAsync(IUserMessage message, EmbedBuilder embed, ulong userid)
     {
         embed.WithOkColor();
-        var buttons = new ComponentBuilder().WithButton("Yes", "yes", ButtonStyle.Success)
-            .WithButton("No", "no", ButtonStyle.Danger);
-        await message.ModifyAsync(x =>
-        {
-            x.Embed = embed.Build();
-            x.Components = buttons.Build();
-        }).ConfigureAwait(false);
-        var input = await GetButtonInputAsync(message.Channel.Id, message.Id, userid).ConfigureAwait(false);
-
-        return input == "Yes";
+        await message.ModifyAsync(x => x.Embed = embed.Build()).ConfigureAwait(false);
+        return await WaitForConfirmAsync(message, userid).ConfigureAwait(false);
     }
 
     /// <summary>
-    ///     Gets the user input from a button interaction asynchronously.
+    ///     Sends a prompt that lists each choice beside its reaction, then waits for the user to react with one.
     /// </summary>
-    /// <param name="channelId">The ID of the channel where the interaction occurred.</param>
-    /// <param name="msgId">The ID of the message where the interaction occurred.</param>
-    /// <param name="userId">The ID of the user who interacted with the button.</param>
-    /// <param name="alreadyDeferred">Determines whether the interaction has already been deferred.</param>
-    /// <returns>A task representing the asynchronous operation, containing the user input string.</returns>
-    public async Task<string?>? GetButtonInputAsync(ulong channelId, ulong msgId, ulong userId,
-        bool alreadyDeferred = false)
+    /// <param name="embed">The prompt embed. The choice legend is appended to its description.</param>
+    /// <param name="userId">The user whose reaction counts.</param>
+    /// <param name="choices">The options to offer.</param>
+    /// <returns>The prompt message and the picked value, or a null value when the user did not answer in time.</returns>
+    public async Task<(IUserMessage Message, string? Value)> PromptReactionChoiceAsync(EmbedBuilder embed,
+        ulong userId, params ReactionChoice[] choices)
     {
-        var userInputTask = new TaskCompletionSource<string>();
-        var handler = EventHandler;
-        try
-        {
-            handler.Subscribe("InteractionCreated", "MewdekoModuleBase", Interaction);
-            if (await Task.WhenAny(userInputTask.Task, Task.Delay(30000)).ConfigureAwait(false) !=
-                userInputTask.Task)
-            {
-                return null;
-            }
+        var legend = string.Join("  ", choices.Select(c => $"{c.Emote} {c.Label}"));
+        embed.WithDescription(string.IsNullOrWhiteSpace(embed.Description)
+            ? legend
+            : $"{embed.Description}\n\n{legend}");
 
-            return await userInputTask.Task.ConfigureAwait(false);
-        }
-        finally
-        {
-            handler.Unsubscribe("InteractionCreated", "MewdekoModuleBase", Interaction);
-        }
+        var msg = await ctx.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+        var index = await Interactive.WaitForReactionAsync(msg, userId, choices.Select(c => c.Emote).ToList())
+            .ConfigureAwait(false);
+        return (msg, index is { } picked ? choices[picked].Value : null);
+    }
 
-        async Task Interaction(SocketInteraction arg)
-        {
-            if (arg is not SocketMessageComponent c) return;
-            if (c.Channel.Id != channelId || c.Message.Id != msgId || c.User.Id != userId)
-            {
-                return;
-            }
-
-            if (c.Data.CustomId == "yes")
-            {
-                if (!alreadyDeferred) await c.DeferAsync().ConfigureAwait(false);
-                userInputTask.TrySetResult("Yes");
-                return;
-            }
-
-            if (!alreadyDeferred) await c.DeferAsync().ConfigureAwait(false);
-            userInputTask.TrySetResult(c.Data.CustomId);
-        }
+    private async Task<bool> WaitForConfirmAsync(IUserMessage message, ulong userId)
+    {
+        var choice = await Interactive.WaitForReactionAsync(message, userId,
+            [InteractiveService.Yes, InteractiveService.No]).ConfigureAwait(false);
+        return choice == 0;
     }
 
     /// <summary>

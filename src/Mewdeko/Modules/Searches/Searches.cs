@@ -3,7 +3,6 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Discord.Commands;
-using Mewdeko.Common.Interactive;
 using GScraper;
 using GScraper.DuckDuckGo;
 using GScraper.Google;

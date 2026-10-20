@@ -1,6 +1,5 @@
 using DataModel;
 using Discord.Commands;
-using Mewdeko.Common.Interactive;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Database.Enums;
 using Mewdeko.Modules.Currency.Models;

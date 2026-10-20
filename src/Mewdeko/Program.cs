@@ -4,7 +4,6 @@ using System.Text;
 using System.Text.Json.Serialization;
 using Discord.Commands;
 using Discord.Rest;
-using Mewdeko.Common.Interactive;
 using Lavalink4NET;
 using Lavalink4NET.Cluster.Extensions;
 using Lavalink4NET.Cluster.LoadBalancing.Strategies;

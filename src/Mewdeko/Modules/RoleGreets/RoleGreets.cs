@@ -1,7 +1,6 @@
 ﻿using System.Globalization;
 using System.Net.Http;
 using Discord.Commands;
-using Mewdeko.Common.Interactive;
 using Humanizer;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;
@@ -286,12 +285,12 @@ public class RoleGreets(InteractiveService interactivity, HttpClient http) : Mew
 
         if (message is null)
         {
-            var components = new ComponentBuilder()
-                .WithButton(Strings.RolegreetButtonPreview(ctx.Guild.Id), "preview")
-                .WithButton(Strings.RolegreetButtonRegular(ctx.Guild.Id), "regular");
-            var msg = await ctx.Channel.SendConfirmAsync(Strings.RolegreetMessagePreviewPrompt(ctx.Guild.Id),
-                components);
-            var response = await GetButtonInputAsync(ctx.Channel.Id, msg.Id, ctx.User.Id).ConfigureAwait(false);
+            var (msg, response) = await PromptReactionChoiceAsync(
+                new EmbedBuilder().WithOkColor().WithDescription(Strings.RolegreetMessagePreviewPrompt(ctx.Guild.Id)),
+                ctx.User.Id,
+                new ReactionChoice(new Emoji("👁️"), Strings.RolegreetButtonPreview(ctx.Guild.Id), "preview"),
+                new ReactionChoice(new Emoji("📝"), Strings.RolegreetButtonRegular(ctx.Guild.Id), "regular"))
+                .ConfigureAwait(false);
             switch (response)
             {
                 case "preview":
@@ -312,6 +311,8 @@ public class RoleGreets(InteractiveService interactivity, HttpClient http) : Mew
                 case "regular":
                     await msg.DeleteAsync().ConfigureAwait(false);
                     await ctx.Channel.SendConfirmAsync(greet.Message).ConfigureAwait(false);
+                    return;
+                default:
                     return;
             }
         }

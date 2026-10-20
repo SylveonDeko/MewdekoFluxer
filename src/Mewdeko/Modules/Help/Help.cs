@@ -2,7 +2,6 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using Discord.Commands;
-using Mewdeko.Common.Interactive;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.JsonSettings;
 using Mewdeko.Modules.Help.Services;

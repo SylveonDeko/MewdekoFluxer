@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Net.Http;
 using Discord.Commands;
-using Mewdeko.Common.Interactive;
 using Mewdeko.Common.Attributes.TextCommands;
 using PokeApiNet;
 

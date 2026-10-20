@@ -1,4 +1,3 @@
-using Mewdeko.Common.Interactive;
 using Mewdeko.Modules.Currency.Services;
 using Mewdeko.Modules.Xp.Services;
 using Mewdeko.Services.Strings;

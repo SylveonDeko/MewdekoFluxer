@@ -7,7 +7,6 @@ using DataModel;
 using Discord.Commands;
 using Discord.Net;
 using Discord.Rest;
-using Mewdeko.Common.Interactive;
 using LibGit2Sharp;
 using LinqToDB.Async;
 using LinqToDB.Data;
@@ -104,19 +103,15 @@ public class OwnerOnly(
     [Aliases]
     public async Task Update()
     {
-        var buttons = new ComponentBuilder()
-            .WithButton("Stable", "main")
-            .WithButton("Nightly", "psqldeko", ButtonStyle.Danger);
-
         var embed = new EmbedBuilder()
             .WithColor(Color.Orange)
-            .WithDescription(Strings.UpdateVersionSelect(ctx.Guild.Id))
-            .Build();
+            .WithDescription(Strings.UpdateVersionSelect(ctx.Guild.Id));
 
-        var msg = await ReplyAsync(embed: embed, components: buttons.Build());
-
-        // Wait for button interaction
-        var branch = await GetButtonInputAsync(ctx.Channel.Id, msg.Id, ctx.User.Id);
+        var (msg, branch) = await PromptReactionChoiceAsync(embed, ctx.User.Id,
+            new ReactionChoice(new Emoji("🟢"), Strings.UpdateBranchStable(ctx.Guild.Id), "main"),
+            new ReactionChoice(new Emoji("🌙"), Strings.UpdateBranchNightly(ctx.Guild.Id), "psqldeko"));
+        if (branch is null)
+            return;
 
         // Provide initial feedback
         var updatingEmbed = new EmbedBuilder()

@@ -4,7 +4,6 @@ using CommandLine;
 using Discord.Commands;
 using Discord.Net;
 using Discord.Rest;
-using Mewdeko.Common.Interactive;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.ModuleBehaviors;
 using Mewdeko.Modules.Administration.Services;

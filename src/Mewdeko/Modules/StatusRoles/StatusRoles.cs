@@ -1,5 +1,4 @@
 ﻿using Discord.Commands;
-using Mewdeko.Common.Interactive;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.StatusRoles.Services;
 using Mewdeko.Services.Settings;
@@ -99,17 +98,12 @@ public class StatusRoles(BotConfigService bss, InteractiveService interactivity)
                 return;
             }
 
-            var componentBuilder = new ComponentBuilder()
-                .WithButton("Preview", "preview")
-                .WithButton("View Raw", "viewraw");
-
-            var msgid = await ctx.Channel.SendMessageAsync(embed: new EmbedBuilder()
-                .WithOkColor()
-                .WithDescription(
-                    Strings.StatusRoleTextSelect(ctx.Guild.Id, bss.Data.LoadingEmote))
-                .Build(), components: componentBuilder.Build());
-
-            var button = await GetButtonInputAsync(ctx.Channel.Id, msgid.Id, ctx.User.Id);
+            var (_, button) = await PromptReactionChoiceAsync(new EmbedBuilder()
+                    .WithOkColor()
+                    .WithDescription(Strings.StatusRoleTextSelect(ctx.Guild.Id, bss.Data.LoadingEmote)),
+                ctx.User.Id,
+                new ReactionChoice(new Emoji("👁️"), Strings.Preview(ctx.Guild.Id), "preview"),
+                new ReactionChoice(new Emoji("📝"), Strings.ViewRaw(ctx.Guild.Id), "viewraw"));
             switch (button)
             {
                 case "preview":

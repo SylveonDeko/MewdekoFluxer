@@ -6,7 +6,6 @@ using AngleSharp;
 using AngleSharp.Html.Dom;
 using Anilist4Net;
 using Discord.Commands;
-using Mewdeko.Common.Interactive;
 using JikanDotNet;
 using MartineApiNet;
 using Mewdeko.Common.Attributes.TextCommands;

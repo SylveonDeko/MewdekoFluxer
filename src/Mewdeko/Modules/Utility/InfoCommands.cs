@@ -19,7 +19,6 @@ public partial class Utility
     public async Task Banner([Remainder] IGuildUser? usr = null)
     {
         usr ??= (IGuildUser)ctx.User;
-        var components = new ComponentBuilder().WithButton("Non-Guild Banner", $"bannertype:real,{usr.Id}");
         var guildUser = await client.Rest.GetGuildUserAsync(ctx.Guild.Id, usr.Id);
         var user = await client.Rest.GetUserAsync(usr.Id);
         if (user.GetBannerUrl(size: 2048) == null && guildUser.GetBannerUrl() == null)
@@ -36,7 +35,7 @@ public partial class Utility
                 .AddField(efb =>
                     efb.WithName($"{(guildUser.BannerId is null ? "" : "Guild")} Banner Url")
                         .WithValue($"[Link]({avatarUrl})").WithIsInline(true))
-                .WithImageUrl(avatarUrl).Build(), components: guildUser.BannerId is null ? null : components.Build())
+                .WithImageUrl(avatarUrl).Build())
             .ConfigureAwait(false);
     }
 
@@ -187,7 +186,6 @@ public partial class Utility
                 return;
             var ownername = guild.GetUser(guild.OwnerId);
 
-            var component = new ComponentBuilder().WithButton("More Info", "moresinfo");
             var embed = new EmbedBuilder()
                 .WithAuthor(eab => eab.WithName(Strings.ServerInfo(ctx.Guild.Id)))
                 .WithTitle(guild.Name)
@@ -211,7 +209,7 @@ public partial class Utility
                             .TrimTo(1024)));
             }
 
-            await ctx.Channel.SendMessageAsync(embed: embed.Build(), components: component.Build())
+            await ctx.Channel.SendMessageAsync(embed: embed.Build())
                 .ConfigureAwait(false);
         }
 
@@ -252,7 +250,6 @@ public partial class Utility
         public async Task UserInfo(IGuildUser? usr = null)
         {
             var user = usr ?? ctx.User as IGuildUser;
-            var component = new ComponentBuilder().WithButton("More Info", $"moreuinfo:{user.Id}");
             var userbanner = (await client.Rest.GetUserAsync(user.Id).ConfigureAwait(false)).GetBannerUrl(size: 2048);
             var serverUserType = user.GuildPermissions.Administrator ? "Administrator" : "Regular User";
             var restUser = await client.Rest.GetUserAsync(user.Id);
@@ -289,11 +286,13 @@ public partial class Utility
                 }
             }
 
-            var msg = await ctx.Channel.SendMessageAsync(embed: embed.Build(), components: component.Build())
-                .ConfigureAwait(false);
-            var input = await GetButtonInputAsync(ctx.Channel.Id, msg.Id, ctx.User.Id).ConfigureAwait(false);
-            if (input == "moreuinfo")
+            var moreInfo = new Emoji("ℹ️");
+            embed.WithFooter($"{moreInfo} {Strings.MoreInfo(ctx.Guild.Id)}");
+            var msg = await ctx.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+            var input = await Interactive.WaitForReactionAsync(msg, ctx.User.Id, [moreInfo]).ConfigureAwait(false);
+            if (input == 0)
             {
+                embed.Footer = null;
                 if (user.GetRoles().Any(x => x.Id != ctx.Guild.EveryoneRole.Id))
                 {
                     embed.AddField("Roles",
@@ -304,11 +303,15 @@ public partial class Utility
                 embed.AddField("Is VC Muted", user.IsMuted);
                 embed.AddField("Is Server Muted",
                     user.GetRoles().Contains(await muteService.GetMuteRole(ctx.Guild).ConfigureAwait(false)));
-                await msg.ModifyAsync(x =>
-                {
-                    x.Embed = embed.Build();
-                    x.Components = null;
-                }).ConfigureAwait(false);
+                await msg.ModifyAsync(x => x.Embed = embed.Build()).ConfigureAwait(false);
+            }
+
+            try
+            {
+                await msg.RemoveAllReactionsAsync().ConfigureAwait(false);
+            }
+            catch
+            {
             }
         }
 
@@ -323,7 +326,6 @@ public partial class Utility
         public async Task Avatar([Remainder] IGuildUser? usr = null)
         {
             usr ??= (IGuildUser)ctx.User;
-            var components = new ComponentBuilder().WithButton("Non-Guild Avatar", $"avatartype:real,{usr.Id}");
             var avatarUrl = usr.GetAvatarUrl(ImageFormat.Auto, 2048);
 
             if (avatarUrl == null)
@@ -344,7 +346,7 @@ public partial class Utility
                     .AddField(efb =>
                         efb.WithName($"{(av.GuildAvatarId is null ? "" : "Guild")} Avatar Url")
                             .WithValue($"[Link]({avatarUrl})").WithIsInline(true))
-                    .WithImageUrl(avatarUrl).Build(), components: av.GuildAvatarId is null ? null : components.Build())
+                    .WithImageUrl(avatarUrl).Build())
                 .ConfigureAwait(false);
         }
     }

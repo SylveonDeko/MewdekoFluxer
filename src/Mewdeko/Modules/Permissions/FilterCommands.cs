@@ -1,6 +1,5 @@
 ﻿using DataModel;
 using Discord.Commands;
-using Mewdeko.Common.Interactive;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.Attributes.TextCommands;

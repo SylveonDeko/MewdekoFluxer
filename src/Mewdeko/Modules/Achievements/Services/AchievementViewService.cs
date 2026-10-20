@@ -1,7 +1,6 @@
 using System.IO;
 using System.Text;
 using DataModel;
-using Mewdeko.Common.Interactive;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Modules.Achievements.Common;

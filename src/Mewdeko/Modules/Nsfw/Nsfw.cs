@@ -1,7 +1,6 @@
 ﻿using System.Net.Http;
 using System.Threading;
 using Discord.Commands;
-using Mewdeko.Common.Interactive;
 using MartineApiNet;
 using MartineApiNet.Enums;
 using MartineApiNet.Models.Images;

@@ -1,7 +1,6 @@
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using Discord.Commands;
-using Mewdeko.Common.Interactive;
 using Humanizer;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;
@@ -350,15 +349,13 @@ public partial class Administration(
         }
 
         var deleteCount = int.Parse(deleteString);
-        var components = new ComponentBuilder()
-            .WithButton(Strings.Preview(ctx.Guild.Id), "previewbans")
-            .WithButton(Strings.Execute(ctx.Guild.Id), "executeorder66", ButtonStyle.Success)
-            .WithButton(Strings.Cancel(ctx.Guild.Id), "cancel", ButtonStyle.Danger);
         var eb = new EmbedBuilder()
             .WithDescription(Strings.PreviewOrExecute(ctx.Guild.Id))
             .WithOkColor();
-        var msg = await ctx.Channel.SendMessageAsync(embed: eb.Build(), components: components.Build());
-        var input = await GetButtonInputAsync(ctx.Channel.Id, msg.Id, ctx.User.Id);
+        var (_, input) = await PromptReactionChoiceAsync(eb, ctx.User.Id,
+            new ReactionChoice(new Emoji("👁️"), Strings.Preview(ctx.Guild.Id), "previewbans"),
+            new ReactionChoice(InteractiveService.Yes, Strings.Execute(ctx.Guild.Id), "executeorder66"),
+            new ReactionChoice(InteractiveService.No, Strings.Cancel(ctx.Guild.Id), "cancel"));
         switch (input)
         {
             case "cancel":

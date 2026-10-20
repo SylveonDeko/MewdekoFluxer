@@ -1,7 +1,6 @@
 using System.IO;
 using System.Net.Http;
 using Discord.Commands;
-using Mewdeko.Common.Interactive;
 using IF.Lastfm.Core.Api.Enums;
 using Mewdeko.Common.Attributes.TextCommands;
 using SkiaSharp;

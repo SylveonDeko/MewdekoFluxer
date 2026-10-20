@@ -1,6 +1,5 @@
 ﻿using System.Text.RegularExpressions;
 using Discord.Commands;
-using Mewdeko.Common.Interactive;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;
 using Mewdeko.Modules.Giveaways.Services;

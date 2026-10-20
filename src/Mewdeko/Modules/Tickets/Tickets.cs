@@ -27,19 +27,7 @@ public partial class Tickets(ILogger<Tickets> logger) : MewdekoModuleBase<Ticket
         {
             if (embedJson is null)
             {
-                // Show preview/regular option
-                var components = new ComponentBuilder()
-                    .WithButton("Preview", "preview")
-                    .WithButton("Create", "create");
-
-                var msg = await ctx.Channel.SendMessageAsync(
-                    embed: new EmbedBuilder()
-                        .WithDescription(Strings.PanelCreationPreview(ctx.Guild.Id))
-                        .WithOkColor().Build(),
-                    components: components.Build()
-                );
-
-                var response = await GetButtonInputAsync(ctx.Channel.Id, msg.Id, ctx.User.Id);
+                var (msg, response) = await PromptPanelChoiceAsync();
                 await msg.DeleteAsync();
 
                 switch (response)
@@ -66,18 +54,7 @@ public partial class Tickets(ILogger<Tickets> logger) : MewdekoModuleBase<Ticket
             }
             else
             {
-                // Show preview option for custom JSON
-                var components = new ComponentBuilder()
-                    .WithButton("Preview", "preview")
-                    .WithButton("Create", "create");
-
-                var msg = await ctx.Channel.SendMessageAsync(
-                    embed: new EmbedBuilder().WithDescription(Strings.PanelCreationPreview(ctx.Guild.Id))
-                        .WithOkColor().Build(),
-                    components: components.Build()
-                );
-
-                var response = await GetButtonInputAsync(ctx.Channel.Id, msg.Id, ctx.User.Id);
+                var (msg, response) = await PromptPanelChoiceAsync();
                 await msg.DeleteAsync();
 
                 switch (response)
@@ -101,6 +78,15 @@ public partial class Tickets(ILogger<Tickets> logger) : MewdekoModuleBase<Ticket
         {
             logger.LogError(ex, "Error creating ticket panel");
             await ctx.Channel.SendErrorAsync(Strings.TicketPanelCreationFailed(ctx.Guild.Id), Config);
+        }
+
+        Task<(IUserMessage Message, string? Value)> PromptPanelChoiceAsync()
+        {
+            return PromptReactionChoiceAsync(
+                new EmbedBuilder().WithDescription(Strings.PanelCreationPreview(ctx.Guild.Id)).WithOkColor(),
+                ctx.User.Id,
+                new ReactionChoice(new Emoji("👁️"), Strings.Preview(ctx.Guild.Id), "preview"),
+                new ReactionChoice(InteractiveService.Yes, Strings.Create(ctx.Guild.Id), "create"));
         }
     }
 

@@ -1,4 +1,3 @@
-using Mewdeko.Common.Interactive;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.RoleStates.Services;
 using Mewdeko.Services.Settings;

@@ -3,7 +3,6 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using Discord.Commands;
-using Mewdeko.Common.Interactive;
 using Mewdeko.Common.Attributes.TextCommands;
 
 namespace Mewdeko.Modules.Searches;

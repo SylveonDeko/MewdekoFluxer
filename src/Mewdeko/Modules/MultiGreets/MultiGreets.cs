@@ -1,6 +1,5 @@
 ﻿using System.Net.Http;
 using Discord.Commands;
-using Mewdeko.Common.Interactive;
 using Humanizer;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;
@@ -362,14 +361,12 @@ public class MultiGreets(InteractiveService interactivity) : MewdekoModuleBase<M
 
         if (embedTemplate is null)
         {
-            var components = new ComponentBuilder()
-                .WithButton(Strings.Preview(ctx.Guild.Id), "preview")
-                .WithButton(Strings.Regular(ctx.Guild.Id), "regular");
-            var msg = await ctx.Channel.SendConfirmAsync(
-                Strings.MultigreetMessagePreviewPrompt(ctx.Guild.Id),
-                components
+            var (msg, response) = await PromptReactionChoiceAsync(
+                new EmbedBuilder().WithOkColor().WithDescription(Strings.MultigreetMessagePreviewPrompt(ctx.Guild.Id)),
+                ctx.User.Id,
+                new ReactionChoice(new Emoji("👁️"), Strings.Preview(ctx.Guild.Id), "preview"),
+                new ReactionChoice(new Emoji("📝"), Strings.Regular(ctx.Guild.Id), "regular")
             ).ConfigureAwait(false);
-            var response = await GetButtonInputAsync(ctx.Channel.Id, msg.Id, ctx.User.Id).ConfigureAwait(false);
             switch (response)
             {
                 case "preview":
@@ -394,6 +391,8 @@ public class MultiGreets(InteractiveService interactivity) : MewdekoModuleBase<M
                 case "regular":
                     await msg.DeleteAsync().ConfigureAwait(false);
                     await ctx.Channel.SendConfirmAsync(greet.Message).ConfigureAwait(false);
+                    return;
+                default:
                     return;
             }
         }

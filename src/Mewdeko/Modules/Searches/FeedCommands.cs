@@ -1,6 +1,5 @@
 ﻿using CodeHollow.FeedReader;
 using Discord.Commands;
-using Mewdeko.Common.Interactive;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Searches.Services;
 

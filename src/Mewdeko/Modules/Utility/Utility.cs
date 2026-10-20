@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using Discord.Commands;
-using Mewdeko.Common.Interactive;
 using Humanizer;
 using LinqToDB.Async;
 using Mewdeko.Common.Attributes.TextCommands;
