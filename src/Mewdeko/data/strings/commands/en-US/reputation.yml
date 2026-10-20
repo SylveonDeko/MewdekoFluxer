@@ -183,11 +183,6 @@ repcommandreqremove:
       name: commandName
       optional: false
       type: string
-repconfig:
-  args:
-    - ''
-  desc: 'Opens the interactive reputation configuration interface.'
-  params: [ ]
 repcooldown:
   args:
     - minutes

@@ -116,19 +116,6 @@ public partial class Reputation
         }
 
         /// <summary>
-        ///     Opens the interactive reputation configuration interface.
-        /// </summary>
-        /// <returns>A task that represents the asynchronous operation.</returns>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.Administrator)]
-        public async Task RepConfig()
-        {
-            await configService.ShowConfigurationMenuAsync(ctx).ConfigureAwait(false);
-        }
-
-        /// <summary>
         ///     Enables or disables the reputation system for this server.
         /// </summary>
         /// <param name="enabled">True to enable, false to disable.</param>

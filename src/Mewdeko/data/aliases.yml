@@ -2180,9 +2180,6 @@ repcommandreqremove:
   - repcommandreqremove
   - repcmdreqremove
   - rcrr
-repconfig:
-  - repconfig
-  - repcfg
 repcooldown:
   - repcooldown
   - repcd
