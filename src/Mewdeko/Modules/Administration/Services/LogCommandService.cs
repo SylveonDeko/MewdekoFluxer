@@ -200,6 +200,75 @@ public class LogCommandService(
     public ConcurrentDictionary<ulong, LoggingV2> GuildLogSettings { get; set; }
 
 
+    private const int MaxEmbedTitleLength = 256;
+    private const int MaxEmbedDescriptionLength = 4096;
+    private const int MaxEmbedFieldNameLength = 256;
+    private const int MaxEmbedFieldValueLength = 1024;
+    private const int MaxEmbedFields = 25;
+    private const int MaxEmbedLength = 6000;
+
+    /// <summary>
+    ///     Creates a log embed with the given title, description and color, stamped with the current time.
+    /// </summary>
+    /// <param name="title">The embed title.</param>
+    /// <param name="description">The embed description.</param>
+    /// <param name="color">The embed color.</param>
+    /// <returns>The embed builder.</returns>
+    private static EmbedBuilder LogEmbed(string title, string description, Color color)
+    {
+        return new EmbedBuilder()
+            .WithTitle(title.TrimTo(MaxEmbedTitleLength))
+            .WithDescription(description.TrimTo(MaxEmbedDescriptionLength))
+            .WithColor(color)
+            .WithCurrentTimestamp();
+    }
+
+    /// <summary>
+    ///     Adds a field to a log embed, skipping empty values and respecting the field count and length limits.
+    /// </summary>
+    /// <param name="eb">The embed to add the field to.</param>
+    /// <param name="name">The field name.</param>
+    /// <param name="value">The field value.</param>
+    private static void AddSection(EmbedBuilder eb, string name, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || eb.Fields.Count >= MaxEmbedFields)
+            return;
+
+        eb.AddField(name.TrimTo(MaxEmbedFieldNameLength), value.TrimTo(MaxEmbedFieldValueLength));
+    }
+
+    /// <summary>
+    ///     Drops trailing fields and then trims the description until the embed fits the total size limit.
+    /// </summary>
+    /// <param name="eb">The embed to shrink.</param>
+    private static void FitEmbed(EmbedBuilder eb)
+    {
+        while (eb.Length > MaxEmbedLength && eb.Fields.Count > 0)
+            eb.Fields.RemoveAt(eb.Fields.Count - 1);
+
+        var excess = eb.Length - MaxEmbedLength;
+        if (excess > 0 && eb.Description is { Length: > 0 } description)
+            eb.WithDescription(description.TrimTo(Math.Max(0, description.Length - excess)));
+    }
+
+    /// <summary>
+    ///     Sends a log embed to a channel without pinging anyone, optionally uploading files with it.
+    /// </summary>
+    /// <param name="channel">The log channel.</param>
+    /// <param name="eb">The embed to send.</param>
+    /// <param name="files">Files to upload alongside the embed.</param>
+    private async Task SendLogAsync(ITextChannel channel, EmbedBuilder eb, List<FileAttachment>? files = null)
+    {
+        FitEmbed(eb);
+
+        if (files is { Count: > 0 })
+            await channel.SendFilesAsync(files, embed: eb.Build(), allowedMentions: AllowedMentions.None);
+        else
+            await channel.SendMessageAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None);
+
+        collector.Feature("logging", channel.Guild.Id);
+    }
+
     /// <inheritdoc />
     public async Task OnReadyAsync()
     {
@@ -236,6 +305,7 @@ public class LogCommandService(
         handler.Subscribe("GuildMemberUpdated", "LogCommandService", OnUserRoleAdded);
         handler.Subscribe("GuildMemberUpdated", "LogCommandService", OnUserRoleRemoved);
         handler.Subscribe("UserUpdated", "LogCommandService", OnUsernameUpdated);
+        handler.Subscribe("UserUpdated", "LogCommandService", OnUserUpdated);
         handler.Subscribe("GuildMemberUpdated", "LogCommandService", OnNicknameUpdated);
         handler.Subscribe("ThreadDeleted", "LogCommandService", OnThreadDeleted);
         handler.Subscribe("ThreadUpdated", "LogCommandService", OnThreadUpdated);
@@ -309,24 +379,18 @@ public class LogCommandService(
             var auditLog = auditLogs.FirstOrDefault();
             if (auditLog == null) return;
 
-            var components = new ComponentBuilderV2()
-                .WithContainer([
-                    new TextDisplayBuilder($"# {strings.RoleCreated(args.Guild.Id)}"),
-                    new TextDisplayBuilder(
-                        strings.NameField(args.Guild.Id, args.Name) +
-                        strings.IdField(args.Guild.Id, args.Id) +
-                        strings.ColorField(args.Guild.Id, args.Colors.PrimaryColor) +
-                        strings.HoistedField(args.Guild.Id, args.IsHoisted) +
-                        strings.MentionableField(args.Guild.Id, args.IsMentionable) +
-                        strings.PositionField(args.Guild.Id, args.Position) +
-                        strings.PermissionsField(args.Guild.Id, string.Join(", ", args.Permissions.ToList())) +
-                        strings.CreatedByField(args.Guild.Id, auditLog.User.Mention, auditLog.User.Id) +
-                        strings.ManagedField(args.Guild.Id, args.IsManaged))
-                ], Mewdeko.OkColor);
+            var eb = LogEmbed(strings.RoleCreated(args.Guild.Id),
+                strings.NameField(args.Guild.Id, args.Name) +
+                strings.IdField(args.Guild.Id, args.Id) +
+                strings.ColorField(args.Guild.Id, args.Colors.PrimaryColor) +
+                strings.HoistedField(args.Guild.Id, args.IsHoisted) +
+                strings.MentionableField(args.Guild.Id, args.IsMentionable) +
+                strings.PositionField(args.Guild.Id, args.Position) +
+                strings.PermissionsField(args.Guild.Id, string.Join(", ", args.Permissions.ToList())) +
+                strings.CreatedByField(args.Guild.Id, auditLog.User.Mention, auditLog.User.Id) +
+                strings.ManagedField(args.Guild.Id, args.IsManaged), Mewdeko.OkColor);
 
-            await channel.SendMessageAsync(components: components.Build(), flags: MessageFlags.ComponentsV2,
-                allowedMentions: AllowedMentions.None);
-            collector.Feature("logging", channel.Guild.Id);
+            await SendLogAsync(channel, eb);
         }
     }
 
@@ -383,210 +447,143 @@ public class LogCommandService(
             var updatedByStr = auditLog is null
                 ? "`Updated By:` Unknown"
                 : $"`Updated By:` {auditLog.User.Mention} | {auditLog.User.Id}";
-            var components = new ComponentBuilderV2();
+            var guildId = args.Id;
+            string title;
+            string description;
+            string? beforeImage = null;
+            string? afterImage = null;
 
             if (args.Name != arsg2.Name)
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.ServerNameUpdated(args.Id)}"),
-                    new TextDisplayBuilder(
-                        strings.ServerNameChangeDescription(args.Id, arsg2.Name, args.Name, updatedByStr))
-                ], Mewdeko.OkColor);
+                title = strings.ServerNameUpdated(guildId);
+                description = strings.ServerNameChangeDescription(guildId, arsg2.Name, args.Name, updatedByStr);
             }
             else if (args.IconUrl != arsg2.IconUrl)
             {
-                var mediaItems = new List<MediaGalleryItemProperties>();
-                if (!string.IsNullOrEmpty(args.IconUrl))
-                    mediaItems.Add(new MediaGalleryItemProperties
-                    {
-                        Media = new UnfurledMediaItemProperties(args.IconUrl), Description = "Before"
-                    });
-                if (!string.IsNullOrEmpty(arsg2.IconUrl))
-                    mediaItems.Add(new MediaGalleryItemProperties
-                    {
-                        Media = new UnfurledMediaItemProperties(arsg2.IconUrl), Description = "After"
-                    });
-
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.ServerIconUpdated(args.Id)}"),
-                    new TextDisplayBuilder(updatedByStr)
-                ], Mewdeko.OkColor);
-
-                if (mediaItems.Count > 0)
-                    components.WithMediaGallery(mediaItems);
+                title = strings.ServerIconUpdated(guildId);
+                description = updatedByStr;
+                beforeImage = args.IconUrl;
+                afterImage = arsg2.IconUrl;
             }
             else if (args.BannerUrl != arsg2.BannerUrl)
             {
-                var mediaItems = new List<MediaGalleryItemProperties>();
-                if (!string.IsNullOrEmpty(args.BannerUrl))
-                    mediaItems.Add(new MediaGalleryItemProperties
-                    {
-                        Media = new UnfurledMediaItemProperties(args.BannerUrl), Description = "Before"
-                    });
-                if (!string.IsNullOrEmpty(arsg2.BannerUrl))
-                    mediaItems.Add(new MediaGalleryItemProperties
-                    {
-                        Media = new UnfurledMediaItemProperties(arsg2.BannerUrl), Description = "After"
-                    });
-
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.ServerBannerUpdated(args.Id)}"),
-                    new TextDisplayBuilder(updatedByStr)
-                ], Mewdeko.OkColor);
-
-                if (mediaItems.Count > 0)
-                    components.WithMediaGallery(mediaItems);
+                title = strings.ServerBannerUpdated(guildId);
+                description = updatedByStr;
+                beforeImage = args.BannerUrl;
+                afterImage = arsg2.BannerUrl;
             }
             else if (args.SplashUrl != arsg2.SplashUrl)
             {
-                var mediaItems = new List<MediaGalleryItemProperties>();
-                if (!string.IsNullOrEmpty(args.SplashUrl))
-                    mediaItems.Add(new MediaGalleryItemProperties
-                    {
-                        Media = new UnfurledMediaItemProperties(args.SplashUrl), Description = "Before"
-                    });
-                if (!string.IsNullOrEmpty(arsg2.SplashUrl))
-                    mediaItems.Add(new MediaGalleryItemProperties
-                    {
-                        Media = new UnfurledMediaItemProperties(arsg2.SplashUrl), Description = "After"
-                    });
-
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.ServerSplashUpdated(args.Id)}"),
-                    new TextDisplayBuilder(updatedByStr)
-                ], Mewdeko.OkColor);
-
-                if (mediaItems.Count > 0)
-                    components.WithMediaGallery(mediaItems);
+                title = strings.ServerSplashUpdated(guildId);
+                description = updatedByStr;
+                beforeImage = args.SplashUrl;
+                afterImage = arsg2.SplashUrl;
             }
             else if (args.VanityURLCode != arsg2.VanityURLCode)
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.ServerVanityUrlUpdated(args.Id)}"),
-                    new TextDisplayBuilder(strings.ServerVanityUrlChange(args.Id,
-                        arsg2.VanityURLCode ?? strings.None(args.Id),
-                        args.VanityURLCode ?? strings.None(args.Id), updatedByStr))
-                ], Mewdeko.OkColor);
+                title = strings.ServerVanityUrlUpdated(guildId);
+                description = strings.ServerVanityUrlChange(guildId, arsg2.VanityURLCode ?? strings.None(guildId),
+                    args.VanityURLCode ?? strings.None(guildId), updatedByStr);
             }
             else if (args.OwnerId != arsg2.OwnerId)
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.ServerOwnerUpdated(args.Id)}"),
-                    new TextDisplayBuilder(strings.ServerOwnerChange(args.Id, arsg2.Owner.Mention, arsg2.Owner.Id,
-                        args.Owner.Mention,
-                        args.Owner.Id, updatedByStr))
-                ], Mewdeko.OkColor);
+                title = strings.ServerOwnerUpdated(guildId);
+                description = strings.ServerOwnerChange(guildId, arsg2.Owner.Mention, arsg2.Owner.Id,
+                    args.Owner.Mention, args.Owner.Id, updatedByStr);
             }
             else if (args.AFKChannel?.Id != arsg2.AFKChannel?.Id)
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.ServerAfkChannelUpdated(args.Id)}"),
-                    new TextDisplayBuilder(strings.ServerAfkChannelChange(args.Id,
-                        arsg2.AFKChannel?.Mention ?? strings.None(args.Id),
-                        arsg2.AFKChannel?.Id.ToString() ?? "N/A", args.AFKChannel?.Mention ?? strings.None(args.Id),
-                        args.AFKChannel?.Id.ToString() ?? "N/A", updatedByStr))
-                ], Mewdeko.OkColor);
+                title = strings.ServerAfkChannelUpdated(guildId);
+                description = strings.ServerAfkChannelChange(guildId,
+                    arsg2.AFKChannel?.Mention ?? strings.None(guildId), arsg2.AFKChannel?.Id.ToString() ?? "N/A",
+                    args.AFKChannel?.Mention ?? strings.None(guildId), args.AFKChannel?.Id.ToString() ?? "N/A",
+                    updatedByStr);
             }
             else if (args.AFKTimeout != arsg2.AFKTimeout)
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.ServerAfkTimeoutUpdated(args.Id)}"),
-                    new TextDisplayBuilder(strings.ServerAfkTimeoutChange(args.Id, arsg2.AFKTimeout, args.AFKTimeout,
-                        updatedByStr))
-                ], Mewdeko.OkColor);
+                title = strings.ServerAfkTimeoutUpdated(guildId);
+                description = strings.ServerAfkTimeoutChange(guildId, arsg2.AFKTimeout, args.AFKTimeout, updatedByStr);
             }
             else if (args.DefaultMessageNotifications != arsg2.DefaultMessageNotifications)
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.ServerDefaultNotificationsUpdated(args.Id)}"),
-                    new TextDisplayBuilder(strings.ServerDefaultNotificationsChange(args.Id,
-                        arsg2.DefaultMessageNotifications,
-                        args.DefaultMessageNotifications, updatedByStr))
-                ], Mewdeko.OkColor);
+                title = strings.ServerDefaultNotificationsUpdated(guildId);
+                description = strings.ServerDefaultNotificationsChange(guildId, arsg2.DefaultMessageNotifications,
+                    args.DefaultMessageNotifications, updatedByStr);
             }
             else if (args.ExplicitContentFilter != arsg2.ExplicitContentFilter)
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.ServerExplicitContentFilterUpdated(args.Id)}"),
-                    new TextDisplayBuilder(strings.ServerExplicitContentFilterChange(args.Id,
-                        arsg2.ExplicitContentFilter,
-                        args.ExplicitContentFilter, updatedByStr))
-                ], Mewdeko.OkColor);
+                title = strings.ServerExplicitContentFilterUpdated(guildId);
+                description = strings.ServerExplicitContentFilterChange(guildId, arsg2.ExplicitContentFilter,
+                    args.ExplicitContentFilter, updatedByStr);
             }
             else if (args.MfaLevel != arsg2.MfaLevel)
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.ServerMfaLevelUpdated(args.Id)}"),
-                    new TextDisplayBuilder(strings.ServerMfaLevelChange(args.Id, arsg2.MfaLevel, args.MfaLevel,
-                        updatedByStr))
-                ], Mewdeko.OkColor);
+                title = strings.ServerMfaLevelUpdated(guildId);
+                description = strings.ServerMfaLevelChange(guildId, arsg2.MfaLevel, args.MfaLevel, updatedByStr);
             }
             else if (args.VerificationLevel != arsg2.VerificationLevel)
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.ServerVerificationLevelUpdated(args.Id)}"),
-                    new TextDisplayBuilder(strings.ServerVerificationLevelChange(args.Id, arsg2.VerificationLevel,
-                        args.VerificationLevel,
-                        updatedByStr))
-                ], Mewdeko.OkColor);
+                title = strings.ServerVerificationLevelUpdated(guildId);
+                description = strings.ServerVerificationLevelChange(guildId, arsg2.VerificationLevel,
+                    args.VerificationLevel, updatedByStr);
             }
             else if (args.SystemChannel?.Id != arsg2.SystemChannel?.Id)
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.ServerSystemChannelUpdated(args.Id)}"),
-                    new TextDisplayBuilder(strings.ServerSystemChannelChange(args.Id,
-                        arsg2.SystemChannel?.Mention ?? strings.None(args.Id),
-                        arsg2.SystemChannel?.Id.ToString() ?? "N/A",
-                        args.SystemChannel?.Mention ?? strings.None(args.Id),
-                        args.SystemChannel?.Id.ToString() ?? "N/A", updatedByStr))
-                ], Mewdeko.OkColor);
+                title = strings.ServerSystemChannelUpdated(guildId);
+                description = strings.ServerSystemChannelChange(guildId,
+                    arsg2.SystemChannel?.Mention ?? strings.None(guildId),
+                    arsg2.SystemChannel?.Id.ToString() ?? "N/A",
+                    args.SystemChannel?.Mention ?? strings.None(guildId),
+                    args.SystemChannel?.Id.ToString() ?? "N/A", updatedByStr);
             }
             else if (args.RulesChannel?.Id != arsg2.RulesChannel?.Id)
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.ServerRulesChannelUpdated(args.Id)}"),
-                    new TextDisplayBuilder(strings.ServerRulesChannelChange(args.Id,
-                        arsg2.RulesChannel?.Mention ?? strings.None(args.Id),
-                        arsg2.RulesChannel?.Id.ToString() ?? "N/A", args.RulesChannel?.Mention ?? strings.None(args.Id),
-                        args.RulesChannel?.Id.ToString() ?? "N/A", updatedByStr))
-                ], Mewdeko.OkColor);
+                title = strings.ServerRulesChannelUpdated(guildId);
+                description = strings.ServerRulesChannelChange(guildId,
+                    arsg2.RulesChannel?.Mention ?? strings.None(guildId),
+                    arsg2.RulesChannel?.Id.ToString() ?? "N/A",
+                    args.RulesChannel?.Mention ?? strings.None(guildId),
+                    args.RulesChannel?.Id.ToString() ?? "N/A", updatedByStr);
             }
             else if (args.PublicUpdatesChannel?.Id != arsg2.PublicUpdatesChannel?.Id)
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.ServerPublicUpdatesChannelUpdated(args.Id)}"),
-                    new TextDisplayBuilder(strings.ServerPublicUpdatesChannelChange(args.Id,
-                        arsg2.PublicUpdatesChannel?.Mention ?? strings.None(args.Id),
-                        arsg2.PublicUpdatesChannel?.Id.ToString() ?? "N/A",
-                        args.PublicUpdatesChannel?.Mention ?? strings.None(args.Id),
-                        args.PublicUpdatesChannel?.Id.ToString() ?? "N/A", updatedByStr))
-                ], Mewdeko.OkColor);
+                title = strings.ServerPublicUpdatesChannelUpdated(guildId);
+                description = strings.ServerPublicUpdatesChannelChange(guildId,
+                    arsg2.PublicUpdatesChannel?.Mention ?? strings.None(guildId),
+                    arsg2.PublicUpdatesChannel?.Id.ToString() ?? "N/A",
+                    args.PublicUpdatesChannel?.Mention ?? strings.None(guildId),
+                    args.PublicUpdatesChannel?.Id.ToString() ?? "N/A", updatedByStr);
             }
             else if (args.MaxVideoChannelUsers != arsg2.MaxVideoChannelUsers)
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.ServerMaxVideoUsersUpdated(args.Id)}"),
-                    new TextDisplayBuilder(strings.ServerMaxVideoUsersChange(args.Id,
-                        arsg2.MaxVideoChannelUsers?.ToString() ?? strings.Unlimited(args.Id),
-                        args.MaxVideoChannelUsers?.ToString() ?? strings.Unlimited(args.Id), updatedByStr))
-                ], Mewdeko.OkColor);
+                title = strings.ServerMaxVideoUsersUpdated(guildId);
+                description = strings.ServerMaxVideoUsersChange(guildId,
+                    arsg2.MaxVideoChannelUsers?.ToString() ?? strings.Unlimited(guildId),
+                    args.MaxVideoChannelUsers?.ToString() ?? strings.Unlimited(guildId), updatedByStr);
             }
             else if (args.MaxMembers != arsg2.MaxMembers)
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.ServerMaxMembersUpdated(args.Id)}"),
-                    new TextDisplayBuilder(strings.ServerMaxMembersChange(args.Id,
-                        arsg2.MaxMembers?.ToString() ?? "N/A",
-                        args.MaxMembers?.ToString() ?? "N/A", updatedByStr))
-                ], Mewdeko.OkColor);
+                title = strings.ServerMaxMembersUpdated(guildId);
+                description = strings.ServerMaxMembersChange(guildId, arsg2.MaxMembers?.ToString() ?? "N/A",
+                    args.MaxMembers?.ToString() ?? "N/A", updatedByStr);
             }
             else
                 return;
 
-            if (components.Components.Count > 0)
-                await channel.SendMessageAsync(components: components.Build(), flags: MessageFlags.ComponentsV2,
-                    allowedMentions: AllowedMentions.None);
-            collector.Feature("logging", channel.Guild.Id);
+            var eb = LogEmbed(title, description, Mewdeko.OkColor);
+            if (!string.IsNullOrEmpty(beforeImage))
+            {
+                eb.WithThumbnailUrl(beforeImage);
+                AddSection(eb, strings.LogSectionBefore(guildId), beforeImage);
+            }
+
+            if (!string.IsNullOrEmpty(afterImage))
+            {
+                eb.WithImageUrl(afterImage);
+                AddSection(eb, strings.LogSectionAfter(guildId), afterImage);
+            }
+
+            await SendLogAsync(channel, eb);
         }
     }
 
@@ -611,19 +608,14 @@ public class LogCommandService(
             var auditLog = auditLogs.FirstOrDefault();
             if (auditLog == null) return;
 
-            var components = new ComponentBuilderV2()
-                .WithContainer([
-                    new TextDisplayBuilder($"# {strings.RoleDeleted(args.Guild.Id)}"),
-                    new TextDisplayBuilder(
-                        strings.RoleField(args.Guild.Id, args.Name) +
-                        strings.IdField(args.Guild.Id, args.Id) +
-                        strings.DeletedByField(args.Guild.Id, auditLog.User.Mention, auditLog.User.Id) +
-                        strings.DeletedAtField(args.Guild.Id, DateTime.UtcNow.ToString("dd/MM/yyyy HH:mm:ss")))
-                ], Mewdeko.OkColor);
+            var eb = LogEmbed(strings.RoleDeleted(args.Guild.Id),
+                strings.RoleField(args.Guild.Id, args.Name) +
+                strings.IdField(args.Guild.Id, args.Id) +
+                strings.DeletedByField(args.Guild.Id, auditLog.User.Mention, auditLog.User.Id) +
+                strings.DeletedAtField(args.Guild.Id, DateTime.UtcNow.ToString("dd/MM/yyyy HH:mm:ss")),
+                Mewdeko.OkColor);
 
-            await channel.SendMessageAsync(components: components.Build(), flags: MessageFlags.ComponentsV2,
-                allowedMentions: AllowedMentions.None);
-            collector.Feature("logging", channel.Guild.Id);
+            await SendLogAsync(channel, eb);
         }
     }
 
@@ -651,82 +643,68 @@ public class LogCommandService(
 
             var updatedByStr = $"`Updated By:` {auditLog.User.Mention} | {auditLog.User.Id}";
             var roleStr = $"`Role:` {args.Mention} | {args.Id}";
-            var components = new ComponentBuilderV2();
+            var guildId = args.Guild.Id;
+            var color = Mewdeko.OkColor;
+            string? thumbnailUrl = null;
+            string title;
+            string description;
 
             if (args.Name != arsg2.Name)
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.RoleNameUpdated(args.Guild.Id)}"),
-                    new TextDisplayBuilder(strings.RoleNameChange(args.Guild.Id, arsg2.Name, args.Name, updatedByStr))
-                ], Mewdeko.OkColor);
+                title = strings.RoleNameUpdated(guildId);
+                description = strings.RoleNameChange(guildId, arsg2.Name, args.Name, updatedByStr);
             }
             else if (args.Colors.PrimaryColor != arsg2.Colors.PrimaryColor)
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.RoleColorUpdated(args.Guild.Id)}"),
-                    new TextDisplayBuilder(strings.RoleColorChange(args.Guild.Id, roleStr, arsg2.Colors.PrimaryColor,
-                        args.Colors.PrimaryColor,
-                        updatedByStr))
-                ], arsg2.Colors.PrimaryColor);
+                title = strings.RoleColorUpdated(guildId);
+                description = strings.RoleColorChange(guildId, roleStr, arsg2.Colors.PrimaryColor,
+                    args.Colors.PrimaryColor, updatedByStr);
+                color = arsg2.Colors.PrimaryColor;
             }
             else if (args.IsHoisted != arsg2.IsHoisted)
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.RoleHoistedUpdated(args.Guild.Id)}"),
-                    new TextDisplayBuilder(strings.RoleHoistedChange(args.Guild.Id, roleStr, arsg2.IsHoisted,
-                        args.IsHoisted, updatedByStr))
-                ], Mewdeko.OkColor);
+                title = strings.RoleHoistedUpdated(guildId);
+                description = strings.RoleHoistedChange(guildId, roleStr, arsg2.IsHoisted, args.IsHoisted,
+                    updatedByStr);
             }
             else if (args.IsMentionable != arsg2.IsMentionable)
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.RoleMentionableUpdated(args.Guild.Id)}"),
-                    new TextDisplayBuilder(strings.RoleMentionableChange(args.Guild.Id, roleStr, arsg2.IsMentionable,
-                        args.IsMentionable, updatedByStr))
-                ], Mewdeko.OkColor);
+                title = strings.RoleMentionableUpdated(guildId);
+                description = strings.RoleMentionableChange(guildId, roleStr, arsg2.IsMentionable,
+                    args.IsMentionable, updatedByStr);
             }
             else if (args.IsManaged != arsg2.IsManaged)
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.RoleManagedUpdated(args.Guild.Id)}"),
-                    new TextDisplayBuilder(strings.RoleManagedChange(args.Guild.Id, roleStr, arsg2.IsManaged,
-                        args.IsManaged, updatedByStr))
-                ], Mewdeko.OkColor);
+                title = strings.RoleManagedUpdated(guildId);
+                description = strings.RoleManagedChange(guildId, roleStr, arsg2.IsManaged, args.IsManaged,
+                    updatedByStr);
             }
             else if (args.Position != arsg2.Position)
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.RolePositionUpdated(args.Guild.Id)}"),
-                    new TextDisplayBuilder(strings.RolePositionChange(args.Guild.Id, roleStr, arsg2.Position,
-                        args.Position, updatedByStr))
-                ], Mewdeko.OkColor);
+                title = strings.RolePositionUpdated(guildId);
+                description = strings.RolePositionChange(guildId, roleStr, arsg2.Position, args.Position,
+                    updatedByStr);
             }
             else if (!arsg2.Permissions.Equals(args.Permissions))
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.RolePermissionsUpdated(args.Guild.Id)}"),
-                    new TextDisplayBuilder(strings.RolePermissionsChange(args.Guild.Id, roleStr, arsg2.Permissions,
-                        args.Permissions, updatedByStr))
-                ], Mewdeko.OkColor);
+                title = strings.RolePermissionsUpdated(guildId);
+                description = strings.RolePermissionsChange(guildId, roleStr, arsg2.Permissions, args.Permissions,
+                    updatedByStr);
             }
             else if (args.Icon != arsg2.Icon || args.Emoji?.ToString() != arsg2.Emoji?.ToString())
             {
-                var iconUrl = arsg2.GetIconUrl() ?? args.GetIconUrl();
-                components.WithSection([
-                        new TextDisplayBuilder($"# {strings.RoleIconUpdated(args.Guild.Id)}"),
-                        new TextDisplayBuilder(strings.RoleIconChange(args.Guild.Id, roleStr, updatedByStr))
-                    ],
-                    !string.IsNullOrEmpty(iconUrl)
-                        ? new ThumbnailBuilder(new UnfurledMediaItemProperties(iconUrl))
-                        : null);
+                title = strings.RoleIconUpdated(guildId);
+                description = strings.RoleIconChange(guildId, roleStr, updatedByStr);
+                thumbnailUrl = arsg2.GetIconUrl() ?? args.GetIconUrl();
             }
             else
-                return; // No detectable change handled
+                return;
 
-            if (components.Components.Count > 0)
-                await channel.SendMessageAsync(components: components.Build(), flags: MessageFlags.ComponentsV2,
-                    allowedMentions: AllowedMentions.None);
-            collector.Feature("logging", channel.Guild.Id);
+            var eb = LogEmbed(title, description, color);
+            if (!string.IsNullOrEmpty(thumbnailUrl))
+                eb.WithThumbnailUrl(thumbnailUrl);
+
+            await SendLogAsync(channel, eb);
         }
     }
 
@@ -745,34 +723,22 @@ public class LogCommandService(
             var channel = args.Guild.GetTextChannel(logSetting.EventCreatedId.Value);
             if (channel is null)
                 return;
-
-            var components = new ComponentBuilderV2()
-                .WithContainer([
-                    new TextDisplayBuilder($"# {strings.EventCreated(args.Guild.Id)}"),
-                    new TextDisplayBuilder(
-                        strings.EventField(args.GuildId, args.Name) +
-                        $"`Created By:` {args.Creator?.Mention ?? "N/A"} | {args.Creator?.Id.ToString() ?? "N/A"}\n" +
-                        $"`Created At:` {DateTime.UtcNow:dd/MM/yyyy HH:mm:ss}\n" +
-                        $"`Description:` {args.Description}\n" +
-                        $"`Event Date:` {args.StartTime:dd/MM/yyyy HH:mm:ss}\n" +
-                        $"`End Date:` {args.EndTime:dd/MM/yyyy HH:mm:ss}\n" +
-                        $"`Event Location:` {args.Location ?? "N/A"}\n" +
-                        $"`Event Type:` {args.Type}\n" +
-                        $"`Event Id:` {args.Id}")
-                ], Mewdeko.OkColor);
+            var eb = LogEmbed(strings.EventCreated(args.Guild.Id),
+                strings.EventField(args.GuildId, args.Name) +
+                $"`Created By:` {args.Creator?.Mention ?? "N/A"} | {args.Creator?.Id.ToString() ?? "N/A"}\n" +
+                $"`Created At:` {DateTime.UtcNow:dd/MM/yyyy HH:mm:ss}\n" +
+                $"`Description:` {args.Description}\n" +
+                $"`Event Date:` {args.StartTime:dd/MM/yyyy HH:mm:ss}\n" +
+                $"`End Date:` {args.EndTime:dd/MM/yyyy HH:mm:ss}\n" +
+                $"`Event Location:` {args.Location ?? "N/A"}\n" +
+                $"`Event Type:` {args.Type}\n" +
+                $"`Event Id:` {args.Id}", Mewdeko.OkColor);
 
             var coverImageUrl = args.GetCoverImageUrl();
             if (!string.IsNullOrEmpty(coverImageUrl))
-                components.WithMediaGallery([
-                    new MediaGalleryItemProperties
-                    {
-                        Media = new UnfurledMediaItemProperties(coverImageUrl)
-                    }
-                ]);
+                eb.WithImageUrl(coverImageUrl);
 
-            await channel.SendMessageAsync(components: components.Build(), flags: MessageFlags.ComponentsV2,
-                allowedMentions: AllowedMentions.None);
-            collector.Feature("logging", channel.Guild.Id);
+            await SendLogAsync(channel, eb);
         }
     }
 
@@ -793,23 +759,18 @@ public class LogCommandService(
             if (logSetting.ThreadCreatedId is null or 0)
                 return;
 
-            if (socketThreadChannel.Guild.GetTextChannel(logSetting.ThreadCreatedId
-                    .Value) is not IThreadChannel channel)
+            var channel = socketThreadChannel.Guild.GetTextChannel(logSetting.ThreadCreatedId.Value);
+            if (channel is null)
                 return;
 
-            var components = new ComponentBuilderV2()
-                .WithContainer([
-                    new TextDisplayBuilder($"# {strings.ThreadCreated(socketThreadChannel.Guild.Id)}"),
-                    new TextDisplayBuilder(
-                        strings.ThreadName(socketThreadChannel.Guild.Id, socketThreadChannel.Name) +
-                        $"`Created By:` {socketThreadChannel.Owner?.Mention ?? "N/A"} | {socketThreadChannel.Owner?.Id.ToString() ?? "N/A"}\n" +
-                        $"`Created At:` {socketThreadChannel.CreatedAt:dd/MM/yyyy HH:mm:ss}\n" +
-                        $"`Thread Type:` {socketThreadChannel.Type}\n" +
-                        $"`Thread Tags:` {string.Join(", ", socketThreadChannel.AppliedTags)}")
-                ], Mewdeko.OkColor);
+            var eb = LogEmbed(strings.ThreadCreated(socketThreadChannel.Guild.Id),
+                strings.ThreadName(socketThreadChannel.Guild.Id, socketThreadChannel.Name) +
+                $"`Created By:` {socketThreadChannel.Owner?.Mention ?? "N/A"} | {socketThreadChannel.Owner?.Id.ToString() ?? "N/A"}\n" +
+                $"`Created At:` {socketThreadChannel.CreatedAt:dd/MM/yyyy HH:mm:ss}\n" +
+                $"`Thread Type:` {socketThreadChannel.Type}\n" +
+                $"`Thread Tags:` {string.Join(", ", socketThreadChannel.AppliedTags)}", Mewdeko.OkColor);
 
-            await channel.SendMessageAsync(components: components.Build(), flags: MessageFlags.ComponentsV2,
-                allowedMentions: AllowedMentions.None);
+            await SendLogAsync(channel, eb);
             collector.Feature("logging", channel.Guild.Id);
         }
     }
@@ -838,20 +799,13 @@ public class LogCommandService(
         var auditLog = auditLogs.LastOrDefault();
         if (auditLog?.User == null) return;
 
-        var components = new ComponentBuilderV2()
-            .WithContainer([
-                new TextDisplayBuilder($"# {strings.UserRolesAdded(arsg2.Guild.Id)}"),
-                new TextDisplayBuilder(
-                    strings.RolesField(arsg2.Guild.Id,
-                        string.Join(strings.CommaSeparator(arsg2.Guild.Id),
-                            addedRoles.Select(x => x.Mention))) +
-                    strings.AddedByField(arsg2.Guild.Id, auditLog.User.Mention, auditLog.User.Id) +
-                    strings.AddedToField(arsg2.Guild.Id, arsg2.Mention, arsg2.Id))
-            ], Mewdeko.OkColor);
+        var eb = LogEmbed(strings.UserRolesAdded(arsg2.Guild.Id),
+            strings.RolesField(arsg2.Guild.Id,
+                string.Join(strings.CommaSeparator(arsg2.Guild.Id), addedRoles.Select(x => x.Mention))) +
+            strings.AddedByField(arsg2.Guild.Id, auditLog.User.Mention, auditLog.User.Id) +
+            strings.AddedToField(arsg2.Guild.Id, arsg2.Mention, arsg2.Id), Mewdeko.OkColor);
 
-        await channel.SendMessageAsync(components: components.Build(), flags: MessageFlags.ComponentsV2,
-            allowedMentions: AllowedMentions.None);
-        collector.Feature("logging", channel.Guild.Id);
+        await SendLogAsync(channel, eb);
     }
 
 
@@ -879,19 +833,13 @@ public class LogCommandService(
         var auditLog = auditLogs.LastOrDefault();
         if (auditLog?.User == null) return;
 
-        var components = new ComponentBuilderV2()
-            .WithContainer([
-                new TextDisplayBuilder($"# {strings.UserRolesRemoved(arsg2.Guild.Id)}"),
-                new TextDisplayBuilder(
-                    strings.RolesField(arsg2.Guild.Id,
-                        string.Join(strings.CommaSeparator(arsg2.Guild.Id), removedRoles.Select(x => x.Mention))) +
-                    strings.RemovedByField(arsg2.Guild.Id, auditLog.User.Mention, auditLog.User.Id) +
-                    strings.RemovedFromField(arsg2.Guild.Id, arsg2.Mention, arsg2.Id))
-            ], Mewdeko.OkColor);
+        var eb = LogEmbed(strings.UserRolesRemoved(arsg2.Guild.Id),
+            strings.RolesField(arsg2.Guild.Id,
+                string.Join(strings.CommaSeparator(arsg2.Guild.Id), removedRoles.Select(x => x.Mention))) +
+            strings.RemovedByField(arsg2.Guild.Id, auditLog.User.Mention, auditLog.User.Id) +
+            strings.RemovedFromField(arsg2.Guild.Id, arsg2.Mention, arsg2.Id), Mewdeko.OkColor);
 
-        await channel.SendMessageAsync(components: components.Build(), flags: MessageFlags.ComponentsV2,
-            allowedMentions: AllowedMentions.None);
-        collector.Feature("logging", channel.Guild.Id);
+        await SendLogAsync(channel, eb);
     }
 
 
@@ -918,18 +866,12 @@ public class LogCommandService(
                 if (channel is null)
                     continue;
 
-                var components = new ComponentBuilderV2()
-                    .WithContainer([
-                        new TextDisplayBuilder($"# {strings.UsernameUpdated(guild.Id)}"),
-                        new TextDisplayBuilder(
-                            strings.UserField(guild.Id, user.Mention, user.Id) +
-                            strings.OldUsernameField(guild.Id, args.Username) +
-                            strings.NewUsernameField(guild.Id, arsg2.Username))
-                    ], Mewdeko.OkColor);
+                var eb = LogEmbed(strings.UsernameUpdated(guild.Id),
+                    strings.UserField(guild.Id, user.Mention, user.Id) +
+                    strings.OldUsernameField(guild.Id, args.Username) +
+                    strings.NewUsernameField(guild.Id, arsg2.Username), Mewdeko.OkColor);
 
-                await channel.SendMessageAsync(components: components.Build(), flags: MessageFlags.ComponentsV2,
-                    allowedMentions: AllowedMentions.None);
-                collector.Feature("logging", channel.Guild.Id);
+                await SendLogAsync(channel, eb);
             }
         }
     }
@@ -957,19 +899,13 @@ public class LogCommandService(
             var entry = auditLogs.FirstOrDefault();
             if (entry == null) return; // Cannot determine who changed it without audit log
 
-            var components = new ComponentBuilderV2()
-                .WithContainer([
-                    new TextDisplayBuilder($"# {strings.NicknameUpdated(arsg2.Guild.Id)}"),
-                    new TextDisplayBuilder(
-                        strings.UserField(arsg2.Guild.Id, arsg2.Mention, arsg2.Id) +
-                        strings.OldNicknameField(arsg2.Guild.Id, cacheable.Value.Nickname ?? cacheable.Value.Username) +
-                        strings.NewNicknameField(arsg2.Guild.Id, arsg2.Nickname ?? arsg2.Username) +
-                        strings.UpdatedByField(arsg2.Guild.Id, entry.User.Mention, entry.User.Id))
-                ], Mewdeko.OkColor);
+            var eb = LogEmbed(strings.NicknameUpdated(arsg2.Guild.Id),
+                strings.UserField(arsg2.Guild.Id, arsg2.Mention, arsg2.Id) +
+                strings.OldNicknameField(arsg2.Guild.Id, cacheable.Value.Nickname ?? cacheable.Value.Username) +
+                strings.NewNicknameField(arsg2.Guild.Id, arsg2.Nickname ?? arsg2.Username) +
+                strings.UpdatedByField(arsg2.Guild.Id, entry.User.Mention, entry.User.Id), Mewdeko.OkColor);
 
-            await channel.SendMessageAsync(components: components.Build(), flags: MessageFlags.ComponentsV2,
-                allowedMentions: AllowedMentions.None);
-            collector.Feature("logging", channel.Guild.Id);
+            await SendLogAsync(channel, eb);
         }
     }
 
@@ -1002,25 +938,15 @@ public class LogCommandService(
             var entry = auditLogs.FirstOrDefault();
             if (entry == null) return;
 
-            var components = new ComponentBuilderV2()
-                .WithContainer([
-                    new TextDisplayBuilder($"# {strings.ThreadDeleted(deletedThread.Guild.Id)}")
-                ], Mewdeko.OkColor);
+            var guildId = deletedThread.Guild.Id;
+            var eb = LogEmbed(strings.ThreadDeleted(guildId),
+                strings.ThreadNameField(guildId, deletedThread.Name) +
+                strings.ThreadIdField(guildId, deletedThread.Id), Mewdeko.OkColor);
 
-            components.WithSeparator();
-            components.WithTextDisplay("\n**Thread Information**");
-            components.WithTextDisplay(
-                strings.ThreadNameField(deletedThread.Guild.Id, deletedThread.Name) +
-                strings.ThreadIdField(deletedThread.Guild.Id, deletedThread.Id));
+            AddSection(eb, strings.LogSectionDeletionDetails(guildId),
+                strings.DeletedByField(guildId, entry.User.Mention, entry.User.Id));
 
-            components.WithSeparator();
-            components.WithTextDisplay("\n**Deletion Details**");
-            components.WithTextDisplay(
-                strings.DeletedByField(deletedThread.Guild.Id, entry.User.Mention, entry.User.Id));
-
-            await channel.SendMessageAsync(components: components.Build(), flags: MessageFlags.ComponentsV2,
-                allowedMentions: AllowedMentions.None);
-            collector.Feature("logging", channel.Guild.Id);
+            await SendLogAsync(channel, eb);
         }
     }
 
@@ -1055,69 +981,43 @@ public class LogCommandService(
 
             var updatedByStr = $"`Updated By:` {entry.User.Mention} | {entry.User.Id}";
             var threadIdStr = $"`Thread:` {arsg2.Mention} | {arsg2.Id}";
-            var components = new ComponentBuilderV2();
+            var guildId = arsg2.Guild.Id;
+            string title;
+            string description;
 
             if (oldThread.Name != arsg2.Name)
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.ThreadNameUpdated(arsg2.Guild.Id)}")
-                ], Mewdeko.OkColor);
-                components.WithSeparator();
-                components.WithTextDisplay("\n**Change Details**");
-                components.WithTextDisplay(strings.ThreadNameChange(arsg2.Guild.Id, threadIdStr, oldThread.Name,
-                    arsg2.Name, updatedByStr));
+                title = strings.ThreadNameUpdated(guildId);
+                description = strings.ThreadNameChange(guildId, threadIdStr, oldThread.Name, arsg2.Name, updatedByStr);
             }
             else if (oldThread.IsArchived != arsg2.IsArchived)
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.ThreadArchiveStatusUpdated(arsg2.Guild.Id)}")
-                ], Mewdeko.OkColor);
-                components.WithSeparator();
-                components.WithTextDisplay("\n**Archive Status Change**");
-                components.WithTextDisplay(strings.ThreadArchiveStatusChange(arsg2.Guild.Id, threadIdStr,
-                    oldThread.IsArchived,
-                    arsg2.IsArchived, updatedByStr));
+                title = strings.ThreadArchiveStatusUpdated(guildId);
+                description = strings.ThreadArchiveStatusChange(guildId, threadIdStr, oldThread.IsArchived,
+                    arsg2.IsArchived, updatedByStr);
             }
             else if (oldThread.IsLocked != arsg2.IsLocked)
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.ThreadLockStatusUpdated(arsg2.Guild.Id)}")
-                ], Mewdeko.OkColor);
-                components.WithSeparator();
-                components.WithTextDisplay("\n**Lock Status Change**");
-                components.WithTextDisplay(strings.ThreadLockStatusChange(arsg2.Guild.Id, threadIdStr,
-                    oldThread.IsLocked, arsg2.IsLocked,
-                    updatedByStr));
+                title = strings.ThreadLockStatusUpdated(guildId);
+                description = strings.ThreadLockStatusChange(guildId, threadIdStr, oldThread.IsLocked,
+                    arsg2.IsLocked, updatedByStr);
             }
             else if (oldThread.SlowModeInterval != arsg2.SlowModeInterval)
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.ThreadSlowModeUpdated(arsg2.Guild.Id)}")
-                ], Mewdeko.OkColor);
-                components.WithSeparator();
-                components.WithTextDisplay("\n**Slow Mode Change**");
-                components.WithTextDisplay(strings.ThreadSlowModeChange(arsg2.Guild.Id, threadIdStr,
-                    oldThread.SlowModeInterval,
-                    arsg2.SlowModeInterval, updatedByStr));
+                title = strings.ThreadSlowModeUpdated(guildId);
+                description = strings.ThreadSlowModeChange(guildId, threadIdStr, oldThread.SlowModeInterval,
+                    arsg2.SlowModeInterval, updatedByStr);
             }
             else if (oldThread.AutoArchiveDuration != arsg2.AutoArchiveDuration)
             {
-                components.WithContainer([
-                    new TextDisplayBuilder($"# {strings.ThreadAutoArchiveUpdated(arsg2.Guild.Id)}")
-                ], Mewdeko.OkColor);
-                components.WithSeparator();
-                components.WithTextDisplay("\n**Auto Archive Duration Change**");
-                components.WithTextDisplay(strings.ThreadAutoArchiveChange(arsg2.Guild.Id, threadIdStr,
-                    oldThread.AutoArchiveDuration,
-                    arsg2.AutoArchiveDuration, updatedByStr));
+                title = strings.ThreadAutoArchiveUpdated(guildId);
+                description = strings.ThreadAutoArchiveChange(guildId, threadIdStr, oldThread.AutoArchiveDuration,
+                    arsg2.AutoArchiveDuration, updatedByStr);
             }
             else
-                return; // No detectable change handled
+                return;
 
-            if (components.Components.Count > 0)
-                await channel.SendMessageAsync(components: components.Build(), flags: MessageFlags.ComponentsV2,
-                    allowedMentions: AllowedMentions.None);
-            collector.Feature("logging", channel.Guild.Id);
+            await SendLogAsync(channel, LogEmbed(title, description, Mewdeko.OkColor));
         }
     }
 
@@ -1148,61 +1048,18 @@ public class LogCommandService(
             if (channel is null)
                 return;
 
-            var components = new ComponentBuilderV2()
-                .WithContainer([
-                    new TextDisplayBuilder($"# {strings.MessageUpdated(guildChannel.Guild.Id)}")
-                ], Mewdeko.OkColor);
+            var guildId = guildChannel.Guild.Id;
+            var eb = LogEmbed(strings.MessageUpdated(guildId),
+                    strings.MessageAuthorField(guildId, oldMessage.Author.Mention, oldMessage.Author.Id) +
+                    strings.MessageChannelField(guildId, guildChannel.Mention, guildChannel.Id) +
+                    strings.MessageIdField(guildId, oldMessage.Id) +
+                    strings.LogJumpToMessage(guildId, oldMessage.GetJumpUrl()), Mewdeko.OkColor)
+                .WithThumbnailUrl(oldMessage.Author.RealAvatarUrl().ToString());
 
-            // Message details with author avatar
-            var avatarUrl = oldMessage.Author.RealAvatarUrl().ToString();
-            var messageDetails =
-                strings.MessageAuthorField(guildChannel.Guild.Id, oldMessage.Author.Mention, oldMessage.Author.Id) +
-                strings.MessageChannelField(guildChannel.Guild.Id, guildChannel.Mention, guildChannel.Id) +
-                strings.MessageIdField(guildChannel.Guild.Id, oldMessage.Id);
+            AddSection(eb, strings.LogSectionBefore(guildId), oldMessage.Content.TrimTo(1000));
+            AddSection(eb, strings.LogSectionAfter(guildId), args2.Content.TrimTo(1000));
 
-            if (!string.IsNullOrEmpty(avatarUrl))
-            {
-                components.WithSection([
-                    new TextDisplayBuilder("**Message Details**"),
-                    new TextDisplayBuilder(messageDetails)
-                ], new ThumbnailBuilder(new UnfurledMediaItemProperties(avatarUrl)));
-            }
-            else
-            {
-                components.WithSeparator();
-                components.WithTextDisplay("\n**Message Details**");
-                components.WithTextDisplay(messageDetails);
-            }
-
-            // Before/After content comparison
-            components.WithSeparator();
-            components.WithTextDisplay("\n**Content Changes**");
-
-            if (!string.IsNullOrWhiteSpace(oldMessage.Content))
-            {
-                components.WithContainer([
-                    new TextDisplayBuilder("**Before**"),
-                    new TextDisplayBuilder(strings.OldMessageContentField(guildChannel.Guild.Id,
-                        oldMessage.Content.TrimTo(500)))
-                ], null);
-            }
-
-            if (!string.IsNullOrWhiteSpace(args2.Content))
-            {
-                components.WithContainer([
-                    new TextDisplayBuilder("**After**"),
-                    new TextDisplayBuilder(
-                        strings.UpdatedMessageContentField(guildChannel.Guild.Id, args2.Content.TrimTo(500)))
-                ], null);
-            }
-
-            components.WithActionRow([
-                new ButtonBuilder("Jump to Message", style: ButtonStyle.Link, url: oldMessage.GetJumpUrl())
-            ]);
-
-            await channel.SendMessageAsync(components: components.Build(), flags: MessageFlags.ComponentsV2,
-                allowedMentions: AllowedMentions.None);
-            collector.Feature("logging", channel.Guild.Id);
+            await SendLogAsync(channel, eb);
         }
     }
 
@@ -1250,135 +1107,64 @@ public class LogCommandService(
             }
 
 
-            var components = new ComponentBuilderV2();
+            var guildId = guildChannel.Guild.Id;
             var tempFiles = new List<FileAttachment>();
 
-            // Build the main content with better organization
-            components.WithContainer([
-                new TextDisplayBuilder($"# {strings.MessageDeleted(guildChannel.Guild.Id)}")
-            ], Mewdeko.OkColor);
+            var eb = LogEmbed(strings.MessageDeleted(guildId),
+                    strings.MessageAuthorField(guildId, message.Author.Mention, message.Author.Id) +
+                    strings.MessageChannelField(guildId, guildChannel.Mention, guildChannel.Id) +
+                    strings.DeletedByField(guildId, deleteUser?.Mention ?? strings.Unknown(guildId),
+                        deleteUser?.Id.ToString() ?? "N/A"), Mewdeko.OkColor)
+                .WithThumbnailUrl(message.Author.RealAvatarUrl().ToString());
 
-            // Message details section with author avatar as thumbnail
-            var avatarUrl = message.Author.RealAvatarUrl().ToString();
-            var messageDetails =
-                strings.MessageAuthorField(guildChannel.Guild.Id, message.Author.Mention, message.Author.Id) +
-                strings.MessageChannelField(guildChannel.Guild.Id, guildChannel.Mention, guildChannel.Id) +
-                strings.DeletedByField(guildChannel.Guild.Id,
-                    deleteUser?.Mention ?? strings.Unknown(guildChannel.Guild.Id),
-                    deleteUser?.Id.ToString() ?? "N/A");
-
-            if (!string.IsNullOrEmpty(avatarUrl))
-            {
-                components.WithSection([
-                    new TextDisplayBuilder("**Message Details**"),
-                    new TextDisplayBuilder(messageDetails)
-                ], new ThumbnailBuilder(new UnfurledMediaItemProperties(avatarUrl)));
-            }
-            else
-            {
-                components.WithSeparator();
-                components.WithTextDisplay("**Message Details**");
-                components.WithTextDisplay(messageDetails);
-            }
-
-            // Content section if message had content
             if (!string.IsNullOrWhiteSpace(message.Content))
-            {
-                components.WithSeparator();
-                components.WithContainer([
-                    new TextDisplayBuilder("**Message Content**"),
-                    new TextDisplayBuilder(message.Content.TrimTo(1000))
-                ], null);
-            }
+                AddSection(eb, strings.LogSectionMessageContent(guildId), message.Content.TrimTo(1000));
 
-            // Handle attachments with temporary download for cached content
             if (message.Attachments.Count > 0)
             {
-                var mediaItems = new List<MediaGalleryItemProperties>();
-                var fileComponents = new List<FileComponentBuilder>();
-
-                components.WithSeparator();
-                components.WithTextDisplay(
-                    $"**{strings.Attachments(guildChannel.Guild.Id)}** ({message.Attachments.Count})");
+                var attachmentLines = new List<string>();
 
                 using var httpClient = new HttpClient();
                 httpClient.Timeout = TimeSpan.FromSeconds(10);
 
-                foreach (var att in message.Attachments.Take(10)) // Limit to 10 for performance
+                foreach (var att in message.Attachments.Take(10))
                 {
+                    var preserved = false;
                     try
                     {
-                        // Download the cached attachment temporarily
                         var response = await httpClient.GetAsync(att.Url);
                         if (response.IsSuccessStatusCode)
                         {
                             var content = await response.Content.ReadAsByteArrayAsync();
-                            var stream = new MemoryStream(content);
-                            var fileAttachment = new FileAttachment(stream, att.Filename, att.Filename);
-                            tempFiles.Add(fileAttachment);
+                            tempFiles.Add(new FileAttachment(new MemoryStream(content), att.Filename, att.Filename));
+                            preserved = true;
 
-                            if (IsImageAttachment(att.Filename))
-                            {
-                                // Add to media gallery for images
-                                mediaItems.Add(new MediaGalleryItemProperties
-                                {
-                                    Media = new UnfurledMediaItemProperties($"attachment://{att.Filename}"),
-                                    Description = $"{att.Filename} ({(att.Size / 1024.0):F1} KB)"
-                                });
-                            }
-                            else
-                            {
-                                // Add as file component for non-images
-                                fileComponents.Add(new FileComponentBuilder
-                                {
-                                    File = new UnfurledMediaItemProperties($"attachment://{att.Filename}")
-                                });
-                            }
+                            if (string.IsNullOrEmpty(eb.ImageUrl) && IsImageAttachment(att.Filename))
+                                eb.WithImageUrl($"attachment://{Uri.EscapeDataString(att.Filename)}");
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // If download fails, just show as text
-                        components.WithTextDisplay(
-                            $"📎 **{att.Filename}** ({strings.AttachmentSize(guildChannel.Guild.Id, att.Size)}) - *Could not preserve attachment*");
+                        logger.LogDebug(ex, "Could not download attachment {Filename} for the deleted message log",
+                            att.Filename);
                     }
+
+                    var sizeText = strings.AttachmentSize(guildId, att.Size);
+                    attachmentLines.Add(preserved
+                        ? strings.LogAttachmentPreserved(guildId, att.Filename, sizeText)
+                        : strings.LogAttachmentNotPreserved(guildId, att.Filename, sizeText));
                 }
 
-                // Add media gallery if we have images
-                if (mediaItems.Count > 0)
-                {
-                    components.WithMediaGallery(mediaItems);
-                }
-
-                // Add file components for non-images
-                foreach (var fileComp in fileComponents)
-                {
-                    components.AddComponent(fileComp);
-                }
+                AddSection(eb, $"{strings.Attachments(guildId)} ({message.Attachments.Count})",
+                    string.Join("\n", attachmentLines));
             }
 
             try
             {
-                if (tempFiles.Count > 0)
-                {
-                    await logChannel.SendFilesAsync(
-                        tempFiles,
-                        components: components.Build(),
-                        flags: MessageFlags.ComponentsV2,
-                        allowedMentions: AllowedMentions.None);
-                }
-                else
-                {
-                    await logChannel.SendMessageAsync(
-                        components: components.Build(),
-                        flags: MessageFlags.ComponentsV2,
-                        allowedMentions: AllowedMentions.None);
-                    collector.Feature("logging", logChannel.Guild.Id);
-                }
+                await SendLogAsync(logChannel, eb, tempFiles);
             }
             finally
             {
-                // Clean up temporary files
                 foreach (var tempFile in tempFiles)
                 {
                     tempFile.Dispose();
@@ -1413,48 +1199,18 @@ public class LogCommandService(
             if (channel is null)
                 return;
 
-            var avatarUrl = guildUser.RealAvatarUrl().ToString();
-            var components = new ComponentBuilderV2()
-                .WithContainer([
-                    new TextDisplayBuilder($"# {strings.UserJoined(guildUser.Guild.Id)}")
-                ], Mewdeko.OkColor);
+            var guildId = guildUser.Guild.Id;
+            var eb = LogEmbed(strings.UserJoined(guildId),
+                    strings.UserField(guildId, guildUser.Mention, guildUser.Id) +
+                    strings.UserGlobalNameField(guildId, guildUser.GlobalName ?? guildUser.Username), Mewdeko.OkColor)
+                .WithThumbnailUrl(guildUser.RealAvatarUrl().ToString());
 
-            // User info section with avatar
-            if (!string.IsNullOrEmpty(avatarUrl))
-            {
-                components.WithSection([
-                    new TextDisplayBuilder("**User Information**"),
-                    new TextDisplayBuilder(strings.UserField(guildUser.Guild.Id, guildUser.Mention, guildUser.Id) +
-                                           strings.UserGlobalNameField(guildUser.Guild.Id,
-                                               guildUser.GlobalName ?? guildUser.Username))
-                ], new ThumbnailBuilder(new UnfurledMediaItemProperties(avatarUrl)));
-            }
-            else
-            {
-                components.WithSeparator();
-                components.WithTextDisplay("**User Information**");
-                components.WithTextDisplay(strings.UserField(guildUser.Guild.Id, guildUser.Mention, guildUser.Id) +
-                                           strings.UserGlobalNameField(guildUser.Guild.Id,
-                                               guildUser.GlobalName ?? guildUser.Username));
-            }
+            AddSection(eb, strings.LogSectionAccountDetails(guildId),
+                strings.AccountCreatedField(guildId, guildUser.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss")) + "\n" +
+                strings.JoinedServerField(guildId, guildUser.JoinedAt?.ToString("dd/MM/yyyy HH:mm:ss") ?? "N/A") +
+                "\n" + strings.UserStatusField(guildId, guildUser.Status));
 
-            // Account details
-            components.WithSeparator();
-            components.WithTextDisplay("\n**Account Details**");
-            components.WithTextDisplay(
-                strings.AccountCreatedField(guildUser.Guild.Id, guildUser.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss")) +
-                strings.JoinedServerField(guildUser.Guild.Id,
-                    guildUser.JoinedAt?.ToString("dd/MM/yyyy HH:mm:ss") ?? "N/A") +
-                strings.UserStatusField(guildUser.Guild.Id, guildUser.Status));
-
-            components.WithActionRow([
-                new ButtonBuilder(strings.ViewUser(guildUser.Guild.Id), style: ButtonStyle.Link,
-                    url: $"discord://-/users/{guildUser.Id}")
-            ]);
-
-            await channel.SendMessageAsync(components: components.Build(), flags: MessageFlags.ComponentsV2,
-                allowedMentions: AllowedMentions.None);
-            collector.Feature("logging", channel.Guild.Id);
+            await SendLogAsync(channel, eb);
         }
     }
 
@@ -1475,8 +1231,8 @@ public class LogCommandService(
                 return;
 
             // Check if it was a kick or ban via audit log
-            var title = "User Left";
-            string footer = null;
+            var title = strings.UserLeft(guild.Id);
+            string? footer = null;
             await Task.Delay(1000); // Delay for audit log
             var auditLogsKick = await GetAuditLogsSafeAsync(guild, ActionType.Kick);
             var kickLog = auditLogsKick.FirstOrDefault(e =>
@@ -1490,8 +1246,8 @@ public class LogCommandService(
 
             if (kickLog != null)
             {
-                title = "User Kicked";
-                footer = $"Kicked by {kickLog.User.Username} ({kickLog.User.Id})";
+                title = strings.LogUserKickedTitle(guild.Id);
+                footer = strings.LogKickedByFooter(guild.Id, kickLog.User.Username, kickLog.User.Id);
             }
             else if (banLog != null)
             {
@@ -1500,52 +1256,17 @@ public class LogCommandService(
                 // Let's just stick to "User Left" unless kicked.
             }
 
-            var avatarUrl = user.RealAvatarUrl().ToString();
-            var userInfo = strings.UserField(guild.Id, user.Mention, user.Id) +
-                           strings.UserGlobalNameField(guild.Id, user.GlobalName ?? user.Username);
+            var eb = LogEmbed(title,
+                    strings.UserField(guild.Id, user.Mention, user.Id) +
+                    strings.UserGlobalNameField(guild.Id, user.GlobalName ?? user.Username) + "\n" +
+                    strings.AccountCreatedField(guild.Id, user.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss")),
+                    Mewdeko.ErrorColor)
+                .WithThumbnailUrl(user.RealAvatarUrl().ToString());
 
-            var accountInfo = strings.AccountCreatedField(guild.Id, user.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss"));
-
-            var components = new ComponentBuilderV2()
-                .WithContainer([
-                    new TextDisplayBuilder($"# {title}")
-                ], Mewdeko.ErrorColor);
-
-            // User info section with avatar
-            if (!string.IsNullOrEmpty(avatarUrl))
-            {
-                components.WithSection([
-                    new TextDisplayBuilder("**User Information**"),
-                    new TextDisplayBuilder(userInfo)
-                ], new ThumbnailBuilder(new UnfurledMediaItemProperties(avatarUrl)));
-            }
-            else
-            {
-                components.WithSeparator();
-                components.WithTextDisplay("\n**User Information**");
-                components.WithTextDisplay(userInfo);
-            }
-
-            // Account details
-            components.WithSeparator();
-            components.WithTextDisplay("\n**Account Details**");
-            components.WithTextDisplay(accountInfo);
-
-            // Footer with kick/ban info if available
             if (footer != null)
-            {
-                components.WithSeparator();
-                components.WithTextDisplay($"\n*{footer}*");
-            }
+                eb.WithFooter(footer);
 
-            components.WithActionRow([
-                new ButtonBuilder(strings.ViewUserMayNotWork(guild.Id), style: ButtonStyle.Link,
-                    url: $"discord://-/users/{user.Id}")
-            ]);
-
-            await channel.SendMessageAsync(components: components.Build(), flags: MessageFlags.ComponentsV2,
-                allowedMentions: AllowedMentions.None);
-            collector.Feature("logging", channel.Guild.Id);
+            await SendLogAsync(channel, eb);
         }
     }
 
@@ -1567,34 +1288,15 @@ public class LogCommandService(
             if (channel is null)
                 return;
 
-            var avatarUrl = user.RealAvatarUrl().ToString();
-            var components = new ComponentBuilderV2()
-                .WithContainer([
-                    new TextDisplayBuilder($"# {strings.UserBanned(guild.Id)}"),
-                    new TextDisplayBuilder(
-                        strings.UserInfoLine(guild.Id, user.Mention, user.Id) +
-                        $"`User Global Name:` {user.GlobalName ?? user.Username}\n" +
-                        $"`Account Created:` {user.CreatedAt:dd/MM/yyyy HH:mm:ss}\n" +
-                        $"`Banned By:` {bannedBy?.Mention ?? "Unknown"} | {bannedBy?.Id.ToString() ?? "N/A"}\n" +
-                        $"`Reason:` {reason ?? "No reason provided"}")
-                ], Mewdeko.ErrorColor);
+            var eb = LogEmbed(strings.UserBanned(guild.Id),
+                    strings.UserInfoLine(guild.Id, user.Mention, user.Id) +
+                    $"`User Global Name:` {user.GlobalName ?? user.Username}\n" +
+                    $"`Account Created:` {user.CreatedAt:dd/MM/yyyy HH:mm:ss}\n" +
+                    $"`Banned By:` {bannedBy?.Mention ?? "Unknown"} | {bannedBy?.Id.ToString() ?? "N/A"}\n" +
+                    $"`Reason:` {reason ?? "No reason provided"}", Mewdeko.ErrorColor)
+                .WithThumbnailUrl(user.RealAvatarUrl().ToString());
 
-            if (!string.IsNullOrEmpty(avatarUrl))
-                components.WithMediaGallery([
-                    new MediaGalleryItemProperties
-                    {
-                        Media = new UnfurledMediaItemProperties(avatarUrl)
-                    }
-                ]);
-
-            components.WithActionRow([
-                new ButtonBuilder("View User (May not work)", style: ButtonStyle.Link,
-                    url: $"discord://-/users/{user.Id}")
-            ]);
-
-            await channel.SendMessageAsync(components: components.Build(), flags: MessageFlags.ComponentsV2,
-                allowedMentions: AllowedMentions.None);
-            collector.Feature("logging", channel.Guild.Id);
+            await SendLogAsync(channel, eb);
         }
     }
 
@@ -1616,28 +1318,15 @@ public class LogCommandService(
             if (channel is null)
                 return;
 
-            var components = new ComponentBuilderV2()
-                .WithContainer([
-                    new TextDisplayBuilder($"# {strings.UserUnbanned(guild.Id)}")
-                ], Mewdeko.OkColor)
-                .WithSeparator()
-                .WithSection([
-                    new TextDisplayBuilder($"**User Details**\n{strings.UserInfoLine(guild.Id, user.Mention, user.Id)}")
-                ], new ThumbnailBuilder(user.RealAvatarUrl().ToString()))
-                .WithSeparator()
-                .WithContainer(new TextDisplayBuilder($"**Additional Information**\n" +
-                                                      $"`User Global Name:` {user.GlobalName ?? user.Username}\n" +
-                                                      $"`Account Created:` {user.CreatedAt:dd/MM/yyyy HH:mm:ss}\n" +
-                                                      $"`Unbanned By:` {unbannedBy?.Mention ?? "Unknown"} | {unbannedBy?.Id.ToString() ?? "N/A"}" +
-                                                      $"`Reason:` {reason ?? "No reason provided"}"))
-                .WithActionRow([
-                    new ButtonBuilder("View User (May not work)", style: ButtonStyle.Link,
-                        url: $"discord://-/users/{user.Id}")
-                ]);
+            var eb = LogEmbed(strings.UserUnbanned(guild.Id),
+                    strings.UserInfoLine(guild.Id, user.Mention, user.Id) +
+                    $"`User Global Name:` {user.GlobalName ?? user.Username}\n" +
+                    $"`Account Created:` {user.CreatedAt:dd/MM/yyyy HH:mm:ss}\n" +
+                    $"`Unbanned By:` {unbannedBy?.Mention ?? "Unknown"} | {unbannedBy?.Id.ToString() ?? "N/A"}\n" +
+                    $"`Reason:` {reason ?? "No reason provided"}", Mewdeko.OkColor)
+                .WithThumbnailUrl(user.RealAvatarUrl().ToString());
 
-            await channel.SendMessageAsync(components: components.Build(),
-                flags: MessageFlags.ComponentsV2, allowedMentions: AllowedMentions.None);
-            collector.Feature("logging", channel.Guild.Id);
+            await SendLogAsync(channel, eb);
         }
     }
 
@@ -1672,48 +1361,28 @@ public class LogCommandService(
                 if (logSetting.AvatarUpdatedId != null)
                     logChannel = guild.GetTextChannel(logSetting.AvatarUpdatedId.Value);
                 if (logChannel is null)
-                    return;
+                    continue;
 
-                var avatarComponents = new ComponentBuilderV2()
-                    .WithContainer([
-                        new TextDisplayBuilder($"# {strings.UserAvatarUpdated(guild.Id)}")
-                    ], Mewdeko.OkColor)
-                    .WithSeparator()
-                    .WithContainer(new TextDisplayBuilder(
-                        $"**User Details**\n{strings.UserLogEntry(guild.Id, userInGuild.Mention, userInGuild.Id)}"))
-                    .WithSeparator()
-                    .WithMediaGallery([
-                        args.RealAvatarUrl().ToString(),
-                        arsg2.RealAvatarUrl().ToString()
-                    ]);
+                var avatarEmbed = LogEmbed(strings.UserAvatarUpdated(guild.Id),
+                        strings.UserLogEntry(guild.Id, userInGuild.Mention, userInGuild.Id), Mewdeko.OkColor)
+                    .WithThumbnailUrl(args.RealAvatarUrl().ToString())
+                    .WithImageUrl(arsg2.RealAvatarUrl().ToString());
 
-                await logChannel.SendMessageAsync(components: avatarComponents.Build(),
-                    flags: MessageFlags.ComponentsV2, allowedMentions: AllowedMentions.None);
-                collector.Feature("logging", logChannel.Guild.Id);
+                await SendLogAsync(logChannel, avatarEmbed);
             }
 
             if (!hasGlobalNameChanged) continue;
             if (logSetting.UsernameUpdatedId != null)
                 logChannel = guild.GetTextChannel(logSetting.UsernameUpdatedId.Value);
             if (logChannel is null)
-                return;
-            var globalNameComponents = new ComponentBuilderV2()
-                .WithContainer([
-                    new TextDisplayBuilder($"# {strings.UserGlobalNameUpdated(guild.Id)}")
-                ], Mewdeko.OkColor)
-                .WithSeparator()
-                .WithSection([
-                    new TextDisplayBuilder(
-                        $"**User Details**\n{strings.UserLogEntry(guild.Id, userInGuild.Mention, userInGuild.Id)}")
-                ], new ThumbnailBuilder(arsg2.RealAvatarUrl().ToString()))
-                .WithSeparator()
-                .WithContainer(new TextDisplayBuilder($"**Name Changes**\n" +
-                                                      $"`Old Global Name:` {args.GlobalName ?? args.Username}\n" +
-                                                      $"`New Global Name:` {arsg2.GlobalName ?? arsg2.Username}"));
+                continue;
+            var globalNameEmbed = LogEmbed(strings.UserGlobalNameUpdated(guild.Id),
+                    strings.UserLogEntry(guild.Id, userInGuild.Mention, userInGuild.Id) + "\n" +
+                    $"`Old Global Name:` {args.GlobalName ?? args.Username}\n" +
+                    $"`New Global Name:` {arsg2.GlobalName ?? arsg2.Username}", Mewdeko.OkColor)
+                .WithThumbnailUrl(arsg2.RealAvatarUrl().ToString());
 
-            await logChannel.SendMessageAsync(components: globalNameComponents.Build(),
-                flags: MessageFlags.ComponentsV2, allowedMentions: AllowedMentions.None);
-            collector.Feature("logging", logChannel.Guild.Id);
+            await SendLogAsync(logChannel, globalNameEmbed);
         }
     }
 
@@ -1752,22 +1421,16 @@ public class LogCommandService(
             var auditLogs = await GetAuditLogsSafeAsync(channel.Guild, ActionType.ChannelCreated);
             var entry = auditLogs.FirstOrDefault();
 
-            var components = new ComponentBuilderV2()
-                .WithContainer([
-                    new TextDisplayBuilder($"# {strings.ChannelCreated(channel.Guild.Id)}")
-                ], Mewdeko.OkColor)
-                .WithSeparator()
-                .WithContainer(new TextDisplayBuilder($"**Channel Details**\n" +
-                                                      $"`Channel:` <#{channel.Id}> ({channel.Name}) | {channel.Id}\n" +
-                                                      $"`Channel Type:` {createdType}"))
-                .WithSeparator()
-                .WithContainer(new TextDisplayBuilder($"**Creation Information**\n" +
-                                                      $"`Created By:` {entry?.User.Mention ?? "Unknown"} | {entry?.User.Id.ToString() ?? "N/A"}\n" +
-                                                      $"`Created At:` {channel.CreatedAt:dd/MM/yyyy HH:mm:ss}"));
+            var guildId = channel.Guild.Id;
+            var eb = LogEmbed(strings.ChannelCreated(guildId),
+                $"`Channel:` <#{channel.Id}> ({channel.Name}) | {channel.Id}\n" +
+                $"`Channel Type:` {createdType}", Mewdeko.OkColor);
 
-            await logChannel.SendMessageAsync(components: components.Build(),
-                flags: MessageFlags.ComponentsV2, allowedMentions: AllowedMentions.None);
-            collector.Feature("logging", logChannel.Guild.Id);
+            AddSection(eb, strings.LogSectionCreationInformation(guildId),
+                $"`Created By:` {entry?.User.Mention ?? "Unknown"} | {entry?.User.Id.ToString() ?? "N/A"}\n" +
+                $"`Created At:` {channel.CreatedAt:dd/MM/yyyy HH:mm:ss}");
+
+            await SendLogAsync(logChannel, eb);
         }
     }
 
@@ -1806,22 +1469,16 @@ public class LogCommandService(
             var auditLogs = await GetAuditLogsSafeAsync(channel.Guild, ActionType.ChannelDeleted);
             var entry = auditLogs.FirstOrDefault();
 
-            var components = new ComponentBuilderV2()
-                .WithContainer([
-                    new TextDisplayBuilder($"# {strings.ChannelDestroyed(channel.Guild.Id)}")
-                ], Mewdeko.ErrorColor)
-                .WithSeparator()
-                .WithContainer(new TextDisplayBuilder($"**Channel Details**\n" +
-                                                      $"{strings.ChannelLogEntry(channel.Guild.Id, channel.Name, channel.Id)}\n" +
-                                                      $"`Channel Type:` {createdType}"))
-                .WithSeparator()
-                .WithContainer(new TextDisplayBuilder($"**Deletion Information**\n" +
-                                                      $"`Destroyed By:` {entry?.User.Mention ?? "Unknown"} | {entry?.User.Id.ToString() ?? "N/A"}\n" +
-                                                      $"`Destroyed At:` {DateTime.UtcNow:dd/MM/yyyy HH:mm:ss}"));
+            var guildId = channel.Guild.Id;
+            var eb = LogEmbed(strings.ChannelDestroyed(guildId),
+                $"{strings.ChannelLogEntry(guildId, channel.Name, channel.Id)}\n" +
+                $"`Channel Type:` {createdType}", Mewdeko.ErrorColor);
 
-            await logChannel.SendMessageAsync(components: components.Build(),
-                flags: MessageFlags.ComponentsV2, allowedMentions: AllowedMentions.None);
-            collector.Feature("logging", logChannel.Guild.Id);
+            AddSection(eb, strings.LogSectionDeletionInformation(guildId),
+                $"`Destroyed By:` {entry?.User.Mention ?? "Unknown"} | {entry?.User.Id.ToString() ?? "N/A"}\n" +
+                $"`Destroyed At:` {DateTime.UtcNow:dd/MM/yyyy HH:mm:ss}");
+
+            await SendLogAsync(logChannel, eb);
         }
     }
 
@@ -1954,16 +1611,9 @@ public class LogCommandService(
 
             if (changed && !string.IsNullOrEmpty(title))
             {
-                var components = new ComponentBuilderV2()
-                    .WithContainer([
-                        new TextDisplayBuilder($"# {title}")
-                    ], Mewdeko.OkColor)
-                    .WithSeparator()
-                    .WithContainer(new TextDisplayBuilder($"**Channel Update Details**\n{description}"));
+                var eb = LogEmbed(title, description, Mewdeko.OkColor);
 
-                await logChannel.SendMessageAsync(components: components.Build(),
-                    flags: MessageFlags.ComponentsV2, allowedMentions: AllowedMentions.None);
-                collector.Feature("logging", logChannel.Guild.Id);
+                await SendLogAsync(logChannel, eb);
             }
         }
     }
@@ -2072,16 +1722,9 @@ public class LogCommandService(
 
             if (stateChanged && !string.IsNullOrEmpty(title))
             {
-                var components = new ComponentBuilderV2()
-                    .WithContainer([
-                        new TextDisplayBuilder($"# {title}")
-                    ], Mewdeko.OkColor)
-                    .WithSeparator()
-                    .WithContainer(new TextDisplayBuilder($"**Voice State Change**\n{description}"));
+                var eb = LogEmbed(title, description, Mewdeko.OkColor);
 
-                await logChannel.SendMessageAsync(components: components.Build(),
-                    flags: MessageFlags.ComponentsV2, allowedMentions: AllowedMentions.None);
-                collector.Feature("logging", logChannel.Guild.Id);
+                await SendLogAsync(logChannel, eb);
             }
         }
     }
@@ -2132,23 +1775,15 @@ public class LogCommandService(
             if (logChannel is null)
                 return;
 
-            var components = new ComponentBuilderV2()
-                .WithContainer([
-                    new TextDisplayBuilder($"# {strings.UserMutedTitle(guildUser.GuildId, muteType)}")
-                ], Mewdeko.ErrorColor)
-                .WithSeparator()
-                .WithSection([
-                    new TextDisplayBuilder(
-                        $"**User Details**\n{strings.UserMutedDesc(guildUser.GuildId, guildUser.Mention, guildUser.Id)}")
-                ], new ThumbnailBuilder(guildUser.RealAvatarUrl().ToString()))
-                .WithSeparator()
-                .WithContainer(new TextDisplayBuilder($"**Moderation Information**\n" +
-                                                      $"{strings.MutedByDesc(guildUser.GuildId, muter.Mention, muter.Id)}" +
-                                                      $"{strings.MuteReasonDesc(guildUser.GuildId, reason ?? "N/A")}"));
+            var eb = LogEmbed(strings.UserMutedTitle(guildUser.GuildId, muteType),
+                strings.UserMutedDesc(guildUser.GuildId, guildUser.Mention, guildUser.Id), Mewdeko.ErrorColor)
+                .WithThumbnailUrl(guildUser.RealAvatarUrl().ToString());
 
-            await logChannel.SendMessageAsync(components: components.Build(),
-                flags: MessageFlags.ComponentsV2, allowedMentions: AllowedMentions.None);
-            collector.Feature("logging", logChannel.Guild.Id);
+            AddSection(eb, strings.LogSectionModerationInformation(guildUser.GuildId),
+                strings.MutedByDesc(guildUser.GuildId, muter.Mention, muter.Id) +
+                strings.MuteReasonDesc(guildUser.GuildId, reason ?? "N/A"));
+
+            await SendLogAsync(logChannel, eb);
         }
     }
 
@@ -2170,23 +1805,15 @@ public class LogCommandService(
             if (logChannel is null)
                 return;
 
-            var components = new ComponentBuilderV2()
-                .WithContainer([
-                    new TextDisplayBuilder($"# {strings.UserUnmutedTitle(guildUser.GuildId, muteType)}")
-                ], Mewdeko.OkColor)
-                .WithSeparator()
-                .WithSection([
-                    new TextDisplayBuilder(
-                        $"**User Details**\n{strings.UserUnmutedDesc(guildUser.GuildId, guildUser.Mention, guildUser.Id)}")
-                ], new ThumbnailBuilder(guildUser.RealAvatarUrl().ToString()))
-                .WithSeparator()
-                .WithContainer(new TextDisplayBuilder($"**Moderation Information**\n" +
-                                                      $"{strings.UnmutedByDesc(guildUser.GuildId, unmuter.Mention, unmuter.Id)}" +
-                                                      $"{strings.MuteReasonDesc(guildUser.GuildId, reason ?? "N/A")}"));
+            var eb = LogEmbed(strings.UserUnmutedTitle(guildUser.GuildId, muteType),
+                strings.UserUnmutedDesc(guildUser.GuildId, guildUser.Mention, guildUser.Id), Mewdeko.OkColor)
+                .WithThumbnailUrl(guildUser.RealAvatarUrl().ToString());
 
-            await logChannel.SendMessageAsync(components: components.Build(),
-                flags: MessageFlags.ComponentsV2, allowedMentions: AllowedMentions.None);
-            collector.Feature("logging", logChannel.Guild.Id);
+            AddSection(eb, strings.LogSectionModerationInformation(guildUser.GuildId),
+                strings.UnmutedByDesc(guildUser.GuildId, unmuter.Mention, unmuter.Id) +
+                strings.MuteReasonDesc(guildUser.GuildId, reason ?? "N/A"));
+
+            await SendLogAsync(logChannel, eb);
         }
     }
 
@@ -2549,30 +2176,17 @@ public class LogCommandService(
             if (channel is null)
                 return;
 
-            var components = new ComponentBuilderV2()
-                .WithContainer([
-                    new TextDisplayBuilder($"# {strings.InviteCreated(invite.Guild.Id)}")
-                ], Mewdeko.OkColor);
-
-            components.WithSeparator();
-            components.WithTextDisplay("\n**Invite Details**");
-            components.WithTextDisplay(
+            var eb = LogEmbed(strings.InviteCreated(invite.Guild.Id),
                 $"`Invite Code:` {invite.Code}\n" +
                 $"`Channel:` <#{invite.Channel.Id}> ({invite.Channel.Name}) | {invite.Channel.Id}\n" +
                 $"`Created By:` {invite.Inviter?.Mention ?? "Unknown"} | {invite.Inviter?.Id.ToString() ?? "N/A"}\n" +
                 $"`Max Uses:` {(invite.MaxUses == 0 ? "Unlimited" : invite.MaxUses.ToString())}\n" +
                 $"`Max Age:` {(invite.MaxAge == 0 ? "Never" : TimeSpan.FromSeconds(invite.MaxAge).ToString(@"dd\.hh\:mm\:ss"))}\n" +
                 $"`Temporary:` {invite.IsTemporary}\n" +
-                $"`Created At:` {invite.CreatedAt:dd/MM/yyyy HH:mm:ss}");
+                $"`Created At:` {invite.CreatedAt:dd/MM/yyyy HH:mm:ss}\n" +
+                strings.LogInviteLink(invite.Guild.Id, invite.Url), Mewdeko.OkColor);
 
-            components.WithActionRow([
-                new ButtonBuilder("Copy Invite URL", style: ButtonStyle.Link,
-                    url: invite.Url)
-            ]);
-
-            await channel.SendMessageAsync(components: components.Build(), flags: MessageFlags.ComponentsV2,
-                allowedMentions: AllowedMentions.None);
-            collector.Feature("logging", channel.Guild.Id);
+            await SendLogAsync(channel, eb);
         }
     }
 
@@ -2592,21 +2206,12 @@ public class LogCommandService(
             if (logChannel is null)
                 return;
 
-            var components = new ComponentBuilderV2()
-                .WithContainer([
-                    new TextDisplayBuilder($"# {strings.InviteDeletedTitle(channel.Guild.Id)}")
-                ], Mewdeko.ErrorColor);
-
-            components.WithSeparator();
-            components.WithTextDisplay("\n**Invite Details**");
-            components.WithTextDisplay(
+            var eb = LogEmbed(strings.InviteDeletedTitle(channel.Guild.Id),
                 $"`Invite Code:` {inviteCode}\n" +
                 $"`Channel:` <#{channel.Id}> ({channel.Name}) | {channel.Id}\n" +
-                $"`Deleted At:` {DateTime.UtcNow:dd/MM/yyyy HH:mm:ss}");
+                $"`Deleted At:` {DateTime.UtcNow:dd/MM/yyyy HH:mm:ss}", Mewdeko.ErrorColor);
 
-            await logChannel.SendMessageAsync(components: components.Build(), flags: MessageFlags.ComponentsV2,
-                allowedMentions: AllowedMentions.None);
-            collector.Feature("logging", logChannel.Guild.Id);
+            await SendLogAsync(logChannel, eb);
         }
     }
 
@@ -2633,33 +2238,22 @@ public class LogCommandService(
             if (logChannel is null)
                 return;
 
-            var components = new ComponentBuilderV2()
-                .WithContainer([
-                    new TextDisplayBuilder($"# {strings.MessagesBulkDeleted(guildChannel.Guild.Id)}")
-                ], Mewdeko.ErrorColor);
-
-            components.WithSeparator();
-            components.WithTextDisplay("\n**Bulk Deletion Details**");
-            components.WithTextDisplay(
-                $"`Messages Deleted:` {messages.Count}\n" +
-                $"`Channel:` <#{guildChannel.Id}> ({guildChannel.Name}) | {guildChannel.Id}\n" +
-                $"`Deleted At:` {DateTime.UtcNow:dd/MM/yyyy HH:mm:ss}");
-
-            // Count how many messages had content vs were cached
+            var guildId = guildChannel.Guild.Id;
             var cachedMessages = messages.Where(m => m.HasValue).ToList();
             var uncachedCount = messages.Count - cachedMessages.Count;
 
-            components.WithSeparator();
-            components.WithTextDisplay("\n**Message Information**");
-            components.WithTextDisplay(
+            var eb = LogEmbed(strings.MessagesBulkDeleted(guildId),
+                $"`Messages Deleted:` {messages.Count}\n" +
+                $"`Channel:` <#{guildChannel.Id}> ({guildChannel.Name}) | {guildChannel.Id}\n" +
+                $"`Deleted At:` {DateTime.UtcNow:dd/MM/yyyy HH:mm:ss}", Mewdeko.ErrorColor);
+
+            AddSection(eb, strings.LogSectionMessageInformation(guildId),
                 $"`Cached Messages:` {cachedMessages.Count}\n" +
                 $"`Uncached Messages:` {uncachedCount}\n" +
                 $"`Oldest Cached Message:` {(cachedMessages.Any() ? cachedMessages.Min(m => m.Value.Timestamp).ToString("dd/MM/yyyy HH:mm:ss") : "N/A")}\n" +
                 $"`Newest Cached Message:` {(cachedMessages.Any() ? cachedMessages.Max(m => m.Value.Timestamp).ToString("dd/MM/yyyy HH:mm:ss") : "N/A")}");
 
-            await logChannel.SendMessageAsync(components: components.Build(), flags: MessageFlags.ComponentsV2,
-                allowedMentions: AllowedMentions.None);
-            collector.Feature("logging", logChannel.Guild.Id);
+            await SendLogAsync(logChannel, eb);
         }
     }
 
@@ -2789,45 +2383,32 @@ public class LogCommandService(
         if (logChannel is null)
             return;
 
-        var components = new ComponentBuilderV2()
-            .WithContainer([
-                new TextDisplayBuilder("# Reaction Events")
-            ], Mewdeko.OkColor);
-
-        components.WithSeparator();
-        components.WithTextDisplay("\n**Reaction Summary**");
-
+        var guildId = batch.GuildId;
         var summary =
             $"`Message:` <#{batch.ChannelId}>: [Jump to Message](https://discord.com/channels/{batch.GuildId}/{batch.ChannelId}/{batch.MessageId})\n" +
             $"`Channel:` <#{batch.ChannelId}> ({batch.ChannelName}) | {batch.ChannelId}\n" +
             $"`Total Added:` {batch.TotalAdded}\n" +
             $"`Total Removed:` {batch.TotalRemoved}";
-        components.WithTextDisplay(summary);
 
-        // Show detailed breakdown if there are changes
+        var eb = LogEmbed(strings.LogReactionEventsTitle(guildId), summary, Mewdeko.OkColor);
+
         if (batch.ReactionsAdded.Any())
         {
-            components.WithSeparator();
-            components.WithTextDisplay("\n**Reactions Added**");
             var addedDetails = string.Join("\n", batch.ReactionsAdded.Select(kvp =>
                 $"`{kvp.Key}`: {kvp.Value.Count} users ({string.Join(", ", kvp.Value.Select(u => $"<@{u}>"))})"));
-            components.WithTextDisplay(addedDetails.TrimTo(1000));
+            AddSection(eb, strings.LogSectionReactionsAdded(guildId), addedDetails);
         }
 
         if (batch.ReactionsRemoved.Any())
         {
-            components.WithSeparator();
-            components.WithTextDisplay("\n**Reactions Removed**");
             var removedDetails = string.Join("\n", batch.ReactionsRemoved.Select(kvp =>
                 $"`{kvp.Key}`: {kvp.Value.Count} users ({string.Join(", ", kvp.Value.Select(u => $"<@{u}>"))})"));
-            components.WithTextDisplay(removedDetails.TrimTo(1000));
+            AddSection(eb, strings.LogSectionReactionsRemoved(guildId), removedDetails);
         }
 
         try
         {
-            await logChannel.SendMessageAsync(components: components.Build(), flags: MessageFlags.ComponentsV2,
-                allowedMentions: AllowedMentions.None);
-            collector.Feature("logging", logChannel.Guild.Id);
+            await SendLogAsync(logChannel, eb);
         }
         catch (Exception ex)
         {
