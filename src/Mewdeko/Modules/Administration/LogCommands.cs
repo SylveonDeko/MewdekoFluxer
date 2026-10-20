@@ -43,19 +43,19 @@ public partial class Administration
         }
 
         /// <summary>
-        ///     Sets multiple logging channels for specified event types at once.
+        ///     Shows which log types are enabled in a channel and how to change them.
         /// </summary>
         /// <remarks>
         ///     This command is restricted to users with Administrator permissions.
         /// </remarks>
-        /// <param name="channel">The channel to set as the logging channel for all specified types.</param>
-        /// <example>.log #log-channel UserJoined UserLeft UserBanned</example>
+        /// <param name="channel">The channel to show the enabled log types for.</param>
+        /// <example>.log #log-channel</example>
         [Cmd]
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
         [Priority(4)]
-        public async Task Log(ITextChannel channel) => await ShowLogSelectMenu(channel);
+        public async Task Log(ITextChannel channel) => await ShowLogTypes(channel);
 
         /// <summary>
         ///     Sets multiple logging channels for specified event types at once.
@@ -75,7 +75,7 @@ public partial class Administration
         {
             if (types is null || types.Length == 0)
             {
-                await ShowLogSelectMenu(channel);
+                await ShowLogTypes(channel);
                 return;
             }
 
@@ -328,63 +328,32 @@ public partial class Administration
             }
         }
 
-        private async Task ShowLogSelectMenu(ITextChannel channel)
+        private async Task ShowLogTypes(ITextChannel channel)
         {
-            var logTypes = Enum.GetValues<LogType>().ToList();
-            var componentBuilder = new ComponentBuilder();
+            var prefix = await gss.GetPrefix(ctx.Guild);
+            Service.GuildLogSettings.TryGetValue(ctx.Guild.Id, out var currentSettings);
 
-            // Get current log settings
-            Service.GuildLogSettings.TryGetValue(Context.Guild.Id, out var currentSettings);
-            var selectedTypes = new HashSet<LogType>();
+            var enabledTypes = currentSettings is null
+                ? []
+                : Enum.GetValues<LogType>()
+                    .Where(logType => GetLogProperty(currentSettings, logType) == channel.Id)
+                    .ToList();
 
-            if (currentSettings != null)
-            {
-                // Build list of currently enabled log types
-                foreach (var logType in from logType in logTypes
-                         let channelId = GetLogProperty(currentSettings, logType)
-                         where channelId == channel.Id
-                         select logType)
-                {
-                    selectedTypes.Add(logType);
-                }
-            }
-
-            // Split into chunks of 25
-            for (var i = 0; i < logTypes.Count; i += 25)
-            {
-                var menuIndex = i / 25;
-                var menuBuilder = new SelectMenuBuilder()
-                    .WithCustomId($"logselect:{channel.Id}:{menuIndex}")
-                    .WithMinValues(1)
-                    .WithMaxValues(Math.Min(25, logTypes.Count - i))
-                    .WithPlaceholder($"Select log types to enable ({menuIndex + 1})...");
-
-                // Add options for this menu (up to 25)
-                foreach (var logType in logTypes.Skip(i).Take(25))
-                {
-                    menuBuilder.AddOption(
-                        logType.ToString(),
-                        logType.ToString(),
-                        $"Enable logging for {logType} events",
-                        isDefault: selectedTypes.Contains(logType) // Preselect if currently enabled
-                    );
-                }
-
-                componentBuilder.WithSelectMenu(menuBuilder);
-            }
+            var enabledText = enabledTypes.Count == 0
+                ? Strings.LogChannelTypesNone(ctx.Guild.Id, channel.Mention)
+                : Strings.LogChannelTypesEnabled(ctx.Guild.Id, channel.Mention,
+                    string.Join(", ", enabledTypes.Select(logType => Format.Code(logType.ToString()))));
 
             var eb = new EmbedBuilder()
                 .WithOkColor()
-                .WithDescription($"{Strings.LogEventsSelect(ctx.Guild.Id, channel.Mention)}\n" +
-                                 (selectedTypes.Any()
-                                     ? $"\n\nCurrently enabled types: {string.Join(", ", selectedTypes)}"
-                                     : ""))
-                .Build();
+                .WithTitle(Strings.LogChannelTitle(ctx.Guild.Id, channel.Mention))
+                .WithDescription(enabledText)
+                .AddField(Strings.LogAvailableTypes(ctx.Guild.Id),
+                    string.Join(", ", Enum.GetNames<LogType>().Select(name => Format.Code(name))).TrimTo(1024))
+                .AddField(Strings.LogUsage(ctx.Guild.Id),
+                    Strings.LogUsageText(ctx.Guild.Id, prefix, channel.Mention));
 
-            await ctx.Channel.SendMessageAsync(
-                embed: eb,
-                components: componentBuilder.Build()
-            );
+            await ctx.Channel.SendMessageAsync(embed: eb.Build());
         }
 
         /// <summary>
