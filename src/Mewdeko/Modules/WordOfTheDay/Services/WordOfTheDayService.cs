@@ -814,7 +814,7 @@ public class WordOfTheDayService : INService, IDisposable
         return !string.IsNullOrWhiteSpace(embed.Title)
                || !string.IsNullOrWhiteSpace(embed.Description)
                || !string.IsNullOrWhiteSpace(embed.Url)
-               || embed.Fields.Length > 0
+               || embed.Fields is { Length: > 0 }
                || embed.Image != null
                || embed.Thumbnail != null
                || embed.Author != null

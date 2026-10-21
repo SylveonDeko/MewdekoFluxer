@@ -325,15 +325,14 @@ public class NewEmbed
     }
 
     /// <summary>
-    ///     Whether an embed shows anything. Discord rejects the whole message when one embed carries nothing but a
-    ///     color or a link, so those are left out.
+    ///     Whether an embed shows anything. An embed with nothing but a color or a link is left out.
     /// </summary>
     /// <param name="embed">The built embed.</param>
     /// <returns>True when it has a title, description, field, image, thumbnail, author, or footer.</returns>
     public static bool HasVisibleContent(EmbedRequest embed) =>
         !string.IsNullOrWhiteSpace(embed.Title) ||
         !string.IsNullOrWhiteSpace(embed.Description) ||
-        embed.Fields.Length > 0 ||
+        embed.Fields is { Length: > 0 } ||
         embed.Image is not null ||
         embed.Thumbnail is not null ||
         embed.Author is not null ||

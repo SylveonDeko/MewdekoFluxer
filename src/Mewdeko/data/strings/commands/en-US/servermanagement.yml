@@ -2216,19 +2216,6 @@ setsplash_string:
       name: time
       optional: false
       type: StoopidTime
-sfr:
-  args:
-    - role emotes
-  desc: Steals emotes for a specific role.
-  params:
-    - desc: The role to steal emotes for.
-      name: role
-      optional: false
-      type: IRole
-    - desc: Space-separated list of emote URLs or emote names.
-      name: e
-      optional: false
-      type: string
 sj:
   args:
     - job
