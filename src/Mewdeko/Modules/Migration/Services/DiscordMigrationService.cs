@@ -3,10 +3,12 @@ using System.IO;
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Threading;
+using DataModel;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Modules.Migration.Common;
 using Npgsql;
+using StackExchange.Redis;
 using NpgsqlTypes;
 
 namespace Mewdeko.Modules.Migration.Services;
@@ -72,6 +74,25 @@ public sealed record MigrationOutcome(int Written, int Held, int Dropped, int Fa
     int Reposted = 0);
 
 /// <summary>
+///     A Discord server that Mewdeko is in and the signed in user runs.
+/// </summary>
+/// <param name="Id">The Discord server id.</param>
+/// <param name="Name">Its name.</param>
+/// <param name="Icon">Its icon URL, if it has one.</param>
+/// <param name="MemberCount">How many members it has.</param>
+/// <param name="BotId">The Mewdeko instance on Discord that holds this server's data.</param>
+/// <param name="BotName">That instance's name.</param>
+/// <param name="BotAvatar">That instance's avatar URL, if it has one.</param>
+public sealed record DiscordServerChoice(
+    string Id,
+    string Name,
+    string? Icon,
+    int MemberCount,
+    string BotId,
+    string BotName,
+    string? BotAvatar);
+
+/// <summary>
 ///     What linking an account did.
 /// </summary>
 /// <param name="Linked">Whether the link was made.</param>
@@ -102,8 +123,11 @@ public sealed class DiscordMigrationService(
     /// </summary>
     /// <param name="guild">The Fluxer server.</param>
     /// <param name="rawCode">The code as typed.</param>
+    /// <param name="channelOverrides">Channel pairs chosen by hand, Discord id to Fluxer id.</param>
+    /// <param name="roleOverrides">Role pairs chosen by hand, Discord id to Fluxer id.</param>
     /// <returns>The plan, or why there is none.</returns>
-    public async Task<(MigrationPlan? Plan, MigrationProblem Problem)> PrepareAsync(SocketGuild guild, string rawCode)
+    public async Task<(MigrationPlan? Plan, MigrationProblem Problem)> PrepareAsync(SocketGuild guild, string rawCode,
+        IReadOnlyDictionary<ulong, ulong>? channelOverrides = null, IReadOnlyDictionary<ulong, ulong>? roleOverrides = null)
     {
         if (MigrationBundle.NormalizeCode(rawCode) is not { } code)
             return (null, MigrationProblem.BadCode);
@@ -118,7 +142,7 @@ public sealed class DiscordMigrationService(
 
         await using var connection = await OpenAsync();
         var schema = await MigrationSchema.LoadAsync(connection);
-        var match = MigrationMatcher.Match(meta, guild);
+        var match = MigrationMatcher.Match(meta, guild, channelOverrides, roleOverrides);
 
         var tables = new List<(TableRule Rule, MigrationTable Data)>();
         foreach (var name in OrderTables(meta.Tables.Where(x =>
@@ -193,6 +217,18 @@ public sealed class DiscordMigrationService(
         if (value.IsNullOrEmpty || !ulong.TryParse(value.ToString(), out var discordUserId))
             return null;
 
+        return await LinkAccountsAsync(fluxerUserId, discordUserId);
+    }
+
+    /// <summary>
+    ///     Links a Fluxer account to a Discord account whose owner already proved they hold it, for example by signing
+    ///     in with Discord on the dashboard, and writes the member's held rows.
+    /// </summary>
+    /// <param name="fluxerUserId">The Fluxer user.</param>
+    /// <param name="discordUserId">The Discord user.</param>
+    /// <returns>What happened.</returns>
+    public async Task<LinkOutcome> LinkAccountsAsync(ulong fluxerUserId, ulong discordUserId)
+    {
         await migrationLock.WaitAsync();
         try
         {
@@ -214,6 +250,145 @@ public sealed class DiscordMigrationService(
         finally
         {
             migrationLock.Release();
+        }
+    }
+
+    /// <summary>
+    ///     Asks Mewdeko on Discord which of the given Discord servers it is in and the user runs, as owner or
+    ///     administrator.
+    /// </summary>
+    /// <param name="discordUserId">The Discord user, proved by signing in with Discord.</param>
+    /// <param name="guildIds">The Discord servers the user is in.</param>
+    /// <returns>The servers that can be brought over, or null when the Discord bot did not answer.</returns>
+    public async Task<List<DiscordServerChoice>?> ListDiscordServersAsync(ulong discordUserId, IEnumerable<ulong> guildIds)
+    {
+        var replies = await AskDiscordAsync(new JsonObject
+        {
+            ["type"] = "guilds",
+            ["discordUserId"] = discordUserId.ToString(CultureInfo.InvariantCulture),
+            ["guildIds"] = new JsonArray(guildIds.Select(x => (JsonNode?)x.ToString(CultureInfo.InvariantCulture)).ToArray())
+        }, TimeSpan.FromSeconds(10), true);
+        if (replies is null)
+            return null;
+
+        return replies
+            .Where(x => x["bot"] is JsonObject && x["guilds"] is JsonArray)
+            .SelectMany(reply => reply["guilds"]!.AsArray().OfType<JsonObject>().Select(guild =>
+                new DiscordServerChoice((string)guild["id"]!, (string?)guild["name"] ?? "", (string?)guild["icon"],
+                    (int?)guild["memberCount"] ?? 0, (string)reply["bot"]!["id"]!,
+                    (string?)reply["bot"]!["name"] ?? "", (string?)reply["bot"]!["avatar"])))
+            .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    /// <summary>
+    ///     Asks Mewdeko on Discord to export a server it is in, for a user who owns or administers it there.
+    /// </summary>
+    /// <param name="discordUserId">The Discord user, proved by signing in with Discord.</param>
+    /// <param name="discordGuildId">The Discord server.</param>
+    /// <param name="botId">The Mewdeko instance on Discord whose data to export, as listed with the server.</param>
+    /// <returns>The export's code, or the reason there is none.</returns>
+    public async Task<(string? Code, string? Error)> ExportFromDiscordAsync(ulong discordUserId, ulong discordGuildId,
+        ulong botId)
+    {
+        var replies = await AskDiscordAsync(new JsonObject
+        {
+            ["type"] = "export",
+            ["botId"] = botId.ToString(CultureInfo.InvariantCulture),
+            ["discordUserId"] = discordUserId.ToString(CultureInfo.InvariantCulture),
+            ["discordGuildId"] = discordGuildId.ToString(CultureInfo.InvariantCulture)
+        }, TimeSpan.FromMinutes(3), false);
+        var reply = replies?.FirstOrDefault();
+        return reply switch
+        {
+            null => (null, "unavailable"),
+            _ when (string?)reply["code"] is { } code => (code, null),
+            _ => (null, (string?)reply["error"] ?? "failed")
+        };
+    }
+
+    /// <summary>
+    ///     Gets the most recent migration into a server and how many members still have data waiting.
+    /// </summary>
+    /// <param name="guildId">The Fluxer server.</param>
+    /// <returns>The migration, or null when the server never was brought over.</returns>
+    public async Task<(MigratedGuild Migration, int WaitingMembers)?> GetStatusAsync(ulong guildId)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var migration = await db.MigratedGuilds.Where(x => x.GuildId == guildId)
+            .OrderByDescending(x => x.Id).FirstOrDefaultAsync();
+        if (migration is null)
+            return null;
+
+        var waiting = await db.MigrationPendingRows.Where(x => x.MigrationId == migration.Id)
+            .Select(x => x.DiscordUserId).Distinct().CountAsync();
+        return (migration, waiting);
+    }
+
+    /// <summary>
+    ///     Gets the Discord account a Fluxer account is linked to.
+    /// </summary>
+    /// <param name="fluxerUserId">The Fluxer user.</param>
+    /// <returns>The Discord user id, or null when not linked.</returns>
+    public async Task<ulong?> GetLinkedDiscordIdAsync(ulong fluxerUserId)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var link = await db.DiscordAccountLinks.FirstOrDefaultAsync(x => x.FluxerUserId == fluxerUserId);
+        return link?.DiscordUserId;
+    }
+
+    private async Task<List<JsonObject>?> AskDiscordAsync(JsonObject request, TimeSpan timeout, bool everyInstance)
+    {
+        var id = Guid.NewGuid().ToString("N");
+        request["id"] = id;
+        var redis = cache.Redis.GetDatabase();
+        var subscriber = cache.Redis.GetSubscriber();
+        var responders = new ConcurrentDictionary<string, byte>();
+        var expected = int.MaxValue;
+        var answered = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var channel = RedisChannel.Literal("mewdeko_migration_replies");
+        void Handler(RedisChannel _, RedisValue value)
+        {
+            var text = value.ToString();
+            if (!text.StartsWith($"{id}:", StringComparison.Ordinal))
+                return;
+
+            responders.TryAdd(text[(id.Length + 1)..], 0);
+            if (!everyInstance || responders.Count >= Volatile.Read(ref expected))
+                answered.TrySetResult(true);
+        }
+
+        await subscriber.SubscribeAsync(channel, Handler);
+        try
+        {
+            var listeners = await subscriber.PublishAsync(RedisChannel.Literal("mewdeko_migration_requests"),
+                request.ToJsonString());
+            if (listeners == 0)
+                return null;
+
+            Volatile.Write(ref expected, (int)listeners);
+            if (everyInstance && responders.Count >= listeners)
+                answered.TrySetResult(true);
+
+            await Task.WhenAny(answered.Task, Task.Delay(timeout));
+            var replies = new List<JsonObject>();
+            foreach (var bot in responders.Keys)
+            {
+                var reply = await redis.StringGetDeleteAsync($"mewdeko_migration_reply:{id}:{bot}");
+                if (!reply.IsNullOrEmpty && JsonNode.Parse(reply.ToString()) is JsonObject json)
+                    replies.Add(json);
+            }
+
+            return replies;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Asking Mewdeko on Discord for {Type} failed", (string?)request["type"]);
+            return null;
+        }
+        finally
+        {
+            await subscriber.UnsubscribeAsync(channel, Handler);
         }
     }
 
