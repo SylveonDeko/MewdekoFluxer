@@ -2462,33 +2462,6 @@ stealemotes_string:
       name: e
       optional: false
       type: string
-stealforrole:
-  args:
-    - '@role text'
-  desc: 'Steals emotes from a message and locks them to a specified role.'
-  params:
-    - &ref_566
-      desc: 'The role to add the emotes to.'
-      name: role
-      optional: false
-      type: IRole
-    - desc: 'The message containing the emotes to steal.'
-      name: e
-      optional: false
-      type: string
-stealforrole_IRole_string:
-  args:
-    - '@role text'
-  desc: 'Steals emotes from a message and locks them to a specified role.'
-  params:
-    - desc: 'The role to add the emotes to.'
-      name: role
-      optional: false
-      type: IRole
-    - desc: 'The message containing the emotes to steal.'
-      name: e
-      optional: false
-      type: string
 stopjob:
   args:
     - number

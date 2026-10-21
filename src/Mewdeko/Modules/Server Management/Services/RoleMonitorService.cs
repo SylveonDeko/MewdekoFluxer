@@ -7,6 +7,7 @@ using Mewdeko.Modules.Moderation.Common;
 using Mewdeko.Modules.Moderation.Services;
 using Mewdeko.Services.Settings;
 using Mewdeko.Services.Strings;
+using Newtonsoft.Json.Linq;
 
 namespace Mewdeko.Modules.Server_Management.Services;
 
@@ -30,7 +31,7 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// <summary>
     ///     Initializes a new instance of the <see cref="RoleMonitorService" /> class.
     /// </summary>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="handler">The event handler.</param>
     /// <param name="dbFactory">The database context provider.</param>
     /// <param name="dataCache">The data cache for accessing Redis.</param>
@@ -52,7 +53,7 @@ public class RoleMonitorService : INService, IReadyExecutor
         this.muteService = muteService;
         this.strings = strings;
 
-        handler.Subscribe("AuditLogCreated", "RoleMonitorService", OnAuditLogCreatedAsync);
+        handler.AuditLogCreated.Subscribe("RoleMonitorService", OnAuditLogCreatedAsync);
     }
 
     /// <summary>
@@ -144,13 +145,12 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// </summary>
     private async Task HandleMemberRoleUpdatedAsync(SocketGuild guild, SocketAuditLog entry)
     {
-        if (entry.Data is not SocketMemberRoleAuditLogData roleUpdate)
+        if (entry.TargetId is not { } userId)
             return;
 
         if (entry.User == null)
             return;
 
-        var userId = roleUpdate.Target.Id;
         var user = await guild.GetUserAsync(userId);
 
         if (user == null)
@@ -159,7 +159,7 @@ public class RoleMonitorService : INService, IReadyExecutor
         if (await IsUserWhitelistedAsync(guild, user.Id) || await IsRoleWhitelistedAsync(guild.Id, user.RoleIds))
             return;
 
-        var addedRoles = roleUpdate.Roles.Where(x => x.Added).Select(x => x.RoleId).ToList();
+        var addedRoles = GetAddedRoles(entry);
 
         if (addedRoles.Count == 0)
             return;
@@ -175,13 +175,12 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// </summary>
     private async Task HandleRoleUpdatedAsync(SocketGuild guild, SocketAuditLog entry)
     {
-        if (entry.Data is not SocketRoleUpdateAuditLogData roleUpdate)
+        if (entry.TargetId is not { } roleId)
             return;
 
         if (entry.User == null)
             return;
 
-        var roleId = roleUpdate.RoleId;
         var role = guild.GetRole(roleId);
         var user = await guild.GetUserAsync(entry.User.Id);
 
@@ -194,18 +193,69 @@ public class RoleMonitorService : INService, IReadyExecutor
         if (await IsUserWhitelistedAsync(guild, user.Id))
             return;
 
-        var beforePermissions = roleUpdate.Before.Permissions;
-        var afterPermissions = roleUpdate.After.Permissions;
+        var beforePermissions = ReadPermissions(entry.Raw.OldData["permissions"]);
+        var afterPermissions = ReadPermissions(entry.Raw.NewData["permissions"]);
 
-        if (!beforePermissions.HasValue || !afterPermissions.HasValue)
+        if (beforePermissions is null || afterPermissions is null)
             return;
 
         var addedPermissions = Enum.GetValues<GuildPermission>()
-            .Where(p => afterPermissions.Value.Has(p) && !beforePermissions.Value.Has(p));
+            .Where(p => afterPermissions.Has(p) && !beforePermissions.Has(p));
 
-        await CheckRolePermissionsAsync(guild, role, addedPermissions, entry.User.Id, beforePermissions.Value);
+        await CheckRolePermissionsAsync(guild, role, addedPermissions, entry.User.Id, beforePermissions);
     }
 
+
+    /// <summary>
+    ///     Works out which roles an audit log entry added to a member.
+    /// </summary>
+    /// <param name="entry">The member role update entry.</param>
+    /// <returns>The IDs of the roles that were added.</returns>
+    private static List<ulong> GetAddedRoles(SocketAuditLog entry)
+    {
+        var added = ReadIds(entry.Raw.NewData["$add"]);
+        if (added.Count > 0)
+            return added;
+
+        if (entry.Raw.OldData["roles"] is not { } oldRoles || entry.Raw.NewData["roles"] is not { } newRoles)
+            return [];
+
+        var before = ReadIds(oldRoles).ToHashSet();
+        return ReadIds(newRoles).Where(x => !before.Contains(x)).ToList();
+    }
+
+    /// <summary>
+    ///     Reads role IDs from an audit log value, which is a list of IDs or of objects with an ID.
+    /// </summary>
+    /// <param name="token">The audit log value.</param>
+    /// <returns>The IDs found.</returns>
+    private static List<ulong> ReadIds(JToken? token)
+    {
+        var ids = new List<ulong>();
+        if (token is not JArray array)
+            return ids;
+
+        foreach (var item in array)
+        {
+            var value = item is JObject obj ? obj["id"] : item;
+            if (value is not null && ulong.TryParse(value.ToString(), out var id))
+                ids.Add(id);
+        }
+
+        return ids;
+    }
+
+    /// <summary>
+    ///     Reads a permission value from an audit log value.
+    /// </summary>
+    /// <param name="token">The audit log value.</param>
+    /// <returns>The permissions, or null when the entry carries none.</returns>
+    private static GuildPermissions? ReadPermissions(JToken? token)
+    {
+        return token is { Type: not JTokenType.Null } && ulong.TryParse(token.ToString(), out var raw)
+            ? new GuildPermissions((GuildPermission)raw)
+            : null;
+    }
 
     /// <summary>
     ///     Checks if a user is whitelisted in the guild.
@@ -285,7 +335,7 @@ public class RoleMonitorService : INService, IReadyExecutor
             }
 
             // Remove the role only if a blacklisted role or permission was found
-            await user.RemoveRoleAsync(role);
+            await user.RemoveRoleAsync(role.Id);
         }
     }
 
@@ -332,14 +382,14 @@ public class RoleMonitorService : INService, IReadyExecutor
         var executor = await guild.GetUserAsync(executorId);
         if (executor != null && !await IsUserWhitelistedAsync(guild, executor.Id))
         {
-            await role.ModifyAsync(rp => rp.Permissions = beforePermissions);
+            await role.ModifyAsync(new UpdateGuildRoleRequest { Permissions = (ulong)beforePermissions.RawValue });
 
             var usersWithRole = await guild.GetUsersAsync();
             foreach (var user in usersWithRole)
             {
                 if (user.RoleIds.Contains(role.Id))
                 {
-                    await user.RemoveRoleAsync(role);
+                    await user.RemoveRoleAsync(role.Id);
                 }
             }
 
@@ -404,16 +454,18 @@ public class RoleMonitorService : INService, IReadyExecutor
                 await guild.AddBanAsync(user.Id,
                     await banPrune.GetPruneDaysAsync(guild.Id, BanPruneAction.SoftBan),
                     $"Violation: {actionDescription}");
-                await guild.RemoveBanAsync(user);
+                await guild.RemoveBanAsync(user.Id);
                 break;
             case PunishmentAction.RemoveRoles:
-                await user.RemoveRolesAsync(user.RoleIds, new RequestOptions
+                var removeOptions = new RequestOptions
                 {
                     AuditLogReason = $"Violation: {actionDescription}"
-                });
+                };
+                foreach (var roleId in user.RoleIds.ToList())
+                    await user.RemoveRoleAsync(roleId, removeOptions);
                 break;
             case PunishmentAction.Timeout:
-                await user.SetTimeOutAsync(TimeSpan.FromDays(28), new RequestOptions
+                await user.SetTimeoutAsync(DateTimeOffset.UtcNow + TimeSpan.FromDays(28), new RequestOptions
                 {
                     AuditLogReason = $"Violation: {actionDescription}"
                 });
@@ -471,7 +523,7 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// <summary>
     ///     Adds a user to the whitelist.
     /// </summary>
-    /// <param name="guild">The Discord guild.</param>
+    /// <param name="guild">The Fluxer guild.</param>
     /// <param name="user">The user parameter.</param>
     public async Task AddWhitelistedUserAsync(SocketGuild guild, SocketGuildMember user)
     {
@@ -494,7 +546,7 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// <summary>
     ///     Removes a user from the whitelist.
     /// </summary>
-    /// <param name="guild">The Discord guild.</param>
+    /// <param name="guild">The Fluxer guild.</param>
     /// <param name="user">The user parameter.</param>
     public async Task RemoveWhitelistedUserAsync(SocketGuild guild, SocketGuildMember user)
     {
@@ -514,7 +566,7 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// <summary>
     ///     Adds a role to the whitelist.
     /// </summary>
-    /// <param name="guild">The Discord guild.</param>
+    /// <param name="guild">The Fluxer guild.</param>
     /// <param name="role">The role parameter.</param>
     public async Task AddWhitelistedRoleAsync(SocketGuild guild, SocketRole role)
     {
@@ -538,7 +590,7 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// <summary>
     ///     Removes a role from the whitelist.
     /// </summary>
-    /// <param name="guild">The Discord guild.</param>
+    /// <param name="guild">The Fluxer guild.</param>
     /// <param name="role">The role parameter.</param>
     public async Task RemoveWhitelistedRoleAsync(SocketGuild guild, SocketRole role)
     {
@@ -601,7 +653,7 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// <summary>
     ///     Adds a role to the blacklist.
     /// </summary>
-    /// <param name="guild">The Discord guild.</param>
+    /// <param name="guild">The Fluxer guild.</param>
     /// <param name="role">The role parameter.</param>
     /// <param name="punishmentAction">The punishmentAction parameter.</param>
     public async Task AddBlacklistedRoleAsync(SocketGuild guild, SocketRole role, PunishmentAction? punishmentAction)
@@ -655,7 +707,7 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// <summary>
     ///     Removes a role from the blacklist.
     /// </summary>
-    /// <param name="guild">The Discord guild.</param>
+    /// <param name="guild">The Fluxer guild.</param>
     /// <param name="role">The role parameter.</param>
     public async Task RemoveBlacklistedRoleAsync(SocketGuild guild, SocketRole role)
     {
@@ -739,7 +791,7 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// <summary>
     ///     Removes a permission from the blacklist.
     /// </summary>
-    /// <param name="guild">The Discord guild.</param>
+    /// <param name="guild">The Fluxer guild.</param>
     /// <param name="permission">The permission parameter.</param>
     public async Task RemoveBlacklistedPermissionAsync(SocketGuild guild, GuildPermission permission)
     {

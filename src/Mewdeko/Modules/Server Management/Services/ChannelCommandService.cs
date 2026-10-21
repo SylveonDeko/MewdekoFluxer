@@ -32,7 +32,7 @@ public class ChannelCommandService : INService, IReadyExecutor
     /// <param name="dataCache">The data cache for accessing Redis.</param>
     /// <param name="handler">The event handler.</param>
     /// <param name="dbFactory">The databse connection provider</param>
-    /// <param name="client">The discord client</param>
+    /// <param name="client">The Fluxer client</param>
     /// <param name="banPrune">The service resolving how many days of messages a ban purges</param>
     public ChannelCommandService(IDataCache dataCache, EventHandler handler, IDataConnectionFactory dbFactory,
         FluxerClient client, BanPruneService banPrune)
@@ -41,7 +41,7 @@ public class ChannelCommandService : INService, IReadyExecutor
         this.dataCache = dataCache;
         this.dbFactory = dbFactory;
         this.client = client;
-        handler.Subscribe("UserJoined", "ChannelCommandService", HandleUserJoinDuringLockdown);
+        handler.UserJoined.Subscribe("ChannelCommandService", HandleUserJoinDuringLockdown);
     }
 
     /// <summary>
@@ -260,7 +260,7 @@ public class ChannelCommandService : INService, IReadyExecutor
                 case PunishmentAction.Ban:
                     var pruneDays = await banPrune
                         .GetPruneDaysAsync(user.Guild.Id, BanPruneAction.Lockdown).ConfigureAwait(false);
-                    await user.Guild.AddBanAsync(user, pruneDays, "Server is in lockdown").ConfigureAwait(false);
+                    await user.Guild.AddBanAsync(user.Id, pruneDays, "Server is in lockdown").ConfigureAwait(false);
                     break;
             }
         }
@@ -324,19 +324,19 @@ public class ChannelCommandService : INService, IReadyExecutor
 
         var newPermissions = (from channel in channels
             where IsRelevantChannel(channel)
-            let permissionOverwrites = channel.PermissionOverwrites
+            let permissionOverwrites = channel.PermissionOverwrites ?? []
             from overwrite in permissionOverwrites
             let existingEntry =
-                existingPermissions.FirstOrDefault(p => p.ChannelId == channel.Id && p.TargetId == overwrite.TargetId)
+                existingPermissions.FirstOrDefault(p => p.ChannelId == channel.Id && p.TargetId == overwrite.Id)
             where existingEntry == null
             select new LockdownChannelPermission
             {
                 GuildId = guild.Id,
                 ChannelId = channel.Id,
-                TargetId = overwrite.TargetId,
-                TargetType = (int)overwrite.TargetType, // Role or User
-                AllowPermissions = GetRawPermissionValue(overwrite.Permissions.ToAllowList()),
-                DenyPermissions = GetRawPermissionValue(overwrite.Permissions.ToDenyList())
+                TargetId = overwrite.Id,
+                TargetType = (int)overwrite.Type,
+                AllowPermissions = GetRawPermissionValue(overwrite.Allow.ToList()),
+                DenyPermissions = GetRawPermissionValue(overwrite.Deny.ToList())
             }).ToList();
 
         // Add all new permissions in one batch
@@ -359,12 +359,14 @@ public class ChannelCommandService : INService, IReadyExecutor
         {
             if (!IsRelevantChannel(channel)) continue;
 
-            var permissionOverrides = channel.PermissionOverwrites.Where(x => x.TargetId == guild.EveryoneRole.Id);
+            var permissionOverrides = (channel.PermissionOverwrites ?? []).Where(x => x.Id == guild.EveryoneRole.Id).ToList();
 
             if (permissionOverrides.Any())
             {
-                await channel.ModifyAsync(x =>
-                    x.PermissionOverwrites = new Optional<IEnumerable<PermissionOverwrite>>(permissionOverrides));
+                await channel.ModifyAsync(new UpdateChannelRequest
+                {
+                    PermissionOverwrites = permissionOverrides.Select(ToOverwriteRequest).ToList()
+                });
             }
         }
     }
@@ -393,92 +395,46 @@ public class ChannelCommandService : INService, IReadyExecutor
         {
             var storedPerm = await context.LockdownChannelPermissions.FirstOrDefaultAsync(p =>
                 p.GuildId == guild.Id && p.ChannelId == channel.Id && p.TargetId == everyoneRole.Id &&
-                p.TargetType == (int)PermissionTarget.Role);
+                p.TargetType == (int)PermissionOverwriteType.Role);
 
             var existingPerms = storedPerm != null
-                ? new OverwritePermissions(storedPerm.AllowPermissions, storedPerm.DenyPermissions)
+                ? new OverwritePermissions((ChannelPermission)storedPerm.AllowPermissions, (ChannelPermission)storedPerm.DenyPermissions)
                 : OverwritePermissions.InheritAll;
 
-            var lockdownPerms = channel switch
+            var lockdownPerms = channel.Type switch
             {
-                Channel => existingPerms.Modify(connect: PermValue.Deny, speak: PermValue.Deny,
+                ChannelType.GuildVoice => existingPerms.Modify(connect: PermValue.Deny, speak: PermValue.Deny,
                     sendMessages: PermValue.Deny, sendMessagesInThreads: PermValue.Deny),
-                Channel => existingPerms.Modify(sendMessagesInThreads: PermValue.Deny,
-                    createPublicThreads: PermValue.Deny,
-                    createPrivateThreads: PermValue.Deny,
-                    sendMessages: PermValue.Allow),
-                _ => existingPerms.Modify(sendMessages: PermValue.Deny, createPublicThreads: PermValue.Deny,
-                    createPrivateThreads: PermValue.Deny, sendMessagesInThreads: PermValue.Deny)
+                _ => existingPerms.Modify(sendMessages: PermValue.Deny, sendMessagesInThreads: PermValue.Deny)
             };
 
             channelPermissions.Add((channel, lockdownPerms));
         }
 
-        var groupedChannels = channelPermissions.GroupBy(x => x.Channel.GetType());
-
-        foreach (var group in groupedChannels)
+        await Task.WhenAll(channelPermissions.Select(x => x.Channel.ModifyAsync(new UpdateChannelRequest
         {
-            if (group.Key == typeof(Channel))
+            PermissionOverwrites = new List<ChannelOverwriteRequest>
             {
-                var textChannels = group.Select(x => x.Channel).Cast<Channel>().ToList();
-                await ModifyTextChannelsAsync(textChannels, everyoneRole, group.Select(x => x.Permissions));
+                ToOverwriteRequest(everyoneRole.Id, OverwriteRequestType.Role, x.Permissions)
             }
-            else if (group.Key == typeof(Channel))
-            {
-                var voiceChannels = group.Select(x => x.Channel).Cast<Channel>().ToList();
-                await ModifyVoiceChannelsAsync(voiceChannels, everyoneRole, group.Select(x => x.Permissions));
-            }
-            else if (group.Key == typeof(Channel))
-            {
-                var forumChannels = group.Select(x => x.Channel).Cast<Channel>().ToList();
-                await ModifyForumChannelsAsync(forumChannels, everyoneRole, group.Select(x => x.Permissions));
-            }
-        }
+        })));
     }
 
-    private static async Task ModifyTextChannelsAsync(List<Channel> channels, SocketRole everyoneRole,
-        IEnumerable<OverwritePermissions> permissions)
+    private static ChannelOverwriteRequest ToOverwriteRequest(PermissionOverwrite overwrite)
     {
-        await Task.WhenAll(channels.Select((channel, index) =>
-            channel.ModifyAsync(x =>
-            {
-                x.PermissionOverwrites = new Optional<IEnumerable<PermissionOverwrite>>(
-                    [
-                        new PermissionOverwrite(everyoneRole.Id, PermissionTarget.Role, permissions.ElementAt(index))
-                    ]
-                );
-            })
-        ));
+        return ToOverwriteRequest(overwrite.Id, overwrite.Type == PermissionOverwriteType.Role
+                ? OverwriteRequestType.Role
+                : OverwriteRequestType.Member,
+            OverwritePermissions.From(overwrite));
     }
 
-    private static async Task ModifyForumChannelsAsync(List<Channel> channels, SocketRole everyoneRole,
-        IEnumerable<OverwritePermissions> permissions)
+    private static ChannelOverwriteRequest ToOverwriteRequest(ulong id, OverwriteRequestType type,
+        OverwritePermissions permissions)
     {
-        await Task.WhenAll(channels.Select((channel, index) =>
-            channel.ModifyAsync(x =>
-            {
-                x.PermissionOverwrites = new Optional<IEnumerable<PermissionOverwrite>>(
-                    [
-                        new PermissionOverwrite(everyoneRole.Id, PermissionTarget.Role, permissions.ElementAt(index))
-                    ]
-                );
-            })
-        ));
-    }
-
-    private static async Task ModifyVoiceChannelsAsync(List<Channel> channels, SocketRole everyoneRole,
-        IEnumerable<OverwritePermissions> permissions)
-    {
-        await Task.WhenAll(channels.Select((channel, index) =>
-            channel.ModifyAsync(x =>
-            {
-                x.PermissionOverwrites = new Optional<IEnumerable<PermissionOverwrite>>(
-                    [
-                        new PermissionOverwrite(everyoneRole.Id, PermissionTarget.Role, permissions.ElementAt(index))
-                    ]
-                );
-            })
-        ));
+        return new ChannelOverwriteRequest
+        {
+            Id = id, Type = type, Allow = (ulong)permissions.AllowValue, Deny = (ulong)permissions.DenyValue
+        };
     }
 
 
@@ -495,7 +451,7 @@ public class ChannelCommandService : INService, IReadyExecutor
 
         var relevantChannels = channels.Where(IsRelevantChannel).ToList();
 
-        var guildRoleIds = guild.Roles.Select(r => r.Id).ToHashSet();
+        var guildRoleIds = guild.Roles.Keys.ToHashSet();
 
         var guildUserIds = (await guild.GetUsersAsync()).Select(u => u.Id).ToHashSet();
 
@@ -509,27 +465,27 @@ public class ChannelCommandService : INService, IReadyExecutor
             if (!storedPermissionsByChannel.TryGetValue(channel.Id, out var storedPermissions))
                 continue;
 
-            var overwrites = new List<PermissionOverwrite>();
+            var overwrites = new List<ChannelOverwriteRequest>();
 
             foreach (var storedPerm in storedPermissions)
             {
-                var permissions = new OverwritePermissions(storedPerm.AllowPermissions, storedPerm.DenyPermissions);
+                var permissions = new OverwritePermissions((ChannelPermission)storedPerm.AllowPermissions, (ChannelPermission)storedPerm.DenyPermissions);
 
-                switch ((PermissionTarget)storedPerm.TargetType)
+                switch ((PermissionOverwriteType)storedPerm.TargetType)
                 {
-                    case PermissionTarget.Role when guildRoleIds.Contains(storedPerm.TargetId):
-                        overwrites.Add(new PermissionOverwrite(storedPerm.TargetId, PermissionTarget.Role, permissions));
+                    case PermissionOverwriteType.Role when guildRoleIds.Contains(storedPerm.TargetId):
+                        overwrites.Add(ToOverwriteRequest(storedPerm.TargetId, OverwriteRequestType.Role, permissions));
                         break;
 
-                    case PermissionTarget.User when guildUserIds.Contains(storedPerm.TargetId):
-                        overwrites.Add(new PermissionOverwrite(storedPerm.TargetId, PermissionTarget.User, permissions));
+                    case PermissionOverwriteType.Member when guildUserIds.Contains(storedPerm.TargetId):
+                        overwrites.Add(ToOverwriteRequest(storedPerm.TargetId, OverwriteRequestType.Member, permissions));
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
             }
 
-            await channel.ModifyAsync(x => x.PermissionOverwrites = new Optional<IEnumerable<PermissionOverwrite>>(overwrites));
+            await channel.ModifyAsync(new UpdateChannelRequest { PermissionOverwrites = overwrites });
 
             await context.DeleteAsync(storedPermissions);
         }
@@ -541,7 +497,7 @@ public class ChannelCommandService : INService, IReadyExecutor
     /// </summary>
     private static bool IsRelevantChannel(Channel channel)
     {
-        return channel is (Channel or Channel or Channel) and not Channel;
+        return channel.Type is ChannelType.GuildText or ChannelType.GuildNews or ChannelType.GuildVoice;
     }
 
 

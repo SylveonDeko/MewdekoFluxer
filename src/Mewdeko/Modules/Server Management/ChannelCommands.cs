@@ -212,14 +212,14 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         public async Task MoveTo(Channel channel)
         {
-            var use = ctx.User as SocketGuildMember;
+            var use = ctx.Member!;
             if (use.VoiceChannel == null)
             {
                 await ctx.Channel.SendErrorAsync(Strings.MovetoNoVoice(ctx.Guild.Id), Config);
                 return;
             }
 
-            await use.ModifyAsync(x => x.Channel = new Optional<Channel>(channel)).ConfigureAwait(false);
+            await use.ModifyAsync(x => x.ChannelId = channel.Id).ConfigureAwait(false);
             await ctx.Channel.SendConfirmAsync(Strings.MovetoSuccess(ctx.Guild.Id, Format.Bold(channel.Name)))
                 .ConfigureAwait(false);
         }
@@ -242,7 +242,7 @@ public partial class ServerManagement
                 return;
             }
 
-            await user.ModifyAsync(x => x.Channel = new Optional<Channel>(channel)).ConfigureAwait(false);
+            await user.ModifyAsync(x => x.ChannelId = channel.Id).ConfigureAwait(false);
             await ctx.Channel
                 .SendConfirmAsync(Strings.MoveuserSuccess(ctx.Guild.Id, user.Mention, Format.Bold(channel.Name)))
                 .ConfigureAwait(false);
@@ -257,7 +257,7 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         public async Task Grab(SocketGuildMember user)
         {
-            var vc = ((SocketGuildMember)ctx.User).VoiceChannel;
+            var vc = ctx.Member!.VoiceChannel;
             if (vc == null)
             {
                 await ctx.Channel.SendErrorAsync(Strings.GrabNotInVoice(ctx.Guild.Id), Config)
@@ -271,7 +271,7 @@ public partial class ServerManagement
                 return;
             }
 
-            await user.ModifyAsync(x => x.Channel = new Optional<Channel>(vc)).ConfigureAwait(false);
+            await user.ModifyAsync(x => x.ChannelId = vc.Id).ConfigureAwait(false);
             await ctx.Channel.SendConfirmAsync(Strings.GrabSuccess(ctx.Guild.Id, user.Mention, user.VoiceChannel.Name))
                 .ConfigureAwait(false);
         }
@@ -293,8 +293,8 @@ public partial class ServerManagement
             }
 
             var everyonerole = ctx.Guild.EveryoneRole;
-            var newperms = everyonerole.Permissions.Modify(sendMessages: true);
-            await everyonerole.ModifyAsync(x => x.Permissions = newperms).ConfigureAwait(false);
+            var newperms = (ulong)(everyonerole.Permissions.RawValue | GuildPermission.SendMessages);
+            await everyonerole.ModifyAsync(new UpdateGuildRoleRequest { Permissions = newperms }).ConfigureAwait(false);
             await ctx.Channel.SendConfirmAsync(Strings.UnlockdownSuccess(ctx.Guild.Id));
         }
 
@@ -331,14 +331,20 @@ public partial class ServerManagement
                     throw;
                 }
 
-                var chan2 = await ctx.Guild.CreateTextChannelAsync(chan.Name, x =>
+                var chan2 = await ctx.Guild.CreateTextChannelAsync(new CreateTextChannelRequest
                 {
-                    x.Position = chan.Position;
-                    if (chan.Topic is not null) x.Topic = chan.Topic;
-                    x.PermissionOverwrites = new Optional<IEnumerable<PermissionOverwrite>>(chan.PermissionOverwrites);
-                    x.IsNsfw = chan.IsNsfw;
-                    x.CategoryId = chan.CategoryId;
-                    x.SlowModeInterval = chan.SlowModeInterval;
+                    Name = chan.Name,
+                    Topic = chan.Topic,
+                    PermissionOverwrites = chan.PermissionOverwrites?.Select(x => new ChannelOverwriteRequest
+                    {
+                        Id = x.Id,
+                        Type = x.Type == PermissionOverwriteType.Role ? OverwriteRequestType.Role : OverwriteRequestType.Member,
+                        Allow = (ulong)x.Allow.RawValue,
+                        Deny = (ulong)x.Deny.RawValue
+                    }).ToArray(),
+                    Nsfw = chan.IsNsfw,
+                    ParentCategoryId = chan.CategoryId,
+                    RatelimitPerUser = chan.SlowModeInterval
                 }).ConfigureAwait(false);
 
                 await chan2.SendAsync(
@@ -395,9 +401,9 @@ public partial class ServerManagement
                 .WithDescription(Strings.CreatingCategory(ctx.Guild.Id, config.Data.LoadingEmote, catName,
                     channels.Length, "Text"));
             var msg = await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
-            var cat = await ctx.Guild.CreateCategoryAsync(catName).ConfigureAwait(false);
+            var cat = await ctx.Guild.CreateCategoryChannelAsync(new CreateCategoryChannelRequest { Name = catName }).ConfigureAwait(false);
             foreach (var i in channels)
-                await ctx.Guild.CreateTextChannelAsync(i, x => x.CategoryId = cat.Id).ConfigureAwait(false);
+                await ctx.Guild.CreateTextChannelAsync(new CreateTextChannelRequest { Name = i, ParentCategoryId = cat.Id }).ConfigureAwait(false);
 
             var eb2 = new EmbedBuilder();
             eb2.WithDescription(Strings.CreatedCategory(ctx.Guild.Id, catName, channels.Length, "Text"));
@@ -420,9 +426,9 @@ public partial class ServerManagement
                 .WithDescription(Strings.CreatingCategory(ctx.Guild.Id, config.Data.LoadingEmote, catName,
                     channels.Length, "Voice"));
             var msg = await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
-            var cat = await ctx.Guild.CreateCategoryAsync(catName).ConfigureAwait(false);
+            var cat = await ctx.Guild.CreateCategoryChannelAsync(new CreateCategoryChannelRequest { Name = catName }).ConfigureAwait(false);
             foreach (var i in channels)
-                await ctx.Guild.CreateVoiceChannelAsync(i, x => x.CategoryId = cat.Id).ConfigureAwait(false);
+                await ctx.Guild.CreateVoiceChannelAsync(new CreateVoiceChannelRequest { Name = i, ParentCategoryId = cat.Id }).ConfigureAwait(false);
 
             var eb2 = new EmbedBuilder();
             eb2.WithDescription(Strings.CreatedCategory(ctx.Guild.Id, catName, channels.Length, "Voice"));
@@ -446,7 +452,7 @@ public partial class ServerManagement
                 Strings.AddingVoiceChannels(ctx.Guild.Id, config.Data.LoadingEmote, channels.Length, chan.Name));
             var msg = await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
             foreach (var i in channels)
-                await ctx.Guild.CreateVoiceChannelAsync(i, x => x.CategoryId = chan.Id).ConfigureAwait(false);
+                await ctx.Guild.CreateVoiceChannelAsync(new CreateVoiceChannelRequest { Name = i, ParentCategoryId = chan.Id }).ConfigureAwait(false);
 
             var eb2 = new EmbedBuilder();
             eb2.WithDescription(Strings.ChannelsAddedVoice(ctx.Guild.Id, channels.Length, chan.Name));
@@ -470,7 +476,7 @@ public partial class ServerManagement
                 Strings.AddingTextChannels(ctx.Guild.Id, config.Data.LoadingEmote, channels.Length, chan.Name));
             var msg = await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
             foreach (var i in channels)
-                await ctx.Guild.CreateTextChannelAsync(i, x => x.CategoryId = chan.Id).ConfigureAwait(false);
+                await ctx.Guild.CreateTextChannelAsync(new CreateTextChannelRequest { Name = i, ParentCategoryId = chan.Id }).ConfigureAwait(false);
 
             var eb2 = new EmbedBuilder();
             eb2.WithDescription(Strings.AddedTextChannels(ctx.Guild.Id, channels.Length.ToString(), chan.Name));
@@ -592,13 +598,13 @@ public partial class ServerManagement
                     switch (channel.SlowModeInterval)
                     {
                         case 0:
-                            await channel.ModifyAsync(x => x.SlowModeInterval = 60).ConfigureAwait(false);
+                            await channel.ModifyAsync(new UpdateChannelRequest { RateLimitPerUser = 60 }).ConfigureAwait(false);
                             await channel
                                 .SendConfirmAsync(Strings.SlowmodeEnabledOneMinute(ctx.Guild.Id, channel.Mention))
                                 .ConfigureAwait(false);
                             return;
                         case > 0:
-                            await channel.ModifyAsync(x => x.SlowModeInterval = 0).ConfigureAwait(false);
+                            await channel.ModifyAsync(new UpdateChannelRequest { RateLimitPerUser = 0 }).ConfigureAwait(false);
                             await channel.SendConfirmAsync(Strings.SlowmodeDisabled(ctx.Guild.Id, channel.Mention))
                                 .ConfigureAwait(false);
                             break;
@@ -612,7 +618,7 @@ public partial class ServerManagement
                         .ConfigureAwait(false);
                     break;
                 default:
-                    await channel.ModifyAsync(x => x.SlowModeInterval = time).ConfigureAwait(false);
+                    await channel.ModifyAsync(new UpdateChannelRequest { RateLimitPerUser = time }).ConfigureAwait(false);
                     await channel.SendConfirmAsync(
                             Strings.SlowmodeEnabledFor(ctx.Guild.Id, channel.Mention, TimeSpan.FromSeconds(time).Humanize(2, maxUnit: TimeUnit.Hour)))
                         .ConfigureAwait(false);
@@ -649,8 +655,7 @@ public partial class ServerManagement
                 using var sr = await http.GetAsync(avatar, HttpCompletionOption.ResponseHeadersRead)
                     .ConfigureAwait(false);
                 var imgData = await sr.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
-                var imgStream = imgData.ToStream();
-                var wh = await channel.CreateWebhookAsync(name, imgStream).ConfigureAwait(false);
+                var wh = await channel.CreateWebhookAsync(name, $"data:{sr.Content.Headers.ContentType?.MediaType ?? "image/png"};base64,{Convert.ToBase64String(imgData)}").ConfigureAwait(false);
                 await ctx.Channel
                     .SendAsync(
                         Strings.WebhookCreated(ctx.Guild.Id, config.Data.SuccessEmote, wh.Name, channel.Mention))
@@ -660,7 +665,6 @@ public partial class ServerManagement
                         Strings.WebhookCreatedDontShare(ctx.Guild.Id, wh.Id, wh.Token))
                     .ConfigureAwait(false);
                 sr.Dispose();
-                await imgStream.DisposeAsync();
             }
             else
             {

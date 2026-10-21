@@ -14,10 +14,10 @@ public partial class ServerManagement
         /// </summary>
         /// <param name="permissions">A collection of channel permissions.</param>
         /// <returns>The aggregated raw permission value.</returns>
-        private static ulong GetRawPermissionValue(IEnumerable<ChannelPermission> permissions)
+        private static ChannelPermission GetRawPermissionValue(IEnumerable<ChannelPermission> permissions)
         {
-            return permissions.Aggregate<ChannelPermission, ulong>(0,
-                (current, permission) => current | (ulong)permission);
+            return permissions.Aggregate<ChannelPermission, ChannelPermission>(0,
+                (current, permission) => current | permission);
         }
 
         /// <summary>
@@ -52,8 +52,8 @@ public partial class ServerManagement
             }
             else
             {
-                var allowPermsRaw = GetRawPermissionValue(currentPerms.Value.ToAllowList());
-                var denyPermsRaw = GetRawPermissionValue(currentPerms.Value.ToDenyList());
+                var allowPermsRaw = currentPerms.Value.AllowValue;
+                var denyPermsRaw = currentPerms.Value.DenyValue;
 
                 switch (perm)
                 {
@@ -118,7 +118,7 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageChannels)]
         [Priority(1)]
-        public async Task PermControl(Channel channel, PermValue perm, IUser user,
+        public async Task PermControl(Channel channel, PermValue perm, SocketGuildMember user,
             params ChannelPermission[] perms)
         {
             OverwritePermissions result;
@@ -134,8 +134,8 @@ public partial class ServerManagement
             }
             else
             {
-                var allowPermsRaw = GetRawPermissionValue(currentPerms.Value.ToAllowList());
-                var denyPermsRaw = GetRawPermissionValue(currentPerms.Value.ToDenyList());
+                var allowPermsRaw = currentPerms.Value.AllowValue;
+                var denyPermsRaw = currentPerms.Value.DenyValue;
 
                 switch (perm)
                 {

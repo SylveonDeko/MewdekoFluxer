@@ -1,6 +1,5 @@
 {
   "join_lockdown_invalid_action": "Join lockdown action must be `Kick` or `Ban`.",
-  "adding_emotes_to_role": "{0} Adding Emotes to {1}...",
   "cape": "CAPE",
   "category": "Category",
   "channel_unlocked": "{0} Unlocked {1}",

@@ -125,7 +125,7 @@ public class RoleCommandsService : INService
     }
 
     /// <summary>
-    ///     Represents a job related to role assignments or removals in a Discord guild.
+    ///     Represents a job related to role assignments or removals in a Fluxer guild.
     /// </summary>
     public class RoleJobs
     {

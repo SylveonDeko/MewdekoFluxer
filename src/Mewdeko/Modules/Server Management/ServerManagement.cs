@@ -1,4 +1,5 @@
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Services.Settings;
 
@@ -20,7 +21,7 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
     [RequireContext(ContextType.Guild)]
     public async Task PermView()
     {
-        var perms = ((SocketGuildMember)ctx.User).GuildPermissions;
+        var perms = ctx.Member!.GuildPermissions;
         var eb = new EmbedBuilder();
         eb.WithTitle(Strings.ListAllowedPerms(ctx.Guild.Id));
         eb.WithOkColor();
@@ -93,7 +94,9 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
         var imgData = await sr.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
         var imgStream = imgData.ToStream();
         await using var _ = imgStream.ConfigureAwait(false);
-        await guild.ModifyAsync(x => x.Splash = new Image(imgStream)).ConfigureAwait(false);
+        var request = new UpdateGuildRequest();
+        request.SplashFromStream(imgStream);
+        await guild.ModifyAsync(request).ConfigureAwait(false);
         await ctx.Channel.SendConfirmAsync(Strings.SplashImageSet(ctx.Guild.Id)).ConfigureAwait(false);
     }
 
@@ -114,7 +117,9 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
         var imgData = await sr.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
         var imgStream = imgData.ToStream();
         await using var _ = imgStream.ConfigureAwait(false);
-        await guild.ModifyAsync(x => x.Icon = new Image(imgStream)).ConfigureAwait(false);
+        var request = new UpdateGuildRequest();
+        request.IconFromStream(imgStream);
+        await guild.ModifyAsync(request).ConfigureAwait(false);
         await ctx.Channel.SendConfirmAsync(Strings.ServerIconSet(ctx.Guild.Id)).ConfigureAwait(false);
     }
 
@@ -135,7 +140,9 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
         var imgData = await sr.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
         var imgStream = imgData.ToStream();
         await using var _ = imgStream.ConfigureAwait(false);
-        await guild.ModifyAsync(x => x.Banner = new Image(imgStream)).ConfigureAwait(false);
+        var request = new UpdateGuildRequest();
+        request.BannerFromStream(imgStream);
+        await guild.ModifyAsync(request).ConfigureAwait(false);
         await ctx.Channel.SendConfirmAsync(Strings.ServerBannerSet(ctx.Guild.Id)).ConfigureAwait(false);
     }
 
@@ -150,7 +157,7 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
     public async Task SetServerName([Remainder] string name)
     {
         var guild = ctx.Guild;
-        await guild.ModifyAsync(x => x.Name = name).ConfigureAwait(false);
+        await guild.ModifyAsync(new UpdateGuildRequest { Name = name }).ConfigureAwait(false);
         await ctx.Channel.SendConfirmAsync(Strings.ServerNameSet(ctx.Guild.Id, name)).ConfigureAwait(false);
     }
 
@@ -170,13 +177,12 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
         string acturl;
         if (string.IsNullOrWhiteSpace(url))
         {
-            var tags = ctx.Message.Attachments.FirstOrDefault();
-            acturl = tags.Url;
+            var tags = ctx.Message.Attachments?.FirstOrDefault();
+            acturl = tags?.Url ?? string.Empty;
         }
         else if (url.StartsWith("<"))
         {
-            var tags = ctx.Message.Tags.Where(t => t.Type == TagType.Emoji).Select(x => (Emoji)x.Value);
-            var result = tags.Select(m => m.Url);
+            var result = GetMessageEmotes(url).Select(GetEmoteUrl);
             acturl = string.Join("", result);
         }
         else
@@ -192,7 +198,9 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
         await using var _ = imgStream.ConfigureAwait(false);
         try
         {
-            var emote = await ctx.Guild.CreateEmoteAsync(name, new Image(imgStream)).ConfigureAwait(false);
+            var emoteRequest = new CreateGuildEmojiRequest { Name = name };
+            emoteRequest.ImageFromStream(imgStream);
+            var emote = await ctx.Guild.CreateEmojiAsync(emoteRequest).ConfigureAwait(false);
             await ctx.Channel.SendConfirmAsync(Strings.EmoteCreated(ctx.Guild.Id, emote, Format.Code(name)))
                 .ConfigureAwait(false);
         }
@@ -216,12 +224,17 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
     [RequireContext(ContextType.Guild)]
     public async Task RemoveEmote(string _)
     {
-        var tags = ctx.Message.Tags.Where(t => t.Type == TagType.Emoji).Select(x => (Emoji)x.Value)
+        var tags = GetMessageEmotes(ctx.Message.Content)
             .FirstOrDefault();
         try
         {
-            var emote1 = await ctx.Guild.GetEmoteAsync(tags.Id).ConfigureAwait(false);
-            await ctx.Guild.DeleteEmoteAsync(emote1).ConfigureAwait(false);
+            var emote1 = ctx.Guild.Emotes.FirstOrDefault(x => x.Id == tags?.Id);
+            if (emote1 is null)
+            {
+                await ctx.Channel.SendErrorAsync(Strings.EmoteNotFromGuild(ctx.Guild.Id), Config).ConfigureAwait(false);
+                return;
+            }
+            await ctx.Guild.DeleteEmojiAsync(emote1).ConfigureAwait(false);
             await ctx.Channel.SendConfirmAsync(Strings.EmoteDeleted(ctx.Guild.Id, emote1)).ConfigureAwait(false);
         }
         catch (FluxerApiException)
@@ -248,14 +261,19 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
             return;
         }
 
-        var tags = ctx.Message.Tags.Where(t => t.Type == TagType.Emoji).Select(x => (Emoji)x.Value)
+        var tags = GetMessageEmotes(ctx.Message.Content)
             .FirstOrDefault();
         try
         {
-            var emote1 = await ctx.Guild.GetEmoteAsync(tags.Id).ConfigureAwait(false);
+            var emote1 = ctx.Guild.Emotes.FirstOrDefault(x => x.Id == tags?.Id);
+            if (emote1 is null)
+            {
+                await ctx.Channel.SendErrorAsync(Strings.EmoteWrongGuild(ctx.Guild.Id), Config).ConfigureAwait(false);
+                return;
+            }
             var ogname = emote1.Name;
-            await ctx.Guild.ModifyEmoteAsync(emote1, x => x.Name = name).ConfigureAwait(false);
-            var emote2 = await ctx.Guild.GetEmoteAsync(tags.Id).ConfigureAwait(false);
+            await ctx.Guild.ModifyEmojiAsync(emote1, name).ConfigureAwait(false);
+            var emote2 = (await ctx.Guild.GetEmojisAsync().ConfigureAwait(false)).First(x => x.Id == tags.Id);
             await ctx.Channel.SendConfirmAsync(
                     Strings.EmoteRenamed(ctx.Guild.Id, emote1, Format.Code(ogname), Format.Code(emote2.Name)))
                 .ConfigureAwait(false);
@@ -284,13 +302,13 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
         };
         var errored = new List<string>();
         var emotes = new List<string>();
-        var tags = ctx.Message.Tags.Where(t => t.Type == TagType.Emoji).Select(x => (Emoji)x.Value).Distinct();
+        var tags = GetMessageEmotes(ctx.Message.Content);
         if (!tags.Any()) return;
         var msg = await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
         foreach (var i in tags)
         {
             using var http = factory.CreateClient();
-            using var sr = await http.GetAsync(i.Url, HttpCompletionOption.ResponseHeadersRead)
+            using var sr = await http.GetAsync(GetEmoteUrl(i), HttpCompletionOption.ResponseHeadersRead)
                 .ConfigureAwait(false);
             var imgData = await sr.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
             var imgStream = imgData.ToStream();
@@ -298,12 +316,14 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
             {
                 try
                 {
-                    var emote = await ctx.Guild.CreateEmoteAsync(i.Name, new Image(imgStream)).ConfigureAwait(false);
+                    var emoteRequest = new CreateGuildEmojiRequest { Name = i.Name };
+                    emoteRequest.ImageFromStream(imgStream);
+                    var emote = await ctx.Guild.CreateEmojiAsync(emoteRequest).ConfigureAwait(false);
                     emotes.Add($"{emote} {Format.Code(emote.Name)}");
                 }
                 catch (Exception)
                 {
-                    errored.Add($"{i.Name}\n{i.Url}");
+                    errored.Add($"{i.Name}\n{GetEmoteUrl(i)}");
                 }
             }
         }
@@ -318,61 +338,32 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
     }
 
     /// <summary>
-    ///     Steals emotes from a message and locks them to a specified role.
+    ///     Finds the custom emotes written in a piece of message text.
     /// </summary>
-    /// <param name="role">The role to add the emotes to.</param>
-    /// <param name="e">The message containing the emotes to steal.</param>
-    [Cmd]
-    [Aliases]
-    [RequireContext(ContextType.Guild)]
-    [UserPerm(GuildPermission.ManageExpressions)]
-    [BotPerm(GuildPermission.ManageExpressions)]
-    [Priority(0)]
-    public async Task StealForRole(SocketRole role, [Remainder] string e)
+    /// <param name="content">The message text.</param>
+    /// <returns>The distinct custom emotes in the text.</returns>
+    private static List<Emoji> GetMessageEmotes(string? content)
     {
-        var eb = new EmbedBuilder
+        var emotes = new List<Emoji>();
+        foreach (Match match in EmoteRegex().Matches(content ?? string.Empty))
         {
-            Description = Strings.AddingEmotesToRole(ctx.Guild.Id, config.Data.LoadingEmote, role.Mention), Color = Mewdeko.OkColor
-        };
-        var list = new Optional<IEnumerable<SocketRole>>([
-            role
-        ]);
-        var errored = new List<string>();
-        var emotes = new List<string>();
-        var tags = ctx.Message.Tags.Where(t => t.Type == TagType.Emoji).Select(x => (Emoji)x.Value).Distinct();
-        if (!tags.Any()) return;
-        var msg = await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
-
-        foreach (var i in tags)
-        {
-            using var http = factory.CreateClient();
-            using var sr = await http.GetAsync(i.Url, HttpCompletionOption.ResponseHeadersRead)
-                .ConfigureAwait(false);
-            var imgData = await sr.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
-            var imgStream = imgData.ToStream();
-            await using var _ = imgStream.ConfigureAwait(false);
-            {
-                try
-                {
-                    var emote = await ctx.Guild.CreateEmoteAsync(i.Name, new Image(imgStream), list)
-                        .ConfigureAwait(false);
-                    emotes.Add($"{emote} {Format.Code(emote.Name)}");
-                }
-                catch (Exception)
-                {
-                    errored.Add($"{i.Name}\n{i.Url}");
-                }
-            }
+            if (Emoji.TryParseCustom(match.Value, out var emote) && emotes.All(x => x.Id != emote.Id))
+                emotes.Add(emote);
         }
 
-        var b = new EmbedBuilder
-        {
-            Color = Mewdeko.OkColor
-        };
-        if (emotes.Count > 0)
-            b.WithDescription(Strings.AddedEmotesToRole(ctx.Guild.Id, emotes.Count, role.Mention,
-                string.Join("\n", emotes)));
-        if (errored.Count > 0) b.AddField(Strings.ErroredEmotes(ctx.Guild.Id, errored.Count), string.Join("\n\n", errored));
-        await msg.ModifyAsync(x => x.Embed = b.Build()).ConfigureAwait(false);
+        return emotes;
     }
+
+    /// <summary>
+    ///     Gets the image address of a custom emote.
+    /// </summary>
+    /// <param name="emote">The emote.</param>
+    /// <returns>The address of the emote image.</returns>
+    private static string GetEmoteUrl(Emoji emote)
+    {
+        return $"{FluxerContext.Client.Config.MediaUrl}/emojis/{emote.Id}.webp?size=160";
+    }
+
+    [GeneratedRegex(@"<a?:\w+:\d+>")]
+    private static partial Regex EmoteRegex();
 }
