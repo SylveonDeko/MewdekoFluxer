@@ -1,6 +1,5 @@
 ﻿using System.Globalization;
 using System.Net.Http;
-using Discord.Commands;
 using Humanizer;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;
@@ -26,9 +25,9 @@ public class RoleGreets(InteractiveService interactivity, HttpClient http) : Mew
     [Aliases]
     [UserPerm(GuildPermission.Administrator)]
     [RequireContext(ContextType.Guild)]
-    public async Task RoleGreetAdd(IRole role, [Remainder] ITextChannel? channel = null)
+    public async Task RoleGreetAdd(SocketRole role, [Remainder] Channel? channel = null)
     {
-        channel ??= ctx.Channel as ITextChannel;
+        channel ??= ctx.Channel as Channel;
         switch (await Service.AddRoleGreet(ctx.Guild.Id, channel.Id, role.Id))
         {
             case true:
@@ -73,7 +72,7 @@ public class RoleGreets(InteractiveService interactivity, HttpClient http) : Mew
     [Aliases]
     [UserPerm(GuildPermission.Administrator)]
     [RequireContext(ContextType.Guild)]
-    public async Task RoleGreetRemove([Remainder] IRole role)
+    public async Task RoleGreetRemove([Remainder] SocketRole role)
     {
         var greet = (await Service.GetListGreets(ctx.Guild.Id)).Where(x => x.RoleId == role.Id);
         if (!greet.Any())
@@ -288,24 +287,24 @@ public class RoleGreets(InteractiveService interactivity, HttpClient http) : Mew
             var (msg, response) = await PromptReactionChoiceAsync(
                 new EmbedBuilder().WithOkColor().WithDescription(Strings.RolegreetMessagePreviewPrompt(ctx.Guild.Id)),
                 ctx.User.Id,
-                new ReactionChoice(new Emoji("👁️"), Strings.RolegreetButtonPreview(ctx.Guild.Id), "preview"),
-                new ReactionChoice(new Emoji("📝"), Strings.RolegreetButtonRegular(ctx.Guild.Id), "regular"))
+                new ReactionChoice(Emoji.FromUnicode("👁️"), Strings.RolegreetButtonPreview(ctx.Guild.Id), "preview"),
+                new ReactionChoice(Emoji.FromUnicode("📝"), Strings.RolegreetButtonRegular(ctx.Guild.Id), "regular"))
                 .ConfigureAwait(false);
             switch (response)
             {
                 case "preview":
                     await msg.DeleteAsync().ConfigureAwait(false);
                     var replacer = new ReplacementBuilder().WithUser(ctx.User)
-                        .WithClient(ctx.Client as DiscordShardedClient)
-                        .WithServer(ctx.Client as DiscordShardedClient, ctx.Guild as SocketGuild).Build();
+                        .WithClient(ctx.Client as FluxerClient)
+                        .WithServer(ctx.Client as FluxerClient, ctx.Guild as SocketGuild).Build();
                     var content = replacer.Replace(greet.Message);
                     if (SmartEmbed.TryParse(content, ctx.Guild?.Id, out var embedData, out var plainText))
                     {
-                        await ctx.Channel.SendMessageAsync(plainText, embeds: embedData).ConfigureAwait(false);
+                        await ctx.Channel.SendAsync(plainText, embeds: embedData).ConfigureAwait(false);
                         return;
                     }
 
-                    await ctx.Channel.SendMessageAsync(content).ConfigureAwait(false);
+                    await ctx.Channel.SendAsync(content).ConfigureAwait(false);
                     return;
                 case "regular":
                     await msg.DeleteAsync().ConfigureAwait(false);

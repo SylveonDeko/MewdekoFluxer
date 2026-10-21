@@ -97,9 +97,31 @@ public class Field
 }
 
 /// <summary>
+///     The look of a button in a saved embed. Fluxer has no buttons, so buttons are sent as links, but saved embeds
+///     keep the style they were written with.
+/// </summary>
+public enum ButtonStyle
+{
+    /// <summary>A blurple button.</summary>
+    Primary = 1,
+
+    /// <summary>A grey button.</summary>
+    Secondary = 2,
+
+    /// <summary>A green button.</summary>
+    Success = 3,
+
+    /// <summary>A red button.</summary>
+    Danger = 4,
+
+    /// <summary>A button that opens a link.</summary>
+    Link = 5
+}
+
+/// <summary>
 ///     Represents an embed message.
 /// </summary>
-public class Embed
+public class EmbedData
 {
     /// <summary>
     ///     Gets or sets the title of the embed.
@@ -178,13 +200,13 @@ public class NewEmbed
     ///     Gets or sets the embed of the message.
     /// </summary>
     [JsonPropertyName("embed")]
-    public Embed? Embed { get; set; }
+    public EmbedData? Embed { get; set; }
 
     /// <summary>
     ///     Gets or sets the list of embeds of the message.
     /// </summary>
     [JsonPropertyName("embeds")]
-    public List<Embed>? Embeds { get; set; }
+    public List<EmbedData>? Embeds { get; set; }
 
     /// <summary>
     ///     Gets or sets the list of components of the message.
@@ -246,10 +268,10 @@ public class NewEmbed
     ///     Converts a collection of <see cref="Embed" /> objects to a collection of Discord.NET <see cref="Embed" /> objects.
     /// </summary>
     /// <param name="embeds">The collection of <see cref="Embed" /> objects to convert.</param>
-    /// <returns>An array of <see cref="Discord.Embed" /> objects, without embeds that would show nothing.</returns>
-    public static Discord.Embed[] ToEmbedArray(IEnumerable<Embed> embeds)
+    /// <returns>An array of <see cref="EmbedRequest" /> objects, without embeds that would show nothing.</returns>
+    public static EmbedRequest[] ToEmbedArray(IEnumerable<EmbedData> embeds)
     {
-        var toReturn = new List<Discord.Embed>();
+        var toReturn = new List<EmbedRequest>();
         foreach (var i in embeds)
         {
             var embed = new EmbedBuilder();
@@ -308,7 +330,7 @@ public class NewEmbed
     /// </summary>
     /// <param name="embed">The built embed.</param>
     /// <returns>True when it has a title, description, field, image, thumbnail, author, or footer.</returns>
-    public static bool HasVisibleContent(Discord.Embed embed) =>
+    public static bool HasVisibleContent(EmbedRequest embed) =>
         !string.IsNullOrWhiteSpace(embed.Title) ||
         !string.IsNullOrWhiteSpace(embed.Description) ||
         embed.Fields.Length > 0 ||

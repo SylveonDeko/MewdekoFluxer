@@ -9,7 +9,6 @@ using Mewdeko.Database.Enums;
 using Mewdeko.Modules.Forms.Common;
 using Mewdeko.Services.Analytics;
 using Mewdeko.Services.Strings;
-using Embed = Discord.Embed;
 
 namespace Mewdeko.Modules.Forms.Services;
 
@@ -18,7 +17,7 @@ namespace Mewdeko.Modules.Forms.Services;
 /// </summary>
 public partial class FormsService : INService, IReadyExecutor, IUnloadableService
 {
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly IDataConnectionFactory dbFactory;
     private readonly EventHandler eventHandler;
@@ -39,7 +38,7 @@ public partial class FormsService : INService, IReadyExecutor, IUnloadableServic
     /// <param name="collector">The analytics collector.</param>
     /// <param name="httpFactory">Creates the clients that post to form notification webhooks.</param>
     public FormsService(
-        DiscordShardedClient client,
+        FluxerClient client,
         IDataConnectionFactory dbFactory,
         EventHandler eventHandler,
         GuildSettingsService guildSettings,
@@ -73,7 +72,7 @@ public partial class FormsService : INService, IReadyExecutor, IUnloadableServic
     {
         var guild = client.GetGuild(form.GuildId);
 
-        Embed embed;
+        EmbedRequest embed;
         try
         {
             embed = await BuildSubmissionEmbedAsync(form, response, answers, guild);
@@ -116,7 +115,7 @@ public partial class FormsService : INService, IReadyExecutor, IUnloadableServic
                 }
                 : AllowedMentions.None;
 
-            var msg = await channel.SendMessageAsync(content, embed: embed, allowedMentions: mentions);
+            var msg = await channel.SendAsync(content, embed: embed, allowedMentions: mentions);
 
             // Update response with message ID
             await using var db = await dbFactory.CreateConnectionAsync();
@@ -149,7 +148,7 @@ public partial class FormsService : INService, IReadyExecutor, IUnloadableServic
     /// <param name="answers">The list of answers.</param>
     /// <param name="guild">The guild the form belongs to, when the bot can see it.</param>
     /// <returns>The built embed.</returns>
-    private async Task<Embed> BuildSubmissionEmbedAsync(Form form, FormResponse response, List<FormAnswer> answers,
+    private async Task<EmbedRequest> BuildSubmissionEmbedAsync(Form form, FormResponse response, List<FormAnswer> answers,
         SocketGuild? guild)
     {
         var embed = new EmbedBuilder()
@@ -1073,7 +1072,7 @@ public partial class FormsService : INService, IReadyExecutor, IUnloadableServic
         // Check Nitro status
         if (question.ConditionalRequiresNitro.HasValue && question.ConditionalRequiresNitro.Value && passesConditions)
         {
-            // Note: Discord.Net does not expose PremiumType (Nitro tier) on SocketGuildUser
+            // Note: Discord.Net does not expose PremiumType (Nitro tier) on SocketGuildMember
             // We can only check if they're boosting, not their actual Nitro subscription
             // As a heuristic, we'll check if they have any Nitro-exclusive features:
             // - Custom avatar in this guild (requires Nitro)

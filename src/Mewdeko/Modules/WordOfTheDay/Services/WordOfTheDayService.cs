@@ -26,7 +26,7 @@ public class WordOfTheDayService : INService, IDisposable
         PropertyNameCaseInsensitive = true
     };
 
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly ConcurrentDictionary<ulong, (WordOfTheDayConfig Config, DateTime Expiry)> configCache = new();
     private readonly IDataConnectionFactory dbFactory;
@@ -47,7 +47,7 @@ public class WordOfTheDayService : INService, IDisposable
     /// <param name="logger">Logger instance.</param>
     /// <param name="collector">Analytics collector.</param>
     public WordOfTheDayService(
-        DiscordShardedClient client,
+        FluxerClient client,
         IDataConnectionFactory dbFactory,
         IHttpClientFactory httpFactory,
         GeneratedBotStrings strings,
@@ -747,8 +747,8 @@ public class WordOfTheDayService : INService, IDisposable
     ///     Plain text and embeds to send, plus whether the guild template was ignored because it
     ///     rendered an empty message.
     /// </returns>
-    public (string? Text, Discord.Embed[]? Embeds, bool UsedFallback) BuildMessage(
-        IGuild guild, IMessageChannel channel, WordOfTheDayConfig config, WordEntry entry, DateTime localDate)
+    public (string? Text, EmbedRequest[]? Embeds, bool UsedFallback) BuildMessage(
+        SocketGuild guild, Channel channel, WordOfTheDayConfig config, WordEntry entry, DateTime localDate)
     {
         var usedFallback = false;
         var pingText = config.PingRoleId.HasValue && guild.GetRole(config.PingRoleId.Value) is { } role
@@ -809,7 +809,7 @@ public class WordOfTheDayService : INService, IDisposable
     /// </summary>
     /// <param name="embed">The embed to inspect.</param>
     /// <returns>True when the embed has text, fields, media, an author, or a footer.</returns>
-    private static bool HasVisibleContent(Discord.Embed embed)
+    private static bool HasVisibleContent(EmbedRequest embed)
     {
         return !string.IsNullOrWhiteSpace(embed.Title)
                || !string.IsNullOrWhiteSpace(embed.Description)
@@ -830,7 +830,7 @@ public class WordOfTheDayService : INService, IDisposable
     /// <param name="localDate">The guild-local date to display.</param>
     /// <param name="pingText">Mention of the ping role, if any.</param>
     /// <returns>A replacer with every %wotd.*% placeholder and the server defaults.</returns>
-    private Replacer BuildReplacer(IGuild guild, IMessageChannel channel, WordEntry entry, DateTime localDate,
+    private Replacer BuildReplacer(SocketGuild guild, Channel channel, WordEntry entry, DateTime localDate,
         string? pingText)
     {
         return new ReplacementBuilder()
@@ -854,7 +854,7 @@ public class WordOfTheDayService : INService, IDisposable
     /// <param name="entry">The word being posted.</param>
     /// <param name="localDate">The guild-local date.</param>
     /// <returns>A thread name no longer than Discord's 100 character limit.</returns>
-    public string BuildThreadName(IGuild guild, IMessageChannel channel, WordOfTheDayConfig config, WordEntry entry,
+    public string BuildThreadName(SocketGuild guild, Channel channel, WordOfTheDayConfig config, WordEntry entry,
         DateTime localDate)
     {
         var template = string.IsNullOrWhiteSpace(config.ThreadName)
@@ -926,7 +926,7 @@ public class WordOfTheDayService : INService, IDisposable
         {
             var (text, embeds, fallback) = BuildMessage(guild, channel, config, entry, localNow);
             usedFallback = fallback;
-            var message = await channel.SendMessageAsync(text, embeds: embeds,
+            var message = await channel.SendAsync(text, embeds: embeds,
                 allowedMentions: AllowedMentions.All);
 
             if (config.CreateThread)
@@ -948,8 +948,8 @@ public class WordOfTheDayService : INService, IDisposable
         return (entry, null, usedFallback);
     }
 
-    private async Task CreateDiscussionThreadAsync(SocketGuild guild, ITextChannel channel,
-        WordOfTheDayConfig config, WordEntry entry, DateTime localDate, IUserMessage message)
+    private async Task CreateDiscussionThreadAsync(SocketGuild guild, Channel channel,
+        WordOfTheDayConfig config, WordEntry entry, DateTime localDate, Message message)
     {
         try
         {
@@ -957,7 +957,7 @@ public class WordOfTheDayService : INService, IDisposable
             var thread = await channel.CreateThreadAsync(name, ThreadType.PublicThread,
                 ArchiveDuration(config.ThreadAutoArchiveMinutes), message);
             var prompt = strings.WotdThreadStarter(guild.Id, entry.Word);
-            await thread.SendMessageAsync(prompt, allowedMentions: AllowedMentions.None);
+            await thread.SendAsync(prompt, allowedMentions: AllowedMentions.None);
         }
         catch (Exception ex)
         {

@@ -1,9 +1,8 @@
-﻿using Discord.Commands;
+﻿
 using Humanizer;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;
 using Mewdeko.Modules.Moderation.Services;
-using PermValue = Discord.PermValue;
 
 namespace Mewdeko.Modules.Moderation;
 
@@ -29,7 +28,7 @@ public partial class Moderation
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.MuteMembers)]
         [Priority(1)]
-        public Task Stfu(StoopidTime time, IGuildUser? user)
+        public Task Stfu(StoopidTime time, SocketGuildMember? user)
         {
             return Stfu(user, time);
         }
@@ -72,11 +71,11 @@ public partial class Moderation
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.MuteMembers)]
         [Priority(0)]
-        public async Task Stfu(IGuildUser? user, StoopidTime? time = null)
+        public async Task Stfu(SocketGuildMember? user, StoopidTime? time = null)
         {
             if (!await CheckRoleHierarchy(user))
                 return;
-            var channel = ctx.Channel as SocketGuildChannel;
+            var channel = ctx.Channel as Channel;
             var currentPerms = channel.GetPermissionOverwrite(user) ?? new OverwritePermissions();
             await channel.AddPermissionOverwriteAsync(user, currentPerms.Modify(sendMessages: PermValue.Deny))
                 .ConfigureAwait(false);
@@ -134,7 +133,7 @@ public partial class Moderation
                                     .WithDescription(Strings.UnmuteAllReasonPrompt(ctx.Guild.Id)), ctx.User.Id)
                             .ConfigureAwait(false))
                     {
-                        var msg = await ctx.Channel.SendMessageAsync(Strings.UnmuteAllReasonRequest(ctx.Guild.Id));
+                        var msg = await ctx.Channel.SendAsync(Strings.UnmuteAllReasonRequest(ctx.Guild.Id));
 
                         reason = await NextMessageAsync(ctx.Channel.Id, ctx.User.Id).ConfigureAwait(false);
                         var eb = new EmbedBuilder().WithDescription(
@@ -159,7 +158,7 @@ public partial class Moderation
                     else
                     {
                         var eb = new EmbedBuilder().WithDescription($"Unmuting {users.Count()} users...");
-                        var msg = await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+                        var msg = await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
                         foreach (var i in users)
                         {
                             try
@@ -179,7 +178,7 @@ public partial class Moderation
                 else
                 {
                     var eb = new EmbedBuilder().WithDescription($"Unmuting {users.Count()} users...");
-                    var msg = await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+                    var msg = await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
                     foreach (var i in users)
                     {
                         try
@@ -207,11 +206,11 @@ public partial class Moderation
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.MuteMembers)]
-        public async Task Unstfu(IGuildUser? user)
+        public async Task Unstfu(SocketGuildMember? user)
         {
             if (!await CheckRoleHierarchy(user))
                 return;
-            var channel = ctx.Channel as SocketGuildChannel;
+            var channel = ctx.Channel as Channel;
             var currentPerms = channel.GetPermissionOverwrite(user) ?? new OverwritePermissions();
             await channel.AddPermissionOverwriteAsync(user, currentPerms.Modify(sendMessages: PermValue.Inherit))
                 .ConfigureAwait(false);
@@ -226,7 +225,7 @@ public partial class Moderation
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
-        public async Task MuteRole([Remainder] IRole role = null)
+        public async Task MuteRole([Remainder] SocketRole role = null)
         {
             if (role is null)
             {
@@ -236,7 +235,7 @@ public partial class Moderation
             }
 
             if (Context.User.Id != Context.Guild.OwnerId &&
-                role.Position >= ((SocketGuildUser)Context.User).Roles.Max(x => x.Position))
+                role.Position >= ((SocketGuildMember)Context.User).Roles.Max(x => x.Position))
             {
                 await ReplyErrorAsync(Strings.InsufPermsU(ctx.Guild.Id)).ConfigureAwait(false);
                 return;
@@ -257,7 +256,7 @@ public partial class Moderation
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles | GuildPermission.MuteMembers)]
         [Priority(0)]
-        public async Task Mute(IGuildUser? target, [Remainder] string reason = "")
+        public async Task Mute(SocketGuildMember? target, [Remainder] string reason = "")
         {
             try
             {
@@ -287,7 +286,7 @@ public partial class Moderation
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles | GuildPermission.MuteMembers)]
         [Priority(2)]
-        public Task Mute(IGuildUser? user, StoopidTime time, string reason = "")
+        public Task Mute(SocketGuildMember? user, StoopidTime time, string reason = "")
         {
             return Mute(time, user, reason);
         }
@@ -303,7 +302,7 @@ public partial class Moderation
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles | GuildPermission.MuteMembers)]
         [Priority(1)]
-        public async Task Mute(StoopidTime time, IGuildUser? user, [Remainder] string reason = "")
+        public async Task Mute(StoopidTime time, SocketGuildMember? user, [Remainder] string reason = "")
         {
             if (time.Time < TimeSpan.FromMinutes(1) || time.Time > TimeSpan.FromDays(90))
                 return;
@@ -332,7 +331,7 @@ public partial class Moderation
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles | GuildPermission.MuteMembers)]
-        public async Task Unmute(IGuildUser? user, [Remainder] string reason = "")
+        public async Task Unmute(SocketGuildMember? user, [Remainder] string reason = "")
         {
             try
             {
@@ -358,7 +357,7 @@ public partial class Moderation
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [Priority(0)]
-        public async Task ChatMute(IGuildUser? user, [Remainder] string reason = "")
+        public async Task ChatMute(SocketGuildMember? user, [Remainder] string reason = "")
         {
             try
             {
@@ -385,7 +384,7 @@ public partial class Moderation
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
-        public async Task ChatUnmute(IGuildUser? user, [Remainder] string reason = "")
+        public async Task ChatUnmute(SocketGuildMember? user, [Remainder] string reason = "")
         {
             try
             {
@@ -413,7 +412,7 @@ public partial class Moderation
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.MuteMembers)]
         [Priority(1)]
-        public async Task VoiceMute(StoopidTime time, IGuildUser? user, [Remainder] string reason = "")
+        public async Task VoiceMute(StoopidTime time, SocketGuildMember? user, [Remainder] string reason = "")
         {
             if (time.Time < TimeSpan.FromMinutes(1) || time.Time > TimeSpan.FromDays(49))
                 return;
@@ -443,7 +442,7 @@ public partial class Moderation
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [Priority(1)]
-        public async Task ChatMute(StoopidTime time, IGuildUser? user, [Remainder] string reason = "")
+        public async Task ChatMute(StoopidTime time, SocketGuildMember? user, [Remainder] string reason = "")
         {
             if (time.Time < TimeSpan.FromMinutes(1) || time.Time > TimeSpan.FromDays(49))
                 return;
@@ -473,7 +472,7 @@ public partial class Moderation
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.MuteMembers)]
         [Priority(1)]
-        public async Task VoiceMute(IGuildUser? user, [Remainder] string reason = "")
+        public async Task VoiceMute(SocketGuildMember? user, [Remainder] string reason = "")
         {
             try
             {
@@ -499,7 +498,7 @@ public partial class Moderation
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.MuteMembers)]
-        public async Task VoiceUnmute(IGuildUser? user, [Remainder] string reason = "")
+        public async Task VoiceUnmute(SocketGuildMember? user, [Remainder] string reason = "")
         {
             try
             {

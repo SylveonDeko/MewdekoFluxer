@@ -16,7 +16,7 @@ public class TypingGame
     /// </summary>
     public const float WordValue = 4.5f;
 
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly List<ulong> finishedUserIds;
     private readonly GamesService games;
     private readonly EventHandler handler;
@@ -35,7 +35,7 @@ public class TypingGame
     /// <param name="options">Options along with starting the game</param>
     /// <param name="handler">Asynchronous event handler because discord sucks</param>
     /// <param name="strings">Localized bot strings</param>
-    public TypingGame(GamesService games, DiscordShardedClient client, ITextChannel channel,
+    public TypingGame(GamesService games, FluxerClient client, Channel channel,
         string? prefix, Options options, EventHandler handler, GeneratedBotStrings strings)
     {
         this.games = games;
@@ -54,7 +54,7 @@ public class TypingGame
     /// <summary>
     ///     Gets the text channel associated with the typing game.
     /// </summary>
-    public ITextChannel Channel { get; }
+    public Channel Channel { get; }
 
     /// <summary>
     ///     Gets or sets the current sentence being typed in the typing game.
@@ -111,7 +111,7 @@ public class TypingGame
 
             var time = options.StartTime;
 
-            var msg = await Channel.SendMessageAsync(
+            var msg = await Channel.SendAsync(
                 Strings.TypingContestCountdown(Channel.Guild.Id, time, "..."),
                 options: new RequestOptions
                 {
@@ -184,7 +184,7 @@ public class TypingGame
         {
             if (imsg.Author.IsBot)
                 return;
-            if (imsg is not SocketUserMessage msg)
+            if (imsg is not SocketMessage msg)
                 return;
 
             if (Channel == null || Channel.Id != msg.Channel.Id) return;

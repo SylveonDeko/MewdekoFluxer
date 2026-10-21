@@ -14,7 +14,7 @@ namespace Mewdeko.Controllers;
 [Authorize("ApiKeyPolicy")]
 public class FeedsController(
     FeedsService service,
-    DiscordShardedClient client,
+    FluxerClient client,
     IDataConnectionFactory dbFactory,
     IDashboardAuditContext auditContext)
     : Controller

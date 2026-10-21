@@ -1,5 +1,4 @@
 using DataModel;
-using Discord.Rest;
 using LinqToDB.Async;
 using Mewdeko.Database.DbContextStuff;
 using Mewdeko.Database.Enums;
@@ -127,7 +126,7 @@ public partial class FormsService
     private async Task<Eligibility> CheckAppealEligibilityAsync(
         Form form,
         ulong userId,
-        IGuild guild,
+        SocketGuild guild,
         IReadOnlyList<SubmissionRecord> history)
     {
         IBan? ban;
@@ -199,7 +198,7 @@ public partial class FormsService
     ///     Finds when a ban was placed, by looking for it in the guild's audit log.
     /// </summary>
     /// <returns>When the ban was placed, or null when it is no longer in the log.</returns>
-    private async Task<DateTime?> FindBanDateAsync(IGuild guild, ulong userId)
+    private async Task<DateTime?> FindBanDateAsync(SocketGuild guild, ulong userId)
     {
         try
         {

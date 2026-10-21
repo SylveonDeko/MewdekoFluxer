@@ -1,5 +1,4 @@
 ﻿using CodeHollow.FeedReader;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Searches.Services;
 
@@ -29,13 +28,13 @@ public partial class Searches
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageMessages)]
-        public async Task FeedAdd(string url, [Remainder] ITextChannel? channel = null)
+        public async Task FeedAdd(string url, [Remainder] Channel? channel = null)
         {
             var success = Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
                           (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
             if (success)
             {
-                channel ??= (ITextChannel)ctx.Channel;
+                channel ??= (Channel)ctx.Channel;
                 try
                 {
                     await FeedReader.ReadAsync(url).ConfigureAwait(false);
@@ -131,7 +130,7 @@ public partial class Searches
                 return;
             }
 
-            await Service.TestRss(feeds.ElementAt(index - 1), ctx.Channel as ITextChannel).ConfigureAwait(false);
+            await Service.TestRss(feeds.ElementAt(index - 1), ctx.Channel as Channel).ConfigureAwait(false);
         }
 
         /// <summary>

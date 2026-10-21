@@ -1,8 +1,7 @@
-﻿using Discord.Commands;
+﻿
 using LinqToDB.Async;
 using Mewdeko.Common.Collections;
 using Mewdeko.Common.ModuleBehaviors;
-using CommandInfo = Discord.Commands.CommandInfo;
 
 namespace Mewdeko.Modules.Permissions.Services;
 
@@ -51,7 +50,7 @@ public class CmdCdService : ILateBlocker, INService
     ///     guild.
     ///     If the command is on cooldown, the execution is blocked. This check is specific to traditional text-based commands.
     /// </remarks>
-    public async Task<bool> TryBlockLate(DiscordShardedClient client, ICommandContext ctx, string moduleName,
+    public async Task<bool> TryBlockLate(FluxerClient client, ICommandContext ctx, string moduleName,
         CommandInfo command)
     {
         var guild = ctx.Guild;
@@ -74,7 +73,7 @@ public class CmdCdService : ILateBlocker, INService
     ///     execution.
     ///     This method manages cooldown state and ensures that commands cannot be spammed by tracking active cooldowns.
     /// </remarks>
-    public async Task<bool> TryBlock(IGuild? guild, IUser user, string commandName)
+    public async Task<bool> TryBlock(SocketGuild? guild, IUser user, string commandName)
     {
         if (guild is null)
             return false;

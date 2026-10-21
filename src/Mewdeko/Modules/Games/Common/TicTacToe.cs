@@ -11,7 +11,7 @@ namespace Mewdeko.Modules.Games.Common;
 /// </summary>
 public class TicTacToe
 {
-    private readonly ITextChannel channel;
+    private readonly Channel channel;
     private readonly BotConfig config;
     private readonly EventHandler handler;
     private readonly SemaphoreSlim moveLock;
@@ -24,14 +24,14 @@ public class TicTacToe
     private readonly Options options;
     private readonly int?[,] state;
     private readonly GeneratedBotStrings Strings;
-    private readonly IGuildUser?[] users;
+    private readonly SocketGuildMember?[] users;
     private int curUserIndex;
     private Phase phase;
 
-    private IUserMessage? previousMessage;
+    private Message? previousMessage;
     private Timer timeoutTimer;
 
-    private IGuildUser? winner;
+    private SocketGuildMember? winner;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="TicTacToe" /> class with the specified strings, client, channel, first
@@ -43,8 +43,8 @@ public class TicTacToe
     /// <param name="options">Options along with the game</param>
     /// <param name="config">Bot Configuration</param>
     /// <param name="handler">Event Handler</param>
-    public TicTacToe(GeneratedBotStrings strings, ITextChannel channel,
-        IGuildUser firstUser, Options options, BotConfig config, EventHandler handler)
+    public TicTacToe(GeneratedBotStrings strings, Channel channel,
+        SocketGuildMember firstUser, Options options, BotConfig config, EventHandler handler)
     {
         this.channel = channel;
         this.Strings = strings;
@@ -147,7 +147,7 @@ public class TicTacToe
     ///     Starts the game with the specified user.
     /// </summary>
     /// <param name="user"></param>
-    public async Task Start(IGuildUser? user)
+    public async Task Start(SocketGuildMember? user)
     {
         if (phase is Phase.Started or Phase.Ended)
         {

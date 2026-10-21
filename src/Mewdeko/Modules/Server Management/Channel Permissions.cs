@@ -1,4 +1,3 @@
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 
 namespace Mewdeko.Modules.Server_Management;
@@ -37,7 +36,7 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageChannels)]
         [Priority(1)]
-        public async Task PermControl(SocketGuildChannel channel, PermValue perm, IRole role,
+        public async Task PermControl(Channel channel, PermValue perm, SocketRole role,
             params ChannelPermission[] perms)
         {
             OverwritePermissions result;
@@ -119,7 +118,7 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageChannels)]
         [Priority(1)]
-        public async Task PermControl(SocketGuildChannel channel, PermValue perm, IUser user,
+        public async Task PermControl(Channel channel, PermValue perm, IUser user,
             params ChannelPermission[] perms)
         {
             OverwritePermissions result;

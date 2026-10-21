@@ -1,6 +1,5 @@
 ﻿using System.Net.Http;
 using System.Threading;
-using Discord.Commands;
 using MartineApiNet;
 using MartineApiNet.Enums;
 using MartineApiNet.Models.Images;
@@ -94,7 +93,7 @@ public class Nsfw(
             }
             else
             {
-                await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+                await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
                 await msg.DeleteAsync();
             }
         }
@@ -563,7 +562,7 @@ public class Nsfw(
                 return;
             }
 
-            await ctx.Channel.SendMessageAsync(string.Join("\n", linksEnum.Select(x => x.Url))).ConfigureAwait(false);
+            await ctx.Channel.SendAsync(string.Join("\n", linksEnum.Select(x => x.Url))).ConfigureAwait(false);
         }
         finally
         {
@@ -599,7 +598,7 @@ public class Nsfw(
                 return;
             }
 
-            await ctx.Channel.SendMessageAsync(string.Join("\n", linksEnum.Select(x => x.Url))).ConfigureAwait(false);
+            await ctx.Channel.SendAsync(string.Join("\n", linksEnum.Select(x => x.Url))).ConfigureAwait(false);
         }
         finally
         {
@@ -860,7 +859,7 @@ public class Nsfw(
 
         if (data.Url.IsImage())
         {
-            await ctx.Channel.SendMessageAsync(embed: new EmbedBuilder().WithOkColor().WithImageUrl(data.Url)
+            await ctx.Channel.SendAsync(embed: new EmbedBuilder().WithOkColor().WithImageUrl(data.Url)
                     .WithDescription($"[link]({data.Url})")
                     .WithFooter(
                         $"{data.Rating} ({data.Provider}) | {string.Join(" | ", data.Tags.Where(x => !string.IsNullOrWhiteSpace(x)).Take(5))}")
@@ -877,7 +876,7 @@ public class Nsfw(
 
             if (fileSize > (long)maxUploadSize)
             {
-                await ctx.Channel.SendMessageAsync(
+                await ctx.Channel.SendAsync(
                     embed: new EmbedBuilder().WithErrorColor()
                         .WithTitle(Strings.NsfwFileTooLarge(ctx.Guild.Id))
                         .WithDescription(
@@ -892,7 +891,7 @@ public class Nsfw(
 
             if (imgData.Length > (int)maxUploadSize)
             {
-                await ctx.Channel.SendMessageAsync(
+                await ctx.Channel.SendAsync(
                     embed: new EmbedBuilder().WithErrorColor()
                         .WithTitle(Strings.NsfwFileTooLarge(ctx.Guild.Id))
                         .WithDescription(

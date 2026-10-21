@@ -19,7 +19,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
     public const int MaxQuestions = 5;
 
     private readonly ConcurrentDictionary<ulong, byte> activeApplicants = new();
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly EventHandler eventHandler;
     private readonly ILogger<ChannelAccessService> logger;
@@ -37,7 +37,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
     /// <param name="strings">The localization service.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     public ChannelAccessService(
-        DiscordShardedClient client,
+        FluxerClient client,
         IDataConnectionFactory dbFactory,
         EventHandler eventHandler,
         GeneratedBotStrings strings,
@@ -94,7 +94,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
         try
         {
             if (client.GetGuild(config.GuildId)?.GetTextChannel(logChannelId) is { } channel)
-                await channel.SendMessageAsync(embed: new EmbedBuilder()
+                await channel.SendAsync(embed: new EmbedBuilder()
                     .WithColor(Color.Blue)
                     .WithDescription(message)
                     .WithCurrentTimestamp()
@@ -370,7 +370,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
     /// <param name="config">The gate being applied to.</param>
     /// <param name="user">The prospective applicant.</param>
     /// <returns>A tuple of whether they may apply and, if not, a human readable reason.</returns>
-    public async Task<(bool CanApply, string? Reason)> CanApplyAsync(ChannelAccessConfig config, IGuildUser user)
+    public async Task<(bool CanApply, string? Reason)> CanApplyAsync(ChannelAccessConfig config, SocketGuildMember user)
     {
         if (!config.Enabled)
             return (false, "Applications for this channel are closed right now.");
@@ -429,7 +429,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
     /// <param name="user">The applicant.</param>
     /// <param name="answers">The applicant's answers, in question order.</param>
     /// <returns>The stored application, or null if the review channel could not be reached.</returns>
-    public async Task<ChannelAccessApplication?> SubmitApplicationAsync(ChannelAccessConfig config, IGuildUser user,
+    public async Task<ChannelAccessApplication?> SubmitApplicationAsync(ChannelAccessConfig config, SocketGuildMember user,
         List<(int? QuestionId, string Question, string Answer)> answers)
     {
         await using var db = await dbFactory.CreateConnectionAsync();
@@ -471,7 +471,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
         var embed = await BuildApplicationEmbedAsync(config, application, user);
         var ping = config.PingRoleId is { } pingRole and not 0 ? $"<@&{pingRole}>" : null;
 
-        var message = await review.SendMessageAsync(ping, embed: embed.Build(),
+        var message = await review.SendAsync(ping, embed: embed.Build(),
             allowedMentions: new AllowedMentions
             {
                 RoleIds = config.PingRoleId is { } r and not 0 ? [r] : []
@@ -593,7 +593,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
     /// <param name="config">The gate being voted on.</param>
     /// <param name="user">The prospective voter.</param>
     /// <returns>True if the member may vote.</returns>
-    public bool CanVote(ChannelAccessConfig config, IGuildUser user)
+    public bool CanVote(ChannelAccessConfig config, SocketGuildMember user)
     {
         if (config.VoterRoleId is { } voterRole and not 0)
             return user.RoleIds.Contains(voterRole);
@@ -609,7 +609,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
     /// <param name="config">The gate to check against.</param>
     /// <param name="user">The member to check.</param>
     /// <returns>True if the member is already inside.</returns>
-    public bool HasAccess(ChannelAccessConfig config, IGuildUser user)
+    public bool HasAccess(ChannelAccessConfig config, SocketGuildMember user)
     {
         if ((AccessGrantMode)config.GrantMode == AccessGrantMode.Role)
             return config.AccessRoleId is { } accessRole && user.RoleIds.Contains(accessRole);
@@ -621,7 +621,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
         if (channel.GetPermissionOverwrite(user) is { ViewChannel: PermValue.Allow })
             return true;
 
-        return user is SocketGuildUser socketUser && socketUser.GetPermissions(channel).ViewChannel;
+        return user is SocketGuildMember socketUser && socketUser.GetPermissions(channel).ViewChannel;
     }
 
     /// <summary>
@@ -631,7 +631,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
     /// <param name="user">The voter.</param>
     /// <param name="vote">1 to approve, -1 to deny, 0 to abstain.</param>
     /// <returns>What happened to the vote.</returns>
-    public async Task<AccessVoteResult> CastVoteAsync(int applicationId, IGuildUser user, int vote)
+    public async Task<AccessVoteResult> CastVoteAsync(int applicationId, SocketGuildMember user, int vote)
     {
         await voteLock.WaitAsync();
         try
@@ -738,16 +738,16 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
     private static readonly Emoji DenyEmoji = new("❌");
     private static readonly Emoji AbstainEmoji = new("🤷");
 
-    private static List<IEmote> GetVoteEmotes(ChannelAccessConfig config)
+    private static List<Emoji> GetVoteEmotes(ChannelAccessConfig config)
     {
-        List<IEmote> emotes = [ApproveEmoji, DenyEmoji];
+        List<Emoji> emotes = [ApproveEmoji, DenyEmoji];
         if (config.AllowAbstain)
             emotes.Add(AbstainEmoji);
 
         return emotes;
     }
 
-    private static int? GetVoteFromEmote(ChannelAccessConfig config, IEmote emote)
+    private static int? GetVoteFromEmote(ChannelAccessConfig config, Emoji emote)
     {
         if (emote.Name == ApproveEmoji.Name)
             return 1;
@@ -758,8 +758,8 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
         return emote.Name == AbstainEmoji.Name && config.AllowAbstain ? 0 : null;
     }
 
-    private async Task OnReactionAddedAsync(Cacheable<IUserMessage, ulong> message,
-        Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
+    private async Task OnReactionAddedAsync(Cacheable<Message> message,
+        Cacheable<Channel> channel, SocketReaction reaction)
     {
         if (!trackedMessages.ContainsKey(message.Id) || reaction.UserId == client.CurrentUser.Id ||
             reaction.User.IsSpecified && reaction.User.Value.IsBot)
@@ -785,8 +785,8 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
         }
     }
 
-    private async Task OnReactionRemovedAsync(Cacheable<IUserMessage, ulong> message,
-        Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
+    private async Task OnReactionRemovedAsync(Cacheable<Message> message,
+        Cacheable<Channel> channel, SocketReaction reaction)
     {
         if (!trackedMessages.ContainsKey(message.Id) || reaction.UserId == client.CurrentUser.Id)
             return;
@@ -799,7 +799,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
                 return;
 
             var config = await GetConfigByIdAsync(application.ConfigId);
-            if (config is not null && GetVoteFromEmote(config, reaction.Emote) is { } vote)
+            if (config is not null && GetVoteFromEmote(config, reaction.Emoji) is { } vote)
                 await RemoveVoteAsync(application.Id, reaction.UserId, vote);
         }
         catch (Exception ex)
@@ -809,14 +809,14 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
         }
     }
 
-    private async Task HandlePanelReactionAsync(ChannelAccessConfig config, Cacheable<IUserMessage, ulong> message,
+    private async Task HandlePanelReactionAsync(ChannelAccessConfig config, Cacheable<Message> message,
         SocketReaction reaction)
     {
-        if (reaction.Emote.Name != ApplyEmoji.Name)
+        if (reaction.Emoji.Name != ApplyEmoji.Name)
             return;
 
         var panelMessage = await message.GetOrDownloadAsync();
-        await TryRemoveReactionAsync(panelMessage, reaction.Emote, reaction.UserId);
+        await TryRemoveReactionAsync(panelMessage, reaction.Emoji, reaction.UserId);
 
         if (client.GetGuild(config.GuildId)?.GetUser(reaction.UserId) is not { } member)
             return;
@@ -826,7 +826,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
         {
             try
             {
-                await member.SendMessageAsync(reason);
+                await member.SendAsync(reason);
             }
             catch
             {
@@ -841,23 +841,23 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
         if (client.GetGuild(config.GuildId)?.GetTextChannel(panelMessage.Channel.Id) is not { } panelChannel)
             return;
 
-        var notice = await panelChannel.SendMessageAsync(strings.ChannelAccessApplyDmClosed(config.GuildId,
+        var notice = await panelChannel.SendAsync(strings.ChannelAccessApplyDmClosed(config.GuildId,
                 member.Mention),
             allowedMentions: new AllowedMentions { UserIds = [member.Id] });
         _ = Task.Delay(TimeSpan.FromSeconds(15)).ContinueWith(_ => notice.DeleteAsync());
     }
 
     private async Task HandleVoteReactionAsync(ChannelAccessApplication application,
-        Cacheable<IUserMessage, ulong> message, SocketReaction reaction)
+        Cacheable<Message> message, SocketReaction reaction)
     {
         var config = await GetConfigByIdAsync(application.ConfigId);
-        if (config is null || GetVoteFromEmote(config, reaction.Emote) is not { } vote)
+        if (config is null || GetVoteFromEmote(config, reaction.Emoji) is not { } vote)
             return;
 
         var reviewMessage = await message.GetOrDownloadAsync();
         if (client.GetGuild(config.GuildId)?.GetUser(reaction.UserId) is not { } member)
         {
-            await TryRemoveReactionAsync(reviewMessage, reaction.Emote, reaction.UserId);
+            await TryRemoveReactionAsync(reviewMessage, reaction.Emoji, reaction.UserId);
             return;
         }
 
@@ -867,16 +867,16 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
             case AccessVoteResult.Recorded:
                 break;
             case AccessVoteResult.Changed:
-                foreach (var emote in GetVoteEmotes(config).Where(x => x.Name != reaction.Emote.Name))
+                foreach (var emote in GetVoteEmotes(config).Where(x => x.Name != reaction.Emoji.Name))
                     await TryRemoveReactionAsync(reviewMessage, emote, reaction.UserId);
                 break;
             default:
-                await TryRemoveReactionAsync(reviewMessage, reaction.Emote, reaction.UserId);
+                await TryRemoveReactionAsync(reviewMessage, reaction.Emoji, reaction.UserId);
                 break;
         }
     }
 
-    private async Task TryRemoveReactionAsync(IUserMessage message, IEmote emote, ulong userId)
+    private async Task TryRemoveReactionAsync(Message message, Emoji emote, ulong userId)
     {
         try
         {
@@ -899,7 +899,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
     /// <param name="config">The gate being applied to.</param>
     /// <param name="user">The applicant.</param>
     /// <returns>False if the applicant's DMs could not be reached.</returns>
-    public async Task<bool> StartApplicationAsync(ChannelAccessConfig config, IGuildUser user)
+    public async Task<bool> StartApplicationAsync(ChannelAccessConfig config, SocketGuildMember user)
     {
         if (!activeApplicants.TryAdd(user.Id, 0))
             return true;
@@ -908,20 +908,20 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
         {
             var questions = await GetQuestionsAsync(config.Id);
             var dm = await user.CreateDMChannelAsync();
-            await dm.SendMessageAsync(strings.ChannelAccessApplyIntro(config.GuildId, $"<#{config.ChannelId}>",
+            await dm.SendAsync(strings.ChannelAccessApplyIntro(config.GuildId, $"<#{config.ChannelId}>",
                 questions.Count));
 
             _ = Task.Run(() => RunApplicationAsync(config, user, dm, questions));
             return true;
         }
-        catch (Discord.Net.HttpException)
+        catch (Discord.Net.FluxerApiException)
         {
             activeApplicants.TryRemove(user.Id, out _);
             return false;
         }
     }
 
-    private async Task RunApplicationAsync(ChannelAccessConfig config, IGuildUser user, IDMChannel dm,
+    private async Task RunApplicationAsync(ChannelAccessConfig config, SocketGuildMember user, Channel dm,
         List<ChannelAccessQuestion> questions)
     {
         try
@@ -935,7 +935,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
                 if (!question.Required)
                     prompt += $"\n{strings.ChannelAccessApplyOptionalHint(config.GuildId)}";
 
-                await dm.SendMessageAsync(prompt);
+                await dm.SendAsync(prompt);
 
                 string answer;
                 while (true)
@@ -943,7 +943,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
                     var reply = await WaitForReplyAsync(dm.Id, user.Id, TimeSpan.FromMinutes(5));
                     if (reply is null)
                     {
-                        await dm.SendMessageAsync(strings.ChannelAccessApplyTimeout(config.GuildId));
+                        await dm.SendAsync(strings.ChannelAccessApplyTimeout(config.GuildId));
                         return;
                     }
 
@@ -957,7 +957,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
                     if (reply.Length < Math.Max(1, question.MinLength) ||
                         question.MaxLength > 0 && reply.Length > question.MaxLength)
                     {
-                        await dm.SendMessageAsync(strings.ChannelAccessApplyLength(config.GuildId,
+                        await dm.SendAsync(strings.ChannelAccessApplyLength(config.GuildId,
                             Math.Max(1, question.MinLength), question.MaxLength));
                         continue;
                     }
@@ -970,7 +970,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
             }
 
             var application = await SubmitApplicationAsync(config, user, answers);
-            await dm.SendMessageAsync(application is null
+            await dm.SendAsync(application is null
                 ? strings.ChannelAccessApplyFailed(config.GuildId)
                 : strings.ChannelAccessApplied(config.GuildId));
         }
@@ -979,7 +979,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
             logger.LogError(ex, "Failed submitting channel access application in guild {GuildId}", config.GuildId);
             try
             {
-                await dm.SendMessageAsync(strings.ChannelAccessApplyFailed(config.GuildId));
+                await dm.SendAsync(strings.ChannelAccessApplyFailed(config.GuildId));
             }
             catch
             {
@@ -1074,7 +1074,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
 
             try
             {
-                await member.SendMessageAsync(text);
+                await member.SendAsync(text);
             }
             catch
             {
@@ -1096,7 +1096,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
     /// </summary>
     /// <param name="config">The gate that was applied to.</param>
     /// <param name="member">The approved applicant.</param>
-    public async Task GrantAccessAsync(ChannelAccessConfig config, IGuildUser member)
+    public async Task GrantAccessAsync(ChannelAccessConfig config, SocketGuildMember member)
     {
         try
         {
@@ -1148,10 +1148,10 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
 
         try
         {
-            if (await channel.GetMessageAsync(application.MessageId.Value) is not IUserMessage message)
+            if (await channel.GetMessageAsync(application.MessageId.Value) is not Message message)
                 return;
 
-            var applicant = guild.GetUser(application.UserId) as IGuildUser;
+            var applicant = guild.GetUser(application.UserId) as SocketGuildMember;
             var embed = await BuildApplicationEmbedAsync(config, application, applicant);
 
             await message.ModifyAsync(m => m.Embed = embed.Build());
@@ -1223,7 +1223,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
     /// <param name="applicant">The applicant, if they are still in the guild.</param>
     /// <returns>The embed builder for the application message.</returns>
     public async Task<EmbedBuilder> BuildApplicationEmbedAsync(ChannelAccessConfig config,
-        ChannelAccessApplication application, IGuildUser? applicant)
+        ChannelAccessApplication application, SocketGuildMember? applicant)
     {
         var status = (AccessApplicationStatus)application.Status;
         var votes = await GetVotesAsync(application.Id);
@@ -1315,7 +1315,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
             .WithDescription(strings.ChannelAccessPanelBody(config.GuildId))
             .Build();
 
-        var message = await target.SendMessageAsync(embed: embed);
+        var message = await target.SendAsync(embed: embed);
         await message.AddReactionAsync(ApplyEmoji);
         trackedMessages.TryAdd(message.Id, 0);
 

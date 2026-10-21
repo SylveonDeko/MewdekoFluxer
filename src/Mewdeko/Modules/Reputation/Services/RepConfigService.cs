@@ -2,7 +2,6 @@ using System.IO;
 using System.Net.Http;
 using System.Text;
 using DataModel;
-using Discord.Commands;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.Configs;
@@ -10,7 +9,6 @@ using Mewdeko.Database.DbContextStuff;
 using Mewdeko.Modules.Reputation.Common;
 using Mewdeko.Services.Strings;
 using Newtonsoft.Json;
-using Embed = Discord.Embed;
 
 namespace Mewdeko.Modules.Reputation.Services;
 
@@ -67,7 +65,7 @@ public class RepConfigService : INService
             .WithTimestamp(DateTimeOffset.UtcNow)
             .Build();
 
-        await ctx.Channel.SendMessageAsync(embed: embed);
+        await ctx.Channel.SendAsync(embed: embed);
     }
 
     /// <summary>

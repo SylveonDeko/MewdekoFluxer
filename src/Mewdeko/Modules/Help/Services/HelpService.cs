@@ -1,9 +1,6 @@
 ﻿using System.Reflection;
 using System.Text;
 using CommandLine;
-using Discord.Commands;
-using Discord.Net;
-using Discord.Rest;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.ModuleBehaviors;
 using Mewdeko.Modules.Administration.Services;
@@ -14,7 +11,6 @@ using Mewdeko.Services.Impl;
 using Mewdeko.Services.Settings;
 using Mewdeko.Services.strings;
 using Mewdeko.Services.Strings;
-using ModuleInfo = Discord.Commands.ModuleInfo;
 
 namespace Mewdeko.Modules.Help.Services;
 
@@ -86,7 +82,7 @@ public class HelpService : INService, IReadyExecutor
     private readonly BlacklistService blacklistService;
     private readonly Mewdeko bot;
     private readonly BotConfigService bss;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly CommandService cmds;
     private readonly BotCredentials creds;
     private readonly DiscordPermOverrideService dpos;
@@ -122,7 +118,7 @@ public class HelpService : INService, IReadyExecutor
         IBotStrings strings,
         DiscordPermOverrideService dpos,
         BotConfigService bss,
-        DiscordShardedClient client,
+        FluxerClient client,
         Mewdeko bot,
         BlacklistService blacklistService,
         CommandService cmds,
@@ -187,22 +183,22 @@ public class HelpService : INService, IReadyExecutor
     /// <summary>
     ///     Executes the help text when someone attempts to dm the bot with a bad command
     /// </summary>
-    /// <param name="DiscordShardedClient">The client</param>
+    /// <param name="FluxerClient">The client</param>
     /// <param name="guild">The guild (hopefully null otherwise this method is useless)</param>
     /// <param name="msg">The message of the user</param>
     /// <returns></returns>
-    public async Task BadCommand(DiscordShardedClient DiscordShardedClient, IGuild? guild, IUserMessage msg)
+    public async Task BadCommand(FluxerClient FluxerClient, SocketGuild? guild, Message msg)
     {
         var settings = bss.Data;
         if (guild != null) return;
         if (string.IsNullOrWhiteSpace(settings.DmHelpText) || settings.DmHelpText == "-")
             return;
         var replacer = new ReplacementBuilder()
-            .WithDefault(msg.Author, msg.Channel, null, DiscordShardedClient).Build();
+            .WithDefault(msg.Author, msg.Channel, null, FluxerClient).Build();
         if (SmartEmbed.TryParse(replacer.Replace(settings.DmHelpText), null, out var embed, out var plainText))
-            await msg.Channel.SendMessageAsync(plainText, embeds: embed);
+            await msg.Channel.SendAsync(plainText, embeds: embed);
         else
-            await msg.Channel.SendMessageAsync(settings.DmHelpText);
+            await msg.Channel.SendAsync(settings.DmHelpText);
     }
 
     /// <summary>
@@ -213,7 +209,7 @@ public class HelpService : INService, IReadyExecutor
     /// <param name="channel">The channel where the help menu was executed</param>
     /// <param name="user">The user who executed the help menu</param>
     /// <returns>An <see cref="EmbedBuilder" /> listing every populated category</returns>
-    public async Task<EmbedBuilder> GetHelpEmbed(bool description, IGuild? guild, IMessageChannel channel, IUser user)
+    public async Task<EmbedBuilder> GetHelpEmbed(bool description, SocketGuild? guild, Channel channel, IUser user)
     {
         var guildId = guild?.Id ?? 0;
         var prefix = await guildSettings.GetPrefix(guild);
@@ -261,7 +257,7 @@ public class HelpService : INService, IReadyExecutor
     /// <param name="moduleName">The top level module name</param>
     /// <param name="guild">The guild where the help menu was executed</param>
     /// <returns>The section index embed, or null if the module should be listed directly</returns>
-    public async Task<EmbedBuilder?> GetModuleOverview(string moduleName, IGuild? guild)
+    public async Task<EmbedBuilder?> GetModuleOverview(string moduleName, SocketGuild? guild)
     {
         var guildId = guild?.Id ?? 0;
         if (!HasSectionIndex(moduleName))
@@ -308,7 +304,7 @@ public class HelpService : INService, IReadyExecutor
     /// <param name="user">The user allowed to control the paginator</param>
     /// <returns>A configured <see cref="LazyPaginatorBuilder" />, or null when nothing matched</returns>
     public async Task<LazyPaginatorBuilder?> BuildCommandPaginator(string moduleName, string? section,
-        string? filter, IGuild? guild, IUser user)
+        string? filter, SocketGuild? guild, IUser user)
     {
         var guildId = guild?.Id ?? 0;
         var prefix = await guildSettings.GetPrefix(guild);
@@ -532,7 +528,7 @@ public class HelpService : INService, IReadyExecutor
             .ToList();
     }
 
-    private async Task<string> CheckEnabled(ulong? guildId, IMessageChannel channel, IUser user, string moduleName)
+    private async Task<string> CheckEnabled(ulong? guildId, Channel channel, IUser user, string moduleName)
     {
         if (!guildId.HasValue)
             return "✅";
@@ -541,7 +537,7 @@ public class HelpService : INService, IReadyExecutor
         return !pc.Permissions.CheckSlashPermissions(moduleName, "none", user, channel, out _) ? "❌" : "✅";
     }
 
-    private string? GetModuleDescription(string module, IGuild? guild)
+    private string? GetModuleDescription(string module, SocketGuild? guild)
     {
         var locale = localization.GetCultureInfo(guild?.Id).Name;
         var key = $"module_description_{module.ToLowerInvariant()}";
@@ -552,7 +548,7 @@ public class HelpService : INService, IReadyExecutor
     {
         if (msg.Content == $"<@{client.CurrentUser.Id}>" || msg.Content == $"<@!{client.CurrentUser.Id}>")
         {
-            if (msg.Channel is ITextChannel chan)
+            if (msg.Channel is Channel chan)
             {
                 var prefix = await guildSettings.GetPrefix(chan.Guild);
                 var eb = new EmbedBuilder();
@@ -563,12 +559,12 @@ public class HelpService : INService, IReadyExecutor
                 eb.WithFooter(new EmbedFooterBuilder().WithText(client.CurrentUser.Username)
                     .WithIconUrl(client.CurrentUser.RealAvatarUrl().ToString()));
 
-                await chan.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+                await chan.SendAsync(embed: eb.Build()).ConfigureAwait(false);
             }
         }
     }
 
-    private async Task HandleJoin(IGuild guild)
+    private async Task HandleJoin(SocketGuild guild)
     {
         if (blacklistService.BlacklistEntries.Select(x => x.ItemId).Contains(guild.Id))
             return;
@@ -604,9 +600,9 @@ public class HelpService : INService, IReadyExecutor
 
         try
         {
-            await inviter.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+            await inviter.SendAsync(embed: eb.Build()).ConfigureAwait(false);
         }
-        catch (HttpException)
+        catch (FluxerApiException)
         {
             logger.LogDebug("Inviter {UserId} for guild {GuildId} has DMs closed", inviter.Id, guild.Id);
         }
@@ -619,7 +615,7 @@ public class HelpService : INService, IReadyExecutor
     /// </summary>
     /// <param name="guild">The guild the bot just joined.</param>
     /// <returns>The inviting user, or null when they cannot be determined.</returns>
-    private async Task<IUser?> ResolveInviter(IGuild guild)
+    private async Task<IUser?> ResolveInviter(SocketGuild guild)
     {
         var botUser = client.GetGuild(guild.Id)?.CurrentUser;
         if (botUser is null || !botUser.GuildPermissions.ViewAuditLog)
@@ -636,7 +632,7 @@ public class HelpService : INService, IReadyExecutor
                 if (entry?.User is not null && !entry.User.IsBot)
                     return entry.User;
             }
-            catch (HttpException ex)
+            catch (FluxerApiException ex)
             {
                 logger.LogDebug(ex, "Could not read the bot-add audit log for guild {GuildId}", guild.Id);
                 return null;
@@ -655,7 +651,7 @@ public class HelpService : INService, IReadyExecutor
     /// <param name="com">The command in question</param>
     /// <param name="guild">The guild where this was executed</param>
     /// <returns>The command help embed</returns>
-    public async Task<EmbedBuilder> GetCommandHelp(CommandInfo com, IGuild? guild)
+    public async Task<EmbedBuilder> GetCommandHelp(CommandInfo com, SocketGuild? guild)
     {
         var actualUrl = GenerateDocumentationUrl(com);
         if (com.Attributes.Any(x => x is HelpDisabled))
@@ -1076,7 +1072,7 @@ public class HelpService : INService, IReadyExecutor
         return (perm + " Server Permission").Replace("Guild", "Server", StringComparison.InvariantCulture);
     }
 
-    private string? GetText(string? text, IGuild? guild, params object?[] replacements)
+    private string? GetText(string? text, SocketGuild? guild, params object?[] replacements)
     {
         return strings.GetText(text, guild?.Id, replacements);
     }

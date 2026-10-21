@@ -14,7 +14,6 @@ using Mewdeko.Modules.Utility.Services.Impl;
 using Mewdeko.Services.Analytics;
 using Mewdeko.Services.Strings;
 using Microsoft.Extensions.DependencyInjection;
-using Embed = Discord.Embed;
 
 namespace Mewdeko.Modules.Utility.Services;
 
@@ -46,7 +45,7 @@ public class AiService : INService
 
     private readonly AiClientFactory aiClientFactory;
     private readonly BotConfig botConfig;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly IDataConnectionFactory dbFactory;
     private readonly IHttpClientFactory httpFactory;
@@ -76,7 +75,7 @@ public class AiService : INService
     /// <param name="serviceProvider">The service provider for dependency injection.</param>
     /// <param name="collector">The analytics collector.</param>
     public AiService(IDataConnectionFactory dbFactory, IHttpClientFactory httpFactory,
-        GeneratedBotStrings strings, BotConfig config, EventHandler handler, DiscordShardedClient client,
+        GeneratedBotStrings strings, BotConfig config, EventHandler handler, FluxerClient client,
         ILogger<AiService> logger, IServiceProvider serviceProvider, IAnalyticsCollector collector)
     {
         this.dbFactory = dbFactory;
@@ -149,8 +148,8 @@ public class AiService : INService
 
     private async Task HandleMessage(SocketMessage msg)
     {
-        if (msg is not IUserMessage || msg.Author.IsBot) return;
-        if (msg.Channel is not IGuildChannel guildChannel) return;
+        if (msg is not Message || msg.Author.IsBot) return;
+        if (msg.Channel is not Channel guildChannel) return;
 
         var config = await GetOrCreateConfig(guildChannel.GuildId);
         if (!config.Enabled || config.ChannelId != msg.Channel.Id) return;
@@ -168,12 +167,12 @@ public class AiService : INService
             return;
         }
 
-        DiscordWebhookClient? webhook = null;
+        FluxerWebhookClient? webhook = null;
         ulong? webhookMessageId = null;
         if (!string.IsNullOrEmpty(config.WebhookUrl))
         {
-            webhook = new DiscordWebhookClient(config.WebhookUrl);
-            webhookMessageId = await webhook.SendMessageAsync(embeds:
+            webhook = new FluxerWebhookClient(config.WebhookUrl);
+            webhookMessageId = await webhook.SendAsync(embeds:
             [
                 new EmbedBuilder()
                     .WithOkColor()
@@ -258,14 +257,14 @@ public class AiService : INService
 
 
     private async Task StreamResponse(GuildAiConfig config, ulong? webhookMessageId, SocketMessage userMsg,
-        DiscordWebhookClient? webhook)
+        FluxerWebhookClient? webhook)
     {
         await using var db = await dbFactory.CreateConnectionAsync();
         var conversation = await db.AiConversations
             .LoadWithAsTable(x => x.AiMessages)
             .FirstOrDefaultAsync(x => x.GuildId == config.GuildId && x.UserId == userMsg.Author.Id);
 
-        var guildChannel = userMsg.Channel as SocketTextChannel;
+        var guildChannel = userMsg.Channel as Channel;
         var replacer = new ReplacementBuilder()
             .WithChannel(userMsg.Channel)
             .WithUser(userMsg.Author)
@@ -363,7 +362,7 @@ public class AiService : INService
         var requestTimer = Stopwatch.StartNew();
 
         // Store response message for regular (non-webhook) updates
-        IUserMessage? regularMessage = null;
+        Message? regularMessage = null;
 
         // Create a replacer that will substitute %airesponse% with the current builder content
         replacer = new ReplacementBuilder()
@@ -589,7 +588,7 @@ public class AiService : INService
                                     return;
                                 }
 
-                                regularMessage = await userMsg.Channel.SendMessageAsync(
+                                regularMessage = await userMsg.Channel.SendAsync(
                                     newEmbed.Content,
                                     embeds: discordEmbeds.ToArray(),
                                     allowedMentions: AllowedMentions.None);
@@ -664,7 +663,7 @@ public class AiService : INService
                         await webhook.ModifyMessageAsync(webhookMessageId.Value, x =>
                         {
                             x.Content = null;
-                            x.Embeds = new List<Embed>
+                            x.Embeds = new List<EmbedRequest>
                             {
                                 embed
                             };
@@ -693,7 +692,7 @@ public class AiService : INService
                             }).ToList();
 
                             // Send the initial message and store the reference
-                            regularMessage = await userMsg.Channel.SendMessageAsync(
+                            regularMessage = await userMsg.Channel.SendAsync(
                                 plainText,
                                 embeds: modifiedEmbeds.ToArray(), allowedMentions: AllowedMentions.None);
                         }
@@ -749,9 +748,9 @@ public class AiService : INService
             }
 
             // Helper method to extract Discord.NET embeds from a NewEmbed object
-            List<Embed> GetDiscordEmbeds(NewEmbed newEmbed)
+            List<EmbedRequest> GetDiscordEmbeds(NewEmbed newEmbed)
             {
-                var discordEmbeds = new List<Embed>();
+                var discordEmbeds = new List<EmbedRequest>();
 
                 if (newEmbed.Embeds?.Count > 0)
                 {
@@ -772,7 +771,7 @@ public class AiService : INService
             async Task SendMultipartJsonEmbeds(List<string> chunks)
             {
                 // For the initial message (or webhook update)
-                var allEmbeds = new List<Embed>();
+                var allEmbeds = new List<EmbedRequest>();
 
                 for (var i = 0; i < chunks.Count; i++)
                 {
@@ -786,7 +785,7 @@ public class AiService : INService
 
                         if (newEmbed != null && (newEmbed.Embeds?.Count > 0 || newEmbed.Embed != null))
                         {
-                            var discordEmbeds = new List<Embed>();
+                            var discordEmbeds = new List<EmbedRequest>();
 
                             if (newEmbed.Embeds?.Count > 0)
                             {
@@ -873,7 +872,7 @@ public class AiService : INService
                 else
                 {
                     // First message
-                    regularMessage = await userMsg.Channel.SendMessageAsync(
+                    regularMessage = await userMsg.Channel.SendAsync(
                         embeds: allEmbeds.ToArray(),
                         allowedMentions: AllowedMentions.None);
                 }
@@ -883,7 +882,7 @@ public class AiService : INService
             async Task SendMultipartRegularEmbeds(List<string> chunks)
             {
                 // Create a collection of embeds
-                var allEmbeds = new List<Embed>();
+                var allEmbeds = new List<EmbedRequest>();
 
                 for (var i = 0; i < chunks.Count; i++)
                 {
@@ -931,7 +930,7 @@ public class AiService : INService
                 else
                 {
                     // First message
-                    regularMessage = await userMsg.Channel.SendMessageAsync(
+                    regularMessage = await userMsg.Channel.SendAsync(
                         embeds: allEmbeds.ToArray(),
                         allowedMentions: AllowedMentions.None);
                 }

@@ -1,5 +1,4 @@
 ﻿using DataModel;
-using Discord.Commands;
 using LinqToDB.Async;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Searches.Common.StreamNotifications.Models;

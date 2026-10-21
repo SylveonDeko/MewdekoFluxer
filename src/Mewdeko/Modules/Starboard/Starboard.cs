@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Starboard.Services;
 
@@ -57,7 +57,7 @@ public class Starboard(GuildSettingsService guildSettings, InteractiveService in
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CreateStarboard(ITextChannel channel, IEmote emote, int threshold = 1)
+    public async Task CreateStarboard(Channel channel, Emoji emote, int threshold = 1)
     {
         try
         {
@@ -262,7 +262,7 @@ public class Starboard(GuildSettingsService guildSettings, InteractiveService in
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task StarboardChToggle(int starboardId, [Remainder] ITextChannel channel)
+    public async Task StarboardChToggle(int starboardId, [Remainder] Channel channel)
     {
         var (wasAdded, config) = await Service.ToggleChannel(ctx.Guild, starboardId, channel.Id.ToString());
         if (config == null)
@@ -344,7 +344,7 @@ public class Starboard(GuildSettingsService guildSettings, InteractiveService in
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task AddStarboardEmote(int starboardId, IEmote emote)
+    public async Task AddStarboardEmote(int starboardId, Emoji emote)
     {
         try
         {
@@ -378,7 +378,7 @@ public class Starboard(GuildSettingsService guildSettings, InteractiveService in
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task RemoveStarboardEmote(int starboardId, IEmote emote)
+    public async Task RemoveStarboardEmote(int starboardId, Emoji emote)
     {
         try
         {
@@ -436,7 +436,7 @@ public class Starboard(GuildSettingsService guildSettings, InteractiveService in
                 $"{user?.Mention ?? "Unknown User"} ({stats.MostActiveStarrer.StarsGiven} given)", true);
         }
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -466,7 +466,7 @@ public class Starboard(GuildSettingsService guildSettings, InteractiveService in
         if (stats.TopStarredPosts.Any())
         {
             var topPosts = string.Join("\n", stats.TopStarredPosts.Select(p =>
-                $"{p.Emote}: [{p.MessageId}](https://discord.com/channels/{ctx.Guild.Id}/{ctx.Channel.Id}/{p.MessageId}) ({p.StarCount} ⭐)"));
+                $"{p.Emoji}: [{p.MessageId}](https://discord.com/channels/{ctx.Guild.Id}/{ctx.Channel.Id}/{p.MessageId}) ({p.StarCount} ⭐)"));
             eb.AddField(Strings.TopStarredPosts(ctx.Guild.Id), topPosts);
         }
 
@@ -484,6 +484,6 @@ public class Starboard(GuildSettingsService guildSettings, InteractiveService in
             eb.AddField(Strings.TopFans(ctx.Guild.Id), fans, true);
         }
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 }

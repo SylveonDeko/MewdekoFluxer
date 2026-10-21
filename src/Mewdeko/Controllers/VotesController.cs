@@ -13,7 +13,7 @@ namespace Mewdeko.Controllers;
 [Authorize("ApiKeyPolicy")]
 public class VotesController(
     VoteService service,
-    DiscordShardedClient client,
+    FluxerClient client,
     IDataConnectionFactory dbFactory,
     IDashboardAuditContext auditContext)
     : Controller

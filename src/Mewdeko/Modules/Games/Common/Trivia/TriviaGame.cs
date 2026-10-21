@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Text;
 using System.Threading;
-using Discord.Net;
 using Mewdeko.Services.Strings;
 using Serilog;
 
@@ -13,7 +12,7 @@ namespace Mewdeko.Modules.Games.Common.Trivia;
 public class TriviaGame
 {
     private readonly SemaphoreSlim guessLock = new(1, 1);
-    private readonly IGuild guild;
+    private readonly SocketGuild guild;
     private readonly EventHandler handler;
     private readonly TriviaOptions options;
 
@@ -35,7 +34,7 @@ public class TriviaGame
     /// <param name="quitCommand">If the quit command was activated this round</param>
     /// <param name="handler">The event handler</param>
     public TriviaGame(GeneratedBotStrings strings,
-        IDataCache cache, IGuild guild, ITextChannel channel,
+        IDataCache cache, SocketGuild guild, Channel channel,
         TriviaOptions options, string? quitCommand, EventHandler handler)
     {
         questionPool = new TriviaQuestionPool(cache);
@@ -52,12 +51,12 @@ public class TriviaGame
     /// <summary>
     ///     Gets the guild where the trivia game is taking place.
     /// </summary>
-    public IGuild Guild { get; }
+    public SocketGuild Guild { get; }
 
     /// <summary>
     ///     Gets the text channel where the trivia game is being conducted.
     /// </summary>
-    public ITextChannel Channel { get; }
+    public Channel Channel { get; }
 
     /// <summary>
     ///     Gets or sets the current trivia question.
@@ -72,7 +71,7 @@ public class TriviaGame
     /// <summary>
     ///     Gets the dictionary of users participating in the trivia game and their scores.
     /// </summary>
-    public ConcurrentDictionary<IGuildUser, int> Users { get; } = new();
+    public ConcurrentDictionary<SocketGuildMember, int> Users { get; } = new();
 
     /// <summary>
     ///     Gets or sets a value indicating whether the trivia game is active.
@@ -110,7 +109,7 @@ public class TriviaGame
             OldQuestions.Add(CurrentQuestion); //add it to exclusion list so it doesn't show up again
 
             EmbedBuilder questionEmbed;
-            IUserMessage questionMessage;
+            Message questionMessage;
             try
             {
                 questionEmbed = new EmbedBuilder().WithOkColor()
@@ -126,7 +125,7 @@ public class TriviaGame
 
                 questionMessage = await Channel.EmbedAsync(questionEmbed).ConfigureAwait(false);
             }
-            catch (HttpException ex) when (ex.HttpCode is HttpStatusCode.NotFound or HttpStatusCode.Forbidden
+            catch (FluxerApiException ex) when (ex.HttpCode is HttpStatusCode.NotFound or HttpStatusCode.Forbidden
                                                or HttpStatusCode.BadRequest)
             {
                 return;
@@ -159,7 +158,7 @@ public class TriviaGame
                                         .WithFooter(efb => efb.WithText(CurrentQuestion.GetHint())).Build())
                                 .ConfigureAwait(false);
                         }
-                        catch (HttpException ex) when (ex.HttpCode is HttpStatusCode.NotFound
+                        catch (FluxerApiException ex) when (ex.HttpCode is HttpStatusCode.NotFound
                                                            or HttpStatusCode.Forbidden)
                         {
                             break;
@@ -253,12 +252,12 @@ public class TriviaGame
             if (imsg.Author.IsBot)
                 return;
 
-            var umsg = imsg as SocketUserMessage;
+            var umsg = imsg as SocketMessage;
 
-            if (umsg?.Channel is not ITextChannel textChannel || textChannel.Guild != Guild)
+            if (umsg?.Channel is not Channel textChannel || textChannel.Guild != Guild)
                 return;
 
-            var guildUser = (IGuildUser)umsg.Author;
+            var guildUser = (SocketGuildMember)umsg.Author;
 
             var guess = false;
             await guessLock.WaitAsync().ConfigureAwait(false);

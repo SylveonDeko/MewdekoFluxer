@@ -1,4 +1,3 @@
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Counting.Services;
 
@@ -21,9 +20,9 @@ public partial class Counting
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageChannels)]
-        public async Task CountingSuccessMessage(ITextChannel? channel = null, [Remainder] string? embed = null)
+        public async Task CountingSuccessMessage(Channel? channel = null, [Remainder] string? embed = null)
         {
-            channel ??= (ITextChannel)ctx.Channel;
+            channel ??= (Channel)ctx.Channel;
 
             var countingChannel = await Service.GetCountingChannelAsync(channel.Id);
             if (countingChannel == null)
@@ -61,9 +60,9 @@ public partial class Counting
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageChannels)]
-        public async Task CountingFailureMessage(ITextChannel? channel = null, [Remainder] string? embed = null)
+        public async Task CountingFailureMessage(Channel? channel = null, [Remainder] string? embed = null)
         {
-            channel ??= (ITextChannel)ctx.Channel;
+            channel ??= (Channel)ctx.Channel;
 
             var countingChannel = await Service.GetCountingChannelAsync(channel.Id);
             if (countingChannel == null)
@@ -101,9 +100,9 @@ public partial class Counting
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageChannels)]
-        public async Task CountingMilestoneMessage(ITextChannel? channel = null, [Remainder] string? embed = null)
+        public async Task CountingMilestoneMessage(Channel? channel = null, [Remainder] string? embed = null)
         {
-            channel ??= (ITextChannel)ctx.Channel;
+            channel ??= (Channel)ctx.Channel;
 
             var countingChannel = await Service.GetCountingChannelAsync(channel.Id);
             if (countingChannel == null)
@@ -141,10 +140,10 @@ public partial class Counting
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageChannels)]
-        public async Task CountingMilestoneChannel(ITextChannel? countingChannel = null,
-            ITextChannel? milestoneChannel = null)
+        public async Task CountingMilestoneChannel(Channel? countingChannel = null,
+            Channel? milestoneChannel = null)
         {
-            countingChannel ??= (ITextChannel)ctx.Channel;
+            countingChannel ??= (Channel)ctx.Channel;
 
             var channel = await Service.GetCountingChannelAsync(countingChannel.Id);
             if (channel == null)
@@ -175,10 +174,10 @@ public partial class Counting
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageChannels)]
-        public async Task CountingFailureChannel(ITextChannel? countingChannel = null,
-            ITextChannel? failureChannel = null)
+        public async Task CountingFailureChannel(Channel? countingChannel = null,
+            Channel? failureChannel = null)
         {
-            countingChannel ??= (ITextChannel)ctx.Channel;
+            countingChannel ??= (Channel)ctx.Channel;
 
             var channel = await Service.GetCountingChannelAsync(countingChannel.Id);
             if (channel == null)
@@ -209,9 +208,9 @@ public partial class Counting
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageChannels)]
-        public async Task CountingMilestones(ITextChannel? channel = null, [Remainder] string? milestones = null)
+        public async Task CountingMilestones(Channel? channel = null, [Remainder] string? milestones = null)
         {
-            channel ??= (ITextChannel)ctx.Channel;
+            channel ??= (Channel)ctx.Channel;
 
             var countingChannel = await Service.GetCountingChannelAsync(channel.Id);
             if (countingChannel == null)
@@ -264,9 +263,9 @@ public partial class Counting
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageChannels)]
-        public async Task CountingFailureThreshold(ITextChannel? channel = null, int threshold = 0)
+        public async Task CountingFailureThreshold(Channel? channel = null, int threshold = 0)
         {
-            channel ??= (ITextChannel)ctx.Channel;
+            channel ??= (Channel)ctx.Channel;
 
             var countingChannel = await Service.GetCountingChannelAsync(channel.Id);
             if (countingChannel == null)
@@ -304,9 +303,9 @@ public partial class Counting
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageChannels)]
-        public async Task CountingCooldown(ITextChannel? channel = null, int seconds = -1)
+        public async Task CountingCooldown(Channel? channel = null, int seconds = -1)
         {
-            channel ??= (ITextChannel)ctx.Channel;
+            channel ??= (Channel)ctx.Channel;
 
             var countingChannel = await Service.GetCountingChannelAsync(channel.Id);
             if (countingChannel == null)

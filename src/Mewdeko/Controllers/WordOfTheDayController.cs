@@ -15,7 +15,7 @@ namespace Mewdeko.Controllers;
 public class WordOfTheDayController : Controller
 {
     private readonly IDashboardAuditContext auditContext;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly ILogger<WordOfTheDayController> logger;
     private readonly WordOfTheDayService service;
 
@@ -28,7 +28,7 @@ public class WordOfTheDayController : Controller
     /// <param name="auditContext">Records before/after state for the dashboard audit log.</param>
     public WordOfTheDayController(
         WordOfTheDayService service,
-        DiscordShardedClient client,
+        FluxerClient client,
         ILogger<WordOfTheDayController> logger,
         IDashboardAuditContext auditContext)
     {

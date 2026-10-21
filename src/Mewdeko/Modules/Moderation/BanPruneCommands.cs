@@ -1,4 +1,3 @@
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Moderation.Common;
 using Mewdeko.Modules.Moderation.Services;
@@ -74,7 +73,7 @@ public partial class Moderation
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task BanPruneSet(string action, int days, IGuildChannel? target = null)
+        public async Task BanPruneSet(string action, int days, Channel? target = null)
         {
             if (!TryResolveAction(action, out var resolved))
             {
@@ -102,7 +101,7 @@ public partial class Moderation
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task BanPruneClear(string action, IGuildChannel? target = null)
+        public async Task BanPruneClear(string action, Channel? target = null)
         {
             if (!TryResolveAction(action, out var resolved))
             {
@@ -147,12 +146,12 @@ public partial class Moderation
             return action is not null;
         }
 
-        private static (BanPruneScope Scope, ulong ScopeId) ResolveScope(IGuildChannel? target)
+        private static (BanPruneScope Scope, ulong ScopeId) ResolveScope(Channel? target)
         {
             return target switch
             {
                 null => (BanPruneScope.Guild, 0UL),
-                ICategoryChannel => (BanPruneScope.Category, target.Id),
+                Channel => (BanPruneScope.Category, target.Id),
                 _ => (BanPruneScope.Channel, target.Id)
             };
         }

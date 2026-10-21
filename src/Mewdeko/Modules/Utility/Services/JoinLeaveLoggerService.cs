@@ -1,3 +1,5 @@
+using System.Threading.Channels;
+using Channel = Fluxer.Net.Channel;
 using System.IO;
 using System.Threading;
 using DataModel;
@@ -6,7 +8,6 @@ using LinqToDB.Data;
 using Mewdeko.Modules.ServerStats.Common;
 using Mewdeko.Modules.ServerStats.Services;
 using SkiaSharp;
-using Embed = Discord.Embed;
 
 namespace Mewdeko.Modules.Utility.Services;
 
@@ -30,7 +31,7 @@ public class JoinLeaveLoggerService : INService, IDisposable
     private readonly Timer flushTimer;
     private readonly GuildSettingsService guildSettingsService;
     private readonly ILogger<JoinLeaveLoggerService> logger;
-    private readonly Channel<JoinLeaveLog> pending = Channel.CreateUnbounded<JoinLeaveLog>();
+    private readonly Channel<JoinLeaveLog> pending = System.Threading.Channels.Channel.CreateUnbounded<JoinLeaveLog>();
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="JoinLeaveLoggerService" /> class.
@@ -64,7 +65,7 @@ public class JoinLeaveLoggerService : INService, IDisposable
         flushLock.Dispose();
     }
 
-    private Task LogUserJoined(IGuildUser user)
+    private Task LogUserJoined(SocketGuildMember user)
     {
         pending.Writer.TryWrite(new JoinLeaveLog
         {
@@ -73,7 +74,7 @@ public class JoinLeaveLoggerService : INService, IDisposable
         return Task.CompletedTask;
     }
 
-    private Task LogUserLeft(IGuild guild, IUser user)
+    private Task LogUserLeft(SocketGuild guild, IUser user)
     {
         pending.Writer.TryWrite(new JoinLeaveLog
         {
@@ -146,7 +147,7 @@ public class JoinLeaveLoggerService : INService, IDisposable
     /// <param name="guildId">The ID of the guild.</param>
     /// <param name="days">How many days to cover.</param>
     /// <returns>A tuple containing the graph image stream and an embed for the graph.</returns>
-    public async Task<(Stream ImageStream, Embed Embed)> GenerateJoinGraphAsync(ulong guildId,
+    public async Task<(Stream ImageStream, EmbedRequest Embed)> GenerateJoinGraphAsync(ulong guildId,
         int days = DefaultGraphDays)
     {
         var joinData = await GetGroupedJoinLeaveDataAsync(guildId, true, days);
@@ -161,7 +162,7 @@ public class JoinLeaveLoggerService : INService, IDisposable
     /// <param name="guildId">The ID of the guild.</param>
     /// <param name="days">How many days to cover.</param>
     /// <returns>A tuple containing the graph image stream and an embed for the graph.</returns>
-    public async Task<(Stream ImageStream, Embed Embed)> GenerateLeaveGraphAsync(ulong guildId,
+    public async Task<(Stream ImageStream, EmbedRequest Embed)> GenerateLeaveGraphAsync(ulong guildId,
         int days = DefaultGraphDays)
     {
         var leaveData = await GetGroupedJoinLeaveDataAsync(guildId, false, days);
@@ -176,7 +177,7 @@ public class JoinLeaveLoggerService : INService, IDisposable
     /// <param name="guildId">The ID of the guild.</param>
     /// <param name="days">How many days to cover.</param>
     /// <returns>A tuple containing the graph image stream and an embed for the graph.</returns>
-    public async Task<(Stream ImageStream, Embed Embed)> GenerateCombinedGraphAsync(ulong guildId,
+    public async Task<(Stream ImageStream, EmbedRequest Embed)> GenerateCombinedGraphAsync(ulong guildId,
         int days = DefaultGraphDays)
     {
         var joins = await GetGroupedJoinLeaveDataAsync(guildId, true, days);
@@ -240,7 +241,7 @@ public class JoinLeaveLoggerService : INService, IDisposable
             .ToList();
     }
 
-    private static (Stream ImageStream, Embed Embed) GenerateGraph(List<DailyLog> dailyLogs, string title,
+    private static (Stream ImageStream, EmbedRequest Embed) GenerateGraph(List<DailyLog> dailyLogs, string title,
         string totalLabel, string seriesLabel, SKColor color)
     {
         var stream = StatChartRenderer.RenderLineChart(title,

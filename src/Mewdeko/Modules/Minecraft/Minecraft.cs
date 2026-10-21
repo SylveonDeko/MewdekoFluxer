@@ -1,5 +1,4 @@
 using DataModel;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Minecraft.Common;
 using Mewdeko.Modules.Minecraft.Services;
@@ -51,7 +50,7 @@ public class Minecraft : MewdekoModuleBase<MinecraftService>
             {
                 Name = address, Address = address, Port = port
             };
-            await ctx.Channel.SendMessageAsync(embed: Service.BuildStatusEmbed(tempServer, status, ctx.Guild.Id))
+            await ctx.Channel.SendAsync(embed: Service.BuildStatusEmbed(tempServer, status, ctx.Guild.Id))
                 .ConfigureAwait(false);
             return;
         }
@@ -69,7 +68,7 @@ public class Minecraft : MewdekoModuleBase<MinecraftService>
             return;
         }
 
-        await ctx.Channel.SendMessageAsync(embed: Service.BuildStatusEmbed(server, serverStatus, ctx.Guild.Id))
+        await ctx.Channel.SendAsync(embed: Service.BuildStatusEmbed(server, serverStatus, ctx.Guild.Id))
             .ConfigureAwait(false);
     }
 
@@ -155,7 +154,7 @@ public class Minecraft : MewdekoModuleBase<MinecraftService>
             eb.AddField($"{s.Name}{def}", $"`{s.Address}:{s.Port}` ({type}){watch}", true);
         }
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -184,7 +183,7 @@ public class Minecraft : MewdekoModuleBase<MinecraftService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task McWatch(string serverName, ITextChannel? channel = null)
+    public async Task McWatch(string serverName, Channel? channel = null)
     {
         var server = await Service.SetWatchChannelAsync(ctx.Guild.Id, serverName, channel?.Id);
         if (server == null)
@@ -269,7 +268,7 @@ public class Minecraft : MewdekoModuleBase<MinecraftService>
             .WithImageUrl(profile.SkinUrl)
             .AddField("UUID", $"`{profile.Uuid}`");
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -292,7 +291,7 @@ public class Minecraft : MewdekoModuleBase<MinecraftService>
             .WithTitle(Strings.McSkinTitle(ctx.Guild.Id, profile.Username))
             .WithImageUrl(profile.SkinUrl);
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -353,7 +352,7 @@ public class Minecraft : MewdekoModuleBase<MinecraftService>
 
                 eb.WithDescription(string.Join("\n", descriptions));
                 eb.WithFooter($"{players.Count} player(s)");
-                await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+                await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
                 return;
             }
         }

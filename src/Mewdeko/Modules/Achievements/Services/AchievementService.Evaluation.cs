@@ -622,10 +622,10 @@ public sealed partial class AchievementService
     /// <param name="member">The member.</param>
     /// <param name="settings">The server's settings.</param>
     /// <returns>Channel IDs.</returns>
-    private static List<ulong> PostableChannels(SocketGuild guild, SocketGuildUser member, AchievementGuildSettings settings)
+    private static List<ulong> PostableChannels(SocketGuild guild, SocketGuildMember member, AchievementGuildSettings settings)
     {
         return guild.TextChannels
-            .Where(c => c is not SocketThreadChannel && !settings.ExcludedChannels.Contains(c.Id))
+            .Where(c => c is not Channel && !settings.ExcludedChannels.Contains(c.Id))
             .Where(c =>
             {
                 var perms = member.GetPermissions(c);
@@ -642,7 +642,7 @@ public sealed partial class AchievementService
     /// <param name="member">The member.</param>
     /// <param name="settings">The server's settings.</param>
     /// <returns>Channel IDs.</returns>
-    private static List<ulong> JoinableVoiceChannels(SocketGuild guild, SocketGuildUser member,
+    private static List<ulong> JoinableVoiceChannels(SocketGuild guild, SocketGuildMember member,
         AchievementGuildSettings settings)
     {
         return guild.VoiceChannels
@@ -832,7 +832,7 @@ public sealed partial class AchievementService
     /// <param name="silent">Whether to skip announcements.</param>
     /// <param name="grantedBy">Who handed them out, for manual grants.</param>
     /// <returns>Everything newly unlocked, including completions and global achievements.</returns>
-    public async Task<List<AchievementDefinition>> UnlockForMemberAsync(SocketGuildUser user,
+    public async Task<List<AchievementDefinition>> UnlockForMemberAsync(SocketGuildMember user,
         IReadOnlyList<AchievementDefinition> defs, ulong channelId, bool silent = false, ulong? grantedBy = null)
     {
         var guild = user.Guild;
@@ -1007,7 +1007,7 @@ public sealed partial class AchievementService
         return unlocked;
     }
 
-    private async Task GrantRewardsAsync(SocketGuildUser user, IReadOnlyList<AchievementDefinition> unlocked)
+    private async Task GrantRewardsAsync(SocketGuildMember user, IReadOnlyList<AchievementDefinition> unlocked)
     {
         var guild = user.Guild;
         try
@@ -1066,7 +1066,7 @@ public sealed partial class AchievementService
     /// <param name="key">The achievement key.</param>
     /// <param name="grantedBy">Who handed it out.</param>
     /// <returns>The achievement when it was newly unlocked.</returns>
-    public async Task<AchievementResult<AchievementDefinition>> GrantAsync(SocketGuildUser user, string key,
+    public async Task<AchievementResult<AchievementDefinition>> GrantAsync(SocketGuildMember user, string key,
         ulong grantedBy)
     {
         var catalog = await GetCatalogAsync(user.Guild.Id);

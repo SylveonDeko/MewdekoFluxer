@@ -1,4 +1,4 @@
-namespace Mewdeko.Common.Interactive;
+﻿namespace Mewdeko.Common.Interactive;
 
 /// <summary>
 ///     Builds one page of a paginator: an embed plus optional message text.
@@ -167,6 +167,15 @@ public sealed class PageBuilder
     }
 
     /// <summary>
+    ///     Sets the author from a member, using their guild avatar when they have one.
+    /// </summary>
+    public PageBuilder WithAuthor(GuildMember member)
+    {
+        embed.WithAuthor(member);
+        return this;
+    }
+
+    /// <summary>
     ///     Sets the author from a builder.
     /// </summary>
     public PageBuilder WithAuthor(EmbedAuthorBuilder author)
@@ -261,7 +270,7 @@ public sealed class PageBuilder
     /// </summary>
     /// <param name="footerOverride">Footer text that replaces the page's own footer, or null to keep it.</param>
     /// <returns>The built embed, or null when the page is text only.</returns>
-    public Discord.Embed? BuildEmbed(string? footerOverride = null)
+    public EmbedRequest? BuildEmbed(string? footerOverride = null)
     {
         var hasContent = embed.Length > 0 || embed.ImageUrl is not null || embed.ThumbnailUrl is not null;
         if (!hasContent && footerOverride is null)

@@ -1,10 +1,10 @@
-﻿using Discord.Commands;
+﻿
 using Mewdeko.Common.Configs;
 
 namespace Mewdeko.Extensions;
 
 /// <summary>
-///     Extensions for IMessageChannel objects. Used a lot throughout the bot.
+///     Extensions for Channel objects. Used a lot throughout the bot.
 /// </summary>
 public static class MessageChannelExtensions
 {
@@ -15,13 +15,9 @@ public static class MessageChannelExtensions
     /// <param name="embed">The embed builder containing the embed message.</param>
     /// <param name="msg">The optional message content to include.</param>
     /// <returns>A task representing the asynchronous operation, returning the sent user message.</returns>
-    public static Task<IUserMessage> EmbedAsync(this IMessageChannel ch, EmbedBuilder embed, string? msg = "")
+    public static Task<Message> EmbedAsync(this Channel ch, EmbedBuilder embed, string? msg = "")
     {
-        return ch.SendMessageAsync(msg, embed: embed.Build(),
-            options: new RequestOptions
-            {
-                RetryMode = RetryMode.AlwaysRetry
-            });
+        return ch.SendAsync(msg, embed: embed.Build());
     }
 
     /// <summary>
@@ -33,7 +29,7 @@ public static class MessageChannelExtensions
     /// <param name="url">The optional URL to include in the error message.</param>
     /// <param name="footer">The optional footer text for the error message.</param>
     /// <returns>A task representing the asynchronous operation, returning the sent user message.</returns>
-    public static Task<IUserMessage> SendErrorAsync(this IMessageChannel ch, string? title, string? error,
+    public static Task<Message> SendErrorAsync(this Channel ch, string? title, string? error,
         string? url = null, string? footer = null)
     {
         var eb = new EmbedBuilder().WithErrorColor().WithDescription(error)
@@ -42,7 +38,7 @@ public static class MessageChannelExtensions
             eb.WithUrl(url);
         if (!string.IsNullOrWhiteSpace(footer))
             eb.WithFooter(efb => efb.WithText(footer));
-        return ch.SendMessageAsync(embed: eb.Build());
+        return ch.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -53,8 +49,8 @@ public static class MessageChannelExtensions
     /// <param name="config">The bot config</param>
     /// <param name="fields">Optional fields to include in the error message.</param>
     /// <returns>A task representing the asynchronous operation, returning the sent user message.</returns>
-    public static Task<IUserMessage> SendErrorAsync(
-        this IMessageChannel ch,
+    public static Task<Message> SendErrorAsync(
+        this Channel ch,
         string? error,
         BotConfig config,
         EmbedFieldBuilder[]? fields = null)
@@ -62,7 +58,7 @@ public static class MessageChannelExtensions
         var eb = new EmbedBuilder().WithErrorColor().WithDescription(error);
         if (fields is not null)
             eb.WithFields(fields);
-        return ch.SendMessageAsync(embed: eb.Build());
+        return ch.SendAsync(embed: eb.Build());
     }
 
 
@@ -75,7 +71,7 @@ public static class MessageChannelExtensions
     /// <param name="url">The optional URL to include in the confirmation message.</param>
     /// <param name="footer">The optional footer text for the confirmation message.</param>
     /// <returns>A task representing the asynchronous operation, returning the sent user message.</returns>
-    public static Task<IUserMessage> SendConfirmAsync(this IMessageChannel ch, string? title, string? text,
+    public static Task<Message> SendConfirmAsync(this Channel ch, string? title, string? text,
         string? url = null, string? footer = null)
     {
         var eb = new EmbedBuilder().WithOkColor().WithDescription(text)
@@ -84,7 +80,7 @@ public static class MessageChannelExtensions
             eb.WithUrl(url);
         if (!string.IsNullOrWhiteSpace(footer))
             eb.WithFooter(efb => efb.WithText(footer));
-        return ch.SendMessageAsync(embed: eb.Build());
+        return ch.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -93,9 +89,9 @@ public static class MessageChannelExtensions
     /// <param name="msg">The original message to reply to.</param>
     /// <param name="text">The text content of the confirmation reply message.</param>
     /// <returns>A task representing the asynchronous operation, returning the sent user message.</returns>
-    public static Task<IUserMessage> SendConfirmReplyAsync(this IUserMessage msg, string? text)
+    public static Task<Message> SendConfirmReplyAsync(this Message msg, string? text)
     {
-        return msg.ReplyAsync(embed: new EmbedBuilder().WithOkColor().WithDescription(text).Build());
+        return msg.ReplyAsync(embeds: [new EmbedBuilder().WithOkColor().WithDescription(text).Build()]);
     }
 
     /// <summary>
@@ -104,9 +100,9 @@ public static class MessageChannelExtensions
     /// <param name="msg">The webhook client to send the message to.</param>
     /// <param name="text">The text content of the confirmation message.</param>
     /// <returns>A task representing the asynchronous operation, returning the ID of the sent message.</returns>
-    public static Task<ulong> SendConfirmAsync(this DiscordWebhookClient msg, string? text)
+    public static Task<ulong> SendConfirmAsync(this FluxerWebhookClient msg, string? text)
     {
-        return msg.SendMessageAsync(embeds:
+        return msg.SendAsync(embeds:
         [
             new EmbedBuilder().WithOkColor().WithDescription(text).Build()
         ]);
@@ -119,9 +115,9 @@ public static class MessageChannelExtensions
     /// <param name="msg">The original message to reply to.</param>
     /// <param name="text">The text content of the error reply message.</param>
     /// <returns>A task representing the asynchronous operation, returning the sent user message.</returns>
-    public static Task<IUserMessage> SendErrorReplyAsync(this IUserMessage msg, string? text)
+    public static Task<Message> SendErrorReplyAsync(this Message msg, string? text)
     {
-        return msg.ReplyAsync(embed: new EmbedBuilder().WithErrorColor().WithDescription(text).Build());
+        return msg.ReplyAsync(embeds: [new EmbedBuilder().WithErrorColor().WithDescription(text).Build()]);
     }
 
     /// <summary>
@@ -130,20 +126,9 @@ public static class MessageChannelExtensions
     /// <param name="ch">The text channel to send the message to.</param>
     /// <param name="text">The text content of the confirmation message.</param>
     /// <returns>A task representing the asynchronous operation, returning the sent user message.</returns>
-    public static Task<IUserMessage> SendConfirmAsync(this ITextChannel ch, string? text)
+    public static Task<Message> SendConfirmAsync(this Channel ch, string? text)
     {
-        return ch.SendMessageAsync(embed: new EmbedBuilder().WithOkColor().WithDescription(text).Build());
-    }
-
-    /// <summary>
-    ///     Sends a confirmation message to the message channel asynchronously.
-    /// </summary>
-    /// <param name="ch">The message channel to send the message to.</param>
-    /// <param name="text">The text content of the confirmation message.</param>
-    /// <returns>A task representing the asynchronous operation, returning the sent user message.</returns>
-    public static Task<IUserMessage> SendConfirmAsync(this IMessageChannel ch, string? text)
-    {
-        return ch.SendMessageAsync(embed: new EmbedBuilder().WithOkColor().WithDescription(text).Build());
+        return ch.SendAsync(embed: new EmbedBuilder().WithOkColor().WithDescription(text).Build());
     }
 
 
@@ -157,11 +142,11 @@ public static class MessageChannelExtensions
     /// <param name="howToPrint">The function that defines how to print each item.</param>
     /// <param name="columns">The number of columns in the table (default is 3).</param>
     /// <returns>A task representing the asynchronous operation, returning the sent user message.</returns>
-    public static Task<IUserMessage> SendTableAsync<T>(this IMessageChannel ch, string seed, IEnumerable<T> items,
+    public static Task<Message> SendTableAsync<T>(this Channel ch, string seed, IEnumerable<T> items,
         Func<T, string> howToPrint, int columns = 3)
     {
         var i = 0;
-        return ch.SendMessageAsync($"""
+        return ch.SendAsync($"""
                                     {seed}```css
                                     {string.Join("\n", items.GroupBy(_ => i++ / columns)
                                         .Select(ig => string.Concat(ig.Select(howToPrint))))}
@@ -178,7 +163,7 @@ public static class MessageChannelExtensions
     /// <param name="howToPrint">The function that defines how to print each item.</param>
     /// <param name="columns">The number of columns in the table (default is 3).</param>
     /// <returns>A task representing the asynchronous operation, returning the sent user message.</returns>
-    public static Task<IUserMessage> SendTableAsync<T>(this IMessageChannel ch, IEnumerable<T> items,
+    public static Task<Message> SendTableAsync<T>(this Channel ch, IEnumerable<T> items,
         Func<T, string> howToPrint, int columns = 3)
     {
         return ch.SendTableAsync("", items, howToPrint, columns);
@@ -189,9 +174,9 @@ public static class MessageChannelExtensions
     /// </summary>
     /// <param name="ctx">The command context.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public static Task OkAsync(this ICommandContext ctx)
+    public static Task OkAsync(this CommandContext ctx)
     {
-        return ctx.Message.AddReactionAsync(new Emoji("✅"));
+        return ctx.Message.AddReactionAsync(Emoji.FromUnicode("✅"));
     }
 
     /// <summary>
@@ -199,9 +184,9 @@ public static class MessageChannelExtensions
     /// </summary>
     /// <param name="ctx">The command context.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public static Task ErrorAsync(this ICommandContext ctx)
+    public static Task ErrorAsync(this CommandContext ctx)
     {
-        return ctx.Message.AddReactionAsync(new Emoji("❌"));
+        return ctx.Message.AddReactionAsync(Emoji.FromUnicode("❌"));
     }
 
     /// <summary>
@@ -209,8 +194,8 @@ public static class MessageChannelExtensions
     /// </summary>
     /// <param name="ctx">The command context.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public static Task WarningAsync(this ICommandContext ctx)
+    public static Task WarningAsync(this CommandContext ctx)
     {
-        return ctx.Message.AddReactionAsync(new Emoji("⚠"));
+        return ctx.Message.AddReactionAsync(Emoji.FromUnicode("⚠"));
     }
 }

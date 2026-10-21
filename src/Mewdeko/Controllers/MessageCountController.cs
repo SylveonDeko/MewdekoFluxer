@@ -13,7 +13,7 @@ namespace Mewdeko.Controllers;
 [Route("botapi/[controller]/{guildId}")]
 [Authorize("ApiKeyPolicy")]
 public class MessageCountController(
-    DiscordShardedClient client,
+    FluxerClient client,
     MessageCountService messageCountService,
     IDashboardAuditContext auditContext,
     IMemoryCache cache) : Controller

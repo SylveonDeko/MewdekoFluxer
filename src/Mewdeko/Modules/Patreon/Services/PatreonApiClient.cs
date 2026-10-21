@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Web;
 using Mewdeko.Modules.Patreon.Common;
+using User = Mewdeko.Modules.Patreon.Common.User;
 
 namespace Mewdeko.Modules.Patreon.Services;
 

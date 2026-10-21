@@ -13,7 +13,7 @@ namespace Mewdeko.Controllers;
 [Authorize("ApiKeyPolicy")]
 public class StarboardController : Controller
 {
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly StarboardService starboardService;
     private readonly IDashboardAuditContext auditContext;
 
@@ -25,7 +25,7 @@ public class StarboardController : Controller
     /// <param name="auditContext">Records before/after state for the dashboard audit log.</param>
     public StarboardController(
         StarboardService starboardService,
-        DiscordShardedClient client,
+        FluxerClient client,
         IDashboardAuditContext auditContext)
     {
         this.starboardService = starboardService;
@@ -61,7 +61,7 @@ public class StarboardController : Controller
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("already used"))
         {
-            return BadRequest("Emote is already in use by another starboard configuration.");
+            return BadRequest("Emoji is already in use by another starboard configuration.");
         }
     }
 
@@ -271,7 +271,7 @@ public class StarboardController : Controller
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("already used"))
         {
-            return BadRequest("Emote is already in use by another starboard configuration.");
+            return BadRequest("Emoji is already in use by another starboard configuration.");
         }
     }
 
@@ -291,7 +291,7 @@ public class StarboardController : Controller
                 starboardService.GetStarboards(guildId).FirstOrDefault(s => s.Id == starboardId));
             var success = await starboardService.RemoveEmoteFromStarboard(guild, starboardId, emote);
             if (!success)
-                return NotFound("Emote not found in starboard configuration");
+                return NotFound("Emoji not found in starboard configuration");
 
             return Ok(emote);
         }

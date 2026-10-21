@@ -1,4 +1,6 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Threading.Channels;
+using Channel = Fluxer.Net.Channel;
+using System.Text.RegularExpressions;
 using DataModel;
 using LinqToDB;
 using LinqToDB.Async;
@@ -14,14 +16,14 @@ namespace Mewdeko.Modules.Highlights.Services;
 public class HighlightsService : INService, IReadyExecutor, IUnloadableService
 {
     private readonly IFusionCache cache;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly IDataConnectionFactory dbFactory;
     private readonly EventHandler eventHandler;
 
 
     private readonly Channel<(SocketMessage, TaskCompletionSource<bool>)> highlightQueue =
-        Channel.CreateBounded<(SocketMessage, TaskCompletionSource<bool>)>(new BoundedChannelOptions(60)
+        System.Threading.Channels.Channel.CreateBounded<(SocketMessage, TaskCompletionSource<bool>)>(new BoundedChannelOptions(60)
         {
             FullMode = BoundedChannelFullMode.DropNewest
         });
@@ -37,7 +39,7 @@ public class HighlightsService : INService, IReadyExecutor, IUnloadableService
     /// <param name="eventHandler">Async event handler because discord stoopid</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     /// <param name="collector">The analytics collector.</param>
-    public HighlightsService(DiscordShardedClient client, IFusionCache cache, IDataConnectionFactory dbFactory,
+    public HighlightsService(FluxerClient client, IFusionCache cache, IDataConnectionFactory dbFactory,
         EventHandler eventHandler, ILogger<HighlightsService> logger, IAnalyticsCollector collector)
     {
         this.collector = collector;
@@ -156,9 +158,9 @@ public class HighlightsService : INService, IReadyExecutor, IUnloadableService
         }
     }
 
-    private async Task AddHighlightTimer(Cacheable<IUser, ulong> arg1, Cacheable<IMessageChannel, ulong> _)
+    private async Task AddHighlightTimer(Cacheable<IUser> arg1, Cacheable<Channel> _)
     {
-        if (arg1.Value is not IGuildUser user)
+        if (arg1.Value is not SocketGuildMember user)
             return;
 
         await TryAddHighlightStaggerUser(user.GuildId, user.Id).ConfigureAwait(false);
@@ -177,7 +179,7 @@ public class HighlightsService : INService, IReadyExecutor, IUnloadableService
 
     private async Task<bool> ExecuteHighlights(SocketMessage message)
     {
-        if (message.Channel is not ITextChannel channel)
+        if (message.Channel is not Channel channel)
             return true;
 
         if (string.IsNullOrWhiteSpace(message.Content))
@@ -235,7 +237,7 @@ public class HighlightsService : INService, IReadyExecutor, IUnloadableService
 
                 try
                 {
-                    await user.SendMessageAsync(
+                    await user.SendAsync(
                         $"In {Format.Bold(channel.Guild.Name)} {channel.Mention} you were mentioned with highlight word {i.Word}",
                         embed: eb.Build()).ConfigureAwait(false);
                     usersDMd.Add(user.Id);

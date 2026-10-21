@@ -42,7 +42,7 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
     private static readonly TimeSpan RenameWindow = TimeSpan.FromMinutes(10);
 
     private readonly IMemoryCache cache;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly IDataConnectionFactory dbFactory;
     private readonly ILogger<StatChannelService> logger;
@@ -60,7 +60,7 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
     /// </summary>
     public StatChannelService(
         IDataConnectionFactory dbFactory,
-        DiscordShardedClient client,
+        FluxerClient client,
         IMemoryCache cache,
         TwitchService twitchService,
         ILogger<StatChannelService> logger,
@@ -173,8 +173,8 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
     /// <param name="goalTarget">The member goal target.</param>
     /// <param name="options">Optional presentation and scheduling overrides.</param>
     /// <returns>The created stat channel and the new voice channel.</returns>
-    public async Task<(StatChannel StatChannel, IVoiceChannel VoiceChannel)> CreateStatChannelAsync(
-        IGuild guild, StatChannelType statType, string template, ulong? categoryId = null,
+    public async Task<(StatChannel StatChannel, Channel VoiceChannel)> CreateStatChannelAsync(
+        SocketGuild guild, StatChannelType statType, string template, ulong? categoryId = null,
         ulong? roleId = null, DateTime? countdownDate = null, int goalTarget = 0,
         StatChannelOptions? options = null)
     {
@@ -507,7 +507,7 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
             case StatChannelType.ChannelCount:
                 return ResolvedStat.Num(guild.Channels.Count);
             case StatChannelType.TextChannelCount:
-                return ResolvedStat.Num(guild.TextChannels.Count(c => c is not IThreadChannel));
+                return ResolvedStat.Num(guild.TextChannels.Count(c => c is not Channel));
             case StatChannelType.VoiceChannelCount:
                 return ResolvedStat.Num(guild.VoiceChannels.Count);
             case StatChannelType.CategoryCount:
@@ -996,7 +996,7 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
     /// <param name="channel">The voice channel being updated.</param>
     /// <param name="newName">The name to push.</param>
     /// <returns>True when the new name reached Discord.</returns>
-    private async Task<bool> AutoAsync(StatChannel sc, SocketGuild guild, SocketVoiceChannel channel, string newName)
+    private async Task<bool> AutoAsync(StatChannel sc, SocketGuild guild, Channel channel, string newName)
     {
         if (HasRenameBudget(sc.ChannelId))
             return await RenameAsync(sc, channel, newName);
@@ -1007,7 +1007,7 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
         return await RecreateAsync(sc, guild, channel, newName);
     }
 
-    private async Task<bool> RenameAsync(StatChannel sc, SocketVoiceChannel channel, string newName)
+    private async Task<bool> RenameAsync(StatChannel sc, Channel channel, string newName)
     {
         try
         {
@@ -1024,7 +1024,7 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
         }
     }
 
-    private async Task<bool> RecreateAsync(StatChannel sc, SocketGuild guild, SocketVoiceChannel channel,
+    private async Task<bool> RecreateAsync(StatChannel sc, SocketGuild guild, Channel channel,
         string newName)
     {
         try
@@ -1149,7 +1149,7 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
         sc.PermissionOverwrites = SerializeOverwrites(channel.PermissionOverwrites.ToList());
     }
 
-    private static string SerializeOverwrites(IEnumerable<Overwrite> overwrites)
+    private static string SerializeOverwrites(IEnumerable<PermissionOverwrite> overwrites)
     {
         return JsonSerializer.Serialize(overwrites.Select(o => new StoredOverwrite
         {
@@ -1160,7 +1160,7 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
         }));
     }
 
-    private static List<Overwrite>? ReadOverwrites(StatChannel sc)
+    private static List<PermissionOverwrite>? ReadOverwrites(StatChannel sc)
     {
         if (string.IsNullOrWhiteSpace(sc.PermissionOverwrites))
             return null;
@@ -1168,7 +1168,7 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
         try
         {
             var stored = JsonSerializer.Deserialize<List<StoredOverwrite>>(sc.PermissionOverwrites);
-            return stored?.Select(o => new Overwrite(o.TargetId, (PermissionTarget)o.TargetType,
+            return stored?.Select(o => new PermissionOverwrite(o.TargetId, (PermissionTarget)o.TargetType,
                 new OverwritePermissions(o.Allow, o.Deny))).ToList();
         }
         catch (JsonException)

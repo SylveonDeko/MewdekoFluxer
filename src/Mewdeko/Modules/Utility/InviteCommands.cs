@@ -1,7 +1,6 @@
 using System.IO;
 using System.Text;
 using DataModel;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Utility.Common;
 using Mewdeko.Modules.Utility.Services;
@@ -50,7 +49,7 @@ public partial class Utility
                     ? Strings.InviteRankFooter(ctx.Guild.Id, rank.Value)
                     : Strings.InviteRankNone(ctx.Guild.Id));
 
-            await ctx.Channel.SendMessageAsync(embed: eb.Build());
+            await ctx.Channel.SendAsync(embed: eb.Build());
         }
 
         /// <summary>
@@ -80,7 +79,7 @@ public partial class Utility
                     settings.LogChannelId.HasValue ? MentionUtils.MentionChannel(settings.LogChannelId.Value) : "-",
                     true);
 
-            await ctx.Channel.SendMessageAsync(embed: eb.Build());
+            await ctx.Channel.SendAsync(embed: eb.Build());
         }
 
         /// <summary>
@@ -175,7 +174,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
-        public async Task InviteLinkChannel(ITextChannel? channel = null)
+        public async Task InviteLinkChannel(Channel? channel = null)
         {
             await Service.SetLinkChannelAsync(ctx.Guild.Id, channel?.Id);
             await ReplyConfirmAsync(channel == null
@@ -191,7 +190,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
-        public async Task InviteLogChannel(ITextChannel? channel = null)
+        public async Task InviteLogChannel(Channel? channel = null)
         {
             await Service.SetLogChannelAsync(ctx.Guild.Id, channel?.Id);
             await ReplyConfirmAsync(channel == null
@@ -207,7 +206,7 @@ public partial class Utility
         [Cmd]
         [Aliases]
         [RequireContext(ContextType.Guild)]
-        public async Task InviteLeaderboard(StatsRange range = StatsRange.AllTime, IRole? role = null)
+        public async Task InviteLeaderboard(StatsRange range = StatsRange.AllTime, SocketRole? role = null)
         {
             var leaderboard = await Service.GetInviteLeaderboardAsync(Context.Guild, range, role?.Id, 200);
 
@@ -255,7 +254,7 @@ public partial class Utility
         public async Task InviteStats(StatsRange range = StatsRange.Monthly)
         {
             var stats = await Service.GetAnalyticsAsync(ctx.Guild, range);
-            await ctx.Channel.SendMessageAsync(embed: BuildAnalyticsEmbed(stats).Build());
+            await ctx.Channel.SendAsync(embed: BuildAnalyticsEmbed(stats).Build());
         }
 
         private EmbedBuilder BuildAnalyticsEmbed(InviteAnalytics stats)
@@ -325,9 +324,9 @@ public partial class Utility
                     true);
             if (record.DateAdded.HasValue)
                 eb.AddField(Strings.InviteJoinedField(ctx.Guild.Id),
-                    TimestampTag.FromDateTime(record.DateAdded.Value, TimestampTagStyles.Relative).ToString(), true);
+                    TimestampTag.FromDateTime(record.DateAdded.Value, TimestampTagStyle.Relative).ToString(), true);
 
-            await ctx.Channel.SendMessageAsync(embed: eb.Build());
+            await ctx.Channel.SendAsync(embed: eb.Build());
         }
 
         /// <summary>
@@ -403,7 +402,7 @@ public partial class Utility
         private static string FormatRecord(InvitedBy record)
         {
             var when = record.DateAdded.HasValue
-                ? TimestampTag.FromDateTime(record.DateAdded.Value, TimestampTagStyles.ShortDate).ToString()
+                ? TimestampTag.FromDateTime(record.DateAdded.Value, TimestampTagStyle.ShortDate).ToString()
                 : "?";
             var flags = new List<string>();
             if (record.IsFake) flags.Add($"fake: {(InviteFakeReason)record.FakeReason}");
@@ -438,7 +437,7 @@ public partial class Utility
                     (x.MaxUses is > 0 ? $"/{x.MaxUses}" : "") +
                     (x.MaxAge is > 0 ? " (expires)" : ""))));
 
-            await ctx.Channel.SendMessageAsync(embed: eb.Build());
+            await ctx.Channel.SendAsync(embed: eb.Build());
         }
 
         /// <summary>
@@ -450,7 +449,7 @@ public partial class Utility
         [BotPerm(GuildPermission.CreateInstantInvite)]
         public async Task InviteLink()
         {
-            var invite = await Service.GetOrCreateUserLinkAsync(ctx.Guild, (IGuildUser)ctx.User);
+            var invite = await Service.GetOrCreateUserLinkAsync(ctx.Guild, (SocketGuildMember)ctx.User);
             if (invite == null)
             {
                 await ReplyErrorAsync(Strings.InviteLinkFailed(ctx.Guild.Id));
@@ -469,7 +468,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
-        public async Task AddInvites(IGuildUser user, int amount)
+        public async Task AddInvites(SocketGuildMember user, int amount)
         {
             if (amount <= 0)
             {
@@ -490,7 +489,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
-        public async Task RemoveInvites(IGuildUser user, int amount)
+        public async Task RemoveInvites(SocketGuildMember user, int amount)
         {
             if (amount <= 0)
             {
@@ -511,7 +510,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
-        public async Task AddBonusInvites(IGuildUser user, int amount)
+        public async Task AddBonusInvites(SocketGuildMember user, int amount)
         {
             if (amount <= 0)
             {
@@ -532,7 +531,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
-        public async Task RemoveBonusInvites(IGuildUser user, int amount)
+        public async Task RemoveBonusInvites(SocketGuildMember user, int amount)
         {
             if (amount <= 0)
             {
@@ -553,7 +552,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
-        public async Task AddFakeInvites(IGuildUser user, int amount)
+        public async Task AddFakeInvites(SocketGuildMember user, int amount)
         {
             if (amount <= 0)
             {
@@ -574,7 +573,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
-        public async Task RemoveFakeInvites(IGuildUser user, int amount)
+        public async Task RemoveFakeInvites(SocketGuildMember user, int amount)
         {
             if (amount <= 0)
             {
@@ -594,7 +593,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
-        public async Task ResetInvites(IGuildUser user)
+        public async Task ResetInvites(SocketGuildMember user)
         {
             if (!await PromptUserConfirmAsync(Strings.InviteResetUserConfirm(ctx.Guild.Id, user.Mention), ctx.User.Id))
                 return;
@@ -632,7 +631,7 @@ public partial class Utility
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
         [BotPerm(GuildPermission.ManageGuild)]
-        public async Task SyncInvites(IGuildUser? user = null)
+        public async Task SyncInvites(SocketGuildMember? user = null)
         {
             var raised = await Service.SyncInvitesAsync(ctx.Guild, user?.Id);
             await ReplyConfirmAsync(Strings.InvitesSynced(ctx.Guild.Id, raised));
@@ -665,7 +664,7 @@ public partial class Utility
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
         [BotPerm(GuildPermission.ManageGuild)]
-        public async Task PurgeInvites(int maxUses = 0, ITextChannel? channel = null)
+        public async Task PurgeInvites(int maxUses = 0, Channel? channel = null)
         {
             if (!await PromptUserConfirmAsync(Strings.InvitePurgeConfirm(ctx.Guild.Id, maxUses), ctx.User.Id))
                 return;
@@ -683,7 +682,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
-        public async Task InviteBlacklist(IGuildUser user)
+        public async Task InviteBlacklist(SocketGuildMember user)
         {
             await ToggleExclusionAsync(user.Id, InviteExclusionKind.BlacklistedUser, user.Mention);
         }
@@ -696,7 +695,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
-        public async Task InviteBlacklist(IRole role)
+        public async Task InviteBlacklist(SocketRole role)
         {
             await ToggleExclusionAsync(role.Id, InviteExclusionKind.BlacklistedRole, role.Mention);
         }
@@ -709,7 +708,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
-        public async Task InviteHide(IGuildUser user)
+        public async Task InviteHide(SocketGuildMember user)
         {
             await ToggleExclusionAsync(user.Id, InviteExclusionKind.HiddenUser, user.Mention);
         }
@@ -753,7 +752,7 @@ public partial class Utility
                 .AddField(Strings.InviteExclusionsHidden(ctx.Guild.Id),
                     hidden.Count == 0 ? "-" : string.Join(", ", hidden.Select(x => $"<@{x}>")));
 
-            await ctx.Channel.SendMessageAsync(embed: eb.Build());
+            await ctx.Channel.SendAsync(embed: eb.Build());
         }
 
         /// <summary>
@@ -787,7 +786,7 @@ public partial class Utility
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
         [BotPerm(GuildPermission.ManageRoles)]
-        public async Task InviteLabelRole(string code, IRole? role = null)
+        public async Task InviteLabelRole(string code, SocketRole? role = null)
         {
             if (await Service.GetLabelAsync(ctx.Guild.Id, code) == null)
             {
@@ -840,7 +839,7 @@ public partial class Utility
                     (x.RoleId.HasValue ? $" role <@&{x.RoleId}>" : "") +
                     (x.OwnerUserId.HasValue ? $" owner <@{x.OwnerUserId}>" : ""))));
 
-            await ctx.Channel.SendMessageAsync(embed: eb.Build());
+            await ctx.Channel.SendAsync(embed: eb.Build());
         }
 
         /// <summary>

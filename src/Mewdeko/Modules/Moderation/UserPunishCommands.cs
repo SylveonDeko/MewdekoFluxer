@@ -1,5 +1,4 @@
 using DataModel;
-using Discord.Commands;
 using Humanizer;
 using LinqToDB.Async;
 using Mewdeko.Common.Attributes.TextCommands;
@@ -72,7 +71,7 @@ public partial class Moderation : MewdekoModule
                         massNick.Failed,
                         TimestampTag.FromDateTime(massNick.StartedAt)));
 
-                await ctx.Channel.SendMessageAsync(embed: eb.Build());
+                await ctx.Channel.SendAsync(embed: eb.Build());
             }
         }
 
@@ -108,7 +107,7 @@ public partial class Moderation : MewdekoModule
         [BotPerm(GuildPermission.Administrator)]
         public async Task DehoistAll(bool onlyDehoistNicks = false)
         {
-            var dehoistedUsers = new ConcurrentDictionary<IGuildUser, string>();
+            var dehoistedUsers = new ConcurrentDictionary<SocketGuildMember, string>();
             var users = (await ctx.Guild.GetUsersAsync()).ToList();
             Parallel.ForEach(users, user =>
             {
@@ -192,7 +191,7 @@ public partial class Moderation : MewdekoModule
         [BotPerm(GuildPermission.Administrator)]
         public async Task SanitizeAll()
         {
-            var sanitizedUsers = new ConcurrentDictionary<IGuildUser, string>();
+            var sanitizedUsers = new ConcurrentDictionary<SocketGuildMember, string>();
             var users = (await ctx.Guild.GetUsersAsync()).ToList();
             Parallel.ForEach(users, user =>
             {
@@ -263,7 +262,7 @@ public partial class Moderation : MewdekoModule
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageNicknames)]
         [BotPerm(GuildPermission.ManageNicknames)]
-        public async Task Dehoist(IGuildUser user)
+        public async Task Dehoist(SocketGuildMember user)
         {
             if (user.Nickname != null && user.Nickname[0] < 'A')
             {
@@ -290,7 +289,7 @@ public partial class Moderation : MewdekoModule
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageNicknames)]
         [BotPerm(GuildPermission.ManageNicknames)]
-        public async Task Sanitize(IGuildUser user)
+        public async Task Sanitize(SocketGuildMember user)
         {
             var newName = user.SanitizeUserName();
             await user.ModifyAsync(u => u.Nickname = newName);
@@ -307,7 +306,7 @@ public partial class Moderation : MewdekoModule
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
         [Priority(0)]
-        public async Task SetWarnChannel([Remainder] ITextChannel channel)
+        public async Task SetWarnChannel([Remainder] Channel channel)
         {
             var warnlogChannel = await Service.GetWarnlogChannel(ctx.Guild.Id);
             if (warnlogChannel == channel.Id)
@@ -343,7 +342,7 @@ public partial class Moderation : MewdekoModule
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ModerateMembers)]
         [BotPerm(GuildPermission.ModerateMembers)]
-        public async Task Timeout(StoopidTime time, IGuildUser? user, [Remainder] string? reason = null)
+        public async Task Timeout(StoopidTime time, SocketGuildMember? user, [Remainder] string? reason = null)
         {
             if (!await CheckRoleHierarchy(user))
                 return;
@@ -372,7 +371,7 @@ public partial class Moderation : MewdekoModule
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ModerateMembers)]
         [BotPerm(GuildPermission.ModerateMembers)]
-        public async Task UnTimeOut(IGuildUser? user)
+        public async Task UnTimeOut(SocketGuildMember? user)
         {
             if (!await CheckRoleHierarchy(user))
                 return;
@@ -392,7 +391,7 @@ public partial class Moderation : MewdekoModule
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.BanMembers)]
-        public async Task Warn(IGuildUser? user, [Remainder] string? reason = null)
+        public async Task Warn(SocketGuildMember? user, [Remainder] string? reason = null)
         {
             if (!await CheckRoleHierarchy(user))
                 return;
@@ -512,7 +511,7 @@ public partial class Moderation : MewdekoModule
         [RequireContext(ContextType.Guild)]
         [Priority(3)]
         [UserPerm(GuildPermission.BanMembers)]
-        public Task Warnlog(IGuildUser user)
+        public Task Warnlog(SocketGuildMember user)
         {
             return InternalWarnlog(user.Id);
         }
@@ -659,7 +658,7 @@ public partial class Moderation : MewdekoModule
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.BanMembers)]
-        public async Task Warnclear(IGuildUser? user, int index = 0)
+        public async Task Warnclear(SocketGuildMember? user, int index = 0)
         {
             if (index < 0)
                 return;
@@ -699,7 +698,7 @@ public partial class Moderation : MewdekoModule
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.BanMembers)]
         [Priority(1)]
-        public async Task WarnPunish(int number, AddRole _, IRole role, StoopidTime? time = null)
+        public async Task WarnPunish(int number, AddRole _, SocketRole role, StoopidTime? time = null)
         {
             const PunishmentAction punish = PunishmentAction.AddRole;
             var success = await Service.WarnPunish(ctx.Guild.Id, number, (int)punish, time, role);
@@ -828,7 +827,7 @@ public partial class Moderation : MewdekoModule
         [UserPerm(GuildPermission.BanMembers)]
         [BotPerm(GuildPermission.BanMembers)]
         [Priority(1)]
-        public async Task Ban(StoopidTime pruneTime, StoopidTime time, IGuildUser? user, [Remainder] string? msg = null)
+        public async Task Ban(StoopidTime pruneTime, StoopidTime time, SocketGuildMember? user, [Remainder] string? msg = null)
         {
             if (time.Time > TimeSpan.FromDays(49))
                 return;
@@ -853,7 +852,7 @@ public partial class Moderation : MewdekoModule
                     {
                         var userChannel = await user.CreateDMChannelAsync().ConfigureAwait(false);
                         await userChannel
-                            .SendMessageAsync(message, embeds: embedBuilder)
+                            .SendAsync(message, embeds: embedBuilder)
                             .ConfigureAwait(false);
                     }
                 }
@@ -950,7 +949,7 @@ public partial class Moderation : MewdekoModule
         [UserPerm(GuildPermission.BanMembers)]
         [BotPerm(GuildPermission.BanMembers)]
         [Priority(2)]
-        public async Task Ban(IGuildUser? user, [Remainder] string? msg = null)
+        public async Task Ban(SocketGuildMember? user, [Remainder] string? msg = null)
         {
             if (!await CheckRoleHierarchy(user).ConfigureAwait(false))
                 return;
@@ -965,7 +964,7 @@ public partial class Moderation : MewdekoModule
                 if (embedBuilder is not null || message is not null)
                 {
                     var userChannel = await user.CreateDMChannelAsync().ConfigureAwait(false);
-                    await userChannel.SendMessageAsync(message, embeds: embedBuilder)
+                    await userChannel.SendAsync(message, embeds: embedBuilder)
                         .ConfigureAwait(false);
                 }
             }
@@ -1006,7 +1005,7 @@ public partial class Moderation : MewdekoModule
         [UserPerm(GuildPermission.BanMembers)]
         [BotPerm(GuildPermission.BanMembers)]
         [Priority(2)]
-        public async Task Ban(StoopidTime time, IGuildUser? user, [Remainder] string? msg = null)
+        public async Task Ban(StoopidTime time, SocketGuildMember? user, [Remainder] string? msg = null)
         {
             if (!await CheckRoleHierarchy(user).ConfigureAwait(false))
                 return;
@@ -1021,7 +1020,7 @@ public partial class Moderation : MewdekoModule
                 if (embedBuilder is not null || message is not null)
                 {
                     var userChannel = await user.CreateDMChannelAsync().ConfigureAwait(false);
-                    await userChannel.SendMessageAsync(message, embeds: embedBuilder)
+                    await userChannel.SendAsync(message, embeds: embedBuilder)
                         .ConfigureAwait(false);
                 }
             }
@@ -1129,7 +1128,7 @@ public partial class Moderation : MewdekoModule
             var dmChannel = await ctx.User.CreateDMChannelAsync().ConfigureAwait(false);
             var defaultMessage = Strings.Bandm(ctx.Guild.Id, Format.Bold(ctx.Guild.Name), reason);
             var crEmbed = await Service.GetBanUserDmEmbed(Context,
-                (IGuildUser)Context.User,
+                (SocketGuildMember)Context.User,
                 defaultMessage,
                 reason,
                 duration).ConfigureAwait(false);
@@ -1143,7 +1142,7 @@ public partial class Moderation : MewdekoModule
                 try
                 {
                     await dmChannel
-                        .SendMessageAsync(crEmbed.Item2, embeds: crEmbed.Item1)
+                        .SendAsync(crEmbed.Item2, embeds: crEmbed.Item1)
                         .ConfigureAwait(false);
                 }
                 catch (Exception)
@@ -1222,7 +1221,7 @@ public partial class Moderation : MewdekoModule
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.KickMembers | GuildPermission.ManageMessages)]
         [BotPerm(GuildPermission.BanMembers)]
-        public Task Softban(IGuildUser? user, [Remainder] string? msg = null)
+        public Task Softban(SocketGuildMember? user, [Remainder] string? msg = null)
         {
             return SoftbanInternal(user, msg);
         }
@@ -1239,7 +1238,7 @@ public partial class Moderation : MewdekoModule
         [BotPerm(GuildPermission.BanMembers)]
         public async Task Softban(ulong userId, [Remainder] string? msg = null)
         {
-            var user = await ((DiscordShardedClient)Context.Client).Rest.GetGuildUserAsync(Context.Guild.Id,
+            var user = await ((FluxerClient)Context.Client).Rest.GetGuildUserAsync(Context.Guild.Id,
                 userId).ConfigureAwait(false);
             if (user is null)
                 return;
@@ -1247,7 +1246,7 @@ public partial class Moderation : MewdekoModule
             await SoftbanInternal(user).ConfigureAwait(false);
         }
 
-        private async Task SoftbanInternal(IGuildUser? user, [Remainder] string? msg = null)
+        private async Task SoftbanInternal(SocketGuildMember? user, [Remainder] string? msg = null)
         {
             if (!await CheckRoleHierarchy(user).ConfigureAwait(false))
                 return;
@@ -1304,7 +1303,7 @@ public partial class Moderation : MewdekoModule
         [UserPerm(GuildPermission.KickMembers)]
         [BotPerm(GuildPermission.KickMembers)]
         [Priority(1)]
-        public Task Kick(IGuildUser? user, [Remainder] string? msg = null)
+        public Task Kick(SocketGuildMember? user, [Remainder] string? msg = null)
         {
             return KickInternal(user, msg);
         }
@@ -1322,7 +1321,7 @@ public partial class Moderation : MewdekoModule
         [Priority(0)]
         public async Task Kick(ulong userId, [Remainder] string? msg = null)
         {
-            var user = await ((DiscordShardedClient)Context.Client).Rest.GetGuildUserAsync(Context.Guild.Id,
+            var user = await ((FluxerClient)Context.Client).Rest.GetGuildUserAsync(Context.Guild.Id,
                 userId).ConfigureAwait(false);
             if (user is null)
                 return;
@@ -1341,7 +1340,7 @@ public partial class Moderation : MewdekoModule
         [BotPerm(GuildPermission.KickMembers)]
         public async Task MassKick(params IUser[] usersUnp)
         {
-            var users = usersUnp.Cast<IGuildUser>();
+            var users = usersUnp.Cast<SocketGuildMember>();
             List<ulong> succ = [], fail = [];
 
             var options = new RequestOptions
@@ -1364,10 +1363,10 @@ public partial class Moderation : MewdekoModule
                 .WithColor(fail.Count > 0 ? fail.Count > succ.Count ? Color.Red : Color.Orange : Color.Green)
                 .WithDescription(Strings.MassKickedMembers(ctx.Guild.Id, succ.Count))
                 .WithTitle(Strings.MassKick(ctx.Guild.Id));
-            await Context.Channel.SendMessageAsync(embed: eb.Build());
+            await Context.Channel.SendAsync(embed: eb.Build());
         }
 
-        private async Task KickInternal(IGuildUser? user, string? msg = null)
+        private async Task KickInternal(SocketGuildMember? user, string? msg = null)
         {
             if (!await CheckRoleHierarchy(user).ConfigureAwait(false))
                 return;

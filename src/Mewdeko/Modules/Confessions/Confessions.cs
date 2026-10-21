@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Confessions.Services;
 
@@ -66,7 +66,7 @@ public class Confessions(GuildSettingsService guildSettings, IBotCredentials cre
     [Aliases]
     [UserPerm(GuildPermission.ManageChannels)]
     [RequireContext(ContextType.Guild)]
-    public async Task ConfessionChannel(ITextChannel? channel = null)
+    public async Task ConfessionChannel(Channel? channel = null)
     {
         if (channel is null)
         {
@@ -97,7 +97,7 @@ public class Confessions(GuildSettingsService guildSettings, IBotCredentials cre
     [Aliases]
     [UserPerm(GuildPermission.Administrator)]
     [RequireContext(ContextType.Guild)]
-    public async Task ConfessionLogChannel(ITextChannel? channel = null)
+    public async Task ConfessionLogChannel(Channel? channel = null)
     {
         if (channel is null)
         {
@@ -178,7 +178,7 @@ public class Confessions(GuildSettingsService guildSettings, IBotCredentials cre
     public async Task ConfessReport(ulong serverId, [Remainder] string how)
     {
         var guildId = ctx.Guild?.Id;
-        var reportedGuild = await ((DiscordShardedClient)ctx.Client).Rest.GetGuildAsync(serverId).ConfigureAwait(false);
+        var reportedGuild = await ((FluxerClient)ctx.Client).Rest.GetGuildAsync(serverId).ConfigureAwait(false);
         if (reportedGuild is null)
         {
             await ctx.Channel.SendErrorAsync(Strings.ConfessionsInvalidId(guildId), Config).ConfigureAwait(false);
@@ -186,8 +186,8 @@ public class Confessions(GuildSettingsService guildSettings, IBotCredentials cre
         }
 
         var channel =
-            await ((DiscordShardedClient)ctx.Client).Rest.GetChannelAsync(credentials.ConfessionReportChannelId)
-                .ConfigureAwait(false) as ITextChannel;
+            await ((FluxerClient)ctx.Client).Rest.GetChannelAsync(credentials.ConfessionReportChannelId)
+                .ConfigureAwait(false) as Channel;
         var eb = new EmbedBuilder().WithErrorColor().WithTitle(Strings.ConfessionsReportReceived(guildId))
             .AddField(Strings.ConfessionsReport(guildId), how)
             .AddField(Strings.ConfessionsReportUser(guildId), $"{ctx.User} | {ctx.User.Id}")
@@ -202,7 +202,7 @@ public class Confessions(GuildSettingsService guildSettings, IBotCredentials cre
             eb.AddField(Strings.ConfessionsServerInvite(guildId), Strings.ConfessionsMissingInvite(guildId));
         }
 
-        await channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+        await channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
         await ctx.Channel.SendErrorAsync(Strings.ConfessionsReportSent(guildId), Config).ConfigureAwait(false);
     }
 }

@@ -1,5 +1,4 @@
 using DataModel;
-using Discord.Rest;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Services.Analytics;
@@ -31,7 +30,7 @@ public class FeatureRequestService : INService
     private static readonly TimeSpan SubmissionWindow = TimeSpan.FromHours(1);
 
     private readonly BotConfigService bss;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly BotCredentials creds;
     private readonly IDataConnectionFactory dbFactory;
@@ -48,7 +47,7 @@ public class FeatureRequestService : INService
     /// <param name="creds">The bot credentials.</param>
     /// <param name="collector">The analytics collector.</param>
     /// <param name="logger">The logger.</param>
-    public FeatureRequestService(DiscordShardedClient client, IDataConnectionFactory dbFactory,
+    public FeatureRequestService(FluxerClient client, IDataConnectionFactory dbFactory,
         BotConfigService bss, BotCredentials creds, IAnalyticsCollector collector,
         ILogger<FeatureRequestService> logger)
     {
@@ -333,7 +332,7 @@ public class FeatureRequestService : INService
 
         try
         {
-            if (await client.Rest.GetChannelAsync(channelId).ConfigureAwait(false) is not RestTextChannel channel)
+            if (await client.Rest.GetChannelAsync(channelId).ConfigureAwait(false) is not Channel channel)
                 return (null, 0, null, false);
 
             return (channel.Name, channel.GuildId, client.GetGuild(channel.GuildId)?.Name, true);
@@ -373,7 +372,7 @@ public class FeatureRequestService : INService
             if (record is null)
                 return;
 
-            if (await client.Rest.GetChannelAsync(channelId).ConfigureAwait(false) is not RestTextChannel channel)
+            if (await client.Rest.GetChannelAsync(channelId).ConfigureAwait(false) is not Channel channel)
                 return;
 
             var eb = new EmbedBuilder()
@@ -399,7 +398,7 @@ public class FeatureRequestService : INService
                 return;
             }
 
-            var msg = await channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+            var msg = await channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
             await db.FeatureRequests.Where(x => x.Id == id)
                 .Set(x => x.ReportMessageId, msg.Id)
                 .UpdateAsync().ConfigureAwait(false);

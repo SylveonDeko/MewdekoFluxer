@@ -1,5 +1,4 @@
 ﻿using System.Net.Http;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 
 namespace Mewdeko.Modules.Administration;
@@ -112,7 +111,7 @@ public partial class Administration
                     .ConfigureAwait(false);
         }
 
-        private async Task<IWebhook> CreateWebhook(ITextChannel? chan, string? name, string imageUrl)
+        private async Task<IWebhook> CreateWebhook(Channel? chan, string? name, string imageUrl)
         {
             using var http = fact.CreateClient();
             var uri = new Uri(imageUrl);
@@ -138,7 +137,7 @@ public partial class Administration
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
-        public async Task LeaveHook(ITextChannel? chan, string? name, string? image = null, string? text = null)
+        public async Task LeaveHook(Channel? chan, string? name, string? image = null, string? text = null)
         {
             if (text?.Equals("disable", StringComparison.OrdinalIgnoreCase) == true)
             {
@@ -361,11 +360,11 @@ public partial class Administration
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
         [Ratelimit(5)]
-        public async Task ByeTest([Remainder] IGuildUser? user = null)
+        public async Task ByeTest([Remainder] SocketGuildMember? user = null)
         {
-            user ??= (IGuildUser)Context.User;
+            user ??= (SocketGuildMember)Context.User;
 
-            await Service.ByeTest((ITextChannel)Context.Channel, user).ConfigureAwait(false);
+            await Service.ByeTest((Channel)Context.Channel, user).ConfigureAwait(false);
             var enabled = await Service.GetByeEnabled(Context.Guild.Id);
             if (!enabled)
                 await ReplyConfirmAsync(Strings.ByemsgEnable(ctx.Guild.Id,
@@ -387,10 +386,10 @@ public partial class Administration
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
         [Ratelimit(5)]
-        public async Task BoostTest([Remainder] IGuildUser? user = null)
+        public async Task BoostTest([Remainder] SocketGuildMember? user = null)
         {
-            user ??= (IGuildUser)Context.User;
-            await Service.BoostTest(ctx.Channel as ITextChannel, user).ConfigureAwait(false);
+            user ??= (SocketGuildMember)Context.User;
+            await Service.BoostTest(ctx.Channel as Channel, user).ConfigureAwait(false);
             var enabled = await Service.GetBoostEnabled(Context.Guild.Id);
             if (!enabled)
                 await ReplyConfirmAsync(Strings.BoostmsgEnable(ctx.Guild.Id,
@@ -411,9 +410,9 @@ public partial class Administration
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
         [Ratelimit(5)]
-        public async Task GreetDmTest([Remainder] IGuildUser? user = null)
+        public async Task GreetDmTest([Remainder] SocketGuildMember? user = null)
         {
-            user ??= (IGuildUser)Context.User;
+            user ??= (SocketGuildMember)Context.User;
 
             var channel = await user.CreateDMChannelAsync().ConfigureAwait(false);
             var success = await Service.GreetDmTest(channel, user).ConfigureAwait(false);

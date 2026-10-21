@@ -2,15 +2,12 @@
 using System.Net.Http;
 using System.Threading;
 using DataModel;
-using Discord.Net;
-using Discord.Rest;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.ModuleBehaviors;
 using Mewdeko.Modules.Moderation.Services;
 using Mewdeko.Services.Analytics;
 using Mewdeko.Services.Strings;
-using DiscordShardedClient = Discord.WebSocket.DiscordShardedClient;
 
 // ReSharper disable GrammarMistakeInComment
 
@@ -28,7 +25,7 @@ namespace Mewdeko.Modules.Administration.Services;
 /// <param name="collector">The analytics collector.</param>
 public class LogCommandService(
     IDataConnectionFactory dbFactory,
-    DiscordShardedClient client,
+    FluxerClient client,
     EventHandler handler,
     MuteService muteService,
     GeneratedBotStrings strings,
@@ -257,14 +254,14 @@ public class LogCommandService(
     /// <param name="channel">The log channel.</param>
     /// <param name="eb">The embed to send.</param>
     /// <param name="files">Files to upload alongside the embed.</param>
-    private async Task SendLogAsync(ITextChannel channel, EmbedBuilder eb, List<FileAttachment>? files = null)
+    private async Task SendLogAsync(Channel channel, EmbedBuilder eb, List<AttachmentRequest>? files = null)
     {
         FitEmbed(eb);
 
         if (files is { Count: > 0 })
             await channel.SendFilesAsync(files, embed: eb.Build(), allowedMentions: AllowedMentions.None);
         else
-            await channel.SendMessageAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None);
+            await channel.SendAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None);
 
         collector.Feature("logging", channel.Guild.Id);
     }
@@ -296,7 +293,6 @@ public class LogCommandService(
         }
 
         // yeaaaa would be a good idea to add events AFTER we get all guild settings.
-        handler.Subscribe("GuildScheduledEventCreated", "LogCommandService", OnEventCreated);
         handler.Subscribe("RoleUpdated", "LogCommandService", OnRoleUpdated);
         handler.Subscribe("RoleCreated", "LogCommandService", OnRoleCreated);
         handler.Subscribe("RoleDeleted", "LogCommandService", OnRoleDeleted);
@@ -337,7 +333,7 @@ public class LogCommandService(
     /// <param name="args">The audit log entry.</param>
     /// <param name="arsg2">The guild where the audit log was created.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    private async Task OnAuditLogCreated(SocketAuditLogEntry args, SocketGuild arsg2)
+    private async Task OnAuditLogCreated(SocketAuditLog args, SocketGuild arsg2)
     {
         switch (args.Action)
         {
@@ -402,7 +398,7 @@ public class LogCommandService(
     /// <param name="actionType">The action type to filter by.</param>
     /// <param name="limit">The maximum number of entries to fetch.</param>
     /// <returns>The matching audit log entries, or an empty collection if they are unavailable.</returns>
-    private async Task<IReadOnlyCollection<IAuditLogEntry>> GetAuditLogsSafeAsync(IGuild? guild, ActionType actionType,
+    private async Task<IReadOnlyCollection<SocketAuditLog>> GetAuditLogsSafeAsync(SocketGuild? guild, ActionType actionType,
         int limit = 1)
     {
         if (guild is null)
@@ -416,7 +412,7 @@ public class LogCommandService(
         {
             return await guild.GetAuditLogsAsync(limit, actionType: actionType).ConfigureAwait(false);
         }
-        catch (HttpException ex)
+        catch (FluxerApiException ex)
         {
             logger.LogDebug(ex, "Could not fetch {ActionType} audit logs for guild {GuildId}", actionType, guild.Id);
             return [];
@@ -709,44 +705,10 @@ public class LogCommandService(
     }
 
     /// <summary>
-    ///     Handles the event when a new event is created in a guild.
-    /// </summary>
-    /// <param name="args">The event that was created.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    private async Task OnEventCreated(SocketGuildEvent args)
-    {
-        if (GuildLogSettings.TryGetValue(args.Guild.Id, out var logSetting))
-        {
-            if (logSetting.EventCreatedId is null or 0)
-                return;
-
-            var channel = args.Guild.GetTextChannel(logSetting.EventCreatedId.Value);
-            if (channel is null)
-                return;
-            var eb = LogEmbed(strings.EventCreated(args.Guild.Id),
-                strings.EventField(args.GuildId, args.Name) +
-                $"`Created By:` {args.Creator?.Mention ?? "N/A"} | {args.Creator?.Id.ToString() ?? "N/A"}\n" +
-                $"`Created At:` {DateTime.UtcNow:dd/MM/yyyy HH:mm:ss}\n" +
-                $"`Description:` {args.Description}\n" +
-                $"`Event Date:` {args.StartTime:dd/MM/yyyy HH:mm:ss}\n" +
-                $"`End Date:` {args.EndTime:dd/MM/yyyy HH:mm:ss}\n" +
-                $"`Event Location:` {args.Location ?? "N/A"}\n" +
-                $"`Event Type:` {args.Type}\n" +
-                $"`Event Id:` {args.Id}", Mewdeko.OkColor);
-
-            var coverImageUrl = args.GetCoverImageUrl();
-            if (!string.IsNullOrEmpty(coverImageUrl))
-                eb.WithImageUrl(coverImageUrl);
-
-            await SendLogAsync(channel, eb);
-        }
-    }
-
-    /// <summary>
     ///     Handles logging for when a thread is created.
     /// </summary>
     /// <param name="socketThreadChannel">The created thread channel.</param>
-    private async Task OnThreadCreated(SocketThreadChannel socketThreadChannel)
+    private async Task OnThreadCreated(Channel socketThreadChannel)
     {
         // Check if thread or its parent channel is ignored
         if (IsChannelIgnored(socketThreadChannel.Guild.Id, socketThreadChannel.Id) ||
@@ -780,7 +742,7 @@ public class LogCommandService(
     /// </summary>
     /// <param name="cacheable">The user before the event fired</param>
     /// <param name="arsg2">The user after the event was fired</param>
-    private async Task OnUserRoleAdded(Cacheable<SocketGuildUser, ulong> cacheable, SocketGuildUser arsg2)
+    private async Task OnUserRoleAdded(Cacheable<SocketGuildMember> cacheable, SocketGuildMember arsg2)
     {
         if (!GuildLogSettings.TryGetValue(arsg2.Guild.Id, out var logSetting) || !cacheable.HasValue)
             return;
@@ -814,7 +776,7 @@ public class LogCommandService(
     /// </summary>
     /// <param name="cacheable">The user before the removal</param>
     /// <param name="arsg2">The user after the removal</param>
-    private async Task OnUserRoleRemoved(Cacheable<SocketGuildUser, ulong> cacheable, SocketGuildUser arsg2)
+    private async Task OnUserRoleRemoved(Cacheable<SocketGuildMember> cacheable, SocketGuildMember arsg2)
     {
         if (!GuildLogSettings.TryGetValue(arsg2.Guild.Id, out var logSetting) || !cacheable.HasValue)
             return;
@@ -881,7 +843,7 @@ public class LogCommandService(
     /// </summary>
     /// <param name="cacheable">The user before they updated their nickname</param>
     /// <param name="arsg2">The user after they updated their nickname</param>
-    private async Task OnNicknameUpdated(Cacheable<SocketGuildUser, ulong> cacheable, SocketGuildUser arsg2)
+    private async Task OnNicknameUpdated(Cacheable<SocketGuildMember> cacheable, SocketGuildMember arsg2)
     {
         if (!cacheable.HasValue || cacheable.Value.Nickname == arsg2.Nickname) return;
 
@@ -913,7 +875,7 @@ public class LogCommandService(
     ///     Handles the event when a thread gets deleted.
     /// </summary>
     /// <param name="args">The cached thread. May return null. See <see cref="Cacheable{TEntity,TId}" /></param>
-    private async Task OnThreadDeleted(Cacheable<SocketThreadChannel, ulong> args)
+    private async Task OnThreadDeleted(Cacheable<Channel> args)
     {
         if (!args.HasValue) return;
         var deletedThread = args.Value;
@@ -955,7 +917,7 @@ public class LogCommandService(
     /// </summary>
     /// <param name="cacheable">The cached thread. May return null. See <see cref="Cacheable{TEntity,TId}" /></param>
     /// <param name="arsg2">The updated thread.</param>
-    private async Task OnThreadUpdated(Cacheable<SocketThreadChannel, ulong> cacheable, SocketThreadChannel arsg2)
+    private async Task OnThreadUpdated(Cacheable<Channel> cacheable, Channel arsg2)
     {
         if (!cacheable.HasValue) return;
         var oldThread = cacheable.Value;
@@ -1027,12 +989,12 @@ public class LogCommandService(
     /// <param name="cacheable">The cached message. May return null. See <see cref="Cacheable{TEntity,TId}" /></param>
     /// <param name="args2">The new message</param>
     /// <param name="args3">The channel where the message was updated</param>
-    private async Task OnMessageUpdated(Cacheable<IMessage, ulong> cacheable, SocketMessage args2,
-        ISocketMessageChannel args3)
+    private async Task OnMessageUpdated(Cacheable<Message> cacheable, SocketMessage args2,
+        Channel args3)
     {
         if (!cacheable.HasValue || args2.Author.IsBot) return;
         var oldMessage = cacheable.Value;
-        if (args3 is not SocketTextChannel guildChannel) return;
+        if (args3 is not Channel guildChannel) return;
         if (oldMessage.Content == args2.Content) return; // Compare content directly
 
         // Check if channel is ignored
@@ -1068,7 +1030,7 @@ public class LogCommandService(
     /// </summary>
     /// <param name="args">The cached message. May return null. See <see cref="Cacheable{TEntity,TId}" /></param>
     /// <param name="arsg2">The channel where the message was deleted</param>
-    private async Task OnMessageDeleted(Cacheable<IMessage, ulong> args, Cacheable<IMessageChannel, ulong> arsg2)
+    private async Task OnMessageDeleted(Cacheable<Message> args, Cacheable<Channel> arsg2)
     {
         // Get message from cache if available
         var message = args.HasValue ? args.Value : null;
@@ -1076,7 +1038,7 @@ public class LogCommandService(
         if (message == null || message.Author.IsBot) return;
         // Get channel from cache if available
         var messageChannel = arsg2.HasValue ? arsg2.Value : null;
-        if (messageChannel is not SocketTextChannel guildChannel) return; // Ensure it's a guild channel
+        if (messageChannel is not Channel guildChannel) return; // Ensure it's a guild channel
 
         // Check if channel is ignored
         if (IsChannelIgnored(guildChannel.Guild.Id, guildChannel.Id))
@@ -1108,7 +1070,7 @@ public class LogCommandService(
 
 
             var guildId = guildChannel.Guild.Id;
-            var tempFiles = new List<FileAttachment>();
+            var tempFiles = new List<AttachmentRequest>();
 
             var eb = LogEmbed(strings.MessageDeleted(guildId),
                     strings.MessageAuthorField(guildId, message.Author.Mention, message.Author.Id) +
@@ -1136,7 +1098,7 @@ public class LogCommandService(
                         if (response.IsSuccessStatusCode)
                         {
                             var content = await response.Content.ReadAsByteArrayAsync();
-                            tempFiles.Add(new FileAttachment(new MemoryStream(content), att.Filename, att.Filename));
+                            tempFiles.Add(new AttachmentRequest(new MemoryStream(content), att.Filename, att.Filename));
                             preserved = true;
 
                             if (string.IsNullOrEmpty(eb.ImageUrl) && IsImageAttachment(att.Filename))
@@ -1186,7 +1148,7 @@ public class LogCommandService(
     ///     Handles the event when a user joins a guild.
     /// </summary>
     /// <param name="guildUser">The user that joined the guild.</param>
-    private async Task OnUserJoined(IGuildUser guildUser)
+    private async Task OnUserJoined(SocketGuildMember guildUser)
     {
         logger.LogDebug("LogCommandService.OnUserJoined called for user {UserId} in guild {GuildId}", guildUser.Id,
             guildUser.Guild.Id);
@@ -1219,7 +1181,7 @@ public class LogCommandService(
     /// </summary>
     /// <param name="guild">The guild the user left.</param>
     /// <param name="user">The user that left the guild.</param>
-    private async Task OnUserLeft(IGuild guild, IUser user)
+    private async Task OnUserLeft(SocketGuild guild, IUser user)
     {
         if (GuildLogSettings.TryGetValue(guild.Id, out var logSetting))
         {
@@ -1339,7 +1301,7 @@ public class LogCommandService(
     {
         if (args.IsBot) return;
 
-        var hasAvatarChanged = args.AvatarId != arsg2.AvatarId;
+        var hasAvatarChanged = args.AvatarHash != arsg2.AvatarHash;
         var hasGlobalNameChanged = args.GlobalName != arsg2.GlobalName;
 
         if (!hasAvatarChanged && !hasGlobalNameChanged) return;
@@ -1390,9 +1352,9 @@ public class LogCommandService(
     ///     Handles the event when a channel is created in a guild.
     /// </summary>
     /// <param name="args">The channel that was created.</param>
-    private async Task OnChannelCreated(SocketChannel args)
+    private async Task OnChannelCreated(Channel args)
     {
-        if (args is not SocketGuildChannel channel) return;
+        if (args is not Channel channel) return;
 
         // Check if channel is ignored
         if (IsChannelIgnored(channel.Guild.Id, channel.Id))
@@ -1410,10 +1372,10 @@ public class LogCommandService(
             var createdType = channel switch
             {
                 SocketStageChannel => "Stage",
-                SocketVoiceChannel => "Voice",
-                SocketNewsChannel => "News",
-                SocketTextChannel => "Text",
-                SocketCategoryChannel => "Category",
+                Channel => "Voice",
+                Channel => "News",
+                Channel => "Text",
+                Channel => "Category",
                 _ => "Unknown"
             };
 
@@ -1438,9 +1400,9 @@ public class LogCommandService(
     ///     Handles the event when a channel is destroyed/deleted in a guild.
     /// </summary>
     /// <param name="args">The channel that was destroyed.</param>
-    private async Task OnChannelDestroyed(SocketChannel args)
+    private async Task OnChannelDestroyed(Channel args)
     {
-        if (args is not SocketGuildChannel channel) return;
+        if (args is not Channel channel) return;
 
         // Check if channel is ignored
         if (IsChannelIgnored(channel.Guild.Id, channel.Id))
@@ -1458,10 +1420,10 @@ public class LogCommandService(
             var createdType = channel switch
             {
                 SocketStageChannel => "Stage",
-                SocketVoiceChannel => "Voice",
-                SocketNewsChannel => "News",
-                SocketTextChannel => "Text",
-                SocketCategoryChannel => "Category",
+                Channel => "Voice",
+                Channel => "News",
+                Channel => "Text",
+                Channel => "Category",
                 _ => "Unknown"
             };
 
@@ -1487,9 +1449,9 @@ public class LogCommandService(
     /// </summary>
     /// <param name="args">The channel before the update.</param>
     /// <param name="arsg2">The channel after the update.</param>
-    private async Task OnChannelUpdated(SocketChannel args, SocketChannel arsg2)
+    private async Task OnChannelUpdated(Channel args, Channel arsg2)
     {
-        if (args is not SocketGuildChannel channel || arsg2 is not SocketGuildChannel channel2) return;
+        if (args is not Channel channel || arsg2 is not Channel channel2) return;
         if (channel.Id != channel2.Id) return; // Should be the same channel
 
         // Check if channel is ignored
@@ -1534,7 +1496,7 @@ public class LogCommandService(
             switch (channel)
             {
                 // Text Channel specific changes
-                case SocketTextChannel textChannel when channel2 is SocketTextChannel textChannel2:
+                case Channel textChannel when channel2 is Channel textChannel2:
                 {
                     if (textChannel.Topic != textChannel2.Topic)
                     {
@@ -1571,7 +1533,7 @@ public class LogCommandService(
                     break;
                 }
                 // Voice Channel specific changes
-                case IVoiceChannel voiceChannel when channel2 is IVoiceChannel voiceChannel2:
+                case Channel voiceChannel when channel2 is Channel voiceChannel2:
                 {
                     if (voiceChannel.Bitrate != voiceChannel2.Bitrate)
                     {
@@ -1626,7 +1588,7 @@ public class LogCommandService(
     /// <param name="newState">The voice state after the update.</param>
     private async Task OnVoicePresence(SocketUser user, SocketVoiceState oldState, SocketVoiceState newState)
     {
-        if (user.IsBot || user is not IGuildUser guildUser)
+        if (user.IsBot || user is not SocketGuildMember guildUser)
             return;
 
         // Check if old or new channel is ignored
@@ -1737,7 +1699,7 @@ public class LogCommandService(
     /// <param name="newState">The voice state after the update.</param>
     private async Task OnVoicePresenceTts(SocketUser user, SocketVoiceState oldState, SocketVoiceState newState)
     {
-        if (user.IsBot || user is not IGuildUser guildUser)
+        if (user.IsBot || user is not SocketGuildMember guildUser)
             return;
 
         // Check if old or new channel is ignored
@@ -1764,7 +1726,7 @@ public class LogCommandService(
     /// <param name="muter">The user that muted the user.</param>
     /// <param name="muteType">Type of mute. <see cref="MuteType" /></param>
     /// <param name="reason">The reason the user was muted.</param>
-    private async Task OnUserMuted(IGuildUser guildUser, IUser muter, MuteType muteType, string reason)
+    private async Task OnUserMuted(SocketGuildMember guildUser, IUser muter, MuteType muteType, string reason)
     {
         if (GuildLogSettings.TryGetValue(guildUser.Guild.Id, out var logSetting))
         {
@@ -1794,7 +1756,7 @@ public class LogCommandService(
     /// <param name="unmuter">The user that unmuted the user.</param>
     /// <param name="muteType">Type of mute. <see cref="MuteType" /></param>
     /// <param name="reason">The reason the user was unmuted.</param>
-    private async Task OnUserUnmuted(IGuildUser guildUser, IUser unmuter, MuteType muteType, string reason)
+    private async Task OnUserUnmuted(SocketGuildMember guildUser, IUser unmuter, MuteType muteType, string reason)
     {
         if (GuildLogSettings.TryGetValue(guildUser.Guild.Id, out var logSetting))
         {
@@ -2163,7 +2125,7 @@ public class LogCommandService(
     ///     Handles the event when an invite is created.
     /// </summary>
     /// <param name="invite">The invite that was created.</param>
-    private async Task OnInviteCreated(SocketInvite invite)
+    private async Task OnInviteCreated(Invite invite)
     {
         if (invite.Guild == null) return;
 
@@ -2195,7 +2157,7 @@ public class LogCommandService(
     /// </summary>
     /// <param name="channel">The channel where the invite was deleted.</param>
     /// <param name="inviteCode">The code of the deleted invite.</param>
-    private async Task OnInviteDeleted(SocketGuildChannel channel, string inviteCode)
+    private async Task OnInviteDeleted(Channel channel, string inviteCode)
     {
         if (GuildLogSettings.TryGetValue(channel.Guild.Id, out var logSetting))
         {
@@ -2220,10 +2182,10 @@ public class LogCommandService(
     /// </summary>
     /// <param name="messages">The collection of deleted messages.</param>
     /// <param name="channel">The channel where messages were deleted.</param>
-    private async Task OnMessagesBulkDeleted(IReadOnlyCollection<Cacheable<IMessage, ulong>> messages,
-        Cacheable<IMessageChannel, ulong> channel)
+    private async Task OnMessagesBulkDeleted(IReadOnlyCollection<Cacheable<Message>> messages,
+        Cacheable<Channel> channel)
     {
-        if (!channel.HasValue || channel.Value is not SocketTextChannel guildChannel) return;
+        if (!channel.HasValue || channel.Value is not Channel guildChannel) return;
 
         // Check if channel is ignored
         if (IsChannelIgnored(guildChannel.Guild.Id, guildChannel.Id))
@@ -2263,10 +2225,10 @@ public class LogCommandService(
     /// <param name="message">The cached message.</param>
     /// <param name="channel">The channel containing the message.</param>
     /// <param name="reaction">The reaction that was added.</param>
-    private Task OnReactionAdded(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel,
+    private Task OnReactionAdded(Cacheable<Message> message, Cacheable<Channel> channel,
         SocketReaction reaction)
     {
-        if (!channel.HasValue || channel.Value is not SocketTextChannel guildChannel) return Task.CompletedTask;
+        if (!channel.HasValue || channel.Value is not Channel guildChannel) return Task.CompletedTask;
         var reactionUser = reaction.User.GetValueOrDefault();
         if (reactionUser?.IsBot == true) return Task.CompletedTask;
 
@@ -2275,7 +2237,7 @@ public class LogCommandService(
             return Task.CompletedTask;
 
         AddReactionToBatch(message.Id, guildChannel.Id, guildChannel.Guild.Id, guildChannel.Name,
-            reactionUser?.Id ?? 0, reaction.Emote, true);
+            reactionUser?.Id ?? 0, reaction.Emoji, true);
         return Task.CompletedTask;
     }
 
@@ -2285,10 +2247,10 @@ public class LogCommandService(
     /// <param name="message">The cached message.</param>
     /// <param name="channel">The channel containing the message.</param>
     /// <param name="reaction">The reaction that was removed.</param>
-    private Task OnReactionRemoved(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel,
+    private Task OnReactionRemoved(Cacheable<Message> message, Cacheable<Channel> channel,
         SocketReaction reaction)
     {
-        if (!channel.HasValue || channel.Value is not SocketTextChannel guildChannel) return Task.CompletedTask;
+        if (!channel.HasValue || channel.Value is not Channel guildChannel) return Task.CompletedTask;
         var reactionUser = reaction.User.GetValueOrDefault();
         if (reactionUser?.IsBot == true) return Task.CompletedTask;
 
@@ -2297,7 +2259,7 @@ public class LogCommandService(
             return Task.CompletedTask;
 
         AddReactionToBatch(message.Id, guildChannel.Id, guildChannel.Guild.Id, guildChannel.Name,
-            reactionUser?.Id ?? 0, reaction.Emote, false);
+            reactionUser?.Id ?? 0, reaction.Emoji, false);
         return Task.CompletedTask;
     }
 
@@ -2305,7 +2267,7 @@ public class LogCommandService(
     ///     Adds a reaction event to the batching system.
     /// </summary>
     private void AddReactionToBatch(ulong messageId, ulong channelId, ulong guildId, string channelName, ulong userId,
-        IEmote emote, bool isAdded)
+        Emoji emote, bool isAdded)
     {
         if (userId == 0) return; // Invalid user
 

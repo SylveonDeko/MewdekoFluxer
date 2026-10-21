@@ -1,4 +1,3 @@
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Birthday.Common;
 using Mewdeko.Modules.Birthday.Services;
@@ -132,7 +131,7 @@ public class Birthday : MewdekoModuleBase<BirthdayService>
             description = "No birthdays found in the specified period.";
 
         embed.WithDescription(description);
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -170,7 +169,7 @@ public class Birthday : MewdekoModuleBase<BirthdayService>
         }
 
         embed.WithDescription(description);
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     #region Admin Commands
@@ -183,9 +182,9 @@ public class Birthday : MewdekoModuleBase<BirthdayService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task BirthdayChannel(ITextChannel? channel = null)
+    public async Task BirthdayChannel(Channel? channel = null)
     {
-        channel ??= (ITextChannel)ctx.Channel;
+        channel ??= (Channel)ctx.Channel;
 
         await Service.UpdateBirthdayConfigAsync(ctx.Guild.Id, config =>
         {
@@ -206,7 +205,7 @@ public class Birthday : MewdekoModuleBase<BirthdayService>
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
     [BotPerm(GuildPermission.ManageRoles)]
-    public async Task BirthdayRole(IRole? role = null)
+    public async Task BirthdayRole(SocketRole? role = null)
     {
         if (role == null)
         {
@@ -265,7 +264,7 @@ public class Birthday : MewdekoModuleBase<BirthdayService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task BirthdayPingRole(IRole? role = null)
+    public async Task BirthdayPingRole(SocketRole? role = null)
     {
         if (role == null)
         {
@@ -335,7 +334,7 @@ public class Birthday : MewdekoModuleBase<BirthdayService>
                 .AddField("Reminder Days", config.BirthdayReminderDays.ToString(), true)
                 .AddField("Enabled Features", features.Any() ? string.Join(", ", features) : "None");
 
-            await ctx.Channel.SendMessageAsync(embed: embed.Build());
+            await ctx.Channel.SendAsync(embed: embed.Build());
         }
         catch (Exception e)
         {

@@ -1,5 +1,4 @@
 ﻿using System.Threading;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Games.Common;
 using Mewdeko.Modules.Games.Services;
@@ -28,18 +27,18 @@ public partial class Games
         public async Task TicTacToe(params string[] args)
         {
             var (options, _) = OptionsParser.ParseFrom(new TicTacToe.Options(), args);
-            var channel = (ITextChannel)ctx.Channel;
+            var channel = (Channel)ctx.Channel;
 
             await sem.WaitAsync(1000).ConfigureAwait(false);
             try
             {
                 if (Service.TicTacToeGames.TryGetValue(channel.Id, out var game))
                 {
-                    _ = game.Start((IGuildUser)ctx.User);
+                    _ = game.Start((SocketGuildMember)ctx.User);
                     return;
                 }
 
-                game = new TicTacToe(Strings, channel, (IGuildUser)ctx.User, options, Config, handler);
+                game = new TicTacToe(Strings, channel, (SocketGuildMember)ctx.User, options, Config, handler);
                 Service.TicTacToeGames.Add(channel.Id, game);
                 await ReplyConfirmAsync(Strings.TttCreated(ctx.Guild.Id)).ConfigureAwait(false);
 

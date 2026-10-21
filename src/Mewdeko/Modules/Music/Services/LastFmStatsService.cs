@@ -16,7 +16,7 @@ namespace Mewdeko.Modules.Music.Services;
 /// </summary>
 /// <param name="Member">The Discord guild member.</param>
 /// <param name="LastFmUser">Their linked Last.fm account.</param>
-public record LinkedLastFmMember(IGuildUser Member, LastFmUser LastFmUser);
+public record LinkedLastFmMember(SocketGuildMember Member, LastFmUser LastFmUser);
 
 /// <summary>
 ///     A user's play count for a specific artist, used for whoknows/crowns ranking.
@@ -68,7 +68,7 @@ public class LastFmStatsService(
     ///     Gets every guild member who currently has a Last.fm account linked.
     /// </summary>
     /// <param name="guild">The guild to check members of.</param>
-    public async Task<List<LinkedLastFmMember>> GetLinkedGuildMembersAsync(IGuild guild)
+    public async Task<List<LinkedLastFmMember>> GetLinkedGuildMembersAsync(SocketGuild guild)
     {
         await using var db = await dbFactory.CreateConnectionAsync();
         var linked = await db.GetTable<LastFmUser>().ToListAsync();

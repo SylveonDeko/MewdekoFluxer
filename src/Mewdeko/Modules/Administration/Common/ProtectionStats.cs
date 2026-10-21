@@ -74,7 +74,7 @@ public class AntiRaidStats
     /// <summary>
     ///     Gets or sets the set of users involved in the raid.
     /// </summary>
-    public ConcurrentHashSet<IGuildUser> RaidUsers { get; set; } = [];
+    public ConcurrentHashSet<SocketGuildMember> RaidUsers { get; set; } = [];
 }
 
 /// <summary>

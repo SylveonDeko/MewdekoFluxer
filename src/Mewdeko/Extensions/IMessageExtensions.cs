@@ -1,11 +1,11 @@
-using Serilog;
-using Embed = Mewdeko.Common.Embed;
+﻿using Serilog;
+using Embed = Mewdeko.Common.EmbedData;
 using Image = Mewdeko.Common.Image;
 
 namespace Mewdeko.Extensions;
 
 /// <summary>
-///     Extension methods for IMessage.
+///     Extension methods for Message.
 /// </summary>
 public static class MessageExtensions
 {
@@ -14,10 +14,9 @@ public static class MessageExtensions
     /// </summary>
     /// <param name="message">The message to get the jump link for.</param>
     /// <returns>The jump link for the message.</returns>
-    public static string GetJumpLink(this IMessage message)
+    public static string GetJumpLink(this Message message)
     {
-        return
-            $"https://discord.com/channels/{(message.Channel is ITextChannel channel ? channel.GuildId : "@me")}/{message.Channel.Id}/{message.Id}";
+        return message.GetJumpUrl();
     }
 
     /// <summary>
@@ -25,10 +24,10 @@ public static class MessageExtensions
     /// </summary>
     /// <param name="message">The message to reply to.</param>
     /// <param name="content">The error message content.</param>
-    public static void ReplyError(this IUserMessage message, string content)
+    public static void ReplyError(this Message message, string content)
     {
         var eb = new EmbedBuilder().WithErrorColor().WithDescription(content);
-        message.ReplyAsync(embed: eb.Build());
+        message.ReplyAsync(embeds: [eb.Build()]);
     }
 
     /// <summary>
@@ -36,7 +35,7 @@ public static class MessageExtensions
     /// </summary>
     /// <param name="message">The message to get the embed source from.</param>
     /// <returns>The source of the embed.</returns>
-    public static NewEmbed GetNewEmbedSource(this IMessage message)
+    public static NewEmbed GetNewEmbedSource(this Message message)
     {
         try
         {
@@ -45,11 +44,10 @@ public static class MessageExtensions
                 Embeds = [], Components = []
             };
             var embedList = new List<Embed>();
-            var componentList = new List<NewEmbed.NewEmbedComponent>();
             eb.Content = message.Content;
-            foreach (var i in message.Embeds)
+            foreach (var i in message.Embeds ?? [])
             {
-                if (i.Type is not EmbedType.Rich)
+                if (i.RawType != "rich")
                     continue;
                 var e = new Embed
                 {
@@ -61,54 +59,52 @@ public static class MessageExtensions
                     e.Description = i.Description;
                 if (i.Url != null)
                     e.Url = i.Url;
-                if (i.Author.HasValue)
+                if (i.Author is { } author)
                 {
                     e.Author = new Author
                     {
-                        Name = i.Author.Value.Name, Url = i.Author.Value.Url, IconUrl = i.Author.Value.IconUrl
+                        Name = author.Name, Url = author.Url, IconUrl = author.IconUrl
                     };
                 }
 
-                if (i.Fields.Any())
+                if (i.Fields is { Length: > 0 })
                 {
                     foreach (var field in i.Fields)
                     {
                         e.Fields.Add(new Field
                         {
-                            Name = field.Name, Value = field.Value, Inline = field.Inline
+                            Name = field.Name, Value = field.Value, Inline = field.IsInline
                         });
                     }
                 }
 
-                if (i.Footer.HasValue)
+                if (i.Footer is { } footer)
                 {
                     e.Footer = new Footer
                     {
-                        Text = i.Footer.Value.Text, IconUrl = i.Footer.HasValue ? i.Footer.Value.IconUrl : ""
+                        Text = footer.Text, IconUrl = footer.IconUrl ?? ""
                     };
                 }
 
-                if (i.Image.HasValue)
+                if (i.Image is { } embedImage)
                 {
-                    var image = new Image
+                    e.Image = new Image
                     {
-                        Url = i.Image.Value.Url
+                        Url = embedImage.Url
                     };
-                    e.Image = image;
                 }
 
-                if (i.Thumbnail.HasValue)
+                if (i.Thumbnail is { } embedThumbnail)
                 {
-                    var thumbnail = new Thumbnail
+                    e.Thumbnail = new Thumbnail
                     {
-                        Url = i.Thumbnail.Value.Url
+                        Url = embedThumbnail.Url
                     };
-                    e.Thumbnail = thumbnail;
                 }
 
-                if (i.Color.HasValue)
+                if (i.Color is { } color)
                 {
-                    e.Color = i.Color;
+                    e.Color = new Color((uint)color);
                 }
 
                 embedList.Add(e);
@@ -116,50 +112,6 @@ public static class MessageExtensions
 
             eb.Embeds.AddRange(embedList);
 
-            if (message.Components.Any())
-            {
-                foreach (var e in message.Components)
-                {
-                    var actionComponents = e as ActionRowComponent;
-                    foreach (var actionComponent in actionComponents.Components)
-                    {
-                        if (actionComponent is ButtonComponent button)
-                        {
-                            var component = new NewEmbed.NewEmbedComponent
-                            {
-                                Style = button.Style,
-                                DisplayName = button.Label,
-                                Url = button.Url,
-                                Id = button.CustomId,
-                                Emoji = button.Emote?.ToString()
-                            };
-                            componentList.Add(component);
-                        }
-
-                        if (actionComponent is not SelectMenuComponent select) continue;
-                        {
-                            var component = new NewEmbed.NewEmbedComponent
-                            {
-                                IsSelect = true, DisplayName = select.Placeholder, Id = select.CustomId, Options = []
-                            };
-
-                            var optionList = select.Options.Select(option => new NewEmbed.NewEmbedSelectOption
-                                {
-                                    Description = option.Description,
-                                    Name = option.Label,
-                                    Id = option.Value,
-                                    Emoji = option.Emote?.ToString()
-                                })
-                                .ToList();
-
-                            component.Options.AddRange(optionList);
-                            componentList.Add(component);
-                        }
-                    }
-                }
-            }
-
-            eb.Components.AddRange(componentList);
             return eb;
         }
         catch (Exception e)

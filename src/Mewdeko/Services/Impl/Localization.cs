@@ -37,13 +37,13 @@ public class Localization(BotConfigService bss, GuildSettingsService service, IB
     }
 
     /// <inheritdoc />
-    public void SetGuildCulture(IGuild guild, CultureInfo? ci)
+    public void SetGuildCulture(SocketGuild guild, CultureInfo? ci)
     {
         SetGuildCulture(guild.Id, ci);
     }
 
     /// <inheritdoc />
-    public void RemoveGuildCulture(IGuild guild)
+    public void RemoveGuildCulture(SocketGuild guild)
     {
         RemoveGuildCulture(guild.Id);
     }
@@ -61,7 +61,7 @@ public class Localization(BotConfigService bss, GuildSettingsService service, IB
     }
 
     /// <inheritdoc />
-    public CultureInfo? GetCultureInfo(IGuild? guild)
+    public CultureInfo? GetCultureInfo(SocketGuild? guild)
     {
         return GetCultureInfo(guild?.Id);
     }

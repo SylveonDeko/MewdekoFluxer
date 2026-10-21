@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Text;
 using DataModel;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Currency.Services;
 
@@ -135,7 +134,7 @@ public partial class Currency
             .AddField(Strings.EconomyConfigRobbery(ctx.Guild.Id), robbery.ToString(), true)
             .AddField(Strings.EconomyConfigDaily(ctx.Guild.Id), daily.ToString(), true);
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
         return;
 
         string Fmt(bool value)
@@ -242,7 +241,7 @@ public partial class Currency
             .AddField(Strings.EconomyStatsTopShare(ctx.Guild.Id), $"{snapshot.TopTenPercentShare:P1}", true)
             .WithFooter(Strings.EconomyStatsGiniHint(ctx.Guild.Id));
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -296,7 +295,7 @@ public partial class Currency
                 sinks.Length == 0 ? Strings.EconomyFlowNone(ctx.Guild.Id) : sinks.ToString())
             .WithFooter(Strings.EconomyFlowNet(ctx.Guild.Id, net, emote));
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -334,7 +333,7 @@ public partial class Currency
                     game.HouseTake), true);
         }
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>

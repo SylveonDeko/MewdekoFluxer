@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Tickets.Common;
 using Mewdeko.Modules.Tickets.Services;
@@ -21,7 +20,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task TicketPanel(ITextChannel channel, [Remainder] string embedJson = null)
+    public async Task TicketPanel(Channel channel, [Remainder] string embedJson = null)
     {
         try
         {
@@ -70,12 +69,12 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
             await ctx.Channel.SendErrorAsync(Strings.TicketPanelCreationFailed(ctx.Guild.Id), Config);
         }
 
-        Task<(IUserMessage Message, string? Value)> PromptPanelChoiceAsync()
+        Task<(Message Message, string? Value)> PromptPanelChoiceAsync()
         {
             return PromptReactionChoiceAsync(
                 new EmbedBuilder().WithDescription(Strings.PanelCreationPreview(ctx.Guild.Id)).WithOkColor(),
                 ctx.User.Id,
-                new ReactionChoice(new Emoji("👁️"), Strings.Preview(ctx.Guild.Id), "preview"),
+                new ReactionChoice(Emoji.FromUnicode("👁️"), Strings.Preview(ctx.Guild.Id), "preview"),
                 new ReactionChoice(InteractiveService.Yes, Strings.Create(ctx.Guild.Id), "create"));
         }
     }
@@ -157,7 +156,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
                 embed.AddField(Strings.Options(ctx.Guild.Id),
                     Strings.PanelDeleteOptions(ctx.Guild.Id, Config.Prefix, panelId));
 
-                await ctx.Channel.SendMessageAsync(embed: embed.Build());
+                await ctx.Channel.SendAsync(embed: embed.Build());
             }
             else
             {
@@ -174,7 +173,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task TicketCategory(int buttonId, ICategoryChannel? category = null)
+    public async Task TicketCategory(int buttonId, Channel? category = null)
     {
         var panel = await Service.GetButtonAsync(buttonId);
         if (panel == null || panel.Panel.GuildId != ctx.Guild.Id)
@@ -203,7 +202,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task TicketArchiveCategory(int buttonId, ICategoryChannel? category = null)
+    public async Task TicketArchiveCategory(int buttonId, Channel? category = null)
     {
         var panel = await Service.GetButtonAsync(buttonId);
         if (panel == null || panel.Panel.GuildId != ctx.Guild.Id)
@@ -233,7 +232,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [RequireContext(ContextType.Guild)]
     public async Task TicketClaim()
     {
-        var success = await Service.ClaimTicket(ctx.Guild, ctx.Channel.Id, ctx.User as IGuildUser);
+        var success = await Service.ClaimTicket(ctx.Guild, ctx.Channel.Id, ctx.User as SocketGuildMember);
         if (success)
             await ctx.Channel.SendConfirmAsync(Strings.TicketClaimed(ctx.Guild.Id, ctx.User.Mention));
         else
@@ -248,7 +247,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [RequireContext(ContextType.Guild)]
     public async Task TicketUnclaim()
     {
-        var success = await Service.UnclaimTicket(ctx.Guild, ctx.Channel.Id, ctx.User as IGuildUser);
+        var success = await Service.UnclaimTicket(ctx.Guild, ctx.Channel.Id, ctx.User as SocketGuildMember);
         if (success)
             await ctx.Channel.SendConfirmAsync(Strings.TicketUnclaimed(ctx.Guild.Id));
         else
@@ -374,7 +373,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [UserPerm(GuildPermission.ManageMessages)]
     public async Task TicketCreateCase(string title, [Remainder] string description)
     {
-        var ticketCase = await Service.CreateCaseAsync(ctx.Guild, title, description, ctx.User as IGuildUser);
+        var ticketCase = await Service.CreateCaseAsync(ctx.Guild, title, description, ctx.User as SocketGuildMember);
         await ctx.Channel.SendConfirmAsync(Strings.TicketCaseCreated(ctx.Guild.Id, ticketCase.Id));
     }
 
@@ -460,7 +459,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
                         n.CreatedAt.ToString("g")))));
         }
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -643,7 +642,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [RequireContext(ContextType.Guild)]
     public async Task TicketPriority(string priority)
     {
-        var success = await Service.SetTicketPriority(ctx.Guild, ctx.Channel.Id, priority, ctx.User as IGuildUser);
+        var success = await Service.SetTicketPriority(ctx.Guild, ctx.Channel.Id, priority, ctx.User as SocketGuildMember);
         if (success)
             await ctx.Channel.SendConfirmAsync(Strings.TicketPrioritySet(ctx.Guild.Id, priority));
         else
@@ -736,7 +735,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [RequireContext(ContextType.Guild)]
     public async Task TicketAddTags(params string[] tags)
     {
-        var success = await Service.AddTicketTags(ctx.Guild, ctx.Channel.Id, tags, ctx.User as IGuildUser);
+        var success = await Service.AddTicketTags(ctx.Guild, ctx.Channel.Id, tags, ctx.User as SocketGuildMember);
         if (success)
             await ctx.Channel.SendConfirmAsync(Strings.TicketTagsAdded(ctx.Guild.Id));
         else
@@ -751,7 +750,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [RequireContext(ContextType.Guild)]
     public async Task TicketRemoveTags(params string[] tags)
     {
-        var success = await Service.RemoveTicketTags(ctx.Guild, ctx.Channel.Id, tags, ctx.User as IGuildUser);
+        var success = await Service.RemoveTicketTags(ctx.Guild, ctx.Channel.Id, tags, ctx.User as SocketGuildMember);
         if (success)
             await ctx.Channel.SendConfirmAsync(Strings.TicketTagsRemoved(ctx.Guild.Id));
         else
@@ -765,7 +764,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task TicketBlock(IGuildUser user, [Remainder] string? reason = null)
+    public async Task TicketBlock(SocketGuildMember user, [Remainder] string? reason = null)
     {
         var success = await Service.BlacklistUser(ctx.Guild, user.Id, reason);
         if (success)
@@ -781,7 +780,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task TicketUnblock(IGuildUser user)
+    public async Task TicketUnblock(SocketGuildMember user)
     {
         var success = await Service.UnblacklistUser(ctx.Guild, user.Id);
         if (success)
@@ -863,7 +862,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
                 Strings.MissingPanelsDescription(ctx.Guild.Id, missingCount, Config.Prefix));
         }
 
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -936,7 +935,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
             eb.AddField(Strings.TicketsByPriority(ctx.Guild.Id), priorityStats);
         }
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -945,9 +944,9 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task TicketUserStats(IGuildUser? user = null)
+    public async Task TicketUserStats(SocketGuildMember? user = null)
     {
-        user ??= ctx.User as IGuildUser;
+        user ??= ctx.User as SocketGuildMember;
         var stats = await Service.GetUserStatistics(ctx.Guild.Id, user.Id);
 
         var eb = new EmbedBuilder()
@@ -970,7 +969,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
             eb.AddField(Strings.RecentTickets(ctx.Guild.Id), recentTickets);
         }
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -980,7 +979,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task TicketTranscriptChannel(ITextChannel? channel = null)
+    public async Task TicketTranscriptChannel(Channel? channel = null)
     {
         await Service.SetTranscriptChannelAsync(ctx.Guild.Id, channel?.Id ?? 0);
 
@@ -997,7 +996,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task TicketLogChannel(ITextChannel? channel = null)
+    public async Task TicketLogChannel(Channel? channel = null)
     {
         await Service.SetLogChannelAsync(ctx.Guild.Id, channel?.Id ?? 0);
 
@@ -1014,7 +1013,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task TicketMoveAll(ICategoryChannel sourceCategory, ICategoryChannel targetCategory)
+    public async Task TicketMoveAll(Channel sourceCategory, Channel targetCategory)
     {
         var (moved, failed) = await Service.BatchMoveTickets(ctx.Guild, sourceCategory.Id, targetCategory.Id);
         await ctx.Channel.SendConfirmAsync(
@@ -1066,7 +1065,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task TicketDuplicatePanel(ulong panelId, ITextChannel targetChannel)
+    public async Task TicketDuplicatePanel(ulong panelId, Channel targetChannel)
     {
         var newPanel = await Service.DuplicatePanelAsync(ctx.Guild, panelId, targetChannel.Id);
         if (newPanel != null)
@@ -1098,7 +1097,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task TicketMovePanel(ulong panelId, ITextChannel targetChannel)
+    public async Task TicketMovePanel(ulong panelId, Channel targetChannel)
     {
         var success = await Service.MovePanelAsync(ctx.Guild, panelId, targetChannel.Id);
         if (success)
@@ -1137,7 +1136,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [RequireContext(ContextType.Guild)]
     public async Task TicketNote([Remainder] string content)
     {
-        var success = await Service.AddNote(ctx.Channel.Id, ctx.User as IGuildUser, content);
+        var success = await Service.AddNote(ctx.Channel.Id, ctx.User as SocketGuildMember, content);
         if (success)
             await ctx.Channel.SendConfirmAsync(Strings.NoteAdded(ctx.Guild.Id));
         else

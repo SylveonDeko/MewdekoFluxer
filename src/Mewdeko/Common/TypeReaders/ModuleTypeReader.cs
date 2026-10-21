@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 
 namespace Mewdeko.Common.TypeReaders;
 
@@ -12,9 +12,9 @@ public class ModuleTypeReader : MewdekoTypeReader<ModuleInfo>
     /// <summary>
     ///     Initializes a new instance of the <see cref="ModuleTypeReader" /> class.
     /// </summary>
-    /// <param name="client">The DiscordShardedClient instance.</param>
+    /// <param name="client">The FluxerClient instance.</param>
     /// <param name="cmds">The CommandService instance.</param>
-    public ModuleTypeReader(DiscordShardedClient client, CommandService cmds) : base(client, cmds)
+    public ModuleTypeReader(FluxerClient client, CommandService cmds) : base(client, cmds)
     {
         this.cmds = cmds;
     }
@@ -41,9 +41,9 @@ public class ModuleOrCrTypeReader : MewdekoTypeReader<ModuleOrCrInfo>
     /// <summary>
     ///     Initializes a new instance of the <see cref="ModuleOrCrTypeReader" /> class.
     /// </summary>
-    /// <param name="client">The DiscordShardedClient instance.</param>
+    /// <param name="client">The FluxerClient instance.</param>
     /// <param name="cmds">The CommandService instance.</param>
-    public ModuleOrCrTypeReader(DiscordShardedClient client, CommandService cmds) : base(client, cmds)
+    public ModuleOrCrTypeReader(FluxerClient client, CommandService cmds) : base(client, cmds)
     {
         this.cmds = cmds;
     }

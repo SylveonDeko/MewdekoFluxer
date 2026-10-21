@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Humanizer;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;
@@ -21,7 +21,7 @@ public class Vote(InteractiveService interactivity) : MewdekoModuleBase<VoteServ
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
     [RequireContext(ContextType.Guild)]
-    public async Task VoteChannel([Remainder] ITextChannel channel)
+    public async Task VoteChannel([Remainder] Channel channel)
     {
         await Service.SetVoteChannel(ctx.Guild.Id, channel.Id);
         await ctx.Channel.SendConfirmAsync(Strings.VoteChannelSet(ctx.Guild.Id));
@@ -55,12 +55,12 @@ public class Vote(InteractiveService interactivity) : MewdekoModuleBase<VoteServ
                         .WithThumbnailUrl(ctx.User.RealAvatarUrl().AbsoluteUri)
                         .WithOkColor();
 
-                    await ctx.Channel.SendMessageAsync(ctx.User.Mention, embed: eb.Build());
+                    await ctx.Channel.SendAsync(ctx.User.Mention, embed: eb.Build());
                 }
                 else
                 {
                     var rep = new ReplacementBuilder()
-                        .WithDefault(ctx.User, null, ctx.Guild as SocketGuild, ctx.Client as DiscordShardedClient)
+                        .WithDefault(ctx.User, null, ctx.Guild as SocketGuild, ctx.Client as FluxerClient)
                         .WithOverride("%votestotalcount%", () => votes.Count.ToString())
                         .WithOverride("%votesmonthcount%",
                             () => votes.Count(x => x.DateAdded.Value.Month == DateTime.UtcNow.Month).ToString())
@@ -68,11 +68,11 @@ public class Vote(InteractiveService interactivity) : MewdekoModuleBase<VoteServ
 
                     if (SmartEmbed.TryParse(rep.Replace(voteMessage), ctx.Guild.Id, out var embeds, out var plainText))
                     {
-                        await ctx.Channel.SendMessageAsync(plainText, embeds: embeds);
+                        await ctx.Channel.SendAsync(plainText, embeds: embeds);
                     }
                     else
                     {
-                        await ctx.Channel.SendMessageAsync(rep.Replace(voteMessage).SanitizeMentions());
+                        await ctx.Channel.SendAsync(rep.Replace(voteMessage).SanitizeMentions());
                     }
                 }
 
@@ -106,7 +106,7 @@ public class Vote(InteractiveService interactivity) : MewdekoModuleBase<VoteServ
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
     [RequireContext(ContextType.Guild)]
-    public async Task VoteRoleAdd(IRole role, StoopidTime time = null)
+    public async Task VoteRoleAdd(SocketRole role, StoopidTime time = null)
     {
         if (time is not null)
         {
@@ -146,7 +146,7 @@ public class Vote(InteractiveService interactivity) : MewdekoModuleBase<VoteServ
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
     [RequireContext(ContextType.Guild)]
-    public async Task VoteRoleRemove(IRole role)
+    public async Task VoteRoleRemove(SocketRole role)
     {
         var removed = await Service.RemoveVoteRole(ctx.Guild.Id, role.Id);
         if (removed.Item1)
@@ -179,7 +179,7 @@ public class Vote(InteractiveService interactivity) : MewdekoModuleBase<VoteServ
                 .WithDescription(string.Join("\n",
                     roles.Select(x =>
                         $"<@&{x.RoleId}>: {(x.Timer == 0 ? Strings.None(ctx.Guild.Id) : $"{TimeSpan.FromSeconds(x.Timer).Humanize()}")}")));
-            await ctx.Channel.SendMessageAsync(embed: eb.Build());
+            await ctx.Channel.SendAsync(embed: eb.Build());
         }
     }
 
@@ -215,7 +215,7 @@ public class Vote(InteractiveService interactivity) : MewdekoModuleBase<VoteServ
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
     [RequireContext(ContextType.Guild)]
-    public async Task VoteRoleEdit(IRole role, StoopidTime time)
+    public async Task VoteRoleEdit(SocketRole role, StoopidTime time)
     {
         var update = await Service.UpdateTimer(ctx.Guild.Id, role.Id, (int)time.Time.TotalSeconds);
         if (!update.Item1)
@@ -260,7 +260,7 @@ public class Vote(InteractiveService interactivity) : MewdekoModuleBase<VoteServ
     public async Task Votes([Remainder] IUser user = null)
     {
         var curUser = user ?? ctx.User;
-        await ctx.Channel.SendMessageAsync(embed: (await Service.GetTotalVotes(curUser, ctx.Guild)).Build());
+        await ctx.Channel.SendAsync(embed: (await Service.GetTotalVotes(curUser, ctx.Guild)).Build());
     }
 
     /// <summary>

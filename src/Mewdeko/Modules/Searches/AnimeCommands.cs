@@ -5,7 +5,6 @@ using System.Text.Json;
 using AngleSharp;
 using AngleSharp.Html.Dom;
 using Anilist4Net;
-using Discord.Commands;
 using JikanDotNet;
 using MartineApiNet;
 using Mewdeko.Common.Attributes.TextCommands;
@@ -121,7 +120,7 @@ public partial class Searches
                 ImageUrl = req.Results.FirstOrDefault()?.Url,
                 Color = Mewdeko.OkColor
             };
-            await ctx.Channel.SendMessageAsync(embed: em.Build()).ConfigureAwait(false);
+            await ctx.Channel.SendAsync(embed: em.Build()).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -144,7 +143,7 @@ public partial class Searches
                 ImageUrl = req.Results.FirstOrDefault()?.Url,
                 Color = Mewdeko.OkColor
             };
-            await ctx.Channel.SendMessageAsync(embed: em.Build()).ConfigureAwait(false);
+            await ctx.Channel.SendAsync(embed: em.Build()).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -167,7 +166,7 @@ public partial class Searches
                 ImageUrl = req.Results.FirstOrDefault()?.Url,
                 Color = Mewdeko.OkColor
             };
-            await ctx.Channel.SendMessageAsync(embed: em.Build()).ConfigureAwait(false);
+            await ctx.Channel.SendAsync(embed: em.Build()).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -301,7 +300,7 @@ public partial class Searches
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [Priority(1)]
-        public Task Mal(IGuildUser usr)
+        public Task Mal(SocketGuildMember usr)
         {
             return Mal(usr.Username);
         }
@@ -386,7 +385,7 @@ public partial class Searches
             eb.AddField(Strings.AnimeMalLink(ctx.Guild.Id), $"https://myanimelist.net/anime/{image?.IdMal}");
             eb.AddField(Strings.AnimeScore(ctx.Guild.Id), image?.MeanScore);
             eb.AddField(Strings.AnimeDescription(ctx.Guild.Id), image?.DescriptionMd.TrimTo(1024).StripHtml());
-            _ = await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+            _ = await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -420,7 +419,7 @@ public partial class Searches
             eb.AddField(Strings.AnimeDescriptionBackstory(ctx.Guild.Id), desc);
             eb.ImageUrl = te.ImageLarge;
             eb.Color = Mewdeko.OkColor;
-            await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+            await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -448,7 +447,7 @@ public partial class Searches
                 return;
             }
 
-            IEnumerable<Anime> newResult = ((ITextChannel)ctx.Channel).IsNsfw
+            IEnumerable<Anime> newResult = ((Channel)ctx.Channel).IsNsfw
                 ? result.Data
                     .Where(x => x.Genres.Any(malUrl => malUrl.Name != "Hentai"))
                 : result.Data;

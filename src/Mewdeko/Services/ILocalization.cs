@@ -17,7 +17,7 @@ public interface ILocalization : INService
     /// </summary>
     /// <param name="guild">The guild to retrieve culture information for.</param>
     /// <returns>The culture information associated with the guild, if available; otherwise, null.</returns>
-    public CultureInfo? GetCultureInfo(IGuild guild);
+    public CultureInfo? GetCultureInfo(SocketGuild guild);
 
     /// <summary>
     ///     Gets the culture information for a guild with the specified ID.
@@ -30,7 +30,7 @@ public interface ILocalization : INService
     ///     Removes the culture information associated with a guild.
     /// </summary>
     /// <param name="guild">The guild to remove culture information for.</param>
-    public void RemoveGuildCulture(IGuild guild);
+    public void RemoveGuildCulture(SocketGuild guild);
 
     /// <summary>
     ///     Resets the default culture to the system default.
@@ -48,7 +48,7 @@ public interface ILocalization : INService
     /// </summary>
     /// <param name="guild">The guild to set culture information for.</param>
     /// <param name="ci">The culture information to associate with the guild.</param>
-    public void SetGuildCulture(IGuild guild, CultureInfo? ci);
+    public void SetGuildCulture(SocketGuild guild, CultureInfo? ci);
 
     /// <summary>
     ///     Attempts to resolve a locale name (e.g. "en-US", or a neutral culture like "en") to a culture we

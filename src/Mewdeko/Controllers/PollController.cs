@@ -20,7 +20,7 @@ namespace Mewdeko.Controllers;
 [Authorize("ApiKeyPolicy")]
 public class PollController : Controller
 {
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly ILogger<PollController> logger;
     private readonly PollMessageService pollMessages;
     private readonly PollService pollService;
@@ -39,7 +39,7 @@ public class PollController : Controller
     /// <param name="logger">The logger instance.</param>
     /// <param name="auditContext">Records before/after state for the dashboard audit log.</param>
     public PollController(PollService pollService, PollTemplateService templateService,
-        PollSchedulerService schedulerService, PollMessageService pollMessages, DiscordShardedClient client,
+        PollSchedulerService schedulerService, PollMessageService pollMessages, FluxerClient client,
         ILogger<PollController> logger, IDashboardAuditContext auditContext)
     {
         this.pollService = pollService;

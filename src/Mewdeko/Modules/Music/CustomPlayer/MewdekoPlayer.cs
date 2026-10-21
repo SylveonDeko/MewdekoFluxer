@@ -4,7 +4,6 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using DataModel;
-using Discord.Net;
 using IF.Lastfm.Core.Api;
 using IF.Lastfm.Core.Objects;
 using Lavalink4NET;
@@ -31,8 +30,8 @@ public sealed class MewdekoPlayer : LavalinkPlayer
     private readonly GeneratedBotStrings Strings;
     private readonly IAudioService audioService;
     private readonly IDataCache cache;
-    private readonly IMessageChannel channel;
-    private readonly DiscordShardedClient client;
+    private readonly Channel channel;
+    private readonly FluxerClient client;
     private readonly BotConfig config;
     private readonly IBotCredentials creds;
     private readonly IDataConnectionFactory dbFactory;
@@ -61,7 +60,7 @@ public sealed class MewdekoPlayer : LavalinkPlayer
         audioService = properties.ServiceProvider.GetRequiredService<IAudioService>();
         creds = properties.ServiceProvider.GetRequiredService<IBotCredentials>();
         channel = properties.Options.Value.Channel;
-        client = properties.ServiceProvider.GetRequiredService<DiscordShardedClient>();
+        client = properties.ServiceProvider.GetRequiredService<FluxerClient>();
         dbFactory = properties.ServiceProvider.GetRequiredService<IDataConnectionFactory>();
         cache = properties.ServiceProvider.GetRequiredService<IDataCache>();
         Strings = properties.ServiceProvider.GetRequiredService<GeneratedBotStrings>();
@@ -116,7 +115,7 @@ public sealed class MewdekoPlayer : LavalinkPlayer
 
                         if (nextTrack is null)
                         {
-                            await TrySendAsync(musicChannel, c => c.SendMessageAsync(Strings.QueueEmpty(GuildId)));
+                            await TrySendAsync(musicChannel, c => c.SendAsync(Strings.QueueEmpty(GuildId)));
                             await StopAsync(token);
                             await cache.SetCurrentTrack(GuildId, null);
                         }
@@ -154,7 +153,7 @@ public sealed class MewdekoPlayer : LavalinkPlayer
                     .WithTitle(Strings.MusicTrackLoadFailedTitle(GuildId))
                     .WithDescription(Strings.TrackLoadFailed(GuildId, item.Track.Title))
                     .Build();
-                await TrySendAsync(musicChannel, c => c.SendMessageAsync(embed: loadFailedEmbed,
+                await TrySendAsync(musicChannel, c => c.SendAsync(embed: loadFailedEmbed,
                     allowedMentions: AllowedMentions.None));
                 if (nextTrack is not null)
                 {
@@ -199,7 +198,7 @@ public sealed class MewdekoPlayer : LavalinkPlayer
 
         var nowPlayingEmbed = await PrettyNowPlayingAsync(queue);
 
-        await TrySendAsync(musicChannel, c => c.SendMessageAsync(embed: nowPlayingEmbed,
+        await TrySendAsync(musicChannel, c => c.SendAsync(embed: nowPlayingEmbed,
             allowedMentions: AllowedMentions.None));
 
         if (DateTime.Now.Month == 4 && DateTime.Now.Day == 1 && !isAprilFoolsJokeRunning)
@@ -258,7 +257,7 @@ public sealed class MewdekoPlayer : LavalinkPlayer
     ///     Gets the music channel for the player, or null if it no longer exists or the bot cannot post in it.
     /// </summary>
     /// <returns>The music channel for the player.</returns>
-    public async Task<IMessageChannel?> GetMusicChannel()
+    public async Task<Channel?> GetMusicChannel()
     {
         var settings = await GetMusicSettings();
         var resolved = settings.MusicChannelId.HasValue
@@ -273,12 +272,12 @@ public sealed class MewdekoPlayer : LavalinkPlayer
     /// </summary>
     /// <param name="target">The channel to check.</param>
     /// <returns>True if the channel is a guild channel the bot can view and send messages in, or a non guild channel.</returns>
-    private bool CanSendTo(IMessageChannel? target)
+    private bool CanSendTo(Channel? target)
     {
         if (target is null)
             return false;
 
-        if (target is not IGuildChannel guildChannel)
+        if (target is not Channel guildChannel)
             return true;
 
         var botUser = client.GetGuild(guildChannel.GuildId)?.CurrentUser;
@@ -296,8 +295,8 @@ public sealed class MewdekoPlayer : LavalinkPlayer
     /// <param name="target">The channel to send to. May be null, in which case nothing is sent.</param>
     /// <param name="send">The send operation to perform.</param>
     /// <returns>The sent message, or null if the message could not be sent.</returns>
-    private async Task<IUserMessage?> TrySendAsync(IMessageChannel? target,
-        Func<IMessageChannel, Task<IUserMessage>> send)
+    private async Task<Message?> TrySendAsync(Channel? target,
+        Func<Channel, Task<Message>> send)
     {
         if (target is null)
             return null;
@@ -306,7 +305,7 @@ public sealed class MewdekoPlayer : LavalinkPlayer
         {
             return await send(target);
         }
-        catch (HttpException ex) when (ex.DiscordCode is DiscordErrorCode.MissingPermissions
+        catch (FluxerApiException ex) when (ex.DiscordCode is DiscordErrorCode.MissingPermissions
                                            or DiscordErrorCode.InsufficientPermissions)
         {
             logger.LogInformation(
@@ -315,7 +314,7 @@ public sealed class MewdekoPlayer : LavalinkPlayer
             await ClearMusicChannelAsync();
             return null;
         }
-        catch (HttpException ex)
+        catch (FluxerApiException ex)
         {
             logger.LogWarning(ex, "Failed to send music message in guild {GuildId}", GuildId);
             return null;
@@ -525,7 +524,7 @@ public sealed class MewdekoPlayer : LavalinkPlayer
     /// <summary>
     ///     Checks if a user has DJ permissions.
     /// </summary>
-    public async Task<bool> HasDjAsync(IGuildUser user)
+    public async Task<bool> HasDjAsync(SocketGuildMember user)
     {
         if (user.GuildPermissions.Administrator)
             return true;
@@ -549,7 +548,7 @@ public sealed class MewdekoPlayer : LavalinkPlayer
     /// <summary>
     ///     Gets a pretty now playing embed for the player.
     /// </summary>
-    public async Task<Discord.Embed> PrettyNowPlayingAsync(List<MewdekoTrack> queue)
+    public async Task<EmbedRequest> PrettyNowPlayingAsync(List<MewdekoTrack> queue)
     {
         var currentTrack = await cache.GetCurrentTrack(GuildId);
         var position = Position.Value.Position;

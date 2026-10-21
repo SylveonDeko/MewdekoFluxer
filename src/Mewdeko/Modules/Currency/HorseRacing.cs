@@ -1,9 +1,6 @@
-using Discord.Commands;
-using Discord.Net;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Database.Enums;
 using Mewdeko.Modules.Currency.Services;
-using Embed = Discord.Embed;
 
 namespace Mewdeko.Modules.Currency;
 
@@ -77,7 +74,7 @@ public partial class Currency
                 if (await Service.UpdateRaceProgress(ctx.Guild.Id) != null)
                     await StartRace();
             }
-            catch (Exception ex) when (ex is HttpException or TimeoutException)
+            catch (Exception ex) when (ex is FluxerApiException or TimeoutException)
             {
                 await Service.CancelRace(ctx.Guild.Id);
             }
@@ -88,7 +85,7 @@ public partial class Currency
         /// </summary>
         private async Task StartRace()
         {
-            var raceMessage = await ctx.Channel.SendMessageAsync(embed: CreateRaceEmbed());
+            var raceMessage = await ctx.Channel.SendAsync(embed: CreateRaceEmbed());
             await RunRaceUpdateLoop(raceMessage);
         }
 
@@ -97,7 +94,7 @@ public partial class Currency
         /// </summary>
         /// <param name="raceMessage">The message containing the race embed to update.</param>
         /// <returns>A task that represents the asynchronous operation.</returns>
-        private async Task RunRaceUpdateLoop(IUserMessage raceMessage)
+        private async Task RunRaceUpdateLoop(Message raceMessage)
         {
             for (var i = 0; i < 6; i++)
             {
@@ -121,7 +118,7 @@ public partial class Currency
         /// </summary>
         /// <param name="progress">The current progress of all racers. If null, creates an initial embed.</param>
         /// <returns>An embed displaying the race progress.</returns>
-        private Embed CreateRaceEmbed(List<RacerProgress> progress = null)
+        private EmbedRequest CreateRaceEmbed(List<RacerProgress> progress = null)
         {
             var eb = new EmbedBuilder()
                 .WithTitle(Strings.HorseRaceInProgress(ctx.Guild.Id))
@@ -142,7 +139,7 @@ public partial class Currency
         /// </summary>
         /// <param name="result">The final result of the race.</param>
         /// <returns>An embed displaying the final race results.</returns>
-        private Embed CreateFinalRaceEmbed(RaceResult result)
+        private EmbedRequest CreateFinalRaceEmbed(RaceResult result)
         {
             var eb = new EmbedBuilder()
                 .WithTitle(Strings.HorseRaceFinished(ctx.Guild.Id))

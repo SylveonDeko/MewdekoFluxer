@@ -1,6 +1,5 @@
 using System.Net.Http;
 using System.Text.RegularExpressions;
-using Discord.Commands;
 using Humanizer;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;
@@ -133,7 +132,7 @@ public partial class Administration(
     public async Task BanByHash(string avatarHash)
     {
         var users = await ctx.Guild.GetUsersAsync();
-        var usersToBan = users?.Where(x => x.AvatarId == avatarHash);
+        var usersToBan = users?.Where(x => x.AvatarHash == avatarHash);
 
         if (usersToBan is null || !usersToBan.Any())
         {
@@ -221,7 +220,7 @@ public partial class Administration(
     [BotPerm(GuildPermission.ManageNicknames)]
     [UserPerm(GuildPermission.ManageNicknames)]
     [Priority(1)]
-    public async Task SetNick(IGuildUser gu, [Remainder] string? newNick = null)
+    public async Task SetNick(SocketGuildMember gu, [Remainder] string? newNick = null)
     {
         var sg = (SocketGuild)Context.Guild;
         if (sg.OwnerId == gu.Id || gu.GetRoles().Max(r => r.Position) >= sg.CurrentUser.GetRoles().Max(r => r.Position))
@@ -244,7 +243,7 @@ public partial class Administration(
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task BanInRole(IRole role, [Remainder] string reason = null)
+    public async Task BanInRole(SocketRole role, [Remainder] string reason = null)
     {
         var users = await ctx.Guild.GetUsersAsync();
         var usersToBan = users.Where(x => x.RoleIds.Contains(role.Id)).ToList();
@@ -353,7 +352,7 @@ public partial class Administration(
             .WithDescription(Strings.PreviewOrExecute(ctx.Guild.Id))
             .WithOkColor();
         var (_, input) = await PromptReactionChoiceAsync(eb, ctx.User.Id,
-            new ReactionChoice(new Emoji("👁️"), Strings.Preview(ctx.Guild.Id), "previewbans"),
+            new ReactionChoice(Emoji.FromUnicode("👁️"), Strings.Preview(ctx.Guild.Id), "previewbans"),
             new ReactionChoice(InteractiveService.Yes, Strings.Execute(ctx.Guild.Id), "executeorder66"),
             new ReactionChoice(InteractiveService.No, Strings.Cancel(ctx.Guild.Id), "cancel"));
         switch (input)
@@ -472,7 +471,7 @@ public partial class Administration(
 
             var banned = 0;
             var errored = 0;
-            var msg = await ctx.Channel.SendMessageAsync(embed: new EmbedBuilder().WithErrorColor()
+            var msg = await ctx.Channel.SendAsync(embed: new EmbedBuilder().WithErrorColor()
                 .WithDescription(Strings.BanunderConfirm(ctx.Guild.Id, users.Count()))
                 .Build());
             var text = await NextMessageAsync(ctx.Channel.Id, ctx.User.Id);
@@ -529,7 +528,7 @@ public partial class Administration(
         await ctx.Guild.DownloadUsersAsync().ConfigureAwait(false);
         var users = ((SocketGuild)ctx.Guild).Users.Where(c =>
             c.JoinedAt != null && DateTimeOffset.Now.Subtract(c.JoinedAt.Value).TotalSeconds <= time.Time.TotalSeconds);
-        var guildUsers = users as SocketGuildUser[] ?? users.ToArray();
+        var guildUsers = users as SocketGuildMember[] ?? users.ToArray();
         if (guildUsers.Length == 0)
         {
             await ErrorAsync(Strings.KickunderNoUsers(ctx.Guild.Id)).ConfigureAwait(false);
@@ -559,7 +558,7 @@ public partial class Administration(
 
         var banned = 0;
         var errored = 0;
-        var msg = await ctx.Channel.SendMessageAsync(embed: new EmbedBuilder().WithErrorColor()
+        var msg = await ctx.Channel.SendAsync(embed: new EmbedBuilder().WithErrorColor()
             .WithDescription(Strings.KickunderConfirm(ctx.Guild.Id, users.Count()))
             .Build());
         var text = await NextMessageAsync(ctx.Channel.Id, ctx.User.Id);
@@ -695,7 +694,7 @@ public partial class Administration(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task MemberRole(IRole? role)
+    public async Task MemberRole(SocketRole? role)
     {
         var rol = await Service.GetMemberRole(ctx.Guild.Id);
         if (rol is 0 && role != null)
@@ -744,7 +743,7 @@ public partial class Administration(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task StaffRole([Remainder] IRole? role = null)
+    public async Task StaffRole([Remainder] SocketRole? role = null)
     {
         var rol = await Service.GetStaffRole(ctx.Guild.Id);
         if (rol is 0 && role != null)
@@ -895,7 +894,7 @@ public partial class Administration(
     [UserPerm(GuildPermission.Administrator)]
     [BotPerm(GuildPermission.ManageMessages)]
     [Priority(0)]
-    public Task Delmsgoncmd(Channel _, State s, ITextChannel ch)
+    public Task Delmsgoncmd(Channel _, State s, Channel ch)
     {
         return Delmsgoncmd(_, s, ch.Id);
     }
@@ -953,7 +952,7 @@ public partial class Administration(
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.DeafenMembers)]
     [BotPerm(GuildPermission.DeafenMembers)]
-    public async Task Deafen(params IGuildUser[] users)
+    public async Task Deafen(params SocketGuildMember[] users)
     {
         await AdministrationService.DeafenUsers(true, users).ConfigureAwait(false);
         await ReplyConfirmAsync(Strings.Deafen(ctx.Guild.Id)).ConfigureAwait(false);
@@ -973,7 +972,7 @@ public partial class Administration(
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.DeafenMembers)]
     [BotPerm(GuildPermission.DeafenMembers)]
-    public async Task UnDeafen(params IGuildUser[] users)
+    public async Task UnDeafen(params SocketGuildMember[] users)
     {
         await AdministrationService.DeafenUsers(false, users).ConfigureAwait(false);
         await ReplyConfirmAsync(Strings.Undeafen(ctx.Guild.Id)).ConfigureAwait(false);
@@ -994,7 +993,7 @@ public partial class Administration(
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
     [BotPerm(GuildPermission.ManageChannels)]
-    public async Task DelVoiChanl([Remainder] IVoiceChannel voiceChannel)
+    public async Task DelVoiChanl([Remainder] Channel voiceChannel)
     {
         await voiceChannel.DeleteAsync().ConfigureAwait(false);
         await ReplyConfirmAsync(Strings.Delvoich(ctx.Guild.Id, Format.Bold(voiceChannel.Name))).ConfigureAwait(false);
@@ -1034,7 +1033,7 @@ public partial class Administration(
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
     [BotPerm(GuildPermission.ManageChannels)]
-    public async Task DelTxtChanl([Remainder] ITextChannel toDelete)
+    public async Task DelTxtChanl([Remainder] Channel toDelete)
     {
         await toDelete.DeleteAsync().ConfigureAwait(false);
         await ReplyConfirmAsync(Strings.Deltextchan(ctx.Guild.Id, Format.Bold(toDelete.Name))).ConfigureAwait(false);
@@ -1077,7 +1076,7 @@ public partial class Administration(
     [BotPerm(GuildPermission.ManageChannels)]
     public async Task SetTopic([Remainder] string? topic = null)
     {
-        var channel = (ITextChannel)ctx.Channel;
+        var channel = (Channel)ctx.Channel;
         topic ??= "";
         await channel.ModifyAsync(c => c.Topic = topic).ConfigureAwait(false);
         await ReplyConfirmAsync(Strings.SetTopic(ctx.Guild.Id)).ConfigureAwait(false);
@@ -1099,7 +1098,7 @@ public partial class Administration(
     [BotPerm(GuildPermission.ManageChannels)]
     public async Task SetChanlName([Remainder] string name)
     {
-        var channel = (ITextChannel)ctx.Channel;
+        var channel = (Channel)ctx.Channel;
         await channel.ModifyAsync(c => c.Name = name).ConfigureAwait(false);
         await ReplyConfirmAsync(Strings.SetChannelName(ctx.Guild.Id)).ConfigureAwait(false);
     }
@@ -1119,7 +1118,7 @@ public partial class Administration(
     [BotPerm(GuildPermission.ManageChannels)]
     public async Task NsfwToggle()
     {
-        var channel = (ITextChannel)ctx.Channel;
+        var channel = (Channel)ctx.Channel;
         var isEnabled = channel.IsNsfw;
 
         await channel.ModifyAsync(c => c.IsNsfw = !isEnabled).ConfigureAwait(false);
@@ -1144,9 +1143,9 @@ public partial class Administration(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [Priority(1)]
-    public async Task Edit(ITextChannel channel, ulong messageId, [Remainder] string? text)
+    public async Task Edit(Channel channel, ulong messageId, [Remainder] string? text)
     {
-        var userPerms = ((SocketGuildUser)ctx.User).GetPermissions(channel);
+        var userPerms = ((SocketGuildMember)ctx.User).GetPermissions(channel);
         var botPerms = ((SocketGuild)ctx.Guild).CurrentUser.GetPermissions(channel);
         if (!userPerms.Has(ChannelPermission.ManageMessages))
         {
@@ -1180,7 +1179,7 @@ public partial class Administration(
     [BotPerm(ChannelPermission.ManageMessages)]
     public Task Delete(ulong messageId, StoopidTime? time = null)
     {
-        return Delete((ITextChannel)ctx.Channel, messageId, time);
+        return Delete((Channel)ctx.Channel, messageId, time);
     }
 
     /// <summary>
@@ -1196,7 +1195,7 @@ public partial class Administration(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public Task Delete(ITextChannel channel, ulong messageId, StoopidTime? time = null)
+    public Task Delete(Channel channel, ulong messageId, StoopidTime? time = null)
     {
         return InternalMessageAction(channel, messageId, time);
     }
@@ -1207,9 +1206,9 @@ public partial class Administration(
     /// <param name="channel">The target channel</param>
     /// <param name="messageId">The target message ID</param>
     /// <param name="time">Time to delete, if any.</param>
-    private async Task InternalMessageAction(ITextChannel channel, ulong messageId, StoopidTime? time)
+    private async Task InternalMessageAction(Channel channel, ulong messageId, StoopidTime? time)
     {
-        var userPerms = ((SocketGuildUser)ctx.User).GetPermissions(channel);
+        var userPerms = ((SocketGuildMember)ctx.User).GetPermissions(channel);
         var botPerms = ((SocketGuild)ctx.Guild).CurrentUser.GetPermissions(channel);
         if (!userPerms.Has(ChannelPermission.ManageMessages))
         {
@@ -1264,7 +1263,7 @@ public partial class Administration(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task RenameChannel(IGuildChannel channel, [Remainder] string name)
+    public async Task RenameChannel(Channel channel, [Remainder] string name)
     {
         await channel.ModifyAsync(x => x.Name = name).ConfigureAwait(false);
         await ConfirmAsync(Strings.ChannelRenamed(ctx.Guild.Id)).ConfigureAwait(false);

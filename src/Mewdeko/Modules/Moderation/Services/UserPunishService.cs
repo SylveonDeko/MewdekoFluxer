@@ -1,14 +1,12 @@
 using System.Text.Json;
 using System.Threading;
 using DataModel;
-using Discord.Commands;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.TypeReaders.Models;
 using Mewdeko.Modules.Administration.Common;
 using Mewdeko.Modules.Moderation.Common;
 using Mewdeko.Modules.Permissions.Services;
-using Embed = Discord.Embed;
 
 namespace Mewdeko.Modules.Moderation.Services;
 
@@ -19,7 +17,7 @@ public class UserPunishService : INService, IDisposable
 {
     private readonly BanPruneService banPrune;
     private readonly BlacklistService blacklistService;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly GuildSettingsService guildSettings;
     private readonly ILogger<UserPunishService> logger;
@@ -34,12 +32,12 @@ public class UserPunishService : INService, IDisposable
     /// <param name="mute">An instance of the MuteService class.</param>
     /// <param name="dbFactory">An instance of the dbContext class.</param>
     /// <param name="blacklistService">An instance of the BlacklistService class.</param>
-    /// <param name="client">An instance of the DiscordShardedClient class.</param>
+    /// <param name="client">An instance of the FluxerClient class.</param>
     /// <param name="guildSettings">An instance of the GuildSettingsService class.</param>
     /// <param name="banPrune">The service resolving how many days of messages a ban purges.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     public UserPunishService(MuteService mute, IDataConnectionFactory dbFactory, BlacklistService blacklistService,
-        DiscordShardedClient client,
+        FluxerClient client,
         GuildSettingsService guildSettings, BanPruneService banPrune, ILogger<UserPunishService> logger)
     {
         this.mute = mute;
@@ -150,7 +148,7 @@ public class UserPunishService : INService, IDisposable
     /// <param name="guild">The guild for which to set the Warnlog channel.</param>
     /// <param name="channel">The channel to set as the Warnlog channel.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task SetWarnlogChannelId(IGuild guild, ITextChannel channel)
+    public async Task SetWarnlogChannelId(SocketGuild guild, Channel channel)
     {
         var gc = await guildSettings.GetGuildConfig(guild.Id);
         gc.WarnlogChannelId = channel.Id;
@@ -165,7 +163,7 @@ public class UserPunishService : INService, IDisposable
     /// <param name="mod">The user who issues the warning.</param>
     /// <param name="reason">The reason for the warning.</param>
     /// <returns>A WarningPunishment object if a punishment is applied due to the warning; otherwise, null.</returns>
-    public async Task<WarningPunishment>? Warn(IGuild guild, ulong userId, IUser mod, string reason)
+    public async Task<WarningPunishment>? Warn(SocketGuild guild, ulong userId, IUser mod, string reason)
     {
         var modName = mod.ToString();
 
@@ -225,7 +223,7 @@ public class UserPunishService : INService, IDisposable
     /// <param name="minutes">The duration of the punishment in minutes.</param>
     /// <param name="roleId">The ID of the role to be applied.</param>
     /// <param name="reason">The reason for the punishment.</param>
-    public async Task ApplyPunishment(IGuild guild, IGuildUser? user, IUser mod, PunishmentAction p, int minutes,
+    public async Task ApplyPunishment(SocketGuild guild, SocketGuildMember? user, IUser mod, PunishmentAction p, int minutes,
         ulong? roleId, string? reason)
     {
         reason ??= "None Specified";
@@ -556,7 +554,7 @@ public class UserPunishService : INService, IDisposable
     /// <param name="role">The role to apply.</param>
     /// <returns></returns>
     public async Task<bool> WarnPunish(ulong guildId, int number, int punish, StoopidTime? time,
-        IRole? role = null)
+        SocketRole? role = null)
     {
         // these 3 don't make sense with time
         if ((PunishmentAction)punish is PunishmentAction.Softban or PunishmentAction.Kick
@@ -740,14 +738,14 @@ public class UserPunishService : INService, IDisposable
     /// <param name="banReason">The reason for the ban.</param>
     /// <param name="duration">The duration of the ban.</param>
     /// <returns></returns>
-    public Task<(Embed[]?, string?)> GetBanUserDmEmbed(ICommandContext context, IGuildUser? target,
+    public Task<(EmbedRequest[]?, string?)> GetBanUserDmEmbed(ICommandContext context, SocketGuildMember? target,
         string? defaultMessage,
         string? banReason, TimeSpan? duration)
     {
         return GetBanUserDmEmbed(
-            (DiscordShardedClient)context.Client,
+            (FluxerClient)context.Client,
             (SocketGuild)context.Guild,
-            (IGuildUser)context.User,
+            (SocketGuildMember)context.User,
             target,
             defaultMessage,
             banReason,
@@ -757,7 +755,7 @@ public class UserPunishService : INService, IDisposable
     /// <summary>
     ///     Gets the dm ban embed for a user.
     /// </summary>
-    /// <param name="DiscordShardedClient">The DiscordShardedClient instance.</param>
+    /// <param name="FluxerClient">The FluxerClient instance.</param>
     /// <param name="guild">The guild where the ban is issued.</param>
     /// <param name="moderator">The user who issues the ban.</param>
     /// <param name="target">The user to ban.</param>
@@ -765,10 +763,10 @@ public class UserPunishService : INService, IDisposable
     /// <param name="banReason">The reason for the ban.</param>
     /// <param name="duration">The duration of the ban.</param>
     /// <returns></returns>
-    public async Task<(Embed[], string?)> GetBanUserDmEmbed(
-        DiscordShardedClient DiscordShardedClient,
+    public async Task<(EmbedRequest[], string?)> GetBanUserDmEmbed(
+        FluxerClient FluxerClient,
         SocketGuild guild,
-        IGuildUser moderator, IGuildUser? target, string? defaultMessage, string? banReason, TimeSpan? duration)
+        SocketGuildMember moderator, SocketGuildMember? target, string? defaultMessage, string? banReason, TimeSpan? duration)
     {
         var template = await GetBanTemplate(guild.Id);
 
@@ -777,7 +775,7 @@ public class UserPunishService : INService, IDisposable
             : banReason;
 
         var replacer = new ReplacementBuilder()
-            .WithServer(DiscordShardedClient, guild)
+            .WithServer(FluxerClient, guild)
             .WithOverride("%ban.mod%", moderator.ToString)
             .WithOverride("%ban.mod.fullname%", moderator.ToString)
             .WithOverride("%ban.mod.name%", () => moderator.Username)
@@ -790,7 +788,7 @@ public class UserPunishService : INService, IDisposable
             .WithOverride("%ban.reason%", () => banReason)
             .WithOverride("%ban.duration%", () => duration?.ToString(@"d\.hh\:mm") ?? "perma")
             .Build();
-        Embed[] embed;
+        EmbedRequest[] embed;
         string plainText;
         // if template isn't set, use the old message style
         if (string.IsNullOrWhiteSpace(template))

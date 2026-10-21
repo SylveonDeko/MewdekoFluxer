@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Utility.Services;
 
@@ -48,7 +48,7 @@ public partial class Utility
             var target = meorhere == MeOrHere.Me ? ctx.User.Id : ctx.Channel.Id;
             var isPrivate = meorhere == MeOrHere.Me || ctx.Guild == null;
             var shouldSanitize = ctx.Guild != null &&
-                                 !((IGuildUser)ctx.User).GetPermissions((IGuildChannel)ctx.Channel).MentionEveryone;
+                                 !((SocketGuildMember)ctx.User).GetPermissions((Channel)ctx.Channel).MentionEveryone;
 
             var (success, message) = await Service.CreateReminderAsync(
                 target,
@@ -77,9 +77,9 @@ public partial class Utility
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageMessages)]
         [Priority(0)]
-        public async Task Remind(ITextChannel channel, [Remainder] string remindString)
+        public async Task Remind(Channel channel, [Remainder] string remindString)
         {
-            var perms = ((IGuildUser)ctx.User).GetPermissions(channel);
+            var perms = ((SocketGuildMember)ctx.User).GetPermissions(channel);
             if (!perms.SendMessages || !perms.ViewChannel)
             {
                 await ReplyErrorAsync(Strings.CantReadOrSend(ctx.Guild.Id)).ConfigureAwait(false);

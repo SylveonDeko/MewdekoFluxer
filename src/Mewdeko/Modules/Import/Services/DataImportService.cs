@@ -20,7 +20,7 @@ namespace Mewdeko.Modules.Import.Services;
 /// </summary>
 public class DataImportService(
     IDataConnectionFactory dbFactory,
-    DiscordShardedClient client,
+    FluxerClient client,
     IHttpClientFactory httpFactory,
     XpService xpService,
     XpCacheManager xpCache,

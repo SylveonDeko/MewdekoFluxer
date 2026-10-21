@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Administration.Services;
 
@@ -45,7 +45,7 @@ public partial class Administration
                 .WithFooter($"Total: {rolesWithReasons.Count} role(s)")
                 .Build();
 
-            await Context.Channel.SendMessageAsync(embed: embed).ConfigureAwait(false);
+            await Context.Channel.SendAsync(embed: embed).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -55,7 +55,7 @@ public partial class Administration
         [Cmd]
         [Aliases]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task AutoBanRoleAdd(IRole role)
+        public async Task AutoBanRoleAdd(SocketRole role)
         {
             var success = await Service.AddAutoBanRole(Context.Guild.Id, role.Id);
             if (success)
@@ -75,7 +75,7 @@ public partial class Administration
         [Cmd]
         [Aliases]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task AutoBanRoleRemove(IRole role)
+        public async Task AutoBanRoleRemove(SocketRole role)
         {
             var success = await Service.RemoveAutoBanRole(Context.Guild.Id, role.Id);
             if (success)
@@ -96,7 +96,7 @@ public partial class Administration
         [Cmd]
         [Aliases]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task AutoBanRoleReason(IRole role, [Remainder] string? reason = null)
+        public async Task AutoBanRoleReason(SocketRole role, [Remainder] string? reason = null)
         {
             // Check if this role is in the auto-ban list
             var roles = await Service.GetAutoBanRoles(Context.Guild.Id);

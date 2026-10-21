@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using DataModel;
-using Discord.Net;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.ModuleBehaviors;
@@ -16,7 +15,7 @@ namespace Mewdeko.Modules.Utility.Services;
 /// </summary>
 public class StreamRoleService : INService, IUnloadableService, IReadyExecutor
 {
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly EventHandler eventHandler;
     private readonly ILogger<StreamRoleService> logger;
@@ -28,7 +27,7 @@ public class StreamRoleService : INService, IUnloadableService, IReadyExecutor
     /// <param name="dbFactory">The database service for storing and retrieving stream role settings.</param>
     /// <param name="eventHandler">Event handler for capturing and responding to guild member updates.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
-    public StreamRoleService(DiscordShardedClient client, IDataConnectionFactory dbFactory, EventHandler eventHandler,
+    public StreamRoleService(FluxerClient client, IDataConnectionFactory dbFactory, EventHandler eventHandler,
         ILogger<StreamRoleService> logger)
     {
         this.client = client;
@@ -65,7 +64,7 @@ public class StreamRoleService : INService, IUnloadableService, IReadyExecutor
     }
 
 
-    private async Task Client_GuildMemberUpdated(Cacheable<SocketGuildUser, ulong> cacheable, SocketGuildUser after)
+    private async Task Client_GuildMemberUpdated(Cacheable<SocketGuildMember> cacheable, SocketGuildMember after)
     {
         await using var db = await dbFactory.CreateConnectionAsync();
 
@@ -90,7 +89,7 @@ public class StreamRoleService : INService, IUnloadableService, IReadyExecutor
     /// <param name="userId">The ID of the user to add or remove.</param>
     /// <param name="userName">The name of the user to add or remove.</param>
     /// <returns>A task that represents the asynchronous operation, containing a boolean indicating the success of the action.</returns>
-    public async Task<bool> ApplyListAction(StreamRoleListType listType, IGuild guild, AddRemove action,
+    public async Task<bool> ApplyListAction(StreamRoleListType listType, SocketGuild guild, AddRemove action,
         ulong userId, string userName)
     {
         userName.ThrowIfNull(nameof(userName));
@@ -191,7 +190,7 @@ public class StreamRoleService : INService, IUnloadableService, IReadyExecutor
     /// <param name="guild">Guild Id</param>
     /// <param name="keyword">Keyword to set</param>
     /// <returns>The keyword set</returns>
-    public async Task<string> SetKeyword(IGuild guild, string? keyword)
+    public async Task<string> SetKeyword(SocketGuild guild, string? keyword)
     {
         keyword = keyword?.Trim().ToLowerInvariant();
         var guildId = guild.Id;
@@ -231,7 +230,7 @@ public class StreamRoleService : INService, IUnloadableService, IReadyExecutor
     /// </summary>
     /// <param name="fromRole">Role to monitor</param>
     /// <param name="addRole">Role to add to the user</param>
-    public async Task SetStreamRole(IRole fromRole, IRole addRole)
+    public async Task SetStreamRole(SocketRole fromRole, SocketRole addRole)
     {
         fromRole.ThrowIfNull(nameof(fromRole));
         addRole.ThrowIfNull(nameof(addRole));
@@ -277,7 +276,7 @@ public class StreamRoleService : INService, IUnloadableService, IReadyExecutor
     /// </summary>
     /// <param name="guild">The guild to stop stream role management in.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task StopStreamRole(IGuild guild)
+    public async Task StopStreamRole(SocketGuild guild)
     {
         var guildId = guild.Id;
         await using var db = await dbFactory.CreateConnectionAsync();
@@ -309,7 +308,7 @@ public class StreamRoleService : INService, IUnloadableService, IReadyExecutor
         UpdateCache(guildId, StreamRoleSetting);
     }
 
-    private async Task RescanUser(IGuildUser user, StreamRoleSetting setting, IRole? addRole = null)
+    private async Task RescanUser(SocketGuildMember user, StreamRoleSetting setting, SocketRole? addRole = null)
     {
         var g = (StreamingGame)user.Activities
             .FirstOrDefault(a => a is StreamingGame &&
@@ -338,7 +337,7 @@ public class StreamRoleService : INService, IUnloadableService, IReadyExecutor
                 logger.LogInformation("Added stream role to user {0} in {1} server", user.ToString(),
                     user.Guild.ToString());
             }
-            catch (HttpException ex) when (ex.HttpCode == HttpStatusCode.Forbidden)
+            catch (FluxerApiException ex) when (ex.HttpCode == HttpStatusCode.Forbidden)
             {
                 await StopStreamRole(user.Guild).ConfigureAwait(false);
                 logger.LogWarning(ex, "Error adding stream role(s). Forcibly disabling stream role feature");
@@ -364,7 +363,7 @@ public class StreamRoleService : INService, IUnloadableService, IReadyExecutor
                     logger.LogInformation("Removed stream role from the user {0} in {1} server", user.ToString(),
                         user.Guild.ToString());
                 }
-                catch (HttpException ex) when (ex.HttpCode == HttpStatusCode.Forbidden)
+                catch (FluxerApiException ex) when (ex.HttpCode == HttpStatusCode.Forbidden)
                 {
                     await StopStreamRole(user.Guild).ConfigureAwait(false);
                     logger.LogWarning(ex, "Error removing stream role(s). Forcibly disabling stream role feature");
@@ -374,7 +373,7 @@ public class StreamRoleService : INService, IUnloadableService, IReadyExecutor
         }
     }
 
-    private async Task RescanUsers(IGuild guild)
+    private async Task RescanUsers(SocketGuild guild)
     {
         var guildId = guild.Id;
         await using var db = await dbFactory.CreateConnectionAsync();

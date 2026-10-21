@@ -4,7 +4,6 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using DataModel;
-using Discord.Commands;
 using LinqToDB;
 using LinqToDB.Async;
 
@@ -19,7 +18,7 @@ public class AdministrationService : INService
     private readonly IDataConnectionFactory dbFactory;
     private readonly GuildSettingsService guildSettings;
     private readonly IHttpClientFactory httpClientFactory;
-    private readonly DiscordShardedClient shardedClient;
+    private readonly FluxerClient shardedClient;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="AdministrationService" /> class with the specified dependencies.
@@ -33,7 +32,7 @@ public class AdministrationService : INService
     /// <param name="shardedClient">The Discord sharded client.</param>
     public AdministrationService(CommandHandler cmdHandler,
         GuildSettingsService guildSettings, Mewdeko bot, IDataConnectionFactory dbFactory,
-        IHttpClientFactory httpClientFactory, IBotCredentials credentials, DiscordShardedClient shardedClient)
+        IHttpClientFactory httpClientFactory, IBotCredentials credentials, FluxerClient shardedClient)
     {
         // Assign the database service and guild settings service
         this.guildSettings = guildSettings;
@@ -52,7 +51,7 @@ public class AdministrationService : INService
     /// </summary>
     /// <param name="guild">The guild to set the staff role for.</param>
     /// <param name="role">The role to set as the staff role.</param>
-    public async Task StaffRoleSet(IGuild guild, ulong role)
+    public async Task StaffRoleSet(SocketGuild guild, ulong role)
     {
         // Create a new database context
         await using var db = await dbFactory.CreateConnectionAsync();
@@ -71,7 +70,7 @@ public class AdministrationService : INService
     /// </summary>
     /// <param name="guild">The guild to toggle the opt-out status for.</param>
     /// <returns>A boolean indicating the new opt-out status.</returns>
-    public async Task<bool> ToggleOptOut(IGuild guild)
+    public async Task<bool> ToggleOptOut(SocketGuild guild)
     {
         // Create a new database context
         var gc = await guildSettings.GetGuildConfig(guild.Id);
@@ -92,7 +91,7 @@ public class AdministrationService : INService
     /// </summary>
     /// <param name="guild">The guild to delete the statistics data for.</param>
     /// <returns>A boolean indicating whether any data was deleted.</returns>
-    public async Task<bool> DeleteStatsData(IGuild guild)
+    public async Task<bool> DeleteStatsData(SocketGuild guild)
     {
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         var toRemove = dbContext.CommandStats.Where(x => x.GuildId == guild.Id);
@@ -107,7 +106,7 @@ public class AdministrationService : INService
     /// </summary>
     /// <param name="guild">The guild to set the member role for.</param>
     /// <param name="role">The role to set as the member role.</param>
-    public async Task MemberRoleSet(IGuild guild, ulong role)
+    public async Task MemberRoleSet(SocketGuild guild, ulong role)
     {
         var gc = await guildSettings.GetGuildConfig(guild.Id);
         gc.MemberRole = role;
@@ -154,9 +153,9 @@ public class AdministrationService : INService
     /// <param name="msg">The user message that triggered the command.</param>
     /// <param name="cmd">The executed command.</param>
     /// <returns>A completed task.</returns>
-    private async Task DelMsgOnCmd_Handler(IUserMessage msg, CommandInfo cmd)
+    private async Task DelMsgOnCmd_Handler(Message msg, CommandInfo cmd)
     {
-        if (msg.Channel is not ITextChannel channel)
+        if (msg.Channel is not Channel channel)
             return;
         await using var db = await dbFactory.CreateConnectionAsync();
         var conf = await guildSettings.GetGuildConfig(channel.GuildId);
@@ -255,7 +254,7 @@ public class AdministrationService : INService
     /// </param>
     /// <param name="users">The users to set the deafen status for.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public static async Task DeafenUsers(bool value, params IGuildUser[] users)
+    public static async Task DeafenUsers(bool value, params SocketGuildMember[] users)
     {
         if (users.Length == 0)
             return;
@@ -280,11 +279,11 @@ public class AdministrationService : INService
     /// <param name="messageId">The ID of the message to edit.</param>
     /// <param name="text">The new text for the message. If null, the message content will be removed.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public static async Task EditMessage(ICommandContext context, ITextChannel chanl, ulong messageId, string? text)
+    public static async Task EditMessage(ICommandContext context, Channel chanl, ulong messageId, string? text)
     {
         var msg = await chanl.GetMessageAsync(messageId).ConfigureAwait(false);
 
-        if (msg is not IUserMessage umsg || msg.Author.Id != context.Client.CurrentUser.Id)
+        if (msg is not Message umsg || msg.Author.Id != context.Client.CurrentUser.Id)
             return;
 
         var rep = new ReplacementBuilder()

@@ -1,5 +1,4 @@
 ﻿using DataModel;
-using Discord.Net;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.Configs;
@@ -8,7 +7,6 @@ using Mewdeko.Modules.Permissions.Common;
 using Mewdeko.Modules.Permissions.Services;
 using Mewdeko.Services.Analytics;
 using Mewdeko.Services.Strings;
-using Embed = Discord.Embed;
 
 namespace Mewdeko.Modules.Suggestions.Services;
 
@@ -50,7 +48,7 @@ public class SuggestionsService : INService
     }
 
     private readonly AdministrationService adminserv;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly BotConfig config;
     private readonly IDataConnectionFactory dbFactory;
@@ -76,7 +74,7 @@ public class SuggestionsService : INService
     /// <param name="collector">The analytics collector.</param>
     public SuggestionsService(
         IDataConnectionFactory dbFactory,
-        DiscordShardedClient client,
+        FluxerClient client,
         AdministrationService aserv,
         PermissionService permserv,
         GuildSettingsService guildSettings, EventHandler eventHandler, BotConfig config, GeneratedBotStrings strings,
@@ -98,27 +96,27 @@ public class SuggestionsService : INService
         this.dbFactory = dbFactory;
     }
 
-    private Task UpdateCountOnReact(Cacheable<IUserMessage, ulong> message,
-        Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
+    private Task UpdateCountOnReact(Cacheable<Message> message,
+        Cacheable<Channel> channel, SocketReaction reaction)
     {
         return RefreshVoteCountAsync(message, channel, reaction, true);
     }
 
-    private Task UpdateCountOnRemoveReact(Cacheable<IUserMessage, ulong> message,
-        Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
+    private Task UpdateCountOnRemoveReact(Cacheable<Message> message,
+        Cacheable<Channel> channel, SocketReaction reaction)
     {
         return RefreshVoteCountAsync(message, channel, reaction, false);
     }
 
-    private async Task RefreshVoteCountAsync(Cacheable<IUserMessage, ulong> cached,
-        Cacheable<IMessageChannel, ulong> cachedChannel, SocketReaction reaction, bool added)
+    private async Task RefreshVoteCountAsync(Cacheable<Message> cached,
+        Cacheable<Channel> cachedChannel, SocketReaction reaction, bool added)
     {
-        if (await cachedChannel.GetOrDownloadAsync().ConfigureAwait(false) is not ITextChannel channel)
+        if (await cachedChannel.GetOrDownloadAsync().ConfigureAwait(false) is not Channel channel)
             return;
         if (channel.Id != await GetSuggestionChannel(channel.Guild.Id))
             return;
 
-        var index = (await GetVoteEmotes(channel.GuildId)).FindIndex(e => Equals(e, reaction.Emote));
+        var index = (await GetVoteEmotes(channel.GuildId)).FindIndex(e => Equals(e, reaction.Emoji));
         if (index < 0)
             return;
 
@@ -132,7 +130,7 @@ public class SuggestionsService : INService
         if (message is null)
             return;
 
-        var count = (await message.GetReactionUsersAsync(reaction.Emote, 500).FlattenAsync().ConfigureAwait(false))
+        var count = (await message.GetReactionUsersAsync(reaction.Emoji, 500).FlattenAsync().ConfigureAwait(false))
             .Count(x => !x.IsBot);
         switch (index)
         {
@@ -164,24 +162,24 @@ public class SuggestionsService : INService
     /// </summary>
     /// <param name="guildId">The guild ID.</param>
     /// <returns>Up to five emotes, in the order their counts are stored.</returns>
-    public async Task<List<IEmote>> GetVoteEmotes(ulong guildId)
+    public async Task<List<Emoji>> GetVoteEmotes(ulong guildId)
     {
         var setting = await GetEmotes(guildId);
         if (string.IsNullOrWhiteSpace(setting) || setting.StartsWith("disable", StringComparison.OrdinalIgnoreCase) ||
             setting == "-")
-            return [new Emoji("👍"), new Emoji("👎")];
+            return [Emoji.FromUnicode("👍"), Emoji.FromUnicode("👎")];
 
         return setting
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(e => e.TryToIEmote(out var emote) ? emote : null)
-            .OfType<IEmote>()
+            .OfType<Emoji>()
             .Take(5)
             .ToList();
     }
 
     private async Task MessageRecieved(SocketMessage msg)
     {
-        if (msg.Channel is not ITextChannel chan)
+        if (msg.Channel is not Channel chan)
             return;
         if (spamCheck.Contains(chan.Id))
             return;
@@ -196,9 +194,9 @@ public class SuggestionsService : INService
                 return;
             }
 
-            var guser = msg.Author as IGuildUser;
+            var guser = msg.Author as SocketGuildMember;
             var pc = await perms.GetCacheFor(guild.Id);
-            var test = pc.Permissions.CheckPermissions(msg as IUserMessage, "suggest", "Suggestions".ToLowerInvariant(),
+            var test = pc.Permissions.CheckPermissions(msg as Message, "suggest", "Suggestions".ToLowerInvariant(),
                 out _);
             if (!test)
             {
@@ -266,7 +264,7 @@ public class SuggestionsService : INService
                 return;
             }
 
-            await SendSuggestion(chan.Guild, msg.Author as IGuildUser, client, msg.Content, msg.Channel as ITextChannel)
+            await SendSuggestion(chan.Guild, msg.Author as SocketGuildMember, client, msg.Content, msg.Channel as Channel)
                 .ConfigureAwait(false);
             spamCheck.Remove(chan.Id);
             try
@@ -329,7 +327,7 @@ public class SuggestionsService : INService
     /// <param name="suggestions">The suggestions model containing the current state.</param>
     /// <param name="guild">The guild from which to retrieve the settings.</param>
     /// <returns>A tuple containing the message ID and channel ID.</returns>
-    public async Task<(ulong, ulong)> GetRepostedMessageAndChannel(Suggestion suggestions, IGuild guild)
+    public async Task<(ulong, ulong)> GetRepostedMessageAndChannel(Suggestion suggestions, SocketGuild guild)
     {
         (ulong, ulong) toreturn = suggestions.CurrentState switch
         {
@@ -348,7 +346,7 @@ public class SuggestionsService : INService
     /// <param name="guild">The guild to configure.</param>
     /// <param name="parsedEmotes">A string representation of the custom emotes.</param>
     /// <returns>A task that represents the asynchronous operation of updating the suggestion emotes.</returns>
-    public async Task SetSuggestionEmotes(IGuild guild, string parsedEmotes)
+    public async Task SetSuggestionEmotes(SocketGuild guild, string parsedEmotes)
     {
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         var gc = await guildSettings.GetGuildConfig(guild.Id);
@@ -362,7 +360,7 @@ public class SuggestionsService : INService
     /// <param name="guild">The guild to configure.</param>
     /// <param name="channel">The channel ID where suggestions will be posted.</param>
     /// <returns>A task that represents the asynchronous operation of setting the suggestion channel ID.</returns>
-    public async Task SetSuggestionChannelId(IGuild guild, ulong channel)
+    public async Task SetSuggestionChannelId(SocketGuild guild, ulong channel)
     {
         await using var dbContext = await dbFactory.CreateConnectionAsync();
 
@@ -378,7 +376,7 @@ public class SuggestionsService : INService
     /// <param name="guild">The guild to configure.</param>
     /// <param name="minLength">The minimum length allowed for suggestions.</param>
     /// <returns>A task that represents the asynchronous operation of setting the minimum suggestion length.</returns>
-    public async Task SetMinLength(IGuild guild, int minLength)
+    public async Task SetMinLength(SocketGuild guild, int minLength)
     {
         var gc = await guildSettings.GetGuildConfig(guild.Id);
         gc.MinSuggestLength = minLength;
@@ -392,7 +390,7 @@ public class SuggestionsService : INService
     /// <param name="guild">The guild to configure.</param>
     /// <param name="maxLength">The maximum length allowed for suggestions.</param>
     /// <returns>A task that represents the asynchronous operation of setting the maximum suggestion length.</returns>
-    public async Task SetMaxLength(IGuild guild, int maxLength)
+    public async Task SetMaxLength(SocketGuild guild, int maxLength)
     {
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         var gc = await guildSettings.GetGuildConfig(guild.Id);
@@ -406,7 +404,7 @@ public class SuggestionsService : INService
     /// </summary>
     /// <param name="guild">The guild where the reset will occur.</param>
     /// <returns>A task that represents the asynchronous operation of resetting suggestions.</returns>
-    public async Task SuggestReset(IGuild guild)
+    public async Task SuggestReset(SocketGuild guild)
     {
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         await dbContext.Suggestions.Where(x => x.GuildId == guild.Id).DeleteAsync().ConfigureAwait(false);
@@ -422,7 +420,7 @@ public class SuggestionsService : INService
     /// <param name="guild">The guild to set the new default suggestion message in.</param>
     /// <param name="message">The new default message for suggestions.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task SetSuggestionMessage(IGuild guild, string message)
+    public async Task SetSuggestionMessage(SocketGuild guild, string message)
     {
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         var gc = await guildSettings.GetGuildConfig(guild.Id);
@@ -437,7 +435,7 @@ public class SuggestionsService : INService
     /// <param name="guild">The guild to set the new default accept message in.</param>
     /// <param name="message">The new default message for when suggestions are accepted.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task SetAcceptMessage(IGuild guild, string message)
+    public async Task SetAcceptMessage(SocketGuild guild, string message)
     {
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         var gc = await guildSettings.GetGuildConfig(guild.Id);
@@ -452,7 +450,7 @@ public class SuggestionsService : INService
     /// <param name="guild">The guild to set the new default deny message in.</param>
     /// <param name="message">The new default message for when suggestions are denied.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task SetDenyMessage(IGuild guild, string message)
+    public async Task SetDenyMessage(SocketGuild guild, string message)
     {
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         var gc = await guildSettings.GetGuildConfig(guild.Id);
@@ -467,7 +465,7 @@ public class SuggestionsService : INService
     /// <param name="guild">The guild to set the new default implement message in.</param>
     /// <param name="message">The new default message for when suggestions are implemented.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task SetImplementMessage(IGuild guild, string message)
+    public async Task SetImplementMessage(SocketGuild guild, string message)
     {
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         var gc = await guildSettings.GetGuildConfig(guild.Id);
@@ -515,7 +513,7 @@ public class SuggestionsService : INService
     /// <param name="guild">The guild to set the thread type in.</param>
     /// <param name="num">The thread type number (e.g., 0 for no threads, 1 for public threads).</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task SetSuggestThreadsType(IGuild guild, int num)
+    public async Task SetSuggestThreadsType(SocketGuild guild, int num)
     {
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         var gc = await guildSettings.GetGuildConfig(guild.Id);
@@ -530,7 +528,7 @@ public class SuggestionsService : INService
     /// <param name="guild">The guild to set the new default consider message in.</param>
     /// <param name="message">The new default message for when suggestions are under consideration.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task SetConsiderMessage(IGuild guild, string message)
+    public async Task SetConsiderMessage(SocketGuild guild, string message)
     {
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         var gc = await guildSettings.GetGuildConfig(guild.Id);
@@ -545,7 +543,7 @@ public class SuggestionsService : INService
     /// <param name="guild">The guild to update the suggestion number in.</param>
     /// <param name="num">The new suggestion number.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task Sugnum(IGuild guild, ulong num)
+    public async Task Sugnum(SocketGuild guild, ulong num)
     {
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         var gc = await guildSettings.GetGuildConfig(guild.Id);
@@ -560,7 +558,7 @@ public class SuggestionsService : INService
     /// <param name="guild">The guild to configure the auto-archive setting for denied suggestions.</param>
     /// <param name="value">True if denied suggestions should be archived; otherwise, false.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task SetArchiveOnDeny(IGuild guild, bool value)
+    public async Task SetArchiveOnDeny(SocketGuild guild, bool value)
     {
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         var gc = await guildSettings.GetGuildConfig(guild.Id);
@@ -575,7 +573,7 @@ public class SuggestionsService : INService
     /// <param name="guild">The guild to set the archive behavior for.</param>
     /// <param name="value">True to archive suggestions on acceptance; false otherwise.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task SetArchiveOnAccept(IGuild guild, bool value)
+    public async Task SetArchiveOnAccept(SocketGuild guild, bool value)
     {
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         var gc = await guildSettings.GetGuildConfig(guild.Id);
@@ -590,7 +588,7 @@ public class SuggestionsService : INService
     /// <param name="guild">The guild to set the archive behavior for.</param>
     /// <param name="value">True to archive suggestions on consideration; false otherwise.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task SetArchiveOnConsider(IGuild guild, bool value)
+    public async Task SetArchiveOnConsider(SocketGuild guild, bool value)
     {
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         var gc = await guildSettings.GetGuildConfig(guild.Id);
@@ -605,7 +603,7 @@ public class SuggestionsService : INService
     /// <param name="guild">The guild to set the archive behavior for.</param>
     /// <param name="value">True to archive suggestions on implementation; false otherwise.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task SetArchiveOnImplement(IGuild guild, bool value)
+    public async Task SetArchiveOnImplement(SocketGuild guild, bool value)
     {
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         var gc = await guildSettings.GetGuildConfig(guild.Id);
@@ -620,7 +618,7 @@ public class SuggestionsService : INService
     /// <param name="guild">The guild to set the accept channel for.</param>
     /// <param name="channelId">The channel ID for accepted suggestions.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task SetAcceptChannel(IGuild guild, ulong channelId)
+    public async Task SetAcceptChannel(SocketGuild guild, ulong channelId)
     {
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         var gc = await guildSettings.GetGuildConfig(guild.Id);
@@ -635,7 +633,7 @@ public class SuggestionsService : INService
     /// <param name="guild">The guild to set the deny channel for.</param>
     /// <param name="channelId">The channel ID for denied suggestions.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task SetDenyChannel(IGuild guild, ulong channelId)
+    public async Task SetDenyChannel(SocketGuild guild, ulong channelId)
     {
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         var gc = await guildSettings.GetGuildConfig(guild.Id);
@@ -650,7 +648,7 @@ public class SuggestionsService : INService
     /// <param name="guild">The guild to set the consider channel for.</param>
     /// <param name="channelId">The channel ID for suggestions under consideration.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task SetConsiderChannel(IGuild guild, ulong channelId)
+    public async Task SetConsiderChannel(SocketGuild guild, ulong channelId)
     {
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         var gc = await guildSettings.GetGuildConfig(guild.Id);
@@ -665,7 +663,7 @@ public class SuggestionsService : INService
     /// <param name="guild">The guild to set the implement channel for.</param>
     /// <param name="channelId">The channel ID for implemented suggestions.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task SetImplementChannel(IGuild guild, ulong channelId)
+    public async Task SetImplementChannel(SocketGuild guild, ulong channelId)
     {
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         var gc = await guildSettings.GetGuildConfig(guild.Id);
@@ -711,7 +709,7 @@ public class SuggestionsService : INService
     /// </summary>
     /// <param name="guild">The guild from which to retrieve the message.</param>
     /// <returns>The custom suggestion message if set; otherwise, null.</returns>
-    public async Task<string>? GetSuggestionMessage(IGuild guild)
+    public async Task<string>? GetSuggestionMessage(SocketGuild guild)
     {
         return (await guildSettings.GetGuildConfig(guild.Id)).SuggestMessage;
     }
@@ -721,7 +719,7 @@ public class SuggestionsService : INService
     /// </summary>
     /// <param name="guild">The guild from which to retrieve the accept message.</param>
     /// <returns>The custom accept message if set; otherwise, null.</returns>
-    public async Task<string>? GetAcceptMessage(IGuild guild)
+    public async Task<string>? GetAcceptMessage(SocketGuild guild)
     {
         return (await guildSettings.GetGuildConfig(guild.Id)).AcceptMessage;
     }
@@ -731,7 +729,7 @@ public class SuggestionsService : INService
     /// </summary>
     /// <param name="guild">The guild from which to retrieve the deny message.</param>
     /// <returns>The custom deny message if set; otherwise, null.</returns>
-    public async Task<string>? GetDenyMessage(IGuild guild)
+    public async Task<string>? GetDenyMessage(SocketGuild guild)
     {
         return (await guildSettings.GetGuildConfig(guild.Id)).DenyMessage;
     }
@@ -741,7 +739,7 @@ public class SuggestionsService : INService
     /// </summary>
     /// <param name="guild">The guild from which to retrieve the implement message.</param>
     /// <returns>The custom implement message if set; otherwise, null.</returns>
-    public async Task<string>? GetImplementMessage(IGuild guild)
+    public async Task<string>? GetImplementMessage(SocketGuild guild)
     {
         return (await guildSettings.GetGuildConfig(guild.Id)).ImplementMessage;
     }
@@ -751,7 +749,7 @@ public class SuggestionsService : INService
     /// </summary>
     /// <param name="guild">The guild from which to retrieve the consider message.</param>
     /// <returns>The custom consider message if set; otherwise, null.</returns>
-    public async Task<string>? GetConsiderMessage(IGuild guild)
+    public async Task<string>? GetConsiderMessage(SocketGuild guild)
     {
         return (await guildSettings.GetGuildConfig(guild.Id)).ConsiderMessage;
     }
@@ -761,7 +759,7 @@ public class SuggestionsService : INService
     /// </summary>
     /// <param name="guild">The guild from which to retrieve the thread type.</param>
     /// <returns>The thread type for suggestions.</returns>
-    public async Task<int> GetThreadType(IGuild guild)
+    public async Task<int> GetThreadType(SocketGuild guild)
     {
         return (await guildSettings.GetGuildConfig(guild.Id)).SuggestionThreadType;
     }
@@ -771,7 +769,7 @@ public class SuggestionsService : INService
     /// </summary>
     /// <param name="guild">The guild from which to retrieve the consider channel ID.</param>
     /// <returns>The consider channel ID.</returns>
-    public async Task<ulong> GetConsiderChannel(IGuild guild)
+    public async Task<ulong> GetConsiderChannel(SocketGuild guild)
     {
         return (await guildSettings.GetGuildConfig(guild.Id)).ConsiderChannel;
     }
@@ -781,7 +779,7 @@ public class SuggestionsService : INService
     /// </summary>
     /// <param name="guild">The guild from which to retrieve the accept channel ID.</param>
     /// <returns>The accept channel ID.</returns>
-    public async Task<ulong> GetAcceptChannel(IGuild guild)
+    public async Task<ulong> GetAcceptChannel(SocketGuild guild)
     {
         return (await guildSettings.GetGuildConfig(guild.Id)).AcceptChannel;
     }
@@ -791,7 +789,7 @@ public class SuggestionsService : INService
     /// </summary>
     /// <param name="guild">The guild from which to retrieve the implement channel ID.</param>
     /// <returns>The implement channel ID.</returns>
-    public async Task<ulong> GetImplementChannel(IGuild guild)
+    public async Task<ulong> GetImplementChannel(SocketGuild guild)
     {
         return (await guildSettings.GetGuildConfig(guild.Id)).ImplementChannel;
     }
@@ -801,7 +799,7 @@ public class SuggestionsService : INService
     /// </summary>
     /// <param name="guild">The guild from which to retrieve the deny channel ID.</param>
     /// <returns>The deny channel ID.</returns>
-    public async Task<ulong> GetDenyChannel(IGuild guild)
+    public async Task<ulong> GetDenyChannel(SocketGuild guild)
     {
         return (await guildSettings.GetGuildConfig(guild.Id)).DenyChannel;
     }
@@ -811,7 +809,7 @@ public class SuggestionsService : INService
     /// </summary>
     /// <param name="guild">The guild to check the archive setting for.</param>
     /// <returns>True if suggestions are archived upon denial; otherwise, false.</returns>
-    public async Task<bool> GetArchiveOnDeny(IGuild guild)
+    public async Task<bool> GetArchiveOnDeny(SocketGuild guild)
     {
         return (await guildSettings.GetGuildConfig(guild.Id)).ArchiveOnDeny;
     }
@@ -821,7 +819,7 @@ public class SuggestionsService : INService
     /// </summary>
     /// <param name="guild">The guild to check the archive setting for.</param>
     /// <returns>True if suggestions are archived upon acceptance; otherwise, false.</returns>
-    public async Task<bool> GetArchiveOnAccept(IGuild guild)
+    public async Task<bool> GetArchiveOnAccept(SocketGuild guild)
     {
         return (await guildSettings.GetGuildConfig(guild.Id)).ArchiveOnAccept;
     }
@@ -831,7 +829,7 @@ public class SuggestionsService : INService
     /// </summary>
     /// <param name="guild">The guild to check the archive setting for.</param>
     /// <returns>True if suggestions are archived upon consideration; otherwise, false.</returns>
-    public async Task<bool> GetArchiveOnConsider(IGuild guild)
+    public async Task<bool> GetArchiveOnConsider(SocketGuild guild)
     {
         return (await guildSettings.GetGuildConfig(guild.Id)).ArchiveOnConsider;
     }
@@ -841,7 +839,7 @@ public class SuggestionsService : INService
     /// </summary>
     /// <param name="guild">The guild to check the archive setting for.</param>
     /// <returns>True if suggestions are archived upon implementation; otherwise, false.</returns>
-    public async Task<bool> GetArchiveOnImplement(IGuild guild)
+    public async Task<bool> GetArchiveOnImplement(SocketGuild guild)
     {
         return (await guildSettings.GetGuildConfig(guild.Id)).ArchiveOnImplement;
     }
@@ -857,7 +855,7 @@ public class SuggestionsService : INService
     /// <param name="channel">The text channel where the denial message will be sent.</param>
     /// <param name="reason">The reason for denial. Optional.</param>
     /// <returns>A Task representing the asynchronous operation.</returns>
-    public async Task SendDenyEmbed(IGuild guild, IUser user, ulong suggestion, ITextChannel? channel = null,
+    public async Task SendDenyEmbed(SocketGuild guild, IUser user, ulong suggestion, Channel? channel = null,
         string? reason = null)
     {
         await SendStatusEmbed(guild, client, user, suggestion, SuggestState.Denied, channel, reason);
@@ -873,7 +871,7 @@ public class SuggestionsService : INService
     /// <param name="channel">The channel where the consideration message will be sent.</param>
     /// <param name="reason">The reason for consideration. Optional.</param>
     /// <returns>A Task representing the asynchronous operation.</returns>
-    public async Task SendConsiderEmbed(IGuild guild, IUser user, ulong suggestion, ITextChannel? channel = null,
+    public async Task SendConsiderEmbed(SocketGuild guild, IUser user, ulong suggestion, Channel? channel = null,
         string? reason = null)
     {
         await SendStatusEmbed(guild, client, user, suggestion, SuggestState.Considered, channel, reason);
@@ -890,7 +888,7 @@ public class SuggestionsService : INService
     /// <param name="channel">The channel where the implementation message will be sent.</param>
     /// <param name="reason">The reason for implementation. Optional.</param>
     /// <returns>A Task representing the asynchronous operation.</returns>
-    public async Task SendImplementEmbed(IGuild guild, IUser user, ulong suggestion, ITextChannel? channel = null,
+    public async Task SendImplementEmbed(SocketGuild guild, IUser user, ulong suggestion, Channel? channel = null,
         string? reason = null)
     {
         await SendStatusEmbed(guild, client, user, suggestion, SuggestState.Implemented, channel, reason);
@@ -906,14 +904,14 @@ public class SuggestionsService : INService
     /// <param name="channel">The channel where the acceptance message will be sent.</param>
     /// <param name="reason">The reason for acceptance. Optional.</param>
     /// <returns>A Task representing the asynchronous operation.</returns>
-    public async Task SendAcceptEmbed(IGuild guild, IUser user, ulong suggestion, ITextChannel? channel = null,
+    public async Task SendAcceptEmbed(SocketGuild guild, IUser user, ulong suggestion, Channel? channel = null,
         string? reason = null)
     {
         await SendStatusEmbed(guild, client, user, suggestion, SuggestState.Accepted, channel, reason);
     }
 
-    private async Task SendStatusEmbed(IGuild guild, DiscordShardedClient client, IUser user, ulong suggestionId,
-        SuggestState state, ITextChannel? channel = null, string? reason = null)
+    private async Task SendStatusEmbed(SocketGuild guild, FluxerClient client, IUser user, ulong suggestionId,
+        SuggestState state, Channel? channel = null, string? reason = null)
     {
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         var suggest = (await Suggestions(guild.Id, suggestionId))?.FirstOrDefault();
@@ -934,7 +932,7 @@ public class SuggestionsService : INService
         await HandleStatusChannel(guild, client, suggest, embed, state);
     }
 
-    private async Task<StatusConfig> GetStatusConfig(IGuild guild, SuggestState state)
+    private async Task<StatusConfig> GetStatusConfig(SocketGuild guild, SuggestState state)
     {
         var message = state switch
         {
@@ -966,7 +964,7 @@ public class SuggestionsService : INService
         return new StatusConfig(message, archive, channelId);
     }
 
-    private async Task<string> GetSuggestionContent(IGuild guild, Suggestion suggest)
+    private async Task<string> GetSuggestionContent(SocketGuild guild, Suggestion suggest)
     {
         if (suggest.Suggestion1 != null)
             return suggest.Suggestion1;
@@ -976,7 +974,7 @@ public class SuggestionsService : INService
         return message.Embeds.FirstOrDefault()?.Description ?? "No content found";
     }
 
-    private async Task<Embed> CreateStatusEmbed(IGuild guild, IUser user, Suggestion suggest, SuggestState state,
+    private async Task<EmbedRequest> CreateStatusEmbed(SocketGuild guild, IUser user, Suggestion suggest, SuggestState state,
         string reason, StatusConfig statusConfig)
     {
         var suggestUser = await guild.GetUserAsync(suggest.UserId);
@@ -1019,7 +1017,7 @@ public class SuggestionsService : INService
             : new EmbedBuilder().WithDescription(content).Build();
     }
 
-    private async Task UpdateSuggestionMessage(IGuild guild, Suggestion suggest, Embed embed,
+    private async Task UpdateSuggestionMessage(SocketGuild guild, Suggestion suggest, EmbedRequest embed,
         StatusConfig statusConfig)
     {
         var chan = await guild.GetTextChannelAsync(await GetSuggestionChannel(guild.Id));
@@ -1033,7 +1031,7 @@ public class SuggestionsService : INService
             await ArchiveSuggestionThread(guild, suggest);
         }
 
-        if (await chan.GetMessageAsync(suggest.MessageId) is IUserMessage message)
+        if (await chan.GetMessageAsync(suggest.MessageId) is Message message)
         {
             await message.ModifyAsync(x =>
             {
@@ -1044,15 +1042,15 @@ public class SuggestionsService : INService
         }
         else
         {
-            var newMessage = await chan.SendMessageAsync(embed: embed);
+            var newMessage = await chan.SendAsync(embed: embed);
             suggest.MessageId = newMessage.Id;
             await using var dbContext = await dbFactory.CreateConnectionAsync();
             await dbContext.UpdateAsync(suggest);
         }
     }
 
-    private async Task NotifyUser(IGuild guild, IUser moderator, Suggestion suggest, SuggestState state,
-        string? reason, ITextChannel? channel)
+    private async Task NotifyUser(SocketGuild guild, IUser moderator, Suggestion suggest, SuggestState state,
+        string? reason, Channel? channel)
     {
         var suggestUser = await guild.GetUserAsync(suggest.UserId);
         var embed = new EmbedBuilder()
@@ -1066,7 +1064,7 @@ public class SuggestionsService : INService
 
         try
         {
-            await suggestUser.SendMessageAsync(embed: embed);
+            await suggestUser.SendAsync(embed: embed);
             await SendConfirmationMessage(channel,
                 $"Suggestion set as {state.ToString().ToLower()} and the user has been DMed.");
         }
@@ -1077,8 +1075,8 @@ public class SuggestionsService : INService
         }
     }
 
-    private async Task HandleStatusChannel(IGuild guild, DiscordShardedClient client, Suggestion suggest,
-        Embed embed, SuggestState state)
+    private async Task HandleStatusChannel(SocketGuild guild, FluxerClient client, Suggestion suggest,
+        EmbedRequest embed, SuggestState state)
     {
         var statusConfig = await GetStatusConfig(guild, state);
         if (statusConfig.ChannelId != 0)
@@ -1088,13 +1086,13 @@ public class SuggestionsService : INService
                 .EmbedLinks)
             {
                 await DeletePreviousStatusMessage(guild, suggest);
-                var newStatusMessage = await statusChannel.SendMessageAsync(embed: embed);
+                var newStatusMessage = await statusChannel.SendAsync(embed: embed);
                 await UpdateStateMessageId(suggest, newStatusMessage.Id);
             }
         }
     }
 
-    private async Task DeletePreviousStatusMessage(IGuild guild, Suggestion suggest)
+    private async Task DeletePreviousStatusMessage(SocketGuild guild, Suggestion suggest)
     {
         var (messageId, messageChannel) = await GetRepostedMessageAndChannel(suggest, guild);
         if (messageId != 0)
@@ -1111,7 +1109,7 @@ public class SuggestionsService : INService
         }
     }
 
-    private async Task ArchiveSuggestionThread(IGuild guild, Suggestion suggest)
+    private async Task ArchiveSuggestionThread(SocketGuild guild, Suggestion suggest)
     {
         var threadChannel = await guild.GetThreadChannelAsync(await GetThreadByMessage(suggest.MessageId));
         if (threadChannel != null)
@@ -1120,13 +1118,13 @@ public class SuggestionsService : INService
         }
     }
 
-    private async Task SendErrorMessage(ITextChannel? channel, string message)
+    private async Task SendErrorMessage(Channel? channel, string message)
     {
         if (channel != null)
             await channel.SendErrorAsync(message, config);
     }
 
-    private async Task SendConfirmationMessage(ITextChannel? channel, string message)
+    private async Task SendConfirmationMessage(Channel? channel, string message)
     {
         if (channel != null)
             await channel.SendConfirmAsync(message);
@@ -1167,11 +1165,11 @@ public class SuggestionsService : INService
     /// <param name="channel">The channel where the suggestion submission confirmation will be sent.</param>
     /// <returns>A Task representing the asynchronous operation.</returns>
     public async Task SendSuggestion(
-        IGuild guild,
-        IGuildUser user,
-        DiscordShardedClient client,
+        SocketGuild guild,
+        SocketGuildMember user,
+        FluxerClient client,
         string suggestion,
-        ITextChannel channel)
+        Channel channel)
     {
         if (await GetSuggestionChannel(guild.Id) == 0)
         {
@@ -1188,10 +1186,10 @@ public class SuggestionsService : INService
             .ConfigureAwait(false);
         var sugnum1 = await GetSNum(guild.Id);
         var customMessage = await GetSuggestionMessage(guild) is not ("-" or "");
-        IUserMessage posted;
+        Message posted;
         if (!customMessage)
         {
-            posted = await suggestionChannel.SendMessageAsync(
+            posted = await suggestionChannel.SendAsync(
                 embed: new EmbedBuilder().WithAuthor(user)
                     .WithTitle(strings.SuggestionNumber(channel.Guild.Id, sugnum1))
                     .WithDescription(suggestion).WithOkColor().Build()).ConfigureAwait(false);
@@ -1206,8 +1204,8 @@ public class SuggestionsService : INService
                 .WithOverride("%suggest.user.avatar%", () => user.RealAvatarUrl().ToString()).Build();
             var rendered = replacer.Replace(await GetSuggestionMessage(guild));
             posted = SmartEmbed.TryParse(rendered, guild.Id, out var embed, out var plainText)
-                ? await suggestionChannel.SendMessageAsync(plainText, embeds: embed).ConfigureAwait(false)
-                : await suggestionChannel.SendMessageAsync(rendered).ConfigureAwait(false);
+                ? await suggestionChannel.SendAsync(plainText, embeds: embed).ConfigureAwait(false)
+                : await suggestionChannel.SendAsync(rendered).ConfigureAwait(false);
         }
 
         foreach (var voteEmote in await GetVoteEmotes(guild.Id))
@@ -1221,16 +1219,16 @@ public class SuggestionsService : INService
             await channel.SendConfirmAsync(strings.SuggestionSent(guild.Id)).ConfigureAwait(false);
     }
 
-    private async Task CreateSuggestionThread(IGuild guild, IGuildUser user, IUserMessage message, ulong number)
+    private async Task CreateSuggestionThread(SocketGuild guild, SocketGuildMember user, Message message, ulong number)
     {
         var threadType = await GetThreadType(guild);
-        if (threadType is not (1 or 2) || message.Channel is not ITextChannel channel)
+        if (threadType is not (1 or 2) || message.Channel is not Channel channel)
             return;
 
         try
         {
             var name = strings.SuggestionThreadName(guild.Id, number);
-            IThreadChannel thread;
+            Channel thread;
             if (threadType == 1)
             {
                 thread = await channel.CreateThreadAsync(name, ThreadType.PublicThread,
@@ -1262,7 +1260,7 @@ public class SuggestionsService : INService
     /// <param name="suggestion">The content of the suggestion.</param>
     /// <returns>A Task representing the asynchronous operation to save the suggestion.</returns>
     public async Task Suggest(
-        IGuild guild,
+        SocketGuild guild,
         ulong suggestId,
         ulong messageId,
         ulong userId,

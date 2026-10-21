@@ -1,6 +1,7 @@
-﻿using System.Net;
+﻿using System.Threading.Channels;
+using Channel = Fluxer.Net.Channel;
+using System.Net;
 using DataModel;
-using Discord.Net;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Modules.RoleStates.Services;
@@ -15,7 +16,7 @@ public sealed class AutoAssignRoleService : INService
     /// <summary>
     ///     A queue of users to assign roles to.
     /// </summary>
-    private readonly Channel<IGuildUser> assignQueue = Channel.CreateBounded<IGuildUser>(
+    private readonly Channel<SocketGuildMember> assignQueue = System.Threading.Channels.Channel.CreateBounded<SocketGuildMember>(
         new BoundedChannelOptions(int.MaxValue)
         {
             FullMode = BoundedChannelFullMode.DropOldest, SingleReader = true, SingleWriter = false
@@ -76,7 +77,7 @@ public sealed class AutoAssignRoleService : INService
     ///     otherwise the member set.
     /// </summary>
     /// <param name="user">The user who joined or passed screening.</param>
-    private async Task AssignAsync(IGuildUser user)
+    private async Task AssignAsync(SocketGuildMember user)
     {
         if (await roleStatesService.ShouldSkipAutoAssignRoles(user.Guild.Id) &&
             await roleStatesService.UserHasRoleState(user.Guild.Id, user.Id))
@@ -108,7 +109,7 @@ public sealed class AutoAssignRoleService : INService
     /// <param name="user">The user to add roles to.</param>
     /// <param name="roleIds">The configured role IDs.</param>
     /// <param name="botFeature">True for the bot role set, false for the member role set.</param>
-    private async Task AddRolesAsync(IGuildUser user, IEnumerable<ulong> roleIds, bool botFeature)
+    private async Task AddRolesAsync(SocketGuildMember user, IEnumerable<ulong> roleIds, bool botFeature)
     {
         var featureName = botFeature ? "Auto assign bot role" : "Auto assign role";
         var roles = roleIds.Select(id => user.Guild.GetRole(id)).Where(x => x is not null).ToList();
@@ -139,7 +140,7 @@ public sealed class AutoAssignRoleService : INService
             await user.AddRolesAsync(roles).ConfigureAwait(false);
             await Task.Delay(250).ConfigureAwait(false);
         }
-        catch (HttpException ex) when (ex.HttpCode == HttpStatusCode.Forbidden)
+        catch (FluxerApiException ex) when (ex.HttpCode == HttpStatusCode.Forbidden)
         {
             logger.LogWarning(
                 "Disabled '{Feature}' on {GuildName} [{GuildId}] because I can't manage roles there: {Reason}",
@@ -163,7 +164,7 @@ public sealed class AutoAssignRoleService : INService
     /// </summary>
     /// <param name="args">The cached user.</param>
     /// <param name="arsg2">The updated user.</param>
-    private async Task OnClientOnGuildMemberUpdated(Cacheable<SocketGuildUser, ulong> args, SocketGuildUser arsg2)
+    private async Task OnClientOnGuildMemberUpdated(Cacheable<SocketGuildMember> args, SocketGuildMember arsg2)
     {
         if (arsg2.IsBot)
             return;
@@ -204,7 +205,7 @@ public sealed class AutoAssignRoleService : INService
     /// </summary>
     /// <param name="user">The user that joined.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    private async Task OnClientOnUserJoined(IGuildUser user)
+    private async Task OnClientOnUserJoined(SocketGuildMember user)
     {
         // If the user is pending, return
         if (user.IsPending.HasValue && user.IsPending.Value)

@@ -12,7 +12,7 @@ using Mewdeko.Modules.Utility.Services;
 using Mewdeko.Services.Analytics;
 using Mewdeko.Services.Impl;
 using Mewdeko.Services.Strings;
-using Embed = Mewdeko.Common.Embed;
+using Embed = Mewdeko.Common.EmbedData;
 using SelectMenuOption = DataModel.SelectMenuOption;
 
 namespace Mewdeko.Modules.Tickets.Services;
@@ -31,7 +31,7 @@ public class TicketService : INService
     private static readonly TimeSpan TemporaryMessageLifetime = TimeSpan.FromSeconds(15);
     private readonly ConcurrentDictionary<(ulong GuildId, ulong UserId), byte> openingTickets = new();
     private readonly ChatLogService chatLogService;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly BotCredentials credentials;
     private readonly IDataConnectionFactory dbFactory;
@@ -54,7 +54,7 @@ public class TicketService : INService
     /// <param name="collector">The analytics collector.</param>
     public TicketService(
         IDataConnectionFactory dbFactory,
-        DiscordShardedClient client,
+        FluxerClient client,
         EventHandler eventHandler,
         GeneratedBotStrings strings,
         ILogger<TicketService> logger,
@@ -97,7 +97,7 @@ public class TicketService : INService
     /// <param name="color">Default color if not using custom JSON</param>
     /// <returns>The created ticket panel</returns>
     public async Task<TicketPanel> CreatePanelAsync(
-        ITextChannel channel,
+        Channel channel,
         string? embedJson = null,
         string? title = null,
         string? description = null,
@@ -127,7 +127,7 @@ public class TicketService : INService
 
         // Create and send panel message
         SmartEmbed.TryParse(finalJson, channel.Guild.Id, out var embeds, out var plainText);
-        var message = await channel.SendMessageAsync(plainText, embeds: embeds);
+        var message = await channel.SendAsync(plainText, embeds: embeds);
 
 
         // Create panel
@@ -174,7 +174,7 @@ public class TicketService : INService
     /// </summary>
     /// <param name="channel">The channel parameter.</param>
     /// <param name="embedJson">The embedjson string.</param>
-    public async Task PreviewPanelAsync(ITextChannel channel, string embedJson)
+    public async Task PreviewPanelAsync(Channel channel, string embedJson)
     {
         try
         {
@@ -186,11 +186,11 @@ public class TicketService : INService
 
             if (SmartEmbed.TryParse(content, channel.Guild.Id, out var embedData, out var plainText))
             {
-                await channel.SendMessageAsync(plainText, embeds: embedData);
+                await channel.SendAsync(plainText, embeds: embedData);
             }
             else
             {
-                await channel.SendMessageAsync(content);
+                await channel.SendAsync(content);
             }
         }
         catch (Exception ex)
@@ -504,7 +504,7 @@ public class TicketService : INService
     /// <param name="force">Whether to force delete even if there are tickets referencing the panel's buttons.</param>
     /// <returns>A tuple containing success status and any error information.</returns>
     public async Task<(bool success, string error, List<int> activeTickets, List<int> deletedTickets)> DeletePanelAsync(
-        ulong panelId, IGuild guild, bool force = false)
+        ulong panelId, SocketGuild guild, bool force = false)
     {
         try
         {
@@ -684,7 +684,7 @@ public class TicketService : INService
     /// <param name="moderator">The moderator performing the unclaim action.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the ticket is not claimed.</exception>
-    public async Task UnclaimTicketAsync(Ticket ticket, IGuildUser moderator)
+    public async Task UnclaimTicketAsync(Ticket ticket, SocketGuildMember moderator)
     {
         if (!ticket.ClaimedBy.HasValue)
             throw new InvalidOperationException("Ticket is not claimed");
@@ -696,7 +696,7 @@ public class TicketService : INService
         ticket.LastActivityAt = DateTime.UtcNow;
         await ctx.UpdateAsync(ticket);
 
-        if (await moderator.Guild.GetChannelAsync(ticket.ChannelId) is ITextChannel channel)
+        if (await moderator.Guild.GetChannelAsync(ticket.ChannelId) is Channel channel)
         {
             var embed = new EmbedBuilder()
                 .WithTitle(strings.TicketUnclaimed(moderator.Guild.Id))
@@ -704,7 +704,7 @@ public class TicketService : INService
                 .WithColor(Color.Orange)
                 .Build();
 
-            await channel.SendMessageAsync(embed: embed);
+            await channel.SendAsync(embed: embed);
 
             // Notify previous claimer if enabled
             var settings = await ctx.GuildTicketSettings.FirstOrDefaultAsync(s => s.GuildId == moderator.Guild.Id);
@@ -721,7 +721,7 @@ public class TicketService : INService
                             .WithColor(Color.Orange)
                             .Build();
 
-                        await previousUser.SendMessageAsync(embed: dmEmbed);
+                        await previousUser.SendAsync(embed: dmEmbed);
                     }
                 }
                 catch (Exception ex)
@@ -765,11 +765,11 @@ public class TicketService : INService
         });
     }
 
-    private async Task SendDefaultOpenMessage(ITextChannel channel, Ticket ticket)
+    private async Task SendDefaultOpenMessage(Channel channel, Ticket ticket)
     {
         var defaultMessage = GetTicketOpenMessage(ticket);
         SmartEmbed.TryParse(defaultMessage, channel.GuildId, out var embeds, out var plainText);
-        var message = await channel.SendMessageAsync(plainText, embeds: embeds);
+        var message = await channel.SendAsync(plainText, embeds: embeds);
         await AddTicketControlsAsync(message);
     }
 
@@ -841,7 +841,7 @@ public class TicketService : INService
     /// <returns>The created ticket.</returns>
     /// <exception cref="InvalidOperationException">Thrown when ticket creation fails due to limits or permissions.</exception>
     public async Task<Ticket?> CreateTicketAsync(
-        IGuild guild,
+        SocketGuild guild,
         IUser creator,
         PanelButton? button = null,
         SelectMenuOption? option = null)
@@ -879,7 +879,7 @@ public class TicketService : INService
             .Replace("{username}", creator.Username.ToLower())
             .Replace("{id}", (totalUserTickets + 1).ToString());
 
-        ITextChannel channel;
+        Channel channel;
         try
         {
             // Overwrites go in with the create call so the channel is never briefly visible to everyone and the
@@ -1010,7 +1010,7 @@ public class TicketService : INService
                         .WithCurrentTimestamp()
                         .Build();
 
-                    await logChannel.SendMessageAsync(embed: logEmbed);
+                    await logChannel.SendAsync(embed: logEmbed);
                 }
             }
             catch (Exception ex)
@@ -1036,8 +1036,8 @@ public class TicketService : INService
     ///     Sends a panel's own opening message in a new ticket.
     /// </summary>
     /// <returns>False when the message has nothing Discord would show, so the default should go instead.</returns>
-    private async Task<bool> SendCustomOpenMessageAsync(string openMessageJson, ITextChannel channel, IUser creator,
-        IGuild guild, Ticket ticket, Dictionary<string, string>? modalResponses)
+    private async Task<bool> SendCustomOpenMessageAsync(string openMessageJson, Channel channel, IUser creator,
+        SocketGuild guild, Ticket ticket, Dictionary<string, string>? modalResponses)
     {
         var replacer = new ReplacementBuilder()
             .WithDefault(creator, channel, guild as SocketGuild, client)
@@ -1060,14 +1060,14 @@ public class TicketService : INService
 
         if (success && (embeds is { Length: > 0 } || !string.IsNullOrWhiteSpace(plainText)))
         {
-            var message = await channel.SendMessageAsync(plainText, embeds: embeds);
+            var message = await channel.SendAsync(plainText, embeds: embeds);
             await AddTicketControlsAsync(message);
             return true;
         }
 
         if (!success && !rendered.TrimStart().StartsWith('{') && !string.IsNullOrWhiteSpace(rendered))
         {
-            var message = await channel.SendMessageAsync(rendered);
+            var message = await channel.SendAsync(rendered);
             await AddTicketControlsAsync(message);
             return true;
         }
@@ -1078,7 +1078,7 @@ public class TicketService : INService
     /// <summary>
     ///     Sends notifications about a new ticket to relevant staff members.
     /// </summary>
-    private async Task SendTicketNotificationsAsync(Ticket ticket, IUser creator, IGuild guild,
+    private async Task SendTicketNotificationsAsync(Ticket ticket, IUser creator, SocketGuild guild,
         GuildTicketSetting settings)
     {
         try
@@ -1095,7 +1095,7 @@ public class TicketService : INService
                 var mentions = string.Join(" ", allRoles.Select(r => $"<@&{r}>"));
                 if (!string.IsNullOrEmpty(mentions))
                 {
-                    await channel.SendMessageAsync(strings.NewTicketRequiresAttention(guild.Id, mentions));
+                    await channel.SendAsync(strings.NewTicketRequiresAttention(guild.Id, mentions));
                 }
             }
 
@@ -1120,7 +1120,7 @@ public class TicketService : INService
                                 .WithColor(Color.Blue)
                                 .Build();
 
-                            await member.SendMessageAsync(embed: dmEmbed);
+                            await member.SendAsync(embed: dmEmbed);
                         }
                         catch (Exception ex)
                         {
@@ -1144,7 +1144,7 @@ public class TicketService : INService
     /// <param name="author">The user creating the note</param>
     /// <param name="content">The content of the note</param>
     /// <returns>The created ticket note</returns>
-    public async Task<TicketNote> AddNoteAsync(Ticket ticket, IGuildUser author, string content)
+    public async Task<TicketNote> AddNoteAsync(Ticket ticket, SocketGuildMember author, string content)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
 
@@ -1175,10 +1175,10 @@ public class TicketService : INService
     /// <param name="ticketsToLink">Optional tickets to link to this case</param>
     /// <returns>The created ticket case</returns>
     public async Task<TicketCase> CreateCaseAsync(
-        IGuild guild,
+        SocketGuild guild,
         string title,
         string description,
-        IGuildUser creator,
+        SocketGuildMember creator,
         IEnumerable<Ticket> ticketsToLink = null)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
@@ -1230,9 +1230,9 @@ public class TicketService : INService
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
 
-        IGuild guild = client.GetGuild(ticket.GuildId);
+        SocketGuild guild = client.GetGuild(ticket.GuildId);
 
-        if (await guild.GetChannelAsync(ticket.ChannelId) is ITextChannel channel)
+        if (await guild.GetChannelAsync(ticket.ChannelId) is Channel channel)
         {
             try
             {
@@ -1296,7 +1296,7 @@ public class TicketService : INService
     /// <param name="guild">The guild containing the ticket</param>
     /// <param name="channel">The ticket channel</param>
     /// <param name="ticket">The ticket being archived</param>
-    private async Task HandleArchiveCleanupAsync(IGuild guild, ITextChannel channel, Ticket ticket)
+    private async Task HandleArchiveCleanupAsync(SocketGuild guild, Channel channel, Ticket ticket)
     {
         try
         {
@@ -1383,7 +1383,7 @@ public class TicketService : INService
         }
 
         var used = new HashSet<string>();
-        var emotes = new IEmote?[pending.Count];
+        var emotes = new Emoji?[pending.Count];
         for (var i = 0; i < pending.Count; i++)
         {
             var configured = ParseEmote(pending[i].Emoji);
@@ -1397,10 +1397,10 @@ public class TicketService : INService
             if (emotes[i] != null)
                 continue;
 
-            while (!used.Add(EmoteKey(new Emoji(NumberEmojis.At(next)))))
+            while (!used.Add(EmoteKey(Emoji.FromUnicode(NumberEmojis.At(next)))))
                 next++;
 
-            emotes[i] = new Emoji(NumberEmojis.At(next++));
+            emotes[i] = Emoji.FromUnicode(NumberEmojis.At(next++));
         }
 
         return pending
@@ -1408,19 +1408,19 @@ public class TicketService : INService
             .ToList();
     }
 
-    private static IEmote? ParseEmote(string? emoji)
+    private static Emoji? ParseEmote(string? emoji)
     {
         if (string.IsNullOrWhiteSpace(emoji))
             return null;
 
         var text = emoji.Trim();
-        if (Emote.TryParse(text, out var custom))
+        if (Emoji.TryParse(text, out var custom))
             return custom;
 
         return Emoji.TryParse(text, out var unicode) ? unicode : null;
     }
 
-    private static string EmoteKey(IEmote emote)
+    private static string EmoteKey(Emoji emote)
     {
         return emote.ToString()!.Replace("️", string.Empty);
     }
@@ -1428,10 +1428,10 @@ public class TicketService : INService
     /// <summary>
     ///     Builds a panel's message: its own embeds followed by one embed listing the reaction for each ticket type.
     /// </summary>
-    private Discord.Embed[] BuildPanelEmbeds(TicketPanel panel, List<PanelEntry> entries, out string? plainText)
+    private EmbedRequest[] BuildPanelEmbeds(TicketPanel panel, List<PanelEntry> entries, out string? plainText)
     {
         SmartEmbed.TryParse(panel.EmbedJson, panel.GuildId, out var parsed, out plainText);
-        var embeds = new List<Discord.Embed>(parsed ?? []);
+        var embeds = new List<EmbedRequest>(parsed ?? []);
         if (entries.Count == 0 || embeds.Count >= 10)
             return [.. embeds];
 
@@ -1448,7 +1448,7 @@ public class TicketService : INService
             }
 
             group = entry.Group;
-            legend.Append($"{entry.Emote} **{entry.Label}**");
+            legend.Append($"{entry.Emoji} **{entry.Label}**");
             if (!string.IsNullOrWhiteSpace(entry.Description))
                 legend.Append($" - {entry.Description}");
 
@@ -1464,17 +1464,17 @@ public class TicketService : INService
         return [.. embeds];
     }
 
-    private async Task AddPanelReactionsAsync(IUserMessage message, List<PanelEntry> entries)
+    private async Task AddPanelReactionsAsync(Message message, List<PanelEntry> entries)
     {
         foreach (var entry in entries)
         {
             try
             {
-                await message.AddReactionAsync(entry.Emote);
+                await message.AddReactionAsync(entry.Emoji);
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Could not add the panel reaction {Emote}", entry.Emote);
+                logger.LogWarning(ex, "Could not add the panel reaction {Emoji}", entry.Emoji);
             }
         }
     }
@@ -1485,11 +1485,11 @@ public class TicketService : INService
     /// <param name="panel">The panel to send.</param>
     /// <param name="channel">The channel to send it to.</param>
     /// <returns>The sent message.</returns>
-    private async Task<IUserMessage> PostPanelAsync(TicketPanel panel, ITextChannel channel)
+    private async Task<Message> PostPanelAsync(TicketPanel panel, Channel channel)
     {
         var entries = await LoadPanelEntriesAsync(panel.Id);
         var embeds = BuildPanelEmbeds(panel, entries, out var plainText);
-        var message = await channel.SendMessageAsync(plainText, embeds: embeds);
+        var message = await channel.SendAsync(plainText, embeds: embeds);
         await AddPanelReactionsAsync(message, entries);
         return message;
     }
@@ -1503,14 +1503,14 @@ public class TicketService : INService
     {
         try
         {
-            IGuild guild = client.GetGuild(panel.GuildId);
+            SocketGuild guild = client.GetGuild(panel.GuildId);
             if (guild == null)
                 return false;
 
-            if (await guild.GetChannelAsync(panel.ChannelId) is not ITextChannel channel)
+            if (await guild.GetChannelAsync(panel.ChannelId) is not Channel channel)
                 return false;
 
-            if (await channel.GetMessageAsync(panel.MessageId) is not IUserMessage message)
+            if (await channel.GetMessageAsync(panel.MessageId) is not Message message)
                 return false;
 
             var entries = await LoadPanelEntriesAsync(panel.Id);
@@ -1540,20 +1540,20 @@ public class TicketService : INService
         }
     }
 
-    private async Task HandleReactionAdded(Cacheable<IUserMessage, ulong> message,
-        Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
+    private async Task HandleReactionAdded(Cacheable<Message> message,
+        Cacheable<Channel> channel, SocketReaction reaction)
     {
         try
         {
             if (reaction.UserId == client.CurrentUser.Id || reaction.User.IsSpecified && reaction.User.Value.IsBot)
                 return;
 
-            if (await channel.GetOrDownloadAsync() is not ITextChannel textChannel)
+            if (await channel.GetOrDownloadAsync() is not Channel textChannel)
                 return;
 
             await using var ctx = await dbFactory.CreateConnectionAsync();
             var panel = await ctx.TicketPanels.FirstOrDefaultAsync(p => p.MessageId == message.Id);
-            var key = EmoteKey(reaction.Emote);
+            var key = EmoteKey(reaction.Emoji);
             if (panel == null)
             {
                 if (key != ClaimEmoji && key != CloseEmoji)
@@ -1563,7 +1563,7 @@ public class TicketService : INService
                     return;
             }
 
-            var member = reaction.User.IsSpecified && reaction.User.Value is IGuildUser cached
+            var member = reaction.User.IsSpecified && reaction.User.Value is SocketGuildMember cached
                 ? cached
                 : await textChannel.Guild.GetUserAsync(reaction.UserId);
             if (member == null || member.IsBot || await message.GetOrDownloadAsync() is not { } userMessage)
@@ -1577,14 +1577,14 @@ public class TicketService : INService
 
             try
             {
-                await userMessage.RemoveReactionAsync(reaction.Emote, member);
+                await userMessage.RemoveReactionAsync(reaction.Emoji, member);
             }
             catch (Exception ex)
             {
                 logger.LogDebug(ex, "Could not clear a panel reaction in {ChannelId}", textChannel.Id);
             }
 
-            var entry = (await LoadPanelEntriesAsync(panel.Id)).FirstOrDefault(e => EmoteKey(e.Emote) == key);
+            var entry = (await LoadPanelEntriesAsync(panel.Id)).FirstOrDefault(e => EmoteKey(e.Emoji) == key);
             if (entry != null)
                 _ = Task.Run(() => OpenTicketFromPanelAsync(textChannel, member, entry));
         }
@@ -1594,16 +1594,16 @@ public class TicketService : INService
         }
     }
 
-    private async Task HandleTicketControlAsync(IUserMessage message, ITextChannel channel, IGuildUser member,
+    private async Task HandleTicketControlAsync(Message message, Channel channel, SocketGuildMember member,
         SocketReaction reaction, string key)
     {
         if (message.Author.Id != client.CurrentUser.Id ||
-            !message.Reactions.TryGetValue(reaction.Emote, out var metadata) || !metadata.IsMe)
+            !message.Reactions.TryGetValue(reaction.Emoji, out var metadata) || !metadata.IsMe)
             return;
 
         try
         {
-            await message.RemoveReactionAsync(reaction.Emote, member);
+            await message.RemoveReactionAsync(reaction.Emoji, member);
         }
         catch (Exception ex)
         {
@@ -1621,7 +1621,7 @@ public class TicketService : INService
         }
     }
 
-    private async Task OpenTicketFromPanelAsync(ITextChannel panelChannel, IGuildUser member, PanelEntry entry)
+    private async Task OpenTicketFromPanelAsync(Channel panelChannel, SocketGuildMember member, PanelEntry entry)
     {
         var guild = panelChannel.Guild;
         if (!openingTickets.TryAdd((guild.Id, member.Id), 0))
@@ -1651,11 +1651,11 @@ public class TicketService : INService
         }
     }
 
-    private async Task SendTemporaryAsync(ITextChannel channel, IUser user, string text, bool isError)
+    private async Task SendTemporaryAsync(Channel channel, IUser user, string text, bool isError)
     {
         try
         {
-            var message = await channel.SendMessageAsync(user.Mention, embed: new EmbedBuilder()
+            var message = await channel.SendAsync(user.Mention, embed: new EmbedBuilder()
                 .WithDescription(text)
                 .WithColor(isError ? Color.Red : Mewdeko.OkColor)
                 .Build());
@@ -1669,12 +1669,12 @@ public class TicketService : INService
         }
     }
 
-    private async Task AddTicketControlsAsync(IUserMessage message)
+    private async Task AddTicketControlsAsync(Message message)
     {
         try
         {
-            await message.AddReactionAsync(new Emoji(ClaimEmoji));
-            await message.AddReactionAsync(new Emoji(CloseEmoji));
+            await message.AddReactionAsync(Emoji.FromUnicode(ClaimEmoji));
+            await message.AddReactionAsync(Emoji.FromUnicode(CloseEmoji));
         }
         catch (Exception ex)
         {
@@ -1683,7 +1683,7 @@ public class TicketService : INService
     }
 
     private sealed record PanelEntry(
-        IEmote Emote,
+        Emoji Emoji,
         string Label,
         string? Description,
         string? Group,
@@ -1694,14 +1694,14 @@ public class TicketService : INService
     ///     Builds the permission overwrites for a new ticket channel: everyone denied, the bot and the creator
     ///     allowed, support roles with full access and viewer roles read only.
     /// </summary>
-    private static async Task<List<Overwrite>> BuildTicketOverwritesAsync(IGuild guild, IUser creator,
+    private static async Task<List<PermissionOverwrite>> BuildTicketOverwritesAsync(SocketGuild guild, IUser creator,
         PanelButton button = null, SelectMenuOption option = null)
     {
         var supportRoles = button?.SupportRoles ?? option?.SupportRoles ?? [];
         var viewerRoles = button?.ViewerRoles ?? option?.ViewerRoles ?? [];
         var bot = await guild.GetCurrentUserAsync();
 
-        var overwrites = new List<Overwrite>
+        var overwrites = new List<PermissionOverwrite>
         {
             new(guild.EveryoneRole.Id, PermissionTarget.Role,
                 new OverwritePermissions(viewChannel: PermValue.Deny)),
@@ -1729,7 +1729,7 @@ public class TicketService : INService
             if (guild.GetRole(roleId) == null)
                 continue;
 
-            overwrites.Add(new Overwrite(roleId, PermissionTarget.Role,
+            overwrites.Add(new PermissionOverwrite(roleId, PermissionTarget.Role,
                 new OverwritePermissions(
                     viewChannel: PermValue.Allow,
                     sendMessages: PermValue.Allow,
@@ -1744,7 +1744,7 @@ public class TicketService : INService
             if (guild.GetRole(roleId) == null || supportRoles.Contains(roleId))
                 continue;
 
-            overwrites.Add(new Overwrite(roleId, PermissionTarget.Role,
+            overwrites.Add(new PermissionOverwrite(roleId, PermissionTarget.Role,
                 new OverwritePermissions(
                     viewChannel: PermValue.Allow,
                     readMessageHistory: PermValue.Allow,
@@ -1774,7 +1774,7 @@ public class TicketService : INService
                 return (false, null, null, "Panel not found in database.");
 
             // Check if the channel still exists
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             var channel = await guild.GetTextChannelAsync(panel.ChannelId);
             if (channel == null)
                 return (false, null, null, "The original channel for this panel no longer exists.");
@@ -1831,7 +1831,7 @@ public class TicketService : INService
                 .ToListAsync();
 
             var statusList = new List<PanelStatusInfo>();
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
 
             foreach (var panel in panels)
             {
@@ -1909,8 +1909,8 @@ public class TicketService : INService
     /// </summary>
     /// <param name="message">The deleted message.</param>
     /// <param name="channel">The channel where the message was deleted.</param>
-    private async Task HandleMessageDeleted(Cacheable<IMessage, ulong> message,
-        Cacheable<IMessageChannel, ulong> channel)
+    private async Task HandleMessageDeleted(Cacheable<Message> message,
+        Cacheable<Channel> channel)
     {
         if (!message.HasValue || !channel.HasValue)
             return;
@@ -1923,7 +1923,7 @@ public class TicketService : INService
         {
             try
             {
-                var targetChannel = channel.Value as ITextChannel;
+                var targetChannel = channel.Value as Channel;
                 if (targetChannel == null)
                 {
                     logger.LogWarning("Cannot recreate panel {PanelId} - channel is not a text channel", panel.Id);
@@ -1950,7 +1950,7 @@ public class TicketService : INService
                     var settings = await ctx.GuildTicketSettings.FirstOrDefaultAsync(s => s.GuildId == panel.GuildId);
                     if (settings?.LogChannelId.HasValue == true)
                     {
-                        IGuild guild = client.GetGuild(panel.GuildId);
+                        SocketGuild guild = client.GetGuild(panel.GuildId);
                         var logChannel = await guild?.GetTextChannelAsync(settings.LogChannelId.Value);
                         if (logChannel != null)
                         {
@@ -1963,7 +1963,7 @@ public class TicketService : INService
                                 .WithCurrentTimestamp()
                                 .Build();
 
-                            await logChannel.SendMessageAsync(embed: errorEmbed);
+                            await logChannel.SendAsync(embed: errorEmbed);
                         }
                     }
                 }
@@ -1981,7 +1981,7 @@ public class TicketService : INService
     /// <param name="guild">The guild containing the panel</param>
     /// <param name="menuId">The ID of the select menu to delete</param>
     /// <returns>True if the menu was successfully deleted, false otherwise</returns>
-    public async Task<bool> DeleteSelectMenuAsync(IGuild guild, int menuId)
+    public async Task<bool> DeleteSelectMenuAsync(SocketGuild guild, int menuId)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
 
@@ -2033,7 +2033,7 @@ public class TicketService : INService
     /// <param name="guild">The guild containing the panel</param>
     /// <param name="optionId">The ID of the option to delete</param>
     /// <returns>True if the option was successfully deleted, false otherwise</returns>
-    public async Task<bool> DeleteSelectOptionAsync(IGuild guild, int optionId)
+    public async Task<bool> DeleteSelectOptionAsync(SocketGuild guild, int optionId)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
 
@@ -2121,7 +2121,7 @@ public class TicketService : INService
     /// <param name="ticket">The ticket parameter.</param>
     /// <param name="priority">The priority string.</param>
     /// <param name="staff">The staff parameter.</param>
-    public async Task SetTicketPriorityAsync(Ticket ticket, string priority, IGuildUser staff)
+    public async Task SetTicketPriorityAsync(Ticket ticket, string priority, SocketGuildMember staff)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
 
@@ -2134,9 +2134,9 @@ public class TicketService : INService
         ticket.LastActivityAt = DateTime.UtcNow;
         await ctx.UpdateAsync(ticket);
 
-        IGuild guild = client.GetGuild(ticket.GuildId);
+        SocketGuild guild = client.GetGuild(ticket.GuildId);
 
-        if (await guild.GetChannelAsync(ticket.ChannelId) is ITextChannel channel)
+        if (await guild.GetChannelAsync(ticket.ChannelId) is Channel channel)
         {
             var embed = new EmbedBuilder()
                 .WithTitle(strings.TicketPriorityUpdated(guild.Id))
@@ -2144,7 +2144,7 @@ public class TicketService : INService
                 .WithColor(Color.Blue)
                 .Build();
 
-            await channel.SendMessageAsync(embed: embed);
+            await channel.SendAsync(embed: embed);
         }
     }
 
@@ -2524,7 +2524,7 @@ public class TicketService : INService
     /// <param name="user">The member opening the ticket.</param>
     /// <param name="questionsJson">The stored question configuration.</param>
     /// <returns>The answers by field key, or null when a required question went unanswered.</returns>
-    private async Task<Dictionary<string, string>?> AskTicketQuestionsAsync(ITextChannel channel, IUser user,
+    private async Task<Dictionary<string, string>?> AskTicketQuestionsAsync(Channel channel, IUser user,
         string questionsJson)
     {
         var answers = new Dictionary<string, string>();
@@ -2569,7 +2569,7 @@ public class TicketService : INService
                 .WithColor(Mewdeko.OkColor)
                 .Build();
 
-            await channel.SendMessageAsync(user.Mention, embed: question);
+            await channel.SendAsync(user.Mention, embed: question);
 
             string? answer = null;
             var answered = false;
@@ -2587,7 +2587,7 @@ public class TicketService : INService
                         answered = true;
                         break;
                     case not null when reply.Length < minLength || reply.Length > maxLength:
-                        await channel.SendMessageAsync(strings.TicketQuestionLength(guildId, minLength, maxLength));
+                        await channel.SendAsync(strings.TicketQuestionLength(guildId, minLength, maxLength));
                         break;
                     default:
                         answer = reply;
@@ -2943,7 +2943,7 @@ public class TicketService : INService
             .FirstOrDefaultAsync(o => o.SelectMenuId == menuId && o.Value == value);
     }
 
-    private async Task<string> GenerateTranscriptAsync(ITextChannel channel, Ticket ticket)
+    private async Task<string> GenerateTranscriptAsync(Channel channel, Ticket ticket)
     {
         var messages = await channel.GetMessagesAsync(5000).FlattenAsync();
         var messagesList = messages.Reverse().ToList();
@@ -2955,7 +2955,7 @@ public class TicketService : INService
         var userColorCache = new Dictionary<ulong, string>();
 
         // Helper function to get user color
-        string GetUserColor(IGuildUser user)
+        string GetUserColor(SocketGuildMember user)
         {
             if (userColorCache.TryGetValue(user.Id, out var cachedColor))
                 return cachedColor;
@@ -2976,7 +2976,7 @@ public class TicketService : INService
 
         foreach (var msg in messagesList)
         {
-            var guildUser = msg.Author as IGuildUser;
+            var guildUser = msg.Author as SocketGuildMember;
             var colorHex = guildUser != null ? GetUserColor(guildUser) : "#7289da";
 
             html.AppendLine($"""
@@ -3004,7 +3004,7 @@ public class TicketService : INService
     /// <param name="channelId">The ID of the ticket channel to close.</param>
     /// <param name="forceArchive">Force archive regardless of configuration</param>
     /// <returns>True if the ticket was successfully closed, false otherwise.</returns>
-    public async Task<bool> CloseTicket(IGuild guild, ulong channelId, bool forceArchive = false)
+    public async Task<bool> CloseTicket(SocketGuild guild, ulong channelId, bool forceArchive = false)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
         var ticket = await ctx.Tickets
@@ -3032,7 +3032,7 @@ public class TicketService : INService
                     .WithCurrentTimestamp()
                     .Build();
 
-                await channel.SendMessageAsync(embed: embed);
+                await channel.SendAsync(embed: embed);
 
                 // Generate transcript if enabled
                 if (ticket.Button?.SaveTranscript == true || ticket.SelectOption?.SaveTranscript == true)
@@ -3057,7 +3057,7 @@ public class TicketService : INService
                         .WithColor(Color.LightGrey)
                         .Build();
 
-                    await channel.SendMessageAsync(embed: archiveEmbed);
+                    await channel.SendAsync(embed: archiveEmbed);
                 }
                 else
                 {
@@ -3096,7 +3096,7 @@ public class TicketService : INService
     /// <param name="guild">The guild containing the ticket</param>
     /// <param name="channel">The ticket channel</param>
     /// <param name="ticket">The ticket being closed</param>
-    private async Task HandleChannelCleanupAsync(IGuild guild, ITextChannel channel, Ticket ticket)
+    private async Task HandleChannelCleanupAsync(SocketGuild guild, Channel channel, Ticket ticket)
     {
         try
         {
@@ -3199,7 +3199,7 @@ public class TicketService : INService
                         .WithColor(Color.Orange)
                         .Build();
 
-                    await channel.SendMessageAsync(embed: lockEmbed);
+                    await channel.SendAsync(embed: lockEmbed);
                 }
                 catch (Exception ex)
                 {
@@ -3237,7 +3237,7 @@ public class TicketService : INService
                         .WithColor(Color.Red)
                         .Build();
 
-                    await channel.SendMessageAsync(embed: deleteEmbed);
+                    await channel.SendAsync(embed: deleteEmbed);
 
                     // Schedule deletion using the new ScheduledTicketDeletions table
                     await ScheduleTicketDeletionAsync(ticket, deleteDelay);
@@ -3293,7 +3293,7 @@ public class TicketService : INService
         {
             try
             {
-                IGuild guild = client.GetGuild(deletion.GuildId);
+                SocketGuild guild = client.GetGuild(deletion.GuildId);
                 var channel = await guild?.GetChannelAsync(deletion.ChannelId);
 
                 if (channel != null)
@@ -3335,7 +3335,7 @@ public class TicketService : INService
     /// <param name="guild">The guild containing the ticket</param>
     /// <param name="channel">The ticket channel</param>
     /// <param name="ticket">The ticket being closed</param>
-    private async Task GenerateAndSaveTranscriptAsync(IGuild guild, ITextChannel channel, Ticket ticket)
+    private async Task GenerateAndSaveTranscriptAsync(SocketGuild guild, Channel channel, Ticket ticket)
     {
         try
         {
@@ -3428,7 +3428,7 @@ public class TicketService : INService
                 .WithCurrentTimestamp()
                 .Build();
 
-            await transcriptChannel.SendMessageAsync(embed: transcriptEmbed);
+            await transcriptChannel.SendAsync(embed: transcriptEmbed);
 
             logger.LogInformation("Saved transcript for ticket {TicketId} as ChatLog {ChatLogId}", ticket.Id,
                 chatLogId);
@@ -3446,7 +3446,7 @@ public class TicketService : INService
     /// <param name="channelId">The ID of the ticket channel to claim.</param>
     /// <param name="staff">The staff member claiming the ticket.</param>
     /// <returns>True if the ticket was successfully claimed, false otherwise.</returns>
-    public async Task<bool> ClaimTicket(IGuild guild, ulong channelId, IGuildUser staff)
+    public async Task<bool> ClaimTicket(SocketGuild guild, ulong channelId, SocketGuildMember staff)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
         var ticket = await ctx.Tickets
@@ -3480,7 +3480,7 @@ public class TicketService : INService
                     .WithCurrentTimestamp()
                     .Build();
 
-                await channel.SendMessageAsync(embed: embed);
+                await channel.SendAsync(embed: embed);
 
                 // Send DM notification to ticket creator if enabled (using existing EnableDmNotifications)
                 var settings = await ctx.GuildTicketSettings
@@ -3500,7 +3500,7 @@ public class TicketService : INService
                                 .WithCurrentTimestamp()
                                 .Build();
 
-                            await creator.SendMessageAsync(embed: dmEmbed);
+                            await creator.SendAsync(embed: dmEmbed);
                         }
                     }
                     catch (Exception ex)
@@ -3526,7 +3526,7 @@ public class TicketService : INService
     /// <param name="channelId">The ID of the ticket channel to unclaim.</param>
     /// <param name="staff">The staff member unclaiming the ticket.</param>
     /// <returns>True if the ticket was successfully unclaimed, false otherwise.</returns>
-    public async Task<bool> UnclaimTicket(IGuild guild, ulong channelId, IGuildUser staff)
+    public async Task<bool> UnclaimTicket(SocketGuild guild, ulong channelId, SocketGuildMember staff)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
         var ticket = await ctx.Tickets
@@ -3556,7 +3556,7 @@ public class TicketService : INService
                     .WithCurrentTimestamp()
                     .Build();
 
-                await channel.SendMessageAsync(embed: embed);
+                await channel.SendAsync(embed: embed);
 
                 // Notify previous claimer if enabled (using existing EnableDmNotifications)
                 var settings = await ctx.GuildTicketSettings
@@ -3576,7 +3576,7 @@ public class TicketService : INService
                                 .WithCurrentTimestamp()
                                 .Build();
 
-                            await previousUser.SendMessageAsync(embed: dmEmbed);
+                            await previousUser.SendAsync(embed: dmEmbed);
                         }
                     }
                     catch (Exception ex)
@@ -3602,7 +3602,7 @@ public class TicketService : INService
     /// <param name="author">The staff member adding the note</param>
     /// <param name="content">The content of the note</param>
     /// <returns>True if the note was successfully added, false otherwise</returns>
-    public async Task<bool> AddNote(ulong channelId, IGuildUser author, string content)
+    public async Task<bool> AddNote(ulong channelId, SocketGuildMember author, string content)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
 
@@ -3645,7 +3645,7 @@ public class TicketService : INService
                         .WithCurrentTimestamp()
                         .Build();
 
-                    await channel.SendMessageAsync(embed: embed);
+                    await channel.SendAsync(embed: embed);
                 }
 
                 return true;
@@ -3670,7 +3670,7 @@ public class TicketService : INService
     /// <param name="author">The staff member editing the note</param>
     /// <param name="newContent">The new content for the note</param>
     /// <returns>True if the note was successfully edited, false otherwise</returns>
-    public async Task<bool> EditNote(int noteId, IGuildUser author, string newContent)
+    public async Task<bool> EditNote(int noteId, SocketGuildMember author, string newContent)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
 
@@ -3735,7 +3735,7 @@ public class TicketService : INService
                         .WithCurrentTimestamp()
                         .Build();
 
-                    await channel.SendMessageAsync(embed: embed);
+                    await channel.SendAsync(embed: embed);
                 }
 
                 return true;
@@ -3759,7 +3759,7 @@ public class TicketService : INService
     /// <param name="noteId">The ID of the note to delete.</param>
     /// <param name="author">The staff member deleting the note.</param>
     /// <returns>True if the note was successfully deleted, false otherwise.</returns>
-    public async Task<bool> DeleteNote(int noteId, IGuildUser author)
+    public async Task<bool> DeleteNote(int noteId, SocketGuildMember author)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
         var note = await ctx.TicketNotes
@@ -3788,7 +3788,7 @@ public class TicketService : INService
                     .WithCurrentTimestamp()
                     .Build();
 
-                await channel.SendMessageAsync(embed: embed);
+                await channel.SendAsync(embed: embed);
             }
 
 
@@ -3809,7 +3809,7 @@ public class TicketService : INService
     /// <param name="name">The name or title of the case.</param>
     /// <param name="description">The description of the case.</param>
     /// <returns>The created case.</returns>
-    public async Task<TicketCase> CreateCase(IGuild guild, IGuildUser creator, string name, string description)
+    public async Task<TicketCase> CreateCase(SocketGuild guild, SocketGuildMember creator, string name, string description)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
         var ticketCase = new TicketCase
@@ -3838,7 +3838,7 @@ public class TicketService : INService
             .WithCurrentTimestamp()
             .Build();
 
-        await logChannel.SendMessageAsync(embed: embed);
+        await logChannel.SendAsync(embed: embed);
 
         return ticketCase;
     }
@@ -4200,7 +4200,7 @@ public class TicketService : INService
     /// <param name="priorityId">The ID of the priority to set.</param>
     /// <param name="staff">The staff member setting the priority.</param>
     /// <returns>True if the priority was successfully set, false otherwise.</returns>
-    public async Task<bool> SetTicketPriority(IGuild guild, ulong channelId, string priorityId, IGuildUser staff)
+    public async Task<bool> SetTicketPriority(SocketGuild guild, ulong channelId, string priorityId, SocketGuildMember staff)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
         var ticket = await ctx.Tickets
@@ -4238,7 +4238,7 @@ public class TicketService : INService
                     .WithCurrentTimestamp()
                     .Build();
 
-                await channel.SendMessageAsync(embed: embed);
+                await channel.SendAsync(embed: embed);
 
                 // Ping staff if enabled
                 if (priority.PingStaff)
@@ -4248,7 +4248,7 @@ public class TicketService : INService
                     if (supportRoles.Any())
                     {
                         var mentions = string.Join(" ", supportRoles.Select(r => $"<@&{r}>"));
-                        await channel.SendMessageAsync(
+                        await channel.SendAsync(
                             strings.TicketPriorityMention(guild.Id, mentions, priority.Name));
                     }
                 }
@@ -4350,7 +4350,7 @@ public class TicketService : INService
     /// <param name="tagIds">The IDs of the tags to add.</param>
     /// <param name="staff">The staff member adding the tags.</param>
     /// <returns>True if the tags were successfully added, false otherwise.</returns>
-    public async Task<bool> AddTicketTags(IGuild guild, ulong channelId, IEnumerable<string> tagIds, IGuildUser staff)
+    public async Task<bool> AddTicketTags(SocketGuild guild, ulong channelId, IEnumerable<string> tagIds, SocketGuildMember staff)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
         var ticket = await ctx.Tickets
@@ -4394,7 +4394,7 @@ public class TicketService : INService
                         .WithCurrentTimestamp()
                         .Build();
 
-                    await channel.SendMessageAsync(embed: embed);
+                    await channel.SendAsync(embed: embed);
                 }
             }
 
@@ -4445,8 +4445,8 @@ public class TicketService : INService
     /// <param name="tagIds">The IDs of the tags to remove.</param>
     /// <param name="staff">The staff member removing the tags.</param>
     /// <returns>True if the tags were successfully removed, false otherwise.</returns>
-    public async Task<bool> RemoveTicketTags(IGuild guild, ulong channelId, IEnumerable<string> tagIds,
-        IGuildUser staff)
+    public async Task<bool> RemoveTicketTags(SocketGuild guild, ulong channelId, IEnumerable<string> tagIds,
+        SocketGuildMember staff)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
         var ticket = await ctx.Tickets
@@ -4483,7 +4483,7 @@ public class TicketService : INService
                     .WithCurrentTimestamp()
                     .Build();
 
-                await channel.SendMessageAsync(embed: embed);
+                await channel.SendAsync(embed: embed);
             }
 
 
@@ -4503,7 +4503,7 @@ public class TicketService : INService
     /// <param name="userId">The ID of the user to blacklist.</param>
     /// <param name="reason">The optional reason for the blacklist.</param>
     /// <returns>True if the user was successfully blacklisted, false if they were already blacklisted.</returns>
-    public async Task<bool> BlacklistUser(IGuild guild, ulong userId, string reason = null)
+    public async Task<bool> BlacklistUser(SocketGuild guild, ulong userId, string reason = null)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
         var settings = await ctx.GuildTicketSettings
@@ -4542,7 +4542,7 @@ public class TicketService : INService
                         .WithCurrentTimestamp()
                         .Build();
 
-                    await logChannel.SendMessageAsync(embed: embed);
+                    await logChannel.SendAsync(embed: embed);
                 }
             }
 
@@ -4561,7 +4561,7 @@ public class TicketService : INService
     /// <param name="guild">The guild object.</param>
     /// <param name="userId">The ID of the user to unblacklist.</param>
     /// <returns>True if the user was successfully unblacklisted, false if they weren't blacklisted.</returns>
-    public async Task<bool> UnblacklistUser(IGuild guild, ulong userId)
+    public async Task<bool> UnblacklistUser(SocketGuild guild, ulong userId)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
         var settings = await ctx.GuildTicketSettings
@@ -4590,7 +4590,7 @@ public class TicketService : INService
                         .WithCurrentTimestamp()
                         .Build();
 
-                    await logChannel.SendMessageAsync(embed: embed);
+                    await logChannel.SendAsync(embed: embed);
                 }
             }
 
@@ -4634,7 +4634,7 @@ public class TicketService : INService
     /// <param name="guild">The guild containing the tickets.</param>
     /// <param name="inactiveTime">The duration of inactivity required for closure.</param>
     /// <returns>A tuple containing the number of tickets closed and failed attempts.</returns>
-    public async Task<(int closed, int failed)> BatchCloseInactiveTickets(IGuild guild, TimeSpan inactiveTime)
+    public async Task<(int closed, int failed)> BatchCloseInactiveTickets(SocketGuild guild, TimeSpan inactiveTime)
     {
         int closed = 0, failed = 0;
         await using var ctx = await dbFactory.CreateConnectionAsync();
@@ -4663,7 +4663,7 @@ public class TicketService : INService
                         .WithCurrentTimestamp()
                         .Build();
 
-                    await channel.SendMessageAsync(embed: embed);
+                    await channel.SendAsync(embed: embed);
                 }
 
                 ticket.ClosedAt = DateTime.UtcNow;
@@ -4693,14 +4693,14 @@ public class TicketService : INService
     /// <param name="sourceCategoryId">The source category ID.</param>
     /// <param name="targetCategoryId">The target category ID.</param>
     /// <returns>A tuple containing the number of tickets moved and failed attempts.</returns>
-    public async Task<(int moved, int failed)> BatchMoveTickets(IGuild guild, ulong sourceCategoryId,
+    public async Task<(int moved, int failed)> BatchMoveTickets(SocketGuild guild, ulong sourceCategoryId,
         ulong targetCategoryId)
     {
         int moved = 0, failed = 0;
         await using var ctx = await dbFactory.CreateConnectionAsync();
 
         var sourceChannels = await guild.GetTextChannelsAsync();
-        sourceChannels = (IReadOnlyCollection<ITextChannel>)sourceChannels.Where(x => x.CategoryId == sourceCategoryId);
+        sourceChannels = (IReadOnlyCollection<Channel>)sourceChannels.Where(x => x.CategoryId == sourceCategoryId);
         var targetCategory = await guild.GetCategoryChannelAsync(targetCategoryId);
 
         if (!sourceChannels.Any() || targetCategory == null)
@@ -4751,7 +4751,7 @@ public class TicketService : INService
     /// <param name="role">The role to add.</param>
     /// <param name="viewOnly">Whether the role should have view-only permissions.</param>
     /// <returns>A tuple containing the number of tickets updated and failed attempts.</returns>
-    public async Task<(int updated, int failed)> BatchAddRole(IGuild guild, IRole role, bool viewOnly = false)
+    public async Task<(int updated, int failed)> BatchAddRole(SocketGuild guild, SocketRole role, bool viewOnly = false)
     {
         int updated = 0, failed = 0;
         await using var ctx = await dbFactory.CreateConnectionAsync();
@@ -4795,7 +4795,7 @@ public class TicketService : INService
     /// <param name="fromStaffId">The ID of the staff member to transfer from.</param>
     /// <param name="toStaffId">The ID of the staff member to transfer to.</param>
     /// <returns>A tuple containing the number of tickets transferred and failed attempts.</returns>
-    public async Task<(int transferred, int failed)> BatchTransferTickets(IGuild guild, ulong fromStaffId,
+    public async Task<(int transferred, int failed)> BatchTransferTickets(SocketGuild guild, ulong fromStaffId,
         ulong toStaffId)
     {
         int transferred = 0, failed = 0;
@@ -4828,7 +4828,7 @@ public class TicketService : INService
                     .WithCurrentTimestamp()
                     .Build();
 
-                await channel.SendMessageAsync(embed: embed);
+                await channel.SendAsync(embed: embed);
                 transferred++;
             }
             catch (Exception ex)
@@ -4849,7 +4849,7 @@ public class TicketService : INService
     /// <param name="panelId">The ID of the panel to update.</param>
     /// <param name="embedJson">The new embed JSON configuration.</param>
     /// <returns>True if the panel was successfully updated, false otherwise.</returns>
-    public async Task<bool> UpdatePanelEmbedAsync(IGuild guild, ulong panelId, string embedJson)
+    public async Task<bool> UpdatePanelEmbedAsync(SocketGuild guild, ulong panelId, string embedJson)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
         var panel = await ctx.TicketPanels.FirstOrDefaultAsync(x => x.GuildId == guild.Id && x.MessageId == panelId);
@@ -4885,7 +4885,7 @@ public class TicketService : INService
     /// <param name="panelId">The ID of the panel to move.</param>
     /// <param name="newChannelId">The ID of the channel to move the panel to.</param>
     /// <returns>True if the panel was successfully moved, false otherwise.</returns>
-    public async Task<bool> MovePanelAsync(IGuild guild, ulong panelId, ulong newChannelId)
+    public async Task<bool> MovePanelAsync(SocketGuild guild, ulong panelId, ulong newChannelId)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
         var panel = await ctx.TicketPanels.FirstOrDefaultAsync(p => p.MessageId == panelId);
@@ -4940,7 +4940,7 @@ public class TicketService : INService
     /// <param name="panelId">The ID of the panel to duplicate</param>
     /// <param name="newChannelId">The ID of the channel to create the duplicate in</param>
     /// <returns>The newly created panel, or null if duplication failed</returns>
-    public async Task<TicketPanel?> DuplicatePanelAsync(IGuild guild, ulong panelId, ulong newChannelId)
+    public async Task<TicketPanel?> DuplicatePanelAsync(SocketGuild guild, ulong panelId, ulong newChannelId)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
 
@@ -5094,7 +5094,7 @@ public class TicketService : INService
     /// <param name="panelId">The ID of the panel</param>
     /// <param name="buttonOrder">List of button IDs in the desired order</param>
     /// <returns>True if the buttons were successfully reordered, false otherwise</returns>
-    public async Task<bool> ReorderPanelButtonsAsync(IGuild guild, ulong panelId, List<int> buttonOrder)
+    public async Task<bool> ReorderPanelButtonsAsync(SocketGuild guild, ulong panelId, List<int> buttonOrder)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
 
@@ -5192,7 +5192,7 @@ public class TicketService : INService
     /// <param name="buttonId">The ID of the button to update.</param>
     /// <param name="responseTime">The new required response time.</param>
     /// <returns>True if the response time was successfully updated, false otherwise.</returns>
-    public async Task<bool> UpdateRequiredResponseTimeAsync(IGuild guild, int buttonId, TimeSpan? responseTime)
+    public async Task<bool> UpdateRequiredResponseTimeAsync(SocketGuild guild, int buttonId, TimeSpan? responseTime)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
         var button = await ctx.PanelButtons
@@ -5221,7 +5221,7 @@ public class TicketService : INService
                         .WithCurrentTimestamp()
                         .Build();
 
-                    await channel.SendMessageAsync(
+                    await channel.SendAsync(
                         string.Join(" ", button.SupportRoles.Select(r => $"<@&{r}>")),
                         embed: embed);
                 }
@@ -5258,7 +5258,7 @@ public class TicketService : INService
     /// <param name="buttonId">The ID of the button to update.</param>
     /// <param name="settings">Dictionary of setting names and their new values.</param>
     /// <returns>True if all settings were successfully updated, false if any failed.</returns>
-    public async Task<bool> UpdateButtonSettingsAsync(IGuild guild, int buttonId, Dictionary<string, object> settings)
+    public async Task<bool> UpdateButtonSettingsAsync(SocketGuild guild, int buttonId, Dictionary<string, object> settings)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
         var button = await ctx.PanelButtons
@@ -5385,7 +5385,7 @@ public class TicketService : INService
     /// <param name="optionId">The ID of the option to update.</param>
     /// <param name="settings">Dictionary of setting names and their new values.</param>
     /// <returns>True if all settings were successfully updated, false if any failed.</returns>
-    public async Task<bool> UpdateSelectOptionSettingsAsync(IGuild guild, int optionId,
+    public async Task<bool> UpdateSelectOptionSettingsAsync(SocketGuild guild, int optionId,
         Dictionary<string, object> settings)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
@@ -5516,7 +5516,7 @@ public class TicketService : INService
     /// <param name="guild">The guild containing the panel</param>
     /// <param name="buttonId">The ID of the button to delete</param>
     /// <returns>True if the button was successfully deleted, false otherwise</returns>
-    public async Task<bool> DeleteButtonAsync(IGuild guild, int buttonId)
+    public async Task<bool> DeleteButtonAsync(SocketGuild guild, int buttonId)
     {
         await using var ctx = await dbFactory.CreateConnectionAsync();
 

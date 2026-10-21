@@ -6,7 +6,6 @@ using LinqToDB.Async;
 using Mewdeko.Modules.Birthday;
 using Mewdeko.Modules.UserProfile.Common;
 using Mewdeko.Services.Strings;
-using Embed = Discord.Embed;
 
 namespace Mewdeko.Modules.UserProfile.Services;
 
@@ -341,7 +340,7 @@ public partial class UserProfileService : INService
     ///     The profile embed includes information such as pronouns, zodiac sign, birthday, and other personalization settings,
     ///     considering the privacy settings.
     /// </remarks>
-    public async Task<Embed?> GetProfileEmbed(IUser? user, IUser profileCaller)
+    public async Task<EmbedRequest?> GetProfileEmbed(IUser? user, IUser profileCaller)
     {
         var eb = new EmbedBuilder().WithTitle(Strings.ProfileForUser(0, user));
         await using var dbContext = await dbFactory.CreateConnectionAsync();

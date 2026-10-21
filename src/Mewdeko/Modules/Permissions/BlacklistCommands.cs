@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders;
 using Mewdeko.Database.Enums;
@@ -104,7 +104,7 @@ public partial class Permissions
         /// </example>
         [Cmd]
         [Aliases]
-        public Task ServerBlacklist(AddRemove action, IGuild guild, [Remainder] string? reason)
+        public Task ServerBlacklist(AddRemove action, SocketGuild guild, [Remainder] string? reason)
         {
             return Blacklist(action, guild.Id, BlacklistType.Server, reason);
         }

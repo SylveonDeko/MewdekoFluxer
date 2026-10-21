@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using DataModel;
 using LinqToDB;
 using LinqToDB.Data;
@@ -24,7 +24,7 @@ public class ActivityTrackingService : INService, IReadyExecutor, IDisposable
     /// </summary>
     private static readonly TimeSpan SweepInterval = TimeSpan.FromMinutes(5);
 
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly IDataConnectionFactory dbFactory;
     private readonly EventHandler eventHandler;
@@ -46,7 +46,7 @@ public class ActivityTrackingService : INService, IReadyExecutor, IDisposable
     /// <param name="eventHandler">The event handler.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     /// <param name="collector">The analytics collector.</param>
-    public ActivityTrackingService(DiscordShardedClient client, IDataConnectionFactory dbFactory,
+    public ActivityTrackingService(FluxerClient client, IDataConnectionFactory dbFactory,
         ServerStatsSettingsService settings, EventHandler eventHandler, ILogger<ActivityTrackingService> logger,
         IAnalyticsCollector collector)
     {
@@ -57,8 +57,8 @@ public class ActivityTrackingService : INService, IReadyExecutor, IDisposable
         this.logger = logger;
         this.collector = collector;
 
-        eventHandler.Subscribe("PresenceUpdated", "ActivityTrackingService", OnPresenceUpdated);
-        eventHandler.Subscribe("LeftGuild", "ActivityTrackingService", OnLeftGuild);
+        eventHandler.PresenceUpdated.Subscribe("ActivityTrackingService", OnPresenceUpdated);
+        eventHandler.LeftGuild.Subscribe("ActivityTrackingService", OnLeftGuild);
     }
 
     /// <inheritdoc />
@@ -84,7 +84,7 @@ public class ActivityTrackingService : INService, IReadyExecutor, IDisposable
         return Task.CompletedTask;
     }
 
-    private async Task OnPresenceUpdated(SocketUser user, SocketPresence before, SocketPresence after)
+    private async Task OnPresenceUpdated(User user, PresenceSnapshot? before, PresenceSnapshot after)
     {
         if (user.IsBot)
             return;

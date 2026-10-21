@@ -12,7 +12,7 @@ namespace Mewdeko.Controllers;
 [ApiController]
 [Route("botapi/[controller]")]
 [Authorize("ApiKeyPolicy")]
-public class ReviewsController(DiscordShardedClient client, IDataConnectionFactory dbFactory) : Controller
+public class ReviewsController(FluxerClient client, IDataConnectionFactory dbFactory) : Controller
 {
     /// <summary>
     ///     Retrieves all bot reviews from the database

@@ -7,7 +7,6 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using DataModel;
-using Discord.Net;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.ModuleBehaviors;
@@ -17,7 +16,6 @@ using Mewdeko.Services.Settings;
 using Mewdeko.Services.Strings;
 using Microsoft.Extensions.Caching.Memory;
 using ZiggyCreatures.Caching.Fusion;
-using Embed = Discord.Embed;
 
 namespace Mewdeko.Modules.Minecraft.Services;
 
@@ -34,7 +32,7 @@ namespace Mewdeko.Modules.Minecraft.Services;
 /// <param name="logger">The logger instance.</param>
 public class MinecraftService(
     IDataConnectionFactory dbFactory,
-    DiscordShardedClient client,
+    FluxerClient client,
     IMemoryCache cache,
     IFusionCache fusionCache,
     IHttpClientFactory httpFactory,
@@ -772,7 +770,7 @@ public class MinecraftService(
     /// <param name="status">The queried server status.</param>
     /// <param name="guildId">The guild ID for localization.</param>
     /// <returns>The built embed.</returns>
-    public Embed BuildStatusEmbed(MinecraftServer server, McServerStatus status, ulong guildId)
+    public EmbedRequest BuildStatusEmbed(MinecraftServer server, McServerStatus status, ulong guildId)
     {
         if (status.IsOnline)
         {
@@ -825,8 +823,8 @@ public class MinecraftService(
     /// <param name="status">The queried server status.</param>
     /// <param name="guild">The guild for context.</param>
     /// <returns>The parsed embeds and text, or null if parsing fails.</returns>
-    public (Embed[]? Embeds, string? PlainText)? BuildCustomStatusEmbed(
-        MinecraftServer server, McServerStatus status, IGuild guild)
+    public (EmbedRequest[]? Embeds, string? PlainText)? BuildCustomStatusEmbed(
+        MinecraftServer server, McServerStatus status, SocketGuild guild)
     {
         if (string.IsNullOrWhiteSpace(server.CustomEmbedTemplate))
             return null;
@@ -1028,8 +1026,8 @@ public class MinecraftService(
         return (success, response);
     }
 
-    private async Task SendAlertMessageAsync(ITextChannel channel, MinecraftServer server, McServerStatus status,
-        IGuild guild, bool isOnline)
+    private async Task SendAlertMessageAsync(Channel channel, MinecraftServer server, McServerStatus status,
+        SocketGuild guild, bool isOnline)
     {
         var customMessage = isOnline ? server.CustomOnlineMessage : server.CustomOfflineMessage;
 
@@ -1040,13 +1038,13 @@ public class MinecraftService(
 
             if (SmartEmbed.TryParse(parsed, guild.Id, out var embeds, out var plainText))
             {
-                await channel.SendMessageAsync(
+                await channel.SendAsync(
                     plainText,
                     embeds: embeds);
                 return;
             }
 
-            await channel.SendMessageAsync(parsed);
+            await channel.SendAsync(parsed);
             return;
         }
 
@@ -1060,10 +1058,10 @@ public class MinecraftService(
         else
             eb.WithErrorColor();
 
-        await channel.SendMessageAsync(embed: eb.Build());
+        await channel.SendAsync(embed: eb.Build());
     }
 
-    private ReplacementBuilder BuildMcReplacer(MinecraftServer server, McServerStatus status, IGuild guild)
+    private ReplacementBuilder BuildMcReplacer(MinecraftServer server, McServerStatus status, SocketGuild guild)
     {
         return new ReplacementBuilder()
             .WithOverride("%mc.server.name%", () => server.Name)
@@ -1162,10 +1160,10 @@ public class MinecraftService(
         }
     }
 
-    private async Task UpdateWatchEmbedAsync(MinecraftServer server, McServerStatus status, IGuild guild,
-        ITextChannel channel, MewdekoDb db)
+    private async Task UpdateWatchEmbedAsync(MinecraftServer server, McServerStatus status, SocketGuild guild,
+        Channel channel, MewdekoDb db)
     {
-        Embed embed;
+        EmbedRequest embed;
         string? plainText = null;
 
         var customResult = BuildCustomStatusEmbed(server, status, guild);
@@ -1190,7 +1188,7 @@ public class MinecraftService(
                 });
                 return;
             }
-            catch (HttpException ex) when (ex.HttpCode == HttpStatusCode.NotFound
+            catch (FluxerApiException ex) when (ex.HttpCode == HttpStatusCode.NotFound
                                            || ex.HttpCode == HttpStatusCode.Forbidden)
             {
                 // Message was actually deleted or we lost access — fall through and post a new one
@@ -1204,7 +1202,7 @@ public class MinecraftService(
             }
         }
 
-        var newMsg = await channel.SendMessageAsync(
+        var newMsg = await channel.SendAsync(
             plainText,
             embed: embed);
 
@@ -1215,8 +1213,8 @@ public class MinecraftService(
             .UpdateAsync();
     }
 
-    private async Task UpdateWatchTopicAsync(MinecraftServer server, McServerStatus status, IGuild guild,
-        ITextChannel channel, MewdekoDb db)
+    private async Task UpdateWatchTopicAsync(MinecraftServer server, McServerStatus status, SocketGuild guild,
+        Channel channel, MewdekoDb db)
     {
         try
         {

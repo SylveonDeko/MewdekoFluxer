@@ -1,5 +1,4 @@
 using System.Threading;
-using Discord.Commands;
 using LinqToDB.Async;
 using Mewdeko.Modules.Achievements.Common;
 using Mewdeko.Modules.Xp.Events;
@@ -67,7 +66,7 @@ public sealed partial class AchievementService
     /// <param name="user">The member.</param>
     /// <param name="channelId">The channel, or 0 for activity outside a channel.</param>
     /// <returns>True when the server has achievements on and nothing excludes the member or channel.</returns>
-    public bool CanEarn(SocketGuildUser user, ulong channelId = 0)
+    public bool CanEarn(SocketGuildMember user, ulong channelId = 0)
     {
         if (user.IsBot || !settingsCache.TryGetValue(user.Guild.Id, out var settings) || !settings.Enabled)
             return false;
@@ -94,9 +93,9 @@ public sealed partial class AchievementService
 
     private Task OnMessageReceivedAsync(SocketMessage message)
     {
-        if (message is not SocketUserMessage userMessage ||
-            message.Author is not SocketGuildUser user ||
-            message.Channel is not SocketGuildChannel channel ||
+        if (message is not SocketMessage userMessage ||
+            message.Author is not SocketGuildMember user ||
+            message.Channel is not Channel channel ||
             !CanEarn(user, channel.Id))
             return Task.CompletedTask;
 
@@ -104,7 +103,7 @@ public sealed partial class AchievementService
         return Task.CompletedTask;
     }
 
-    private async Task HandleMessageAsync(SocketUserMessage message, SocketGuildUser user, SocketGuildChannel channel)
+    private async Task HandleMessageAsync(SocketMessage message, SocketGuildMember user, Channel channel)
     {
         try
         {
@@ -222,10 +221,10 @@ public sealed partial class AchievementService
         }
     }
 
-    private Task OnMessageUpdatedAsync(Cacheable<IMessage, ulong> before, SocketMessage after,
-        ISocketMessageChannel channel)
+    private Task OnMessageUpdatedAsync(Cacheable<Message> before, SocketMessage after,
+        Channel channel)
     {
-        if (after.Author is not SocketGuildUser user || !recentMessages.TryGetValue(after.Id, out var recent))
+        if (after.Author is not SocketGuildMember user || !recentMessages.TryGetValue(after.Id, out var recent))
             return Task.CompletedTask;
         if (after.EditedTimestamp is not { } edited || edited.UtcDateTime - recent.SentAt > QuickWindow)
             return Task.CompletedTask;
@@ -238,7 +237,7 @@ public sealed partial class AchievementService
         return Task.CompletedTask;
     }
 
-    private Task OnMessageDeletedAsync(Cacheable<IMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel)
+    private Task OnMessageDeletedAsync(Cacheable<Message> message, Cacheable<Channel> channel)
     {
         if (!recentMessages.TryRemove(message.Id, out var recent) || DateTime.UtcNow - recent.SentAt > QuickWindow)
             return Task.CompletedTask;
@@ -251,11 +250,11 @@ public sealed partial class AchievementService
         return Task.CompletedTask;
     }
 
-    private Task OnReactionAddedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel,
+    private Task OnReactionAddedAsync(Cacheable<Message> message, Cacheable<Channel> channel,
         SocketReaction reaction)
     {
-        var guildChannel = reaction.Channel as SocketGuildChannel;
-        var member = reaction.User.GetValueOrDefault() as SocketGuildUser ?? guildChannel?.Guild.GetUser(reaction.UserId);
+        var guildChannel = reaction.Channel as Channel;
+        var member = reaction.User.GetValueOrDefault() as SocketGuildMember ?? guildChannel?.Guild.GetUser(reaction.UserId);
         if (member is null || guildChannel is null || !CanEarn(member, guildChannel.Id))
             return Task.CompletedTask;
 
@@ -263,13 +262,13 @@ public sealed partial class AchievementService
         return Task.CompletedTask;
     }
 
-    private async Task HandleReactionAsync(SocketGuildUser user, ulong channelId, Cacheable<IUserMessage, ulong> message,
+    private async Task HandleReactionAsync(SocketGuildMember user, ulong channelId, Cacheable<Message> message,
         SocketReaction reaction)
     {
         try
         {
             var guildId = user.Guild.Id;
-            var emojiKey = EmojiKey(reaction.Emote);
+            var emojiKey = EmojiKey(reaction.Emoji);
             emojiDeltas.AddOrUpdate((guildId, user.Id, emojiKey), 1, (_, count) => count + 1);
             MarkDirty(guildId, user.Id, AchievementDirty.Reactions, channelId);
 
@@ -294,7 +293,7 @@ public sealed partial class AchievementService
             var matched = catalog.Watchers
                 .Where(d => d.Trigger == AchievementTrigger.Reaction &&
                             (d.ChannelId is null || d.ChannelId == channelId) &&
-                            EmojiMatches(d.Keyword!, reaction.Emote))
+                            EmojiMatches(d.Keyword!, reaction.Emoji))
                 .ToList();
             if (matched.Count > 0)
                 await UnlockForMemberAsync(user, matched, channelId);
@@ -310,17 +309,17 @@ public sealed partial class AchievementService
     /// </summary>
     /// <param name="emote">The emoji.</param>
     /// <returns>The key.</returns>
-    public static string EmojiKey(IEmote emote)
+    public static string EmojiKey(Emoji emote)
     {
-        return emote is Emote custom ? custom.Id.ToString() : emote.Name;
+        return emote is Emoji custom ? custom.Id.ToString() : emote.Name;
     }
 
-    private static bool EmojiMatches(string stored, IEmote emote)
+    private static bool EmojiMatches(string stored, Emoji emote)
     {
         var trimmed = stored.Trim();
-        if (emote is Emote custom)
+        if (emote is Emoji custom)
         {
-            if (Emote.TryParse(trimmed, out var parsed))
+            if (Emoji.TryParse(trimmed, out var parsed))
                 return parsed.Id == custom.Id;
             return trimmed == custom.Id.ToString() ||
                    string.Equals(trimmed.Trim(':'), custom.Name, StringComparison.OrdinalIgnoreCase);
@@ -349,14 +348,14 @@ public sealed partial class AchievementService
         }
     }
 
-    private static bool IsMuted(SocketGuildUser user)
+    private static bool IsMuted(SocketGuildMember user)
     {
         return user.IsSelfMuted || user.IsMuted || user.IsSelfDeafened || user.IsDeafened;
     }
 
     private Task OnVoiceStateUpdatedAsync(SocketUser socketUser, SocketVoiceState before, SocketVoiceState after)
     {
-        if (socketUser is not SocketGuildUser user || user.IsBot || !IsEnabled(user.Guild.Id))
+        if (socketUser is not SocketGuildMember user || user.IsBot || !IsEnabled(user.Guild.Id))
             return Task.CompletedTask;
 
         try
@@ -371,7 +370,7 @@ public sealed partial class AchievementService
         return Task.CompletedTask;
     }
 
-    private void HandleVoice(SocketGuildUser user, SocketVoiceState before, SocketVoiceState after)
+    private void HandleVoice(SocketGuildMember user, SocketVoiceState before, SocketVoiceState after)
     {
         var guildId = user.Guild.Id;
         var key = (guildId, user.Id);
@@ -442,7 +441,7 @@ public sealed partial class AchievementService
         MarkDirty(guildId, userId, AchievementDirty.Voice);
     }
 
-    private Task OnGuildMemberUpdatedAsync(Cacheable<SocketGuildUser, ulong> before, SocketGuildUser after)
+    private Task OnGuildMemberUpdatedAsync(Cacheable<SocketGuildMember> before, SocketGuildMember after)
     {
         if (after.IsBot || !IsEnabled(after.Guild.Id))
             return Task.CompletedTask;
@@ -472,14 +471,14 @@ public sealed partial class AchievementService
         return Task.CompletedTask;
     }
 
-    private Task OnTextCommandExecutedAsync(IUserMessage message, CommandInfo command)
+    private Task OnTextCommandExecutedAsync(Message message, CommandInfo command)
     {
-        if (message.Author is SocketGuildUser user && message.Channel is SocketGuildChannel channel)
+        if (message.Author is SocketGuildMember user && message.Channel is Channel channel)
             MarkDirty(user.Guild.Id, user.Id, AchievementDirty.Commands, channel.Id);
         return Task.CompletedTask;
     }
 
-    private async Task UnlockFeatsAsync(SocketGuildUser user, IReadOnlyCollection<AchievementFeat> feats,
+    private async Task UnlockFeatsAsync(SocketGuildMember user, IReadOnlyCollection<AchievementFeat> feats,
         ulong channelId)
     {
         try

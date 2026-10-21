@@ -1,5 +1,4 @@
 ﻿using System.Net.Http;
-using Discord.Commands;
 using Humanizer;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;
@@ -42,9 +41,9 @@ public class MultiGreets(InteractiveService interactivity) : MewdekoModuleBase<M
     [Aliases]
     [UserPerm(GuildPermission.Administrator)]
     [RequireContext(ContextType.Guild)]
-    public async Task MultiGreetAdd([Remainder] ITextChannel? channel = null)
+    public async Task MultiGreetAdd([Remainder] Channel? channel = null)
     {
-        channel ??= ctx.Channel as ITextChannel;
+        channel ??= ctx.Channel as Channel;
         var added = await Service.AddMultiGreet(ctx.Guild.Id, channel.Id);
         switch (added)
         {
@@ -96,7 +95,7 @@ public class MultiGreets(InteractiveService interactivity) : MewdekoModuleBase<M
     [Aliases]
     [UserPerm(GuildPermission.Administrator)]
     [RequireContext(ContextType.Guild)]
-    public async Task MultiGreetRemove([Remainder] ITextChannel channel)
+    public async Task MultiGreetRemove([Remainder] Channel channel)
     {
         var greet = (await Service.GetGreets(ctx.Guild.Id))?.Where(x => x.ChannelId == channel.Id);
         if (!greet.Any())
@@ -364,8 +363,8 @@ public class MultiGreets(InteractiveService interactivity) : MewdekoModuleBase<M
             var (msg, response) = await PromptReactionChoiceAsync(
                 new EmbedBuilder().WithOkColor().WithDescription(Strings.MultigreetMessagePreviewPrompt(ctx.Guild.Id)),
                 ctx.User.Id,
-                new ReactionChoice(new Emoji("👁️"), Strings.Preview(ctx.Guild.Id), "preview"),
-                new ReactionChoice(new Emoji("📝"), Strings.Regular(ctx.Guild.Id), "regular")
+                new ReactionChoice(Emoji.FromUnicode("👁️"), Strings.Preview(ctx.Guild.Id), "preview"),
+                new ReactionChoice(Emoji.FromUnicode("📝"), Strings.Regular(ctx.Guild.Id), "regular")
             ).ConfigureAwait(false);
             switch (response)
             {
@@ -373,18 +372,18 @@ public class MultiGreets(InteractiveService interactivity) : MewdekoModuleBase<M
                     await msg.DeleteAsync().ConfigureAwait(false);
                     var replacer = new ReplacementBuilder()
                         .WithUser(ctx.User)
-                        .WithClient(ctx.Client as DiscordShardedClient)
-                        .WithServer(ctx.Client as DiscordShardedClient, ctx.Guild as SocketGuild).Build();
+                        .WithClient(ctx.Client as FluxerClient)
+                        .WithServer(ctx.Client as FluxerClient, ctx.Guild as SocketGuild).Build();
                     var content = replacer.Replace(greet.Message);
                     if (SmartEmbed.TryParse(content, ctx.Guild.Id, out var embedData, out var plainText))
                     {
                         await ctx.Channel
-                            .SendMessageAsync(plainText ?? "", embeds: embedData)
+                            .SendAsync(plainText ?? "", embeds: embedData)
                             .ConfigureAwait(false);
                         return;
                     }
 
-                    await ctx.Channel.SendMessageAsync(content).ConfigureAwait(false);
+                    await ctx.Channel.SendAsync(content).ConfigureAwait(false);
                     return;
 
                 case "regular":

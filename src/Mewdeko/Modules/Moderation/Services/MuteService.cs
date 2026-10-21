@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Threading;
 using DataModel;
-using Discord.Net;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.Collections;
@@ -66,7 +65,7 @@ public class MuteService : INService, IReadyExecutor, IDisposable
 
     private readonly BanPruneService banPrune;
 
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly EventHandler eventHandler;
 
@@ -90,7 +89,7 @@ public class MuteService : INService, IReadyExecutor, IDisposable
     /// <param name="strings">The localization service</param>
     /// <param name="banPrune">The service resolving how many days of messages a ban purges</param>
     /// <param name="logger">The logger instance for structured logging.</param>
-    public MuteService(DiscordShardedClient client, IDataConnectionFactory dbFactory,
+    public MuteService(FluxerClient client, IDataConnectionFactory dbFactory,
         GuildSettingsService guildSettings,
         EventHandler eventHandler, GeneratedBotStrings strings, BanPruneService banPrune,
         ILogger<MuteService> logger)
@@ -219,12 +218,12 @@ public class MuteService : INService, IReadyExecutor, IDisposable
     /// <summary>
     ///     Event for when a user is muted.
     /// </summary>
-    public event EventHandler.AsyncEventHandler<IGuildUser, IUser, MuteType, string> UserMuted;
+    public event EventHandler.AsyncEventHandler<SocketGuildMember, IUser, MuteType, string> UserMuted;
 
     /// <summary>
     ///     Event for when a user is unmuted.
     /// </summary>
-    public event EventHandler.AsyncEventHandler<IGuildUser, IUser, MuteType, string> UserUnmuted;
+    public event EventHandler.AsyncEventHandler<SocketGuildMember, IUser, MuteType, string> UserUnmuted;
 
 
     /// <summary>
@@ -343,11 +342,11 @@ public class MuteService : INService, IReadyExecutor, IDisposable
                     await guild.RemoveBanAsync(userId);
                     logger.LogDebug("Successfully unbanned user {UserId} from guild {GuildId}", userId, guildId);
                 }
-                catch (HttpException httpEx) when (httpEx.DiscordCode == DiscordErrorCode.UnknownBan)
+                catch (FluxerApiException httpEx) when (httpEx.DiscordCode == DiscordErrorCode.UnknownBan)
                 {
                     logger.LogInformation("User {UserId} was already unbanned from guild {GuildId}", userId, guildId);
                 }
-                catch (HttpException httpEx) when (httpEx.DiscordCode == DiscordErrorCode.MissingPermissions)
+                catch (FluxerApiException httpEx) when (httpEx.DiscordCode == DiscordErrorCode.MissingPermissions)
                 {
                     logger.LogWarning("Missing permissions to unban user {UserId} from guild {GuildId}", userId,
                         guildId);
@@ -453,20 +452,20 @@ public class MuteService : INService, IReadyExecutor, IDisposable
                 // Success - clean up
                 await CleanupRoleTimer(guildId, userId, roleId);
             }
-            catch (HttpException httpEx) when (httpEx.DiscordCode == DiscordErrorCode.MissingPermissions)
+            catch (FluxerApiException httpEx) when (httpEx.DiscordCode == DiscordErrorCode.MissingPermissions)
             {
                 logger.LogWarning(
                     "Missing permissions to remove role {RoleName} from user {UserId} in guild {GuildId}, will retry in 1 hour",
                     role.Name, userId, guildId);
                 CreateIndividualTimer(key, DateTime.UtcNow.AddHours(1)); // Retry in 1 hour
             }
-            catch (HttpException httpEx) when (httpEx.DiscordCode == DiscordErrorCode.UnknownRole)
+            catch (FluxerApiException httpEx) when (httpEx.DiscordCode == DiscordErrorCode.UnknownRole)
             {
                 logger.LogInformation("Role {RoleId} was deleted while processing timer in guild {GuildId}", roleId,
                     guildId);
                 await CleanupRoleTimer(guildId, userId, roleId);
             }
-            catch (HttpException httpEx) when (httpEx.DiscordCode == DiscordErrorCode.UnknownMember)
+            catch (FluxerApiException httpEx) when (httpEx.DiscordCode == DiscordErrorCode.UnknownMember)
             {
                 logger.LogInformation("User {UserId} left guild {GuildId} while processing timer", userId, guildId);
                 await CleanupRoleTimer(guildId, userId, roleId);
@@ -491,12 +490,12 @@ public class MuteService : INService, IReadyExecutor, IDisposable
     }
 
 
-    private async Task OnUserMuted(IGuildUser user, IUser mod, MuteType type, string reason)
+    private async Task OnUserMuted(SocketGuildMember user, IUser mod, MuteType type, string reason)
     {
         if (string.IsNullOrWhiteSpace(reason))
             return;
 
-        await user.SendMessageAsync(embed: new EmbedBuilder()
+        await user.SendAsync(embed: new EmbedBuilder()
             .WithDescription(strings.UserMutedDm(user.Guild.Id, user.Guild))
             .AddField("Mute Type", type.ToString())
             .AddField("Moderator", mod.ToString())
@@ -504,12 +503,12 @@ public class MuteService : INService, IReadyExecutor, IDisposable
             .Build());
     }
 
-    private async Task OnUserUnmuted(IGuildUser user, IUser mod, MuteType type, string reason)
+    private async Task OnUserUnmuted(SocketGuildMember user, IUser mod, MuteType type, string reason)
     {
         if (string.IsNullOrWhiteSpace(reason))
             return;
 
-        await user.SendMessageAsync(embed: new EmbedBuilder()
+        await user.SendAsync(embed: new EmbedBuilder()
             .WithDescription(strings.UserUnmutedDm(user.Guild.Id, user.Guild.Name))
             .AddField("Unmute Type", type.ToString())
             .AddField("Moderator", mod.ToString())
@@ -517,7 +516,7 @@ public class MuteService : INService, IReadyExecutor, IDisposable
             .Build());
     }
 
-    private async Task Client_UserJoined(IGuildUser? usr)
+    private async Task Client_UserJoined(SocketGuildMember? usr)
     {
         try
         {
@@ -556,7 +555,7 @@ public class MuteService : INService, IReadyExecutor, IDisposable
     /// <param name="type">The type of mute</param>
     /// <param name="reason">The mute reason</param>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
-    public async Task MuteUser(IGuildUser? usr, IUser mod, MuteType type = MuteType.All, string reason = "")
+    public async Task MuteUser(SocketGuildMember? usr, IUser mod, MuteType type = MuteType.All, string reason = "")
     {
         switch (type)
         {
@@ -577,7 +576,7 @@ public class MuteService : INService, IReadyExecutor, IDisposable
                 var roles = usr.GetRoles().Where(p => p.Tags == null).Except([
                     usr.Guild.EveryoneRole
                 ]);
-                var enumerable = roles as IRole[] ?? roles.ToArray();
+                var enumerable = roles as SocketRole[] ?? roles.ToArray();
                 var uroles = string.Join(" ", enumerable.Select(x => x.Id));
 
                 // Remove any existing entry
@@ -655,7 +654,7 @@ public class MuteService : INService, IReadyExecutor, IDisposable
     /// </summary>
     /// <param name="guild">The server to set this setting</param>
     /// <param name="yesnt">nosnt</param>
-    public async Task Removeonmute(IGuild guild, string yesnt)
+    public async Task Removeonmute(SocketGuild guild, string yesnt)
     {
         var yesno = -1;
 
@@ -790,9 +789,9 @@ public class MuteService : INService, IReadyExecutor, IDisposable
     ///     Gets the mute role for a guild.
     /// </summary>
     /// <param name="guild">The guildid to get the mute role from</param>
-    /// <returns>The mute <see cref="IRole" /></returns>
+    /// <returns>The mute <see cref="SocketRole" /></returns>
     /// <exception cref="ArgumentNullException"></exception>
-    public async Task<IRole> GetMuteRole(IGuild guild)
+    public async Task<SocketRole> GetMuteRole(SocketGuild guild)
     {
         ArgumentNullException.ThrowIfNull(guild);
 
@@ -821,7 +820,7 @@ public class MuteService : INService, IReadyExecutor, IDisposable
         {
             try
             {
-                if (toOverwrite is IThreadChannel)
+                if (toOverwrite is Channel)
                     continue;
                 if (toOverwrite.PermissionOverwrites.Any(x => x.TargetId == muteRole.Id
                                                               && x.TargetType == PermissionTarget.Role))
@@ -851,7 +850,7 @@ public class MuteService : INService, IReadyExecutor, IDisposable
     /// <param name="after">The time to mute the user for</param>
     /// <param name="muteType">The type of mute</param>
     /// <param name="reason">The reason for the mute</param>
-    public async Task TimedMute(IGuildUser? user, IUser mod, TimeSpan after, MuteType muteType = MuteType.All,
+    public async Task TimedMute(SocketGuildMember? user, IUser mod, TimeSpan after, MuteType muteType = MuteType.All,
         string reason = "")
     {
         await MuteUser(user, mod, muteType, reason).ConfigureAwait(false);
@@ -877,7 +876,7 @@ public class MuteService : INService, IReadyExecutor, IDisposable
     /// <param name="after">The time to ban the user for</param>
     /// <param name="reason">The reason for the ban</param>
     /// <param name="todelete">The time to delete the ban message</param>
-    public async Task TimedBan(IGuild guild, IUser? user, TimeSpan after, string reason, TimeSpan todelete = default)
+    public async Task TimedBan(SocketGuild guild, IUser? user, TimeSpan after, string reason, TimeSpan todelete = default)
     {
         var pruneDays = todelete == default
             ? await banPrune.GetPruneDaysAsync(guild.Id, BanPruneAction.TempBan).ConfigureAwait(false)
@@ -907,7 +906,7 @@ public class MuteService : INService, IReadyExecutor, IDisposable
     /// <param name="after">The time to add the role for</param>
     /// <param name="reason">The reason for adding the role</param>
     /// <param name="role">The role to add</param>
-    public async Task TimedRole(IGuildUser? user, TimeSpan after, string reason, IRole role)
+    public async Task TimedRole(SocketGuildMember? user, TimeSpan after, string reason, SocketRole role)
     {
         await user.AddRoleAsync(role, new RequestOptions
         {

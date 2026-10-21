@@ -68,7 +68,7 @@ public class GuildSettingsService
     /// </summary>
     /// <param name="guild">The guild to get the prefix for. Can be null for default prefix.</param>
     /// <returns>The guild's custom prefix if set, otherwise the default bot prefix.</returns>
-    public async Task<string> GetPrefix(IGuild? guild)
+    public async Task<string> GetPrefix(SocketGuild? guild)
     {
         using (perfService.Measure(nameof(GetPrefix)))
         {
@@ -114,7 +114,7 @@ public class GuildSettingsService
     /// <param name="prefix">The new prefix to set.</param>
     /// <returns>The newly set prefix.</returns>
     /// <exception cref="ArgumentNullException">Thrown when either guild or prefix is null.</exception>
-    public async Task<string> SetPrefix(IGuild guild, string prefix)
+    public async Task<string> SetPrefix(SocketGuild guild, string prefix)
     {
         using (perfService.Measure(nameof(SetPrefix)))
         {

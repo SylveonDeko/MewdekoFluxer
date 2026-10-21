@@ -1,5 +1,4 @@
 ﻿using DataModel;
-using Discord.Net;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Modules.Utility.Services;
@@ -12,7 +11,7 @@ namespace Mewdeko.Modules.MultiGreets.Services;
 /// </summary>
 public class MultiGreetService : INService
 {
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly IDataConnectionFactory dbFactory;
     private readonly EventHandler eventHandler;
@@ -30,7 +29,7 @@ public class MultiGreetService : INService
     /// <param name="inviteCountService">The invite count service.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     /// <param name="collector">The analytics collector.</param>
-    public MultiGreetService(IDataConnectionFactory dbFactory, DiscordShardedClient client,
+    public MultiGreetService(IDataConnectionFactory dbFactory, FluxerClient client,
         GuildSettingsService guildSettingsService, EventHandler eventHandler, InviteCountService inviteCountService,
         ILogger<MultiGreetService> logger, IAnalyticsCollector collector)
     {
@@ -65,7 +64,7 @@ public class MultiGreetService : INService
             .ToArrayAsync();
     }
 
-    private async Task DoMultiGreet(IGuildUser user)
+    private async Task DoMultiGreet(SocketGuildMember user)
     {
         var greets = await GetGreets(user.Guild.Id);
         if (greets.Length == 0) return;
@@ -96,7 +95,7 @@ public class MultiGreetService : INService
     /// </summary>
     /// <param name="guild">The guild to set the multi-greet type for.</param>
     /// <param name="type">The type of multi-greet to set.</param>
-    public async Task SetMultiGreetType(IGuild guild, int type)
+    public async Task SetMultiGreetType(SocketGuild guild, int type)
     {
         var gc = await guildSettingsService.GetGuildConfig(guild.Id);
         gc.MultiGreetType = type;
@@ -204,36 +203,36 @@ public class MultiGreetService : INService
         await db.UpdateAsync(greet);
     }
 
-    private static async Task SendSmartEmbedMessage(IMessageChannel channel, string content, ulong guildId,
+    private static async Task SendSmartEmbedMessage(Channel channel, string content, ulong guildId,
         int deleteTime = 0)
     {
         SmartEmbed.TryParse(content, guildId, out var embedData, out var plainText);
         if (!string.IsNullOrWhiteSpace(plainText) || embedData?.Length > 0)
         {
-            var msg = await channel.SendMessageAsync(plainText, embeds: embedData);
+            var msg = await channel.SendAsync(plainText, embeds: embedData);
             if (deleteTime > 0)
                 msg.DeleteAfter(deleteTime);
         }
         else if (!string.IsNullOrWhiteSpace(content))
         {
-            var msg = await channel.SendMessageAsync(content);
+            var msg = await channel.SendAsync(content);
             if (deleteTime > 0)
                 msg.DeleteAfter(deleteTime);
         }
     }
 
-    private async Task<ulong> SendSmartEmbedWebhookMessage(DiscordWebhookClient webhook, string content, ulong guildId)
+    private async Task<ulong> SendSmartEmbedWebhookMessage(FluxerWebhookClient webhook, string content, ulong guildId)
     {
         SmartEmbed.TryParse(content, guildId, out var embedData, out var plainText);
         if (!string.IsNullOrWhiteSpace(plainText) || embedData?.Length > 0)
         {
-            return await webhook.SendMessageAsync(plainText, embeds: embedData);
+            return await webhook.SendAsync(plainText, embeds: embedData);
         }
 
-        return await webhook.SendMessageAsync(content);
+        return await webhook.SendAsync(content);
     }
 
-    private async Task HandleGreet(MultiGreet greet, IGuildUser user, ReplacementBuilder replacer)
+    private async Task HandleGreet(MultiGreet greet, SocketGuildMember user, ReplacementBuilder replacer)
     {
         if (user.IsBot && !greet.GreetBots)
             return;
@@ -257,7 +256,7 @@ public class MultiGreetService : INService
         {
             if (greet.WebhookUrl != null)
             {
-                var webhook = new DiscordWebhookClient(greet.WebhookUrl);
+                var webhook = new FluxerWebhookClient(greet.WebhookUrl);
                 var msgId = await SendSmartEmbedWebhookMessage(webhook, content, user.Guild.Id);
                 if (greet.DeleteTime > 0)
                 {
@@ -272,7 +271,7 @@ public class MultiGreetService : INService
 
             collector.Feature("greet", user.Guild.Id);
         }
-        catch (HttpException ex)
+        catch (FluxerApiException ex)
         {
             collector.Feature("greet", user.Guild.Id, false, ex.DiscordCode?.ToString() ?? ex.GetType().Name);
             if (ex.DiscordCode is DiscordErrorCode.UnknownWebhook or DiscordErrorCode.InvalidWebhookToken

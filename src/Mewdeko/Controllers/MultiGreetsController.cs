@@ -17,7 +17,7 @@ namespace Mewdeko.Controllers;
 public class MultiGreetController : Controller
 {
     private readonly IDashboardAuditContext auditContext;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly MultiGreetService multiGreetService;
 
     /// <summary>
@@ -28,7 +28,7 @@ public class MultiGreetController : Controller
     /// <param name="auditContext">Records before/after state for the dashboard audit log.</param>
     public MultiGreetController(
         MultiGreetService multiGreetService,
-        DiscordShardedClient client,
+        FluxerClient client,
         IDashboardAuditContext auditContext)
     {
         this.multiGreetService = multiGreetService;
@@ -45,7 +45,7 @@ public class MultiGreetController : Controller
     public async Task<IActionResult> GetAllGreets(ulong guildId)
     {
         var greets = await multiGreetService.GetGreets(guildId);
-        IGuild guild = client.GetGuild(guildId);
+        SocketGuild guild = client.GetGuild(guildId);
 
         if (greets == null)
             return NotFound();
@@ -206,7 +206,7 @@ public class MultiGreetController : Controller
 
         auditContext.RecordBefore(greet);
 
-        IGuild guild = client.GetGuild(guildId);
+        SocketGuild guild = client.GetGuild(guildId);
         var channel = await guild.GetTextChannelAsync(greet.ChannelId);
 
         if (channel == null)

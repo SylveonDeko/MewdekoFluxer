@@ -21,7 +21,7 @@ namespace Mewdeko.Controllers;
 [Route("botapi/[controller]/{guildId}")]
 [Authorize("ApiKeyPolicy")]
 public class UtilityController(
-    DiscordShardedClient client,
+    FluxerClient client,
     IDataConnectionFactory dbFactory,
     CommandMapService commandMapService,
     AutoPublishService autoPublishService,
@@ -247,7 +247,7 @@ public class UtilityController(
     public async Task<IActionResult> AddAutoPublish(ulong guildId, ulong channelId)
     {
         var guild = client.GetGuild(guildId);
-        if (guild?.GetChannel(channelId) is not INewsChannel channel)
+        if (guild?.GetChannel(channelId) is not Channel channel)
             return BadRequest("Channel must be an announcement channel");
         if (!await autoPublishService.PermCheck(channel))
             return BadRequest("The bot needs Manage Messages in that channel");

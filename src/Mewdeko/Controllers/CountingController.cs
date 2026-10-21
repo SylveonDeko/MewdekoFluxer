@@ -18,7 +18,7 @@ namespace Mewdeko.Controllers;
 public class CountingController : Controller
 {
     private readonly IDashboardAuditContext auditContext;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly CountingService countingService;
     private readonly IDataConnectionFactory dbFactory;
     private readonly ILogger<CountingController> logger;
@@ -39,7 +39,7 @@ public class CountingController : Controller
         CountingService countingService,
         CountingStatsService statsService,
         CountingModerationService moderationService,
-        DiscordShardedClient client,
+        FluxerClient client,
         ILogger<CountingController> logger,
         IDataConnectionFactory dbFactory,
         IDashboardAuditContext auditContext)
@@ -72,7 +72,7 @@ public class CountingController : Controller
             if (countingChannel == null || countingChannel.GuildId != guildId)
                 return NotFound("Counting channel not found");
 
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -108,7 +108,7 @@ public class CountingController : Controller
         try
         {
             var channels = await countingService.GetGuildCountingChannelsAsync(guildId);
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
 
             if (guild == null)
                 return NotFound("Guild not found");
@@ -159,7 +159,7 @@ public class CountingController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -219,7 +219,7 @@ public class CountingController : Controller
             if (countingChannel == null || countingChannel.GuildId != guildId)
                 return NotFound("Counting channel not found");
 
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -284,7 +284,7 @@ public class CountingController : Controller
             if (countingChannel == null || countingChannel.GuildId != guildId)
                 return NotFound("Counting channel not found");
 
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -437,7 +437,7 @@ public class CountingController : Controller
             if (countingChannel == null || countingChannel.GuildId != guildId)
                 return NotFound("Counting channel not found");
 
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -535,7 +535,7 @@ public class CountingController : Controller
                 limit = 20;
 
             var leaderboard = await statsService.GetLeaderboardAsync(channelId, leaderboardType, limit);
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
 
             if (guild == null)
                 return NotFound("Guild not found");
@@ -588,7 +588,7 @@ public class CountingController : Controller
             if (countingChannel == null || countingChannel.GuildId != guildId)
                 return NotFound("Counting channel not found");
 
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -649,7 +649,7 @@ public class CountingController : Controller
             if (countingChannel == null || countingChannel.GuildId != guildId)
                 return NotFound("Counting channel not found");
 
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -690,7 +690,7 @@ public class CountingController : Controller
             if (countingChannel == null || countingChannel.GuildId != guildId)
                 return NotFound("Counting channel not found");
 
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -743,7 +743,7 @@ public class CountingController : Controller
             if (countingChannel == null || countingChannel.GuildId != guildId)
                 return NotFound("Counting channel not found");
 
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -788,7 +788,7 @@ public class CountingController : Controller
             if (countingChannel == null || countingChannel.GuildId != guildId)
                 return NotFound("Counting channel not found");
 
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -838,7 +838,7 @@ public class CountingController : Controller
             if (countingChannel == null || countingChannel.GuildId != guildId)
                 return NotFound("Counting channel not found");
 
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -995,7 +995,7 @@ public class CountingController : Controller
             if (countingChannel == null || countingChannel.GuildId != guildId)
                 return NotFound("Counting channel not found");
 
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -1041,7 +1041,7 @@ public class CountingController : Controller
             if (countingChannel == null || countingChannel.GuildId != guildId)
                 return NotFound("Counting channel not found");
 
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -1089,7 +1089,7 @@ public class CountingController : Controller
             if (countingChannel == null || countingChannel.GuildId != guildId)
                 return NotFound("Counting channel not found");
 
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 

@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 
 // ReSharper disable UnusedTypeParameter
 
@@ -10,9 +10,9 @@ namespace Mewdeko.Common.TypeReaders;
 /// <typeparam name="T">The type that the type reader converts input to.</typeparam>
 public abstract class MewdekoTypeReader<T> : TypeReader
 {
-    // DiscordShardedClient instance (unused field)
+    // FluxerClient instance (unused field)
     // ReSharper disable once NotAccessedField.Local
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
 
     // CommandService instance (unused field)
     // ReSharper disable once NotAccessedField.Local
@@ -21,9 +21,9 @@ public abstract class MewdekoTypeReader<T> : TypeReader
     /// <summary>
     ///     Initializes a new instance of the <see cref="MewdekoTypeReader{T}" /> class.
     /// </summary>
-    /// <param name="client">The DiscordShardedClient instance.</param>
+    /// <param name="client">The FluxerClient instance.</param>
     /// <param name="cmds">The CommandService instance.</param>
-    protected MewdekoTypeReader(DiscordShardedClient client, CommandService cmds)
+    protected MewdekoTypeReader(FluxerClient client, CommandService cmds)
     {
         this.client = client;
         this.cmds = cmds;

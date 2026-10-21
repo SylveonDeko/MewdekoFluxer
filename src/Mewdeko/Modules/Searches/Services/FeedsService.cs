@@ -3,7 +3,6 @@ using CodeHollow.FeedReader.Feeds;
 using DataModel;
 using LinqToDB;
 using LinqToDB.Async;
-using Embed = Discord.Embed;
 
 namespace Mewdeko.Modules.Searches.Services;
 
@@ -12,7 +11,7 @@ namespace Mewdeko.Modules.Searches.Services;
 /// </summary>
 public class FeedsService : INService
 {
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
 
     private readonly ConcurrentDictionary<string, DateTime> lastPosts =
@@ -26,7 +25,7 @@ public class FeedsService : INService
     /// <param name="dbFactory">The database service.</param>
     /// <param name="client">The Discord client.</param>
     /// <param name="bot">The bot instance.</param>
-    public FeedsService(IDataConnectionFactory dbFactory, DiscordShardedClient client, Mewdeko bot)
+    public FeedsService(IDataConnectionFactory dbFactory, FluxerClient client, Mewdeko bot)
     {
         this.dbFactory = dbFactory;
         subs = new ConcurrentDictionary<string, HashSet<FeedSub>>();
@@ -127,7 +126,7 @@ public class FeedsService : INService
                             .WithOverride("%categories%", () => string.Join(", ", feedItem.Categories))
                             .WithOverride("%timestamp%",
                                 () => TimestampTag.FromDateTime(feedItem.PublishingDate.Value,
-                                    TimestampTagStyles.LongDateTime).ToString())
+                                    TimestampTagStyle.LongDateTime).ToString())
                             .WithOverride("%url%", () => feedItem.Link ?? feedItem.SpecificItem.Link)
                             .WithOverride("%feedurl%", () => rssUrl)
                             .Build();
@@ -192,7 +191,7 @@ public class FeedsService : INService
                             if (feed1.Message is "-" or null)
                                 allSendTasks.Add(channel.EmbedAsync(embed));
                             else
-                                allSendTasks.Add(channel.SendMessageAsync(content ?? "", embeds: builder ?? null));
+                                allSendTasks.Add(channel.SendAsync(content ?? "", embeds: builder ?? null));
                         }
                     }
                 }
@@ -213,7 +212,7 @@ public class FeedsService : INService
     /// <param name="sub">The feed subscription to test.</param>
     /// <param name="channel">The channel to send the test update to.</param>
     /// <returns>An asynchronous task representing the operation.</returns>
-    public async Task TestRss(FeedSub sub, ITextChannel channel)
+    public async Task TestRss(FeedSub sub, Channel channel)
     {
         var feed = await FeedReader.ReadAsync(sub.Url, default, true,
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
@@ -253,7 +252,7 @@ public class FeedsService : INService
             })
             .WithOverride("%categories%", () => string.Join(", ", feedItem.Categories))
             .WithOverride("%timestamp%",
-                () => TimestampTag.FromDateTime(feedItem.PublishingDate.Value, TimestampTagStyles.LongDateTime)
+                () => TimestampTag.FromDateTime(feedItem.PublishingDate.Value, TimestampTagStyle.LongDateTime)
                     .ToString())
             .WithOverride("%url%", () => feedItem.Link ?? feedItem.SpecificItem.Link)
             .WithOverride("%feedurl%", () => sub.Url).Build();
@@ -291,15 +290,15 @@ public class FeedsService : INService
         var (builder, content) = await GetFeedEmbed(repbuilder.Replace(sub.Message), channel.GuildId);
         if (sub.Message is "-" or null) await channel.EmbedAsync(embed);
         else
-            await channel.SendMessageAsync(content ?? "", embeds: builder ?? null);
+            await channel.SendAsync(content ?? "", embeds: builder ?? null);
     }
 
-    private Task<(Embed[] builder, string content)> GetFeedEmbed(string message,
+    private Task<(EmbedRequest[] builder, string content)> GetFeedEmbed(string message,
         ulong guildId)
     {
         return SmartEmbed.TryParse(message, guildId, out var embed, out var content)
             ? Task.FromResult((embed, content))
-            : Task.FromResult<(Embed[], string)>(([], message));
+            : Task.FromResult<(EmbedRequest[], string)>(([], message));
     }
 
 

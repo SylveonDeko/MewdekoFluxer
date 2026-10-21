@@ -13,7 +13,7 @@ namespace Mewdeko.Modules.Reputation.Services;
 /// </summary>
 public class RepDecayService : INService, IReadyExecutor, IUnloadableService
 {
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly ILogger<RepDecayService> logger;
     private readonly SemaphoreSlim semaphore = new(1, 1);
@@ -32,7 +32,7 @@ public class RepDecayService : INService, IReadyExecutor, IUnloadableService
         IDataConnectionFactory dbFactory,
         ILogger<RepDecayService> logger,
         GeneratedBotStrings strings,
-        DiscordShardedClient client)
+        FluxerClient client)
     {
         this.dbFactory = dbFactory;
         this.logger = logger;
@@ -321,7 +321,7 @@ public class RepDecayService : INService, IReadyExecutor, IUnloadableService
     {
         try
         {
-            if (client.GetGuild(guildId) is not IGuild guild) return;
+            if (client.GetGuild(guildId) is not SocketGuild guild) return;
 
             var channel = await guild.GetTextChannelAsync(channelId);
             if (channel == null) return;
@@ -330,7 +330,7 @@ public class RepDecayService : INService, IReadyExecutor, IUnloadableService
             var username = user?.ToString() ?? $"Unknown User ({userId})";
 
             var message = strings.RepDecayNotification(guildId, username, decayAmount, newTotal);
-            await channel.SendMessageAsync(message);
+            await channel.SendAsync(message);
         }
         catch (Exception ex)
         {

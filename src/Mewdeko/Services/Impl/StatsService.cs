@@ -27,7 +27,7 @@ public class StatsService : IStatsService, IDisposable, IReadyExecutor
     };
 
     private readonly IDataCache cache;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IBotCredentials creds;
     private readonly HttpClient http;
     private readonly ILogger<StatsService> logger;
@@ -45,7 +45,7 @@ public class StatsService : IStatsService, IDisposable, IReadyExecutor
     /// <exception cref="ArgumentNullException"></exception>
     /// <param name="logger">The logger instance for structured logging.</param>
     public StatsService(
-        DiscordShardedClient client, IBotCredentials creds,
+        FluxerClient client, IBotCredentials creds,
         HttpClient http, IDataCache cache, ILogger<StatsService> logger)
     {
         this.client = client ?? throw new ArgumentNullException(nameof(client));
@@ -78,10 +78,8 @@ public class StatsService : IStatsService, IDisposable, IReadyExecutor
             {
                 try
                 {
-                    IDiscordClient cl = client;
                     logger.LogInformation("Updating top guilds");
-                    var guilds = (await cl.GetGuildsAsync().ConfigureAwait(false))
-                        .Cast<SocketGuild>();
+                    var guilds = client.Guilds;
 
                     var excludedTerms = function;
                     const ulong excludedId = 374071874222686211;
@@ -90,12 +88,12 @@ public class StatsService : IStatsService, IDisposable, IReadyExecutor
                         .Where(x => x.Id != excludedId &&
                                     !excludedTerms.Any(term =>
                                         x.Name.Contains(term, StringComparison.OrdinalIgnoreCase)))
-                        .OrderByDescending(x => x.MemberCount)
+                        .OrderByDescending(x => x.TotalMembers)
                         .Take(11)
                         .Select(x => new MewdekoPartialGuild
                         {
-                            IconUrl = x.IconId.StartsWith("a_") ? x.IconUrl.Replace(".jpg", ".gif") : x.IconUrl,
-                            MemberCount = x.MemberCount,
+                            IconUrl = x.IconUrl,
+                            MemberCount = x.TotalMembers,
                             Name = x.Name
                         })
                         .ToList();
@@ -190,7 +188,7 @@ public class StatsService : IStatsService, IDisposable, IReadyExecutor
 
             foreach (var guild in guilds)
             {
-                members += guild.DownloadedMemberCount;
+                members += guild.Members.Count;
                 channels += guild.Channels.Count;
                 roles += guild.Roles.Count;
             }
@@ -224,8 +222,7 @@ public class StatsService : IStatsService, IDisposable, IReadyExecutor
 
         while (await topGgTimer.WaitForNextTickAsync().ConfigureAwait(false))
         {
-            IDiscordClient cl = client;
-            var guilds = await cl.GetGuildsAsync();
+            var guilds = client.Guilds;
             var content = JsonContent.Create(new
             {
                 shard_count = creds.TotalShards, server_count = guilds.Count

@@ -1,7 +1,6 @@
-﻿using Discord.Commands;
+﻿
 using LinqToDB;
 using LinqToDB.Async;
-using Mewdeko.Common.DiscordImplementations;
 using Mewdeko.Modules.Permissions.Common;
 using Mewdeko.Modules.Permissions.Services;
 using Mewdeko.Services.strings;
@@ -59,7 +58,7 @@ public class VerboseErrorsService : INService, IUnloadableService
     /// <summary>
     ///     Logs a detailed error when a command execution fails, providing additional context to the user.
     /// </summary>
-    private async Task LogVerboseError(CommandInfo cmd, ITextChannel? channel, string reason, IUser user)
+    private async Task LogVerboseError(CommandInfo cmd, Channel? channel, string reason, IUser user)
     {
         if (channel == null)
             return;
@@ -69,10 +68,7 @@ public class VerboseErrorsService : INService, IUnloadableService
         var perms = services.GetService<PermissionService>();
         var pc = await perms.GetCacheFor(channel.GuildId);
         if (cmd.Aliases.Any(i => !(pc.Permissions != null
-                                   && pc.Permissions.CheckPermissions(new MewdekoUserMessage
-                                       {
-                                           Author = user, Channel = channel
-                                       },
+                                   && pc.Permissions.CheckPermissions(SyntheticMessage.Create(user, channel),
                                        i,
                                        cmd.MethodName(), out _))))
         {
@@ -90,7 +86,7 @@ public class VerboseErrorsService : INService, IUnloadableService
                 .WithFooter($"Run {await guildSettings.GetPrefix(channel.Guild)}ve to disable these prompts.")
                 .WithErrorColor();
 
-            await channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+            await channel.SendAsync(embed: embed.Build()).ConfigureAwait(false);
         }
         catch
         {

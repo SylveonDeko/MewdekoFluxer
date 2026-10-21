@@ -34,7 +34,7 @@ public class GameVoiceChannelService : INService
     /// <param name="cacheable">The cacheable guild user.</param>
     /// <param name="after">The guild user after the update.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    private async Task _client_GuildMemberUpdated(Cacheable<SocketGuildUser, ulong> cacheable, SocketGuildUser? after)
+    private async Task _client_GuildMemberUpdated(Cacheable<SocketGuildMember> cacheable, SocketGuildMember? after)
     {
         try
         {
@@ -110,7 +110,7 @@ public class GameVoiceChannelService : INService
     {
         try
         {
-            if (usr is not SocketGuildUser gUser)
+            if (usr is not SocketGuildMember gUser)
                 return;
 
             var game = gUser.Activities.FirstOrDefault()?.Name;
@@ -143,7 +143,7 @@ public class GameVoiceChannelService : INService
     /// <param name="gUser">The guild user.</param>
     /// <param name="game">The game.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    private static async Task TriggerGvc(SocketGuildUser gUser, string game)
+    private static async Task TriggerGvc(SocketGuildMember gUser, string game)
     {
         if (string.IsNullOrWhiteSpace(game))
             return;

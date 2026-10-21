@@ -1,5 +1,4 @@
 using DataModel;
-using Discord.Net;
 using LinqToDB.Async;
 using Mewdeko.Modules.Xp.Models;
 
@@ -39,7 +38,7 @@ public class XpRoleSyncService : INService
     /// <param name="guild">The guild to synchronize roles for.</param>
     /// <param name="progressCallback">Optional callback to report synchronization progress.</param>
     /// <returns>A task representing the asynchronous operation with sync results.</returns>
-    public async Task<RoleSyncResult> SyncAllUsersAsync(IGuild guild,
+    public async Task<RoleSyncResult> SyncAllUsersAsync(SocketGuild guild,
         Func<RoleSyncProgress, Task>? progressCallback = null)
     {
         if (!guildSyncInProgress.TryAdd(guild.Id, true))
@@ -198,11 +197,11 @@ public class XpRoleSyncService : INService
     /// <param name="roleDict">Pre-fetched guild roles dictionary.</param>
     /// <returns>A task representing the asynchronous operation with sync results.</returns>
     private async Task<UserRoleSyncResult> SyncUserRolesBatchAsync(
-        IGuild guild,
+        SocketGuild guild,
         GuildUserXp userXp,
         BatchSyncData batchData,
-        Dictionary<ulong, IGuildUser> memberDict,
-        Dictionary<ulong, IRole> roleDict)
+        Dictionary<ulong, SocketGuildMember> memberDict,
+        Dictionary<ulong, SocketRole> roleDict)
     {
         var result = new UserRoleSyncResult
         {
@@ -242,7 +241,7 @@ public class XpRoleSyncService : INService
                     await user.AddRoleAsync(role);
                     result.RolesAdded++;
                 }
-                catch (HttpException ex) when (ex.DiscordCode == DiscordErrorCode.MissingPermissions)
+                catch (FluxerApiException ex) when (ex.DiscordCode == DiscordErrorCode.MissingPermissions)
                 {
                     logger.LogWarning("Missing permissions to add role {RoleId} to user {UserId} in guild {GuildId}",
                         roleId,
@@ -250,7 +249,7 @@ public class XpRoleSyncService : INService
                     result.HasError = true;
                     result.ErrorMessage = "Missing permissions";
                 }
-                catch (HttpException ex) when (ex.DiscordCode == DiscordErrorCode.InvalidFormBody)
+                catch (FluxerApiException ex) when (ex.DiscordCode == DiscordErrorCode.InvalidFormBody)
                 {
                     logger.LogWarning(
                         "Invalid form body adding role {RoleId} to user {UserId} in guild {GuildId}: {Message}",
@@ -258,7 +257,7 @@ public class XpRoleSyncService : INService
                     result.HasError = true;
                     result.ErrorMessage = "Invalid form body";
                 }
-                catch (HttpException ex) when (ex.DiscordCode == DiscordErrorCode.WriteRatelimitReached)
+                catch (FluxerApiException ex) when (ex.DiscordCode == DiscordErrorCode.WriteRatelimitReached)
                 {
                     logger.LogWarning("Rate limited adding role {RoleId} to user {UserId} in guild {GuildId}", roleId,
                         userXp.UserId, guild.Id);
@@ -289,7 +288,7 @@ public class XpRoleSyncService : INService
                     await user.RemoveRoleAsync(role);
                     result.RolesRemoved++;
                 }
-                catch (HttpException ex) when (ex.DiscordCode == DiscordErrorCode.MissingPermissions)
+                catch (FluxerApiException ex) when (ex.DiscordCode == DiscordErrorCode.MissingPermissions)
                 {
                     logger.LogWarning(
                         "Missing permissions to remove role {RoleId} from user {UserId} in guild {GuildId}",
@@ -297,7 +296,7 @@ public class XpRoleSyncService : INService
                     result.HasError = true;
                     result.ErrorMessage = "Missing permissions";
                 }
-                catch (HttpException ex) when (ex.DiscordCode == DiscordErrorCode.InvalidFormBody)
+                catch (FluxerApiException ex) when (ex.DiscordCode == DiscordErrorCode.InvalidFormBody)
                 {
                     logger.LogWarning(
                         "Invalid form body removing role {RoleId} from user {UserId} in guild {GuildId}: {Message}",
@@ -305,7 +304,7 @@ public class XpRoleSyncService : INService
                     result.HasError = true;
                     result.ErrorMessage = "Invalid form body";
                 }
-                catch (HttpException ex) when (ex.DiscordCode == DiscordErrorCode.WriteRatelimitReached)
+                catch (FluxerApiException ex) when (ex.DiscordCode == DiscordErrorCode.WriteRatelimitReached)
                 {
                     logger.LogWarning("Rate limited removing role {RoleId} from user {UserId} in guild {GuildId}",
                         roleId,
@@ -344,7 +343,7 @@ public class XpRoleSyncService : INService
     /// <param name="guild">The guild containing the user.</param>
     /// <param name="userId">The ID of the user to synchronize roles for.</param>
     /// <returns>A task representing the asynchronous operation with sync results.</returns>
-    public async Task<UserRoleSyncResult> SyncUserRolesAsync(IGuild guild, ulong userId)
+    public async Task<UserRoleSyncResult> SyncUserRolesAsync(SocketGuild guild, ulong userId)
     {
         var lastSync = lastSyncTimes.GetValueOrDefault(userId, DateTime.MinValue);
         var timeSinceLastSync = DateTime.UtcNow - lastSync;
@@ -395,7 +394,7 @@ public class XpRoleSyncService : INService
     /// <param name="userXp">The user's XP data.</param>
     /// <param name="roleRewards">The available role rewards for the guild.</param>
     /// <returns>A task representing the asynchronous operation with sync results.</returns>
-    private async Task<UserRoleSyncResult> SyncUserRolesInternalAsync(IGuild guild, GuildUserXp userXp,
+    private async Task<UserRoleSyncResult> SyncUserRolesInternalAsync(SocketGuild guild, GuildUserXp userXp,
         List<XpRoleReward> roleRewards)
     {
         var result = new UserRoleSyncResult

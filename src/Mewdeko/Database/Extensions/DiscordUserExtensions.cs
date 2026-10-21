@@ -79,7 +79,7 @@ public static class DiscordUserExtensions
     /// <returns>The Discord user entity.</returns>
     public static async Task<DiscordUser> GetOrCreateUser(this MewdekoDb db, IUser? original)
     {
-        var toReturn = await db.GetOrCreateUser(original.Id, original.Username, original.AvatarId);
+        var toReturn = await db.GetOrCreateUser(original.Id, original.Username, original.AvatarHash);
         return toReturn;
     }
 

@@ -3,7 +3,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using DataModel;
-using Discord.Net;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.ModuleBehaviors;
@@ -146,12 +145,12 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <summary>
     ///     Handler for the ChannelDestroyed event, kept so it can be unsubscribed.
     /// </summary>
-    private readonly Func<SocketChannel, Task> channelDestroyedHandler;
+    private readonly Func<Channel, Task> channelDestroyedHandler;
 
     /// <summary>
     ///     The Discord client.
     /// </summary>
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
 
     /// <summary>
     ///     Analytics collector.
@@ -191,7 +190,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <summary>
     ///     Handler for the MessageDeleted event, kept so it can be unsubscribed.
     /// </summary>
-    private readonly Func<Cacheable<IMessage, ulong>, Cacheable<IMessageChannel, ulong>, Task> messageDeletedHandler;
+    private readonly Func<Cacheable<Message>, Cacheable<Channel>, Task> messageDeletedHandler;
 
     /// <summary>
     ///     Posted message ID to menu ID, used to notice when a menu's message is deleted.
@@ -201,7 +200,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <summary>
     ///     Handler for the MessagesBulkDeleted event, kept so it can be unsubscribed.
     /// </summary>
-    private readonly Func<IReadOnlyCollection<Cacheable<IMessage, ulong>>, Cacheable<IMessageChannel, ulong>, Task>
+    private readonly Func<IReadOnlyCollection<Cacheable<Message>>, Cacheable<Channel>, Task>
         messagesBulkDeletedHandler;
 
     /// <summary>
@@ -223,13 +222,13 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <summary>
     ///     Handler for the ReactionAdded event, kept so it can be unsubscribed.
     /// </summary>
-    private readonly Func<Cacheable<IUserMessage, ulong>, Cacheable<IMessageChannel, ulong>, SocketReaction, Task>
+    private readonly Func<Cacheable<Message>, Cacheable<Channel>, SocketReaction, Task>
         reactionAddedHandler;
 
     /// <summary>
     ///     Handler for the ReactionRemoved event, kept so it can be unsubscribed.
     /// </summary>
-    private readonly Func<Cacheable<IUserMessage, ulong>, Cacheable<IMessageChannel, ulong>, SocketReaction, Task>
+    private readonly Func<Cacheable<Message>, Cacheable<Channel>, SocketReaction, Task>
         reactionRemovedHandler;
 
     /// <summary>
@@ -260,7 +259,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="collector">Analytics collector.</param>
     /// <param name="logger">Logger instance.</param>
     public RoleMenuService(
-        DiscordShardedClient client,
+        FluxerClient client,
         IDataConnectionFactory dbFactory,
         GeneratedBotStrings strings,
         EventHandler eventHandler,
@@ -351,7 +350,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// </summary>
     /// <param name="guild">The guild.</param>
     /// <returns>The prefix.</returns>
-    public Task<string> GetPrefixAsync(IGuild guild)
+    public Task<string> GetPrefixAsync(SocketGuild guild)
     {
         return guildSettings.GetPrefix(guild);
     }
@@ -452,7 +451,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="actor">The person editing the menu, or null to skip the editor check.</param>
     /// <param name="roleId">The role ID.</param>
     /// <returns>The problem, or None.</returns>
-    public RoleMenuRoleProblem CheckRole(SocketGuild guild, IGuildUser? actor, ulong roleId)
+    public RoleMenuRoleProblem CheckRole(SocketGuild guild, SocketGuildMember? actor, ulong roleId)
     {
         var role = guild.GetRole(roleId);
         if (role is null)
@@ -493,7 +492,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="guild">The guild.</param>
     /// <param name="channel">The channel.</param>
     /// <returns>The problem text, or null when the bot can post there.</returns>
-    public static string? ChannelProblem(SocketGuild guild, IGuildChannel channel)
+    public static string? ChannelProblem(SocketGuild guild, Channel channel)
     {
         var perms = guild.CurrentUser.GetPermissions(channel);
         if (!perms.ViewChannel)
@@ -515,10 +514,10 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="channel">The channel when it is valid.</param>
     /// <returns>The error and detail, or None.</returns>
     public (RoleMenuError Error, string? Detail) ValidateChannel(SocketGuild guild, ulong channelId,
-        out SocketTextChannel? channel)
+        out Channel? channel)
     {
         channel = guild.GetTextChannel(channelId);
-        if (channel is null or IThreadChannel or IVoiceChannel)
+        if (channel is null or Channel or Channel)
         {
             channel = null;
             return (RoleMenuError.InvalidChannel, null);
@@ -533,9 +532,9 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// </summary>
     /// <param name="channel">The channel.</param>
     /// <returns>True when the channel type is allowed.</returns>
-    public static bool IsMenuChannel(SocketTextChannel channel)
+    public static bool IsMenuChannel(Channel channel)
     {
-        return channel is not IThreadChannel and not IVoiceChannel;
+        return channel is not Channel and not Channel;
     }
 
     /// <summary>
@@ -630,7 +629,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
 
             switch (emote)
             {
-                case Emote custom:
+                case Emoji custom:
                     if (!client.Guilds.Any(g => g.Emotes.Any(e => e.Id == custom.Id)))
                         return (RoleMenuError.InvalidEmoji, emojiText);
                     option.Emoji = custom.ToString();
@@ -672,7 +671,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="draft">The normalized draft.</param>
     /// <param name="stored">The stored menu when updating, or null when creating.</param>
     /// <returns>The error and the offending role name, or None.</returns>
-    private (RoleMenuError Error, string? Detail) ValidateRoles(SocketGuild guild, IGuildUser? actor,
+    private (RoleMenuError Error, string? Detail) ValidateRoles(SocketGuild guild, SocketGuildMember? actor,
         RoleMenuDraft draft, RoleMenu? stored)
     {
         var storedRoles = stored?.Options.Select(x => x.RoleId).ToHashSet() ?? [];
@@ -703,9 +702,9 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="guild">The guild.</param>
     /// <param name="actor">The editor.</param>
     /// <returns>The highest role position.</returns>
-    private static int ActorHierarchy(SocketGuild guild, IGuildUser actor)
+    private static int ActorHierarchy(SocketGuild guild, SocketGuildMember actor)
     {
-        if (actor is SocketGuildUser socketUser)
+        if (actor is SocketGuildMember socketUser)
             return socketUser.Hierarchy;
 
         return actor.RoleIds
@@ -727,7 +726,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="actor">The person creating the menu, or null.</param>
     /// <param name="draft">The menu to create.</param>
     /// <returns>The created menu or the reason it was refused.</returns>
-    public async Task<RoleMenuResult> CreateAsync(ulong guildId, IGuildUser? actor, RoleMenuDraft draft)
+    public async Task<RoleMenuResult> CreateAsync(ulong guildId, SocketGuildMember? actor, RoleMenuDraft draft)
     {
         var guild = client.GetGuild(guildId);
         if (guild is null)
@@ -776,12 +775,12 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
 
             menu.Options = options;
 
-            IUserMessage posted;
+            Message posted;
             try
             {
                 posted = await PostAsync(guild, channel, menu);
             }
-            catch (HttpException ex)
+            catch (FluxerApiException ex)
             {
                 await tx.RollbackAsync();
                 return RoleMenuResult.Fail(RoleMenuError.PostFailed, ex.Reason ?? ex.Message);
@@ -820,7 +819,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="actor">The person editing the menu, or null.</param>
     /// <param name="draft">The desired state.</param>
     /// <returns>The updated menu or the reason it was refused.</returns>
-    public async Task<RoleMenuResult> UpdateAsync(ulong guildId, int menuId, IGuildUser? actor,
+    public async Task<RoleMenuResult> UpdateAsync(ulong guildId, int menuId, SocketGuildMember? actor,
         RoleMenuDraft draft)
     {
         var guild = client.GetGuild(guildId);
@@ -888,7 +887,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
             ApplyDraft(stored, draft, now);
             stored.Options = options;
 
-            IUserMessage? posted = null;
+            Message? posted = null;
             ulong? staleChannelId = null;
             try
             {
@@ -905,7 +904,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
                         staleChannelId = oldChannelId;
                 }
             }
-            catch (HttpException ex)
+            catch (FluxerApiException ex)
             {
                 await tx.RollbackAsync();
                 return RoleMenuResult.Fail(RoleMenuError.PostFailed, ex.Reason ?? ex.Message);
@@ -1002,7 +1001,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
             {
                 await EditInPlaceAsync(guild, stored);
             }
-            catch (HttpException ex)
+            catch (FluxerApiException ex)
             {
                 await tx.RollbackAsync();
                 return RoleMenuResult.Fail(RoleMenuError.PostFailed, ex.Reason ?? ex.Message);
@@ -1064,7 +1063,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
             {
                 await EditInPlaceAsync(guild, stored);
             }
-            catch (HttpException ex)
+            catch (FluxerApiException ex)
             {
                 await tx.RollbackAsync();
                 return RoleMenuResult.Fail(RoleMenuError.PostFailed, ex.Reason ?? ex.Message);
@@ -1117,12 +1116,12 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
 
             await using var tx = await db.BeginTransactionAsync();
 
-            IUserMessage posted;
+            Message posted;
             try
             {
                 posted = await PostAsync(guild, channel, stored);
             }
-            catch (HttpException ex)
+            catch (FluxerApiException ex)
             {
                 await tx.RollbackAsync();
                 return RoleMenuResult.Fail(RoleMenuError.PostFailed, ex.Reason ?? ex.Message);
@@ -1162,7 +1161,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="actor">The person importing, or null.</param>
     /// <param name="import">Import settings.</param>
     /// <returns>The created menu or the reason it was refused.</returns>
-    public async Task<RoleMenuResult> ImportAsync(ulong guildId, IGuildUser? actor, RoleMenuImportDraft import)
+    public async Task<RoleMenuResult> ImportAsync(ulong guildId, SocketGuildMember? actor, RoleMenuImportDraft import)
     {
         var guild = client.GetGuild(guildId);
         if (guild is null)
@@ -1184,12 +1183,12 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
         var channelId = import.ChannelId is > 0 ? import.ChannelId.Value : source.ChannelId;
 
         var sourceChannel = guild.GetTextChannel(source.ChannelId);
-        IUserMessage? original = null;
+        Message? original = null;
         if (sourceChannel is not null)
         {
             try
             {
-                original = await sourceChannel.GetMessageAsync(source.MessageId) as IUserMessage;
+                original = await sourceChannel.GetMessageAsync(source.MessageId) as Message;
             }
             catch (Exception ex)
             {
@@ -1284,7 +1283,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// </summary>
     /// <param name="message">The message to copy.</param>
     /// <returns>The JSON source, or null when the message has nothing to copy.</returns>
-    private static string? SerializeForBuilder(IMessage message)
+    private static string? SerializeForBuilder(Message message)
     {
         var content = string.IsNullOrWhiteSpace(message.Content) ? null : message.Content;
         var embeds = message.Embeds
@@ -1391,11 +1390,11 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="channel">The channel the message lives in.</param>
     /// <param name="menu">The menu with its options sorted.</param>
     /// <returns>Plain text and embeds.</returns>
-    public (string? Text, Discord.Embed[]? Embeds) BuildMessage(SocketGuild guild, ITextChannel channel,
+    public (string? Text, EmbedRequest[]? Embeds) BuildMessage(SocketGuild guild, Channel channel,
         RoleMenu menu)
     {
         string? text;
-        Discord.Embed[]? embeds;
+        EmbedRequest[]? embeds;
 
         if (!string.IsNullOrWhiteSpace(menu.Message))
         {
@@ -1435,7 +1434,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="menu">The menu.</param>
     /// <param name="withHeader">Whether to add the menu name and the intro line.</param>
     /// <returns>The embed.</returns>
-    private Discord.Embed BuildOptionsEmbed(SocketGuild guild, RoleMenu menu, bool withHeader)
+    private EmbedRequest BuildOptionsEmbed(SocketGuild guild, RoleMenu menu, bool withHeader)
     {
         var lines = string.Join("\n", menu.Options.Select(o =>
             o.Emoji + " **" + o.Label + "**" + (o.Description is null ? "" : ": " + o.Description)));
@@ -1460,7 +1459,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// </summary>
     /// <param name="emoji">The stored emoji text.</param>
     /// <returns>The emote, or null.</returns>
-    private static IEmote? ParseEmote(string? emoji)
+    private static Emoji? ParseEmote(string? emoji)
     {
         if (string.IsNullOrWhiteSpace(emoji))
             return null;
@@ -1474,10 +1473,10 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="channel">The channel.</param>
     /// <param name="menu">The menu.</param>
     /// <returns>The posted message.</returns>
-    private async Task<IUserMessage> PostAsync(SocketGuild guild, ITextChannel channel, RoleMenu menu)
+    private async Task<Message> PostAsync(SocketGuild guild, Channel channel, RoleMenu menu)
     {
         var (text, embeds) = BuildMessage(guild, channel, menu);
-        var message = await channel.SendMessageAsync(text, embeds: embeds, allowedMentions: AllowedMentions.None);
+        var message = await channel.SendAsync(text, embeds: embeds, allowedMentions: AllowedMentions.None);
         try
         {
             await SyncReactionsAsync(message, menu);
@@ -1497,9 +1496,9 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="message">The menu's message.</param>
     /// <param name="menu">The menu with its options sorted.</param>
     /// <returns>A task that completes when the reactions match.</returns>
-    private async Task SyncReactionsAsync(IUserMessage message, RoleMenu menu)
+    private async Task SyncReactionsAsync(Message message, RoleMenu menu)
     {
-        var wanted = menu.Options.Select(o => ParseEmote(o.Emoji)).OfType<IEmote>().ToList();
+        var wanted = menu.Options.Select(o => ParseEmote(o.Emoji)).OfType<Emoji>().ToList();
         var wantedKeys = wanted.Select(EmoteKey).ToHashSet();
 
         foreach (var present in message.Reactions.Keys.Where(e => !wantedKeys.Contains(EmoteKey(e))).ToList())
@@ -1518,9 +1517,9 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// </summary>
     /// <param name="emote">The emoji.</param>
     /// <returns>The identifying text.</returns>
-    private static string EmoteKey(IEmote emote)
+    private static string EmoteKey(Emoji emote)
     {
-        return emote is Emote custom ? custom.Id.ToString() : emote.Name;
+        return emote is Emoji custom ? custom.Id.ToString() : emote.Name;
     }
 
     /// <summary>
@@ -1531,7 +1530,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="message">The message to edit.</param>
     /// <param name="menu">The menu.</param>
     /// <returns>A task that completes when the edit is done.</returns>
-    private async Task ModifyAsync(SocketGuild guild, ITextChannel channel, IUserMessage message, RoleMenu menu)
+    private async Task ModifyAsync(SocketGuild guild, Channel channel, Message message, RoleMenu menu)
     {
         var (text, embeds) = BuildMessage(guild, channel, menu);
         await message.ModifyAsync(p =>
@@ -1569,19 +1568,19 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="channel">The channel.</param>
     /// <param name="messageId">The message ID.</param>
     /// <returns>The message, or null when it is gone or not the bot's.</returns>
-    private async Task<IUserMessage?> FetchOwnMessageAsync(ITextChannel channel, ulong messageId)
+    private async Task<Message?> FetchOwnMessageAsync(Channel channel, ulong messageId)
     {
-        IMessage? message;
+        Message? message;
         try
         {
             message = await channel.GetMessageAsync(messageId);
         }
-        catch (HttpException ex) when (ex.HttpCode == HttpStatusCode.NotFound)
+        catch (FluxerApiException ex) when (ex.HttpCode == HttpStatusCode.NotFound)
         {
             return null;
         }
 
-        return message is IUserMessage userMessage && userMessage.Author.Id == client.CurrentUser.Id
+        return message is Message userMessage && userMessage.Author.Id == client.CurrentUser.Id
             ? userMessage
             : null;
     }
@@ -1618,8 +1617,8 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="channel">The channel it is in.</param>
     /// <param name="reaction">The reaction.</param>
     /// <returns>A task that completes when the reaction has been handled.</returns>
-    private async Task OnReactionAddedAsync(Cacheable<IUserMessage, ulong> message,
-        Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
+    private async Task OnReactionAddedAsync(Cacheable<Message> message,
+        Cacheable<Channel> channel, SocketReaction reaction)
     {
         try
         {
@@ -1638,8 +1637,8 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="channel">The channel it is in.</param>
     /// <param name="reaction">The reaction.</param>
     /// <returns>A task that completes when the removal has been handled.</returns>
-    private async Task OnReactionRemovedAsync(Cacheable<IUserMessage, ulong> message,
-        Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
+    private async Task OnReactionRemovedAsync(Cacheable<Message> message,
+        Cacheable<Channel> channel, SocketReaction reaction)
     {
         try
         {
@@ -1658,7 +1657,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="reaction">The reaction.</param>
     /// <param name="add">True when the reaction was added, false when it was removed.</param>
     /// <returns>A task that completes when the roles have been updated.</returns>
-    private async Task HandleReactionAsync(Cacheable<IUserMessage, ulong> cached, SocketReaction reaction, bool add)
+    private async Task HandleReactionAsync(Cacheable<Message> cached, SocketReaction reaction, bool add)
     {
         if (reaction.UserId == client.CurrentUser.Id || !messageIndex.TryGetValue(cached.Id, out var menuId))
             return;
@@ -1668,16 +1667,16 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
         if (menu is null || guild is null)
             return;
 
-        var member = guild.GetUser(reaction.UserId) ?? reaction.User.GetValueOrDefault() as SocketGuildUser;
+        var member = guild.GetUser(reaction.UserId) ?? reaction.User.GetValueOrDefault() as SocketGuildMember;
         if (member is null || member.IsBot)
             return;
 
         var option = menu.Options.FirstOrDefault(o =>
-            ParseEmote(o.Emoji) is { } emote && EmoteKey(emote) == EmoteKey(reaction.Emote));
+            ParseEmote(o.Emoji) is { } emote && EmoteKey(emote) == EmoteKey(reaction.Emoji));
 
         if (!add)
         {
-            if (option is null || !menu.Enabled || TakeBotRemoval(cached.Id, member.Id, reaction.Emote))
+            if (option is null || !menu.Enabled || TakeBotRemoval(cached.Id, member.Id, reaction.Emoji))
                 return;
 
             await SendNoteAsync(guild, menu, member, await ApplyAsync(menu, member, option, false));
@@ -1686,14 +1685,14 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
 
         if (option is null)
         {
-            await RemoveMemberReactionAsync(cached, reaction.Emote, member);
+            await RemoveMemberReactionAsync(cached, reaction.Emoji, member);
             return;
         }
 
         var blocked = AccessProblem(guild, member, menu);
         if (blocked is not null)
         {
-            await RemoveMemberReactionAsync(cached, reaction.Emote, member);
+            await RemoveMemberReactionAsync(cached, reaction.Emoji, member);
             await SendTextAsync(guild, menu, member, blocked);
             return;
         }
@@ -1706,7 +1705,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
         }
 
         if (!CurrentRoleIds(guild.Id, member).Contains(option.RoleId))
-            await RemoveMemberReactionAsync(cached, reaction.Emote, member);
+            await RemoveMemberReactionAsync(cached, reaction.Emoji, member);
 
         await SendNoteAsync(guild, menu, member, outcome);
     }
@@ -1719,7 +1718,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="emote">The reaction to remove.</param>
     /// <param name="member">The member whose reaction it is.</param>
     /// <returns>A task that completes when the attempt is done.</returns>
-    private async Task RemoveMemberReactionAsync(Cacheable<IUserMessage, ulong> cached, IEmote emote, IUser member)
+    private async Task RemoveMemberReactionAsync(Cacheable<Message> cached, Emoji emote, IUser member)
     {
         var key = (cached.Id, member.Id, EmoteKey(emote));
         var now = DateTime.UtcNow;
@@ -1752,7 +1751,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="userId">The member ID.</param>
     /// <param name="emote">The removed reaction.</param>
     /// <returns>True when the bot removed it just now.</returns>
-    private bool TakeBotRemoval(ulong messageId, ulong userId, IEmote emote)
+    private bool TakeBotRemoval(ulong messageId, ulong userId, Emoji emote)
     {
         return botRemovedReactions.TryRemove((messageId, userId, EmoteKey(emote)), out var expires) &&
                expires >= DateTime.UtcNow;
@@ -1765,7 +1764,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="member">The member.</param>
     /// <param name="menu">The menu.</param>
     /// <returns>The text explaining why not, or null when they may.</returns>
-    private string? AccessProblem(SocketGuild guild, SocketGuildUser member, RoleMenu menu)
+    private string? AccessProblem(SocketGuild guild, SocketGuildMember member, RoleMenu menu)
     {
         if (!menu.Enabled)
             return strings.RolemenuPaused(guild.Id);
@@ -1785,7 +1784,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="member">The member.</param>
     /// <param name="outcome">The outcome.</param>
     /// <returns>A task that completes when the note is sent.</returns>
-    private async Task SendNoteAsync(SocketGuild guild, RoleMenu menu, SocketGuildUser member,
+    private async Task SendNoteAsync(SocketGuild guild, RoleMenu menu, SocketGuildMember member,
         RoleMenuOutcome outcome)
     {
         var silent = (RoleMenuReplyMode)menu.ReplyMode == RoleMenuReplyMode.Silent;
@@ -1804,7 +1803,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="member">The member.</param>
     /// <param name="text">The text.</param>
     /// <returns>A task that completes when the note is sent.</returns>
-    private async Task SendTextAsync(SocketGuild guild, RoleMenu menu, SocketGuildUser member, string text)
+    private async Task SendTextAsync(SocketGuild guild, RoleMenu menu, SocketGuildMember member, string text)
     {
         if (guild.GetTextChannel(menu.ChannelId) is not { } channel)
             return;
@@ -1812,7 +1811,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
         try
         {
             var note = member.Mention + "\n" + text;
-            var sent = await channel.SendMessageAsync(note,
+            var sent = await channel.SendAsync(note,
                 allowedMentions: new AllowedMentions(AllowedMentionTypes.Users));
             sent.DeleteAfter(NoteSeconds);
         }
@@ -1857,7 +1856,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="picked">The option the member reacted with.</param>
     /// <param name="add">True when the member added the reaction, false when they removed it.</param>
     /// <returns>What changed and any notes.</returns>
-    private async Task<RoleMenuOutcome> ApplyAsync(RoleMenu menu, SocketGuildUser member, RoleMenuOption picked,
+    private async Task<RoleMenuOutcome> ApplyAsync(RoleMenu menu, SocketGuildMember member, RoleMenuOption picked,
         bool add)
     {
         var guild = member.Guild;
@@ -1945,7 +1944,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
                         await member.RemoveRolesAsync(toRemove, options);
                         outcome.Removed.AddRange(toRemove);
                     }
-                    catch (HttpException ex) when (IsPermissionFailure(ex))
+                    catch (FluxerApiException ex) when (IsPermissionFailure(ex))
                     {
                         foreach (var id in toRemove)
                             outcome.Notes.Add(strings.RolemenuRoleUnavailable(guild.Id, MentionUtils.MentionRole(id)));
@@ -1959,7 +1958,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
                         await member.AddRolesAsync(toAdd, options);
                         outcome.Added.AddRange(toAdd);
                     }
-                    catch (HttpException ex) when (IsPermissionFailure(ex))
+                    catch (FluxerApiException ex) when (IsPermissionFailure(ex))
                     {
                         foreach (var id in toAdd)
                             outcome.Notes.Add(strings.RolemenuRoleUnavailable(guild.Id, MentionUtils.MentionRole(id)));
@@ -1992,7 +1991,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// </summary>
     /// <param name="ex">The error.</param>
     /// <returns>True for a permission failure.</returns>
-    private static bool IsPermissionFailure(HttpException ex)
+    private static bool IsPermissionFailure(FluxerApiException ex)
     {
         return ex.DiscordCode == DiscordErrorCode.MissingPermissions;
     }
@@ -2003,7 +2002,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="guildId">The guild ID.</param>
     /// <param name="member">The member.</param>
     /// <returns>The role IDs.</returns>
-    private HashSet<ulong> CurrentRoleIds(ulong guildId, SocketGuildUser member)
+    private HashSet<ulong> CurrentRoleIds(ulong guildId, SocketGuildMember member)
     {
         var ids = member.Roles.Select(r => r.Id).ToHashSet();
         var key = (guildId, member.Id);
@@ -2069,8 +2068,8 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="message">The deleted message.</param>
     /// <param name="channel">The channel it was in.</param>
     /// <returns>A task that completes when cleanup is done.</returns>
-    private async Task OnMessageDeletedAsync(Cacheable<IMessage, ulong> message,
-        Cacheable<IMessageChannel, ulong> channel)
+    private async Task OnMessageDeletedAsync(Cacheable<Message> message,
+        Cacheable<Channel> channel)
     {
         if (!messageIndex.TryRemove(message.Id, out var menuId))
             return;
@@ -2083,8 +2082,8 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="messages">The deleted messages.</param>
     /// <param name="channel">The channel they were in.</param>
     /// <returns>A task that completes when cleanup is done.</returns>
-    private async Task OnMessagesBulkDeletedAsync(IReadOnlyCollection<Cacheable<IMessage, ulong>> messages,
-        Cacheable<IMessageChannel, ulong> channel)
+    private async Task OnMessagesBulkDeletedAsync(IReadOnlyCollection<Cacheable<Message>> messages,
+        Cacheable<Channel> channel)
     {
         foreach (var message in messages)
         {
@@ -2128,9 +2127,9 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// </summary>
     /// <param name="channel">The deleted channel.</param>
     /// <returns>A task that completes when cleanup is done.</returns>
-    private async Task OnChannelDestroyedAsync(SocketChannel channel)
+    private async Task OnChannelDestroyedAsync(Channel channel)
     {
-        if (channel is not SocketGuildChannel guildChannel)
+        if (channel is not Channel guildChannel)
             return;
 
         await writeLock.WaitAsync();

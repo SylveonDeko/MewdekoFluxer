@@ -14,7 +14,7 @@ namespace Mewdeko.Controllers;
 [Route("botapi/[controller]/{guildId}")]
 [Authorize("ApiKeyPolicy")]
 public class ChannelAccessController(
-    DiscordShardedClient client,
+    FluxerClient client,
     ChannelAccessService service,
     IDashboardAuditContext auditContext) : Controller
 {

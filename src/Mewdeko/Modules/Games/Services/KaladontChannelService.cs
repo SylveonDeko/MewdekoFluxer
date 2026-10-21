@@ -16,7 +16,7 @@ public class KaladontChannelService : INService, IReadyExecutor
 {
     private const string CHANNEL_CACHE_KEY = "kaladont_channel_{0}";
     private readonly IMemoryCache cache;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
 
     private readonly IDataConnectionFactory dbFactory;
     private readonly EventHandler eventHandler;
@@ -38,7 +38,7 @@ public class KaladontChannelService : INService, IReadyExecutor
         ILogger<KaladontChannelService> logger,
         IMemoryCache cache,
         EventHandler eventHandler,
-        DiscordShardedClient client,
+        FluxerClient client,
         GeneratedBotStrings strings)
     {
         this.dbFactory = dbFactory;
@@ -245,7 +245,7 @@ public class KaladontChannelService : INService, IReadyExecutor
         // Notify channel
         try
         {
-            if (client.GetChannel(channelId) is ITextChannel textChannel)
+            if (client.GetChannel(channelId) is Channel textChannel)
             {
                 var embed = new EmbedBuilder()
                     .WithOkColor()
@@ -253,7 +253,7 @@ public class KaladontChannelService : INService, IReadyExecutor
                     .WithDescription(strings.KaladontStartingWord(textChannel.GuildId, newWord))
                     .Build();
 
-                await textChannel.SendMessageAsync(embed: embed);
+                await textChannel.SendAsync(embed: embed);
             }
         }
         catch (Exception ex)
@@ -264,7 +264,7 @@ public class KaladontChannelService : INService, IReadyExecutor
 
     private async Task MessageReceived(SocketMessage msg)
     {
-        if (msg.Author.IsBot || msg.Channel is not ITextChannel textChannel)
+        if (msg.Author.IsBot || msg.Channel is not Channel textChannel)
             return;
 
         // Check if this is a persistent Kaladont channel
@@ -378,7 +378,7 @@ public class KaladontChannelService : INService, IReadyExecutor
                         .AddField(strings.KaladontNextPrefix(guildId), Format.Bold(nextPrefix.ToUpperInvariant()), true)
                         .Build();
 
-                    await textChannel.SendMessageAsync(embed: embed);
+                    await textChannel.SendAsync(embed: embed);
                 }
                 catch (Exception ex)
                 {
@@ -394,8 +394,8 @@ public class KaladontChannelService : INService, IReadyExecutor
                 {
                     try
                     {
-                        await msg.AddReactionAsync(new Emoji("❌"));
-                        var reply = await textChannel.SendMessageAsync(errorMsg);
+                        await msg.AddReactionAsync(Emoji.FromUnicode("❌"));
+                        var reply = await textChannel.SendAsync(errorMsg);
 
                         // Delete error after 5 seconds
                         _ = Task.Run(async () =>

@@ -1,5 +1,4 @@
 ﻿using DataModel;
-using Discord.Commands;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.Attributes.TextCommands;
@@ -30,7 +29,7 @@ public class UserProfile(IDataConnectionFactory dbFactory, BotCredentials creds)
         if (embed is null)
             await ctx.Channel.SendErrorAsync(Strings.ProfilePrivate(ctx.Guild.Id), Config);
         else
-            await ctx.Channel.SendMessageAsync(embed: embed);
+            await ctx.Channel.SendAsync(embed: embed);
     }
 
     /// <summary>
@@ -172,7 +171,7 @@ public class UserProfile(IDataConnectionFactory dbFactory, BotCredentials creds)
         await Service.SetProfileImage(ctx.User, url);
         var eb = new EmbedBuilder().WithOkColor().WithDescription(Strings.ProfileImageSet(ctx.Guild.Id))
             .WithImageUrl(url);
-        await ctx.Channel.SendMessageAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -256,7 +255,7 @@ public class UserProfile(IDataConnectionFactory dbFactory, BotCredentials creds)
                 new EmbedBuilder().WithOkColor()
                     .WithDescription(Strings.PronounsInternalSelf(ctx.Guild.Id, user.Pronouns)),
                 ctx.User.Id,
-                new ReactionChoice(new Emoji("🗑️"), Strings.PronounsOverwriteClearButton(ctx.Guild.Id), "clear"))
+                new ReactionChoice(Emoji.FromUnicode("🗑️"), Strings.PronounsOverwriteClearButton(ctx.Guild.Id), "clear"))
                 .ConfigureAwait(false);
             if (picked != "clear")
                 return;
@@ -296,7 +295,7 @@ public class UserProfile(IDataConnectionFactory dbFactory, BotCredentials creds)
         }
 
         var channel = await ctx.Client.GetChannelAsync(creds.PronounAbuseReportChannelId).ConfigureAwait(false);
-        if (channel is not ITextChannel reportChannel)
+        if (channel is not Channel reportChannel)
         {
             await ReplyErrorAsync(Strings.PronounsReportNothing(ctx.Guild.Id)).ConfigureAwait(false);
             return;
@@ -317,7 +316,7 @@ public class UserProfile(IDataConnectionFactory dbFactory, BotCredentials creds)
             .WithFooter(Strings.ReportedInGuild(ctx.Guild.Id, ctx.Guild.Id))
             .WithErrorColor();
 
-        await reportChannel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+        await reportChannel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
         await ReplyConfirmAsync(Strings.PronounsReported(ctx.Guild.Id)).ConfigureAwait(false);
     }
 

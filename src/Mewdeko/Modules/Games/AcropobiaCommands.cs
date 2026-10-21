@@ -1,5 +1,4 @@
 ﻿using System.Collections.Immutable;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Games.Common.Acrophobia;
 using Mewdeko.Modules.Games.Services;
@@ -29,7 +28,7 @@ public partial class Games
         public async Task Acrophobia(params string[] args)
         {
             var (options, _) = OptionsParser.ParseFrom(new AcrophobiaGame.Options(), args);
-            var channel = (ITextChannel)ctx.Channel;
+            var channel = (Channel)ctx.Channel;
 
             var game = new AcrophobiaGame(options);
             if (Service.AcrophobiaGames.TryAdd(channel.Id, game))

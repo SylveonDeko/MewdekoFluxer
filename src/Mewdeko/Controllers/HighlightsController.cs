@@ -14,7 +14,7 @@ namespace Mewdeko.Controllers;
 [Authorize("ApiKeyPolicy")]
 public class HighlightsController(
     HighlightsService service,
-    DiscordShardedClient client,
+    FluxerClient client,
     IDataConnectionFactory dbFactory,
     IDashboardAuditContext auditContext)
     : Controller

@@ -1,4 +1,3 @@
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Games.Common.Kaladont;
 using Mewdeko.Modules.Games.Services;
@@ -31,7 +30,7 @@ public partial class Games
         public async Task Kaladont(params string[] args)
         {
             var (options, _) = OptionsParser.ParseFrom(new KaladontGame.Options(), args);
-            var channel = (ITextChannel)ctx.Channel;
+            var channel = (Channel)ctx.Channel;
 
             // Get dictionary for selected language
             var dictionary = Service.GetKaladontDictionary(options.Language);
@@ -160,8 +159,8 @@ public partial class Games
                 }
             }
 
-            async Task ClientReactionAdded(Cacheable<IUserMessage, ulong> message,
-                Cacheable<IMessageChannel, ulong> reactionChannel, SocketReaction reaction)
+            async Task ClientReactionAdded(Cacheable<Message> message,
+                Cacheable<Channel> reactionChannel, SocketReaction reaction)
             {
                 if (reactionChannel.Id != ctx.Channel.Id || reaction.UserId == ctx.Client.CurrentUser.Id)
                     return;
@@ -173,7 +172,7 @@ public partial class Games
 
                 try
                 {
-                    if (activeGame.CurrentPhase == KaladontGame.Phase.Joining && reaction.Emote.Name == "✅")
+                    if (activeGame.CurrentPhase == KaladontGame.Phase.Joining && reaction.Emoji.Name == "✅")
                     {
                         var user = await ctx.Guild.GetUserAsync(reaction.UserId).ConfigureAwait(false);
                         if (user == null || user.IsBot)
@@ -204,7 +203,7 @@ public partial class Games
         [RequireContext(ContextType.Guild)]
         public async Task KaladontStop()
         {
-            var channel = (ITextChannel)ctx.Channel;
+            var channel = (Channel)ctx.Channel;
 
             if (Service.KaladontGames.TryGetValue(channel.Id, out var game))
             {
@@ -230,7 +229,7 @@ public partial class Games
         public async Task KaladontSetup(params string[] args)
         {
             var (options, _) = OptionsParser.ParseFrom(new KaladontGame.Options(), args);
-            var channel = (ITextChannel)ctx.Channel;
+            var channel = (Channel)ctx.Channel;
 
             // Check if dictionary exists
             var dictionary = Service.GetKaladontDictionary(options.Language);
@@ -307,7 +306,7 @@ public partial class Games
                     $"Language: {game.Opts.Language.ToUpperInvariant()} | Mode: {modeText} | Join time: {game.Opts.JoinTime}s");
 
             var msg = await ctx.Channel.EmbedAsync(embed).ConfigureAwait(false);
-            await msg.AddReactionAsync(new Emoji("✅")).ConfigureAwait(false);
+            await msg.AddReactionAsync(Emoji.FromUnicode("✅")).ConfigureAwait(false);
         }
 
         private Task Game_OnStarted(KaladontGame game)

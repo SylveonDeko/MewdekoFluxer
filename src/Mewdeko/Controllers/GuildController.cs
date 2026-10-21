@@ -13,7 +13,7 @@ namespace Mewdeko.Controllers;
 public class GuildController : ControllerBase
 {
     private readonly AdministrationService adminService;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly ILogger<GuildController> logger;
     private readonly IDashboardAuditContext auditContext;
 
@@ -24,7 +24,7 @@ public class GuildController : ControllerBase
     /// <param name="logger">The logger instance</param>
     /// <param name="adminService">The administration service</param>
     /// <param name="auditContext">Records before/after state for the dashboard audit log.</param>
-    public GuildController(DiscordShardedClient client, ILogger<GuildController> logger,
+    public GuildController(FluxerClient client, ILogger<GuildController> logger,
         AdministrationService adminService, IDashboardAuditContext auditContext)
     {
         this.client = client;

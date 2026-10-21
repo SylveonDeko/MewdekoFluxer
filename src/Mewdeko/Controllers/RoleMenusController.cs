@@ -18,7 +18,7 @@ namespace Mewdeko.Controllers;
 public class RoleMenusController : Controller
 {
     private readonly IDashboardAuditContext auditContext;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly ILogger<RoleMenusController> logger;
     private readonly RoleCommandsService roleCommands;
     private readonly RoleMenuService service;
@@ -34,7 +34,7 @@ public class RoleMenusController : Controller
     public RoleMenusController(
         RoleMenuService service,
         RoleCommandsService roleCommands,
-        DiscordShardedClient client,
+        FluxerClient client,
         ILogger<RoleMenusController> logger,
         IDashboardAuditContext auditContext)
     {
@@ -480,7 +480,7 @@ public class RoleMenusController : Controller
     /// </summary>
     /// <param name="guild">The guild.</param>
     /// <returns>The member, or null when the request has no valid user or they are not in the guild.</returns>
-    private async Task<SocketGuildUser?> ResolveActorAsync(SocketGuild guild)
+    private async Task<SocketGuildMember?> ResolveActorAsync(SocketGuild guild)
     {
         var userId = await HttpContext.GetDashboardUserIdAsync() ?? 0;
         return userId == 0 ? null : guild.GetUser(userId);

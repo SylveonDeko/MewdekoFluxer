@@ -15,7 +15,7 @@ namespace Mewdeko.Controllers;
 [Authorize("ApiKeyPolicy")]
 public class RepeatersController : Controller
 {
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly ILogger<RepeatersController> logger;
     private readonly MessageCountService? messageCountService;
     private readonly MessageRepeaterService repeaterService;
@@ -28,7 +28,7 @@ public class RepeatersController : Controller
     /// </summary>
     public RepeatersController(
         MessageRepeaterService repeaterService,
-        DiscordShardedClient client,
+        FluxerClient client,
         ILogger<RepeatersController> logger,
         IDashboardAuditContext auditContext,
         MessageCountService? messageCountService = null,
@@ -175,7 +175,7 @@ public class RepeatersController : Controller
             if (request.TriggerMode == StickyTriggerMode.Immediate)
             {
                 var channel = guild.GetChannel(request.ChannelId);
-                if (channel is IForumChannel && !request.ThreadOnlyMode)
+                if (channel is Channel && !request.ThreadOnlyMode)
                 {
                     return BadRequest(
                         "Immediate mode on forum channels requires Thread-Only Mode to be enabled, as bots cannot post directly to forum channels.");

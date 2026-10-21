@@ -1,5 +1,4 @@
 ﻿using System.IO;
-using Discord.Commands;
 using MathNet.Symbolics;
 using Mewdeko.Common.Attributes.TextCommands;
 using OxyPlot;

@@ -1,18 +1,14 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using DataModel;
-using Discord.Commands;
-using Discord.Net;
-using Discord.Rest;
 using LibGit2Sharp;
 using LinqToDB.Async;
 using LinqToDB.Data;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.Configs;
-using Mewdeko.Common.DiscordImplementations;
 using Mewdeko.Modules.OwnerOnly.Services;
 using Mewdeko.Services.Impl;
 using Mewdeko.Services.Settings;
@@ -49,7 +45,7 @@ namespace Mewdeko.Modules.OwnerOnly;
 /// <param name="botHells">Service that flags servers littered with bots.</param>
 [OwnerOnly]
 public class OwnerOnly(
-    DiscordShardedClient client,
+    FluxerClient client,
     Mewdeko bot,
     IBotStrings strings,
     InteractiveService serv,
@@ -108,8 +104,8 @@ public class OwnerOnly(
             .WithDescription(Strings.UpdateVersionSelect(ctx.Guild.Id));
 
         var (msg, branch) = await PromptReactionChoiceAsync(embed, ctx.User.Id,
-            new ReactionChoice(new Emoji("🟢"), Strings.UpdateBranchStable(ctx.Guild.Id), "main"),
-            new ReactionChoice(new Emoji("🌙"), Strings.UpdateBranchNightly(ctx.Guild.Id), "psqldeko"));
+            new ReactionChoice(Emoji.FromUnicode("🟢"), Strings.UpdateBranchStable(ctx.Guild.Id), "main"),
+            new ReactionChoice(Emoji.FromUnicode("🌙"), Strings.UpdateBranchNightly(ctx.Guild.Id), "psqldeko"));
         if (branch is null)
             return;
 
@@ -199,10 +195,10 @@ public class OwnerOnly(
     /// </remarks>
     [Cmd]
     [Aliases]
-    public async Task Sudo(IGuildUser user, [Remainder] string args)
+    public async Task Sudo(SocketGuildMember user, [Remainder] string args)
     {
         var content = $"{await guildSettings.GetPrefix(ctx.Guild)}{args}";
-        var msg = MewdekoUserMessage.CreateWithMentions(content, user, ctx.Channel);
+        var msg = Context.Message.CopyAs(user, content);
         commandHandler.AddCommandToParseQueue(msg);
         _ = commandHandler.ExecuteCommandsInChannelAsync(ctx.Channel.Id);
     }
@@ -220,7 +216,10 @@ public class OwnerOnly(
     public async Task Sudo([Remainder] string args)
     {
         var content = $"{await guildSettings.GetPrefix(ctx.Guild)}{args}";
-        var msg = MewdekoUserMessage.CreateWithMentions(content, await Context.Guild.GetOwnerAsync(), ctx.Channel);
+        var owner = await ctx.Guild.GetMemberAsync(ctx.Guild.OwnerId);
+        if (owner is null)
+            return;
+        var msg = Context.Message.CopyAs(owner, content);
         commandHandler.AddCommandToParseQueue(msg);
         _ = commandHandler.ExecuteCommandsInChannelAsync(ctx.Channel.Id);
     }
@@ -233,17 +232,17 @@ public class OwnerOnly(
     [OwnerOnly]
     public async Task GenerateDocs()
     {
-        await ctx.Channel.SendMessageAsync(Strings.GeneratingDocs(ctx.Guild.Id));
+        await ctx.Channel.SendAsync(Strings.GeneratingDocs(ctx.Guild.Id));
 
         try
         {
             await Service.GenerateDocumentationAsync("/home/sylv/RiderProjects/mewdeko/src/Mewdeko/Modules");
-            await ctx.Channel.SendMessageAsync(Strings.DocsGenerated(ctx.Guild.Id));
+            await ctx.Channel.SendAsync(Strings.DocsGenerated(ctx.Guild.Id));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error generating command documentation");
-            await ctx.Channel.SendMessageAsync(Strings.DocsError(ctx.Guild.Id));
+            await ctx.Channel.SendAsync(Strings.DocsError(ctx.Guild.Id));
         }
     }
 
@@ -262,7 +261,7 @@ public class OwnerOnly(
         var result = await cache.ExecuteRedisCommand(command).ConfigureAwait(false);
         var eb = new EmbedBuilder().WithOkColor().WithTitle(Strings.RedisResponse(ctx.Guild.Id))
             .WithDescription(result.ToString());
-        await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -443,7 +442,7 @@ public class OwnerOnly(
             .OrderByDescending(gc => gc.Count)
             .FirstOrDefaultAsync();
 
-        IGuild? guild = null;
+        SocketGuild? guild = null;
         IUser? user = null;
 
         // Parallel fetch of guild and user details
@@ -473,7 +472,7 @@ public class OwnerOnly(
                 Strings.StatsTopGuild(ctx.Guild.Id, guild?.Name ?? Strings.UnknownGuild(ctx.Guild.Id),
                     topGuildStat?.Count ?? 0));
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
 
@@ -778,7 +777,7 @@ public class OwnerOnly(
             cmdText.StartsWith($"{await guildSettings.GetPrefix(ctx.Guild)}restart", StringComparison.InvariantCulture))
             return;
 
-        var guser = (IGuildUser)ctx.User;
+        var guser = (SocketGuildMember)ctx.User;
         var cmd = new AutoCommand
         {
             CommandText = cmdText,
@@ -839,7 +838,7 @@ public class OwnerOnly(
         if (interval < 5)
             return;
 
-        var guser = (IGuildUser)ctx.User;
+        var guser = (SocketGuildMember)ctx.User;
         var cmd = new AutoCommand
         {
             CommandText = cmdText,
@@ -1092,82 +1091,6 @@ public class OwnerOnly(
     }
 
 
-    /// <summary>
-    ///     Displays statistics for all shards of the bot, including their statuses, guild counts, and user counts.
-    /// </summary>
-    /// <remarks>
-    ///     This command aggregates the current status of all shards and displays a summary followed by a detailed
-    ///     paginated list of each shard's status, including the time since last update, guild count, and user count.
-    ///     The statuses are represented by emojis for quick visual reference.
-    /// </remarks>
-    [Cmd]
-    [Aliases]
-    public async Task ShardStats()
-    {
-        var statuses = client.Shards;
-
-        // Aggregate shard status summaries
-        var status = string.Join(" : ", statuses
-            .Select(x => (ConnectionStateToEmoji(x.ConnectionState), x))
-            .GroupBy(x => x.Item1)
-            .Select(x => Strings.ShardStatusGroup(ctx.Guild.Id, x.Count(), x.Key))
-            .ToArray());
-
-        var allShardStrings = statuses
-            .Select(st =>
-            {
-                var stateStr = ConnectionStateToEmoji(st.ConnectionState);
-                var maxGuildCountLength = statuses.Max(x => x.Guilds.Count).ToString().Length;
-                return Strings.ShardInfo(
-                    ctx.Guild.Id,
-                    stateStr,
-                    st.ShardId.ToString().PadBoth(3),
-                    st.Guilds.Count.ToString().PadBoth(maxGuildCountLength),
-                    st.Guilds.Select(x => x.Users.Count).Sum()
-                );
-            })
-            .ToArray();
-
-
-        // Setup and send a paginator for detailed shard stats
-        var paginator = new LazyPaginatorBuilder()
-            .AddUser(ctx.User)
-            .WithPageFactory(PageFactory)
-            .WithFooter(PaginatorFooter.PageNumber)
-            .WithMaxPageIndex(allShardStrings.Length / 25)
-            .WithActionOnCancellation(ActionOnStop.DeleteMessage)
-            .Build();
-
-        await serv.SendPaginatorAsync(paginator, Context.Channel, TimeSpan.FromMinutes(60)).ConfigureAwait(false);
-
-        async Task<PageBuilder> PageFactory(int page)
-        {
-            await Task.CompletedTask.ConfigureAwait(false);
-            var str = string.Join("\n", allShardStrings.Skip(25 * page).Take(25));
-
-            if (string.IsNullOrWhiteSpace(str))
-                str = Strings.NoShardsOnPage(ctx.Guild.Id);
-
-            return new PageBuilder()
-                .WithAuthor(a => a.WithName(Strings.ShardStatsTitle(ctx.Guild.Id)))
-                .WithTitle(status)
-                .WithColor(Mewdeko.OkColor)
-                .WithDescription(str)
-                .WithFooter(Strings.PageSuffix(ctx.Guild.Id, page + 1));
-        }
-    }
-
-
-    private static string ConnectionStateToEmoji(ConnectionState status)
-    {
-        return status switch
-        {
-            ConnectionState.Connected => "✅",
-            ConnectionState.Disconnected => "🔻",
-            ConnectionState.Connecting => "🔄",
-            _ => "❓"
-        };
-    }
 
     /// <summary>
     ///     Commands the bot to leave a server.
@@ -1224,8 +1147,8 @@ public class OwnerOnly(
                     : entry.GuildName;
                 eb.AddField($"{name} `{entry.GuildId}`",
                     Strings.RetentionEntry(ctx.Guild.Id,
-                        TimestampTag.FromDateTime(entry.LeftAt, TimestampTagStyles.Relative),
-                        TimestampTag.FromDateTime(entry.PurgeAfter, TimestampTagStyles.Relative),
+                        TimestampTag.FromDateTime(entry.LeftAt, TimestampTagStyle.Relative),
+                        TimestampTag.FromDateTime(entry.PurgeAfter, TimestampTagStyle.Relative),
                         entry.Source));
             }
 
@@ -1261,12 +1184,12 @@ public class OwnerOnly(
                 listed += $" +{batch.Count() - 5}";
             eb.AddField(
                 Strings.RetentionRecentEntry(ctx.Guild.Id,
-                    TimestampTag.FromDateTime(batch.Key, TimestampTagStyles.Relative), batch.Count(),
+                    TimestampTag.FromDateTime(batch.Key, TimestampTagStyle.Relative), batch.Count(),
                     batch.First().RowsDeleted),
                 listed.TrimTo(1024));
         }
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1421,7 +1344,7 @@ public class OwnerOnly(
         else
             eb.WithOkColor();
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1584,7 +1507,7 @@ public class OwnerOnly(
     public async Task Send(ulong whereOrTo, ulong to = 0, [Remainder] string? msg = null)
     {
         var rep = new ReplacementBuilder().WithDefault(Context).Build();
-        RestGuild potentialServer;
+        Guild potentialServer;
         try
         {
             potentialServer = await client.Rest.GetGuildAsync(whereOrTo).ConfigureAwait(false);
@@ -1600,14 +1523,14 @@ public class OwnerOnly(
 
             if (SmartEmbed.TryParse(rep.Replace(msg), ctx.Guild?.Id, out var embed, out var plainText))
             {
-                await potentialUser.SendMessageAsync(plainText, embeds: embed)
+                await potentialUser.SendAsync(plainText, embeds: embed)
                     .ConfigureAwait(false);
                 await ctx.Channel.SendConfirmAsync(Strings.MessageSentToUser(ctx.Guild.Id, potentialUser.Mention))
                     .ConfigureAwait(false);
                 return;
             }
 
-            await potentialUser.SendMessageAsync(rep.Replace(msg)).ConfigureAwait(false);
+            await potentialUser.SendAsync(rep.Replace(msg)).ConfigureAwait(false);
             await ctx.Channel.SendConfirmAsync(Strings.MessageSentToUser(ctx.Guild.Id, potentialUser.Mention))
                 .ConfigureAwait(false);
             return;
@@ -1625,7 +1548,7 @@ public class OwnerOnly(
         {
             if (SmartEmbed.TryParse(rep.Replace(msg), ctx.Guild.Id, out var embed, out var plainText))
             {
-                await channel.SendMessageAsync(plainText, embeds: embed)
+                await channel.SendAsync(plainText, embeds: embed)
                     .ConfigureAwait(false);
                 await ctx.Channel
                     .SendConfirmAsync(Strings.MessageSentToServer(ctx.Guild.Id, potentialServer, channel.Mention))
@@ -1633,7 +1556,7 @@ public class OwnerOnly(
                 return;
             }
 
-            await channel.SendMessageAsync(rep.Replace(msg)).ConfigureAwait(false);
+            await channel.SendAsync(rep.Replace(msg)).ConfigureAwait(false);
             await ctx.Channel.SendConfirmAsync(Strings.MessageSentChannel(ctx.Guild.Id, potentialServer,
                 channel.Mention));
             return;
@@ -1649,14 +1572,14 @@ public class OwnerOnly(
 
         if (SmartEmbed.TryParse(rep.Replace(msg), ctx.Guild?.Id, out var embed1, out var plainText1))
         {
-            await channel.SendMessageAsync(plainText1, embeds: embed1)
+            await channel.SendAsync(plainText1, embeds: embed1)
                 .ConfigureAwait(false);
             await ctx.Channel.SendConfirmAsync(Strings.MessageSentGuild(ctx.Guild.Id, potentialServer, user.Mention));
 
             return;
         }
 
-        await channel.SendMessageAsync(rep.Replace(msg)).ConfigureAwait(false);
+        await channel.SendAsync(rep.Replace(msg)).ConfigureAwait(false);
         await ctx.Channel.SendConfirmAsync(Strings.MessageSentUser(ctx.Guild.Id, user.Mention));
     }
 
@@ -1754,7 +1677,7 @@ public class OwnerOnly(
 
                 if (string.IsNullOrEmpty(output))
                 {
-                    await ctx.Channel.SendMessageAsync($"```{Strings.EvalOutputBlank(ctx.Guild.Id)}```");
+                    await ctx.Channel.SendAsync($"```{Strings.EvalOutputBlank(ctx.Guild.Id)}```");
                     return;
                 }
 
@@ -1887,7 +1810,7 @@ public class OwnerOnly(
         {
             Title = Strings.EvalCompiling(ctx.Guild.Id), Color = new Color(0xD091B2)
         };
-        var msg = await Context.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+        var msg = await Context.Channel.SendAsync(embed: embed.Build()).ConfigureAwait(false);
 
         // Get all namespaces from loaded assemblies
         var allNamespaces = new HashSet<string>();
@@ -2082,7 +2005,7 @@ public sealed class EvaluationEnvironment
     /// <summary>
     ///     Gets the message that triggered the current eval command
     /// </summary>
-    public IUserMessage Message
+    public Message Message
     {
         get
         {
@@ -2093,7 +2016,7 @@ public sealed class EvaluationEnvironment
     /// <summary>
     ///     Gets the channel in which the eval command was executed
     /// </summary>
-    public IMessageChannel Channel
+    public Channel Channel
     {
         get
         {
@@ -2104,7 +2027,7 @@ public sealed class EvaluationEnvironment
     /// <summary>
     ///     Gets the guild in which the eval command was executed. May be null for commands executed in DMs
     /// </summary>
-    public IGuild Guild
+    public SocketGuild Guild
     {
         get
         {
@@ -2125,20 +2048,20 @@ public sealed class EvaluationEnvironment
 
     /// <summary>
     ///     Gets the guild member who executed the eval command. This is a convenience property for accessing the user as an
-    ///     IGuildUser
+    ///     SocketGuildMember
     /// </summary>
-    public IGuildUser Member
+    public SocketGuildMember Member
     {
         get
         {
-            return (IGuildUser)Ctx.User;
+            return (SocketGuildMember)Ctx.User;
         }
     }
 
     /// <summary>
     ///     Gets or sets the Discord sharded client instance for interacting with the Discord API
     /// </summary>
-    public DiscordShardedClient Client { get; set; }
+    public FluxerClient Client { get; set; }
 
     /// <summary>
     ///     Gets or sets the service provider for dependency injection and service resolution

@@ -175,7 +175,7 @@ public static class AchievementMapping
     /// <param name="client">The Discord client, for members who left.</param>
     /// <returns>The response.</returns>
     public static AchievementMemberResponse MapMember(SocketGuild guild, ulong userId, int points, int unlocked,
-        DateTime? lastUnlockAt, int rank, DiscordShardedClient client)
+        DateTime? lastUnlockAt, int rank, FluxerClient client)
     {
         var member = guild.GetUser(userId);
         IUser? user = member ?? client.GetUser(userId);

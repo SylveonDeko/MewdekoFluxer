@@ -176,7 +176,7 @@ public partial class FormsService
     ///     Filters a list of role identifiers down to the roles that exist and that the bot sits
     ///     above in the hierarchy, so an unmanageable role is skipped rather than failing the batch.
     /// </summary>
-    private List<IRole> Manageable(SocketGuild guild, IReadOnlyCollection<ulong> roleIds)
+    private List<SocketRole> Manageable(SocketGuild guild, IReadOnlyCollection<ulong> roleIds)
     {
         if (roleIds.Count == 0)
             return [];
@@ -184,7 +184,7 @@ public partial class FormsService
         var botMember = guild.CurrentUser;
         var highest = botMember.Roles.Max(r => r.Position);
 
-        var manageable = new List<IRole>();
+        var manageable = new List<SocketRole>();
 
         foreach (var roleId in roleIds)
         {
@@ -262,7 +262,7 @@ public partial class FormsService
                 embed.AddField("Invite", $"https://discord.gg/{inviteCode}");
 
             var channel = await user.CreateDMChannelAsync();
-            await channel.SendMessageAsync(embed: embed.Build());
+            await channel.SendAsync(embed: embed.Build());
 
             return true;
         }

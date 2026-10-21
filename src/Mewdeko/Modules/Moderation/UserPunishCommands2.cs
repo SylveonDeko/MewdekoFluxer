@@ -1,5 +1,4 @@
 using DataModel;
-using Discord.Commands;
 using Humanizer;
 using LinqToDB.Async;
 using Mewdeko.Common.Attributes.TextCommands;
@@ -46,7 +45,7 @@ public partial class Moderation
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
         [Priority(0)]
-        public async Task SetMWarnChannel([Remainder] ITextChannel channel)
+        public async Task SetMWarnChannel([Remainder] Channel channel)
         {
             if (string.IsNullOrWhiteSpace(channel.Name))
                 return;
@@ -86,11 +85,11 @@ public partial class Moderation
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.MuteMembers)]
-        public async Task MWarn(IGuildUser user, [Remainder] string? reason = null)
+        public async Task MWarn(SocketGuildMember user, [Remainder] string? reason = null)
         {
             if (ctx.User.Id != user.Guild.OwnerId
                 && user.GetRoles().Select(r => r.Position).Max() >=
-                ((IGuildUser)ctx.User).GetRoles().Select(r => r.Position).Max())
+                ((SocketGuildMember)ctx.User).GetRoles().Select(r => r.Position).Max())
             {
                 await ReplyErrorAsync(Strings.Hierarchy(ctx.Guild.Id)).ConfigureAwait(false);
                 return;
@@ -196,7 +195,7 @@ public partial class Moderation
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.MuteMembers)]
         [Priority(2)]
-        public Task MWarnlog(int page, IGuildUser user)
+        public Task MWarnlog(int page, SocketGuildMember user)
         {
             return MWarnlog(page, user.Id);
         }
@@ -210,11 +209,11 @@ public partial class Moderation
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [Priority(3)]
-        public Task MWarnlog(IGuildUser? user = null)
+        public Task MWarnlog(SocketGuildMember? user = null)
         {
             if (user == null)
-                user = (IGuildUser)ctx.User;
-            return ctx.User.Id == user.Id || ((IGuildUser)ctx.User).GuildPermissions.MuteMembers
+                user = (SocketGuildMember)ctx.User;
+            return ctx.User.Id == user.Id || ((SocketGuildMember)ctx.User).GuildPermissions.MuteMembers
                 ? MWarnlog(user.Id)
                 : Task.CompletedTask;
         }
@@ -347,7 +346,7 @@ public partial class Moderation
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public Task MWarnclear(IGuildUser user, int index = 0)
+        public Task MWarnclear(SocketGuildMember user, int index = 0)
         {
             return MWarnclear(user.Id, index);
         }
@@ -389,7 +388,7 @@ public partial class Moderation
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
         [Priority(1)]
-        public async Task MWarnPunish(int number, AddRole _, IRole role, StoopidTime? time = null)
+        public async Task MWarnPunish(int number, AddRole _, SocketRole role, StoopidTime? time = null)
         {
             const PunishmentAction punish = PunishmentAction.AddRole;
             var success = await Service.WarnPunish(ctx.Guild.Id, number, (int)punish, time, role);

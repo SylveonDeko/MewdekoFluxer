@@ -1,6 +1,5 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Discord.Commands;
 using Mewdeko.Controllers.Common.Bot;
 using Mewdeko.Services.Impl;
 using Microsoft.AspNetCore.Authorization;
@@ -14,7 +13,7 @@ namespace Mewdeko.Controllers;
 [ApiController]
 [Route("botapi/[controller]")]
 [Authorize("ApiKeyPolicy")]
-public class BotStatus(DiscordShardedClient client, StatsService statsService, CommandService commandService)
+public class BotStatus(FluxerClient client, StatsService statsService, CommandService commandService)
     : Controller
 {
     private static readonly JsonSerializerOptions Options = new()

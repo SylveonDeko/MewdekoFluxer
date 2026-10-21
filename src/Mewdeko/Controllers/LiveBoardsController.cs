@@ -16,7 +16,7 @@ public class LiveBoardsController : Controller
 {
     private readonly IDashboardAuditContext auditContext;
     private readonly LiveBoardService boards;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly ServerReportService reports;
 
     /// <summary>
@@ -26,7 +26,7 @@ public class LiveBoardsController : Controller
     /// <param name="reports">The server report service.</param>
     /// <param name="client">The Discord client.</param>
     /// <param name="auditContext">Records before/after state for the dashboard audit log.</param>
-    public LiveBoardsController(LiveBoardService boards, ServerReportService reports, DiscordShardedClient client,
+    public LiveBoardsController(LiveBoardService boards, ServerReportService reports, FluxerClient client,
         IDashboardAuditContext auditContext)
     {
         this.boards = boards;

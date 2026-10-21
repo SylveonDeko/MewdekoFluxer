@@ -1,4 +1,3 @@
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Reputation.Common;
 using Mewdeko.Modules.Reputation.Services;
@@ -19,7 +18,7 @@ public partial class Reputation : MewdekoModuleBase<RepService>
     /// <returns>A task that represents the asynchronous operation.</returns>
     [Cmd]
     [Aliases]
-    public async Task Rep(IGuildUser? target = null, string repType = "standard", [Remainder] string? reason = null)
+    public async Task Rep(SocketGuildMember? target = null, string repType = "standard", [Remainder] string? reason = null)
     {
         if (target == null)
         {
@@ -46,7 +45,7 @@ public partial class Reputation : MewdekoModuleBase<RepService>
     /// <returns>A task that represents the asynchronous operation.</returns>
     [Cmd]
     [Aliases]
-    public async Task RepGive(IGuildUser target, string repType = "standard", [Remainder] string? reason = null)
+    public async Task RepGive(SocketGuildMember target, string repType = "standard", [Remainder] string? reason = null)
     {
         await GiveRep(target, repType, reason).ConfigureAwait(false);
     }
@@ -60,12 +59,12 @@ public partial class Reputation : MewdekoModuleBase<RepService>
     /// <returns>A task that represents the asynchronous operation.</returns>
     [Cmd]
     [Aliases]
-    public async Task GiveRep(IGuildUser target, string repType = "standard", [Remainder] string? reason = null)
+    public async Task GiveRep(SocketGuildMember target, string repType = "standard", [Remainder] string? reason = null)
     {
         await GiveRepInternal(target, repType, reason).ConfigureAwait(false);
     }
 
-    private async Task GiveRepInternal(IGuildUser target, string repType = "standard", string? reason = null,
+    private async Task GiveRepInternal(SocketGuildMember target, string repType = "standard", string? reason = null,
         bool anonymous = false)
     {
         if (target.Id == ctx.User.Id)
@@ -130,9 +129,9 @@ public partial class Reputation : MewdekoModuleBase<RepService>
     /// <returns>A task that represents the asynchronous operation.</returns>
     [Cmd]
     [Aliases]
-    public async Task RepCheck([Remainder] IGuildUser? target = null)
+    public async Task RepCheck([Remainder] SocketGuildMember? target = null)
     {
-        target ??= (IGuildUser)ctx.User;
+        target ??= (SocketGuildMember)ctx.User;
 
         var (total, rank) = await Service.GetUserReputationAsync(ctx.Guild.Id, target.Id);
 
@@ -163,7 +162,7 @@ public partial class Reputation : MewdekoModuleBase<RepService>
     /// <returns>A task that represents the asynchronous operation.</returns>
     [Cmd]
     [Aliases]
-    public async Task CheckRep([Remainder] IGuildUser? target = null)
+    public async Task CheckRep([Remainder] SocketGuildMember? target = null)
     {
         await RepCheck(target).ConfigureAwait(false);
     }
@@ -251,9 +250,9 @@ public partial class Reputation : MewdekoModuleBase<RepService>
     /// <returns>A task that represents the asynchronous operation.</returns>
     [Cmd]
     [Aliases]
-    public async Task RepHistory([Remainder] IGuildUser? target = null)
+    public async Task RepHistory([Remainder] SocketGuildMember? target = null)
     {
-        target ??= (IGuildUser)ctx.User;
+        target ??= (SocketGuildMember)ctx.User;
 
         var history = await Service.GetReputationHistoryAsync(ctx.Guild.Id, target.Id);
 
@@ -294,9 +293,9 @@ public partial class Reputation : MewdekoModuleBase<RepService>
     /// <returns>A task that represents the asynchronous operation.</returns>
     [Cmd]
     [Aliases]
-    public async Task RepStats([Remainder] IGuildUser? target = null)
+    public async Task RepStats([Remainder] SocketGuildMember? target = null)
     {
-        target ??= (IGuildUser)ctx.User;
+        target ??= (SocketGuildMember)ctx.User;
 
         var stats = await Service.GetUserStatsAsync(ctx.Guild.Id, target.Id);
 
@@ -330,7 +329,7 @@ public partial class Reputation : MewdekoModuleBase<RepService>
     /// <returns>A task that represents the asynchronous operation.</returns>
     [Cmd]
     [Aliases]
-    public async Task AnonRep(IGuildUser target, string repType = "standard", [Remainder] string? reason = null)
+    public async Task AnonRep(SocketGuildMember target, string repType = "standard", [Remainder] string? reason = null)
     {
         await GiveRepInternal(target, repType, reason, true).ConfigureAwait(false);
     }
@@ -344,7 +343,7 @@ public partial class Reputation : MewdekoModuleBase<RepService>
     /// <returns>A task that represents the asynchronous operation.</returns>
     [Cmd]
     [Aliases]
-    public async Task RepAnon(IGuildUser target, string repType = "standard", [Remainder] string? reason = null)
+    public async Task RepAnon(SocketGuildMember target, string repType = "standard", [Remainder] string? reason = null)
     {
         await GiveRepInternal(target, repType, reason, true).ConfigureAwait(false);
     }

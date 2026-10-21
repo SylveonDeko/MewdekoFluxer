@@ -5,6 +5,7 @@ using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.ModuleBehaviors;
 using Mewdeko.Modules.Patreon.Common;
+using User = Mewdeko.Modules.Patreon.Common.User;
 using Mewdeko.Modules.Patreon.Extensions;
 using Mewdeko.Services.Analytics;
 using Mewdeko.Services.Strings;
@@ -23,7 +24,7 @@ public class PatreonService : BackgroundService, INService, IReadyExecutor
     };
 
     private readonly PatreonApiClient apiClient;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly IBotCredentials creds;
     private readonly IDataConnectionFactory db;
@@ -43,7 +44,7 @@ public class PatreonService : BackgroundService, INService, IReadyExecutor
     /// <param name="logger">Serilog logger.</param>
     /// <param name="collector">The analytics collector.</param>
     public PatreonService(
-        DiscordShardedClient client,
+        FluxerClient client,
         IDataConnectionFactory db,
         GuildSettingsService guildSettings,
         GeneratedBotStrings strings,
@@ -334,7 +335,7 @@ public class PatreonService : BackgroundService, INService, IReadyExecutor
     /// <summary>
     ///     Sends the actual Patreon announcement message
     /// </summary>
-    private async Task SendPatreonAnnouncement(IGuild guild, ITextChannel channel, GuildConfig config, bool isManual)
+    private async Task SendPatreonAnnouncement(SocketGuild guild, Channel channel, GuildConfig config, bool isManual)
     {
         try
         {
@@ -389,11 +390,11 @@ public class PatreonService : BackgroundService, INService, IReadyExecutor
             // Send the message
             if (SmartEmbed.TryParse(message, guild.Id, out var embed, out var plainText))
             {
-                await channel.SendMessageAsync(plainText, embeds: embed);
+                await channel.SendAsync(plainText, embeds: embed);
             }
             else
             {
-                await channel.SendMessageAsync(message);
+                await channel.SendAsync(message);
             }
 
             // Update last announcement time
@@ -940,7 +941,7 @@ public class PatreonService : BackgroundService, INService, IReadyExecutor
             var currentPatreonRoles = user.Roles.Where(r => patreonRoleIds.Contains(r.Id)).ToList();
 
             // Determine target role based on supporter status and amount
-            IRole? targetRole = null;
+            SocketRole? targetRole = null;
             if (supporter is { AmountCents: > 0 } && (
                     supporter.PatronStatus == "active_patron" ||
                     supporter.PatronStatus == "declined_patron" ||
@@ -1229,7 +1230,7 @@ public class PatreonService : BackgroundService, INService, IReadyExecutor
                         }
                     }
 
-                    await channel.SendMessageAsync(embed: embed.Build());
+                    await channel.SendAsync(embed: embed.Build());
                     messagesSent++;
 
                     // Small delay to prevent rate limiting

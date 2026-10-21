@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Net.Http;
 using System.Text;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Import.Common;
 using Mewdeko.Modules.Import.Services;
@@ -229,7 +228,7 @@ public class ImportCommands(IHttpClientFactory httpFactory) : MewdekoModuleBase<
             var undone = await Service.UndoAsync(ctx.Guild.Id, null).ConfigureAwait(false);
             await ConfirmAsync(Strings.ImportUndone(ctx.Guild.Id, SourceName(undone.Source),
                     TimestampTag.FromDateTime(DateTime.SpecifyKind(undone.DateAdded, DateTimeKind.Utc),
-                        TimestampTagStyles.Relative)))
+                        TimestampTagStyle.Relative)))
                 .ConfigureAwait(false);
         }
         catch (ImportException ex)

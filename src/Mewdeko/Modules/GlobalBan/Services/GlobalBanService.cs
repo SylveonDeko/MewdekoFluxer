@@ -11,7 +11,7 @@
 //         handler.UserJoined += OnUserJoined;
 //     }
 //
-//     private async Task OnUserJoined(IGuildUser args)
+//     private async Task OnUserJoined(SocketGuildMember args)
 //     {
 //
 //         var banEntry = await dbContext.GlobalBans.FirstOrDefaultAsync(x => x.UserId == args.Id);
@@ -57,7 +57,7 @@
 //                                     },
 //                                  Color = Mewdeko.OkColor
 //                              };
-//                              await channel.SendMessageAsync(embed: eb.Build());
+//                              await channel.SendAsync(embed: eb.Build());
 //                              await args.KickAsync(options: new RequestOptions
 //                              {
 //                                  AuditLogReason = $"Global Ban: {banReasonsString.TrimTo(256)}"
@@ -87,7 +87,7 @@
 //                                  },
 //                                  Color = Mewdeko.OkColor
 //                              };
-//                              await channel.SendMessageAsync(embed: eb1.Build());
+//                              await channel.SendAsync(embed: eb1.Build());
 //                              await args.BanAsync(options: new RequestOptions
 //                              {
 //                                  AuditLogReason = $"Global Ban: {banReasonsString.TrimTo(256)}"
@@ -117,7 +117,7 @@
 //                                  },
 //                                  Color = Mewdeko.OkColor
 //                              };
-//                              await channel.SendMessageAsync(embed: eb2.Build());
+//                              await channel.SendAsync(embed: eb2.Build());
 //                              await args.SetTimeOutAsync(banEntry.Duration, options: new RequestOptions
 //                              {
 //                                  AuditLogReason = $"Global Ban: {banReasonsString.TrimTo(256)}"
@@ -147,7 +147,7 @@
 //                                  },
 //                                  Color = Mewdeko.OkColor
 //                              };
-//                              await channel.SendMessageAsync(embed: eb3.Build());
+//                              await channel.SendAsync(embed: eb3.Build());
 //                              break;
 //                      }
 //                  }

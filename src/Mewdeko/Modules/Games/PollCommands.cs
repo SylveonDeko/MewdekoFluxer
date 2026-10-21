@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text.Json;
-using Discord.Commands;
 using Humanizer;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Games.Common;
@@ -149,7 +148,7 @@ public class PollCommands : MewdekoModuleBase<PollService>
             embed.AddField(Strings.PollStatsAverageTime(guildId), stats.AverageVoteTime.Humanize(2), true);
 
         embed.AddField(Strings.PollStatsResults(guildId), results);
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -242,7 +241,7 @@ public class PollCommands : MewdekoModuleBase<PollService>
             if (templates.Count > 10)
                 embed.WithFooter(Strings.PollShowingTemplates(ctx.Guild.Id, templates.Count));
 
-            await ctx.Channel.SendMessageAsync(embed: embed.Build());
+            await ctx.Channel.SendAsync(embed: embed.Build());
         }
         catch (Exception ex)
         {
@@ -335,7 +334,7 @@ public class PollCommands : MewdekoModuleBase<PollService>
             if (polls.Count > 10)
                 embed.WithFooter(Strings.PollShowingActive(ctx.Guild.Id, polls.Count));
 
-            await ctx.Channel.SendMessageAsync(embed: embed.Build());
+            await ctx.Channel.SendAsync(embed: embed.Build());
         }
         catch (Exception ex)
         {
@@ -391,7 +390,7 @@ public class PollCommands : MewdekoModuleBase<PollService>
                 .AddField(Strings.PollFieldQuestion(ctx.Guild.Id), template.Question)
                 .AddField(Strings.PollFieldOptions(ctx.Guild.Id), string.Join(", ", options.Select(o => o.Text)));
 
-            await ctx.Channel.SendMessageAsync(embed: embed.Build());
+            await ctx.Channel.SendAsync(embed: embed.Build());
         }
         catch (InvalidOperationException ex)
         {
@@ -423,7 +422,7 @@ public class PollCommands : MewdekoModuleBase<PollService>
                 return;
             }
 
-            if (template.CreatorId != ctx.User.Id && !((IGuildUser)ctx.User).GuildPermissions.ManageMessages)
+            if (template.CreatorId != ctx.User.Id && !((SocketGuildMember)ctx.User).GuildPermissions.ManageMessages)
             {
                 await ErrorAsync(Strings.PollTemplateDeleteNoPermission(ctx.Guild.Id));
                 return;
@@ -488,7 +487,7 @@ public class PollCommands : MewdekoModuleBase<PollService>
 
     private async Task PostAsync(string question, List<PollOptionData> options, PollType type, PollSettings settings)
     {
-        if (ctx.Channel is not ITextChannel channel)
+        if (ctx.Channel is not Channel channel)
             return;
 
         var problem = await pollMessages.GetPostProblemAsync(channel, settings, options);
@@ -519,7 +518,7 @@ public class PollCommands : MewdekoModuleBase<PollService>
             return null;
         }
 
-        if (poll.CreatorId == ctx.User.Id || ((IGuildUser)ctx.User).GuildPermissions.ManageMessages)
+        if (poll.CreatorId == ctx.User.Id || ((SocketGuildMember)ctx.User).GuildPermissions.ManageMessages)
             return poll;
 
         await ErrorAsync(Strings.PollManageNoPermission(ctx.Guild.Id));

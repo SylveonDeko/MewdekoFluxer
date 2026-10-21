@@ -55,7 +55,7 @@ public partial class XpService : INService, IUnloadableService
 
     #region Fields
 
-    internal readonly DiscordShardedClient Client;
+    internal readonly FluxerClient Client;
     internal readonly IDataConnectionFactory DbFactory;
     internal readonly EventHandler EventHandler;
     internal readonly IHttpClientFactory HttpClientFactory;
@@ -92,7 +92,7 @@ public partial class XpService : INService, IUnloadableService
     /// <param name="serviceProvider">The service provider for dependency injection.</param>
     /// <param name="collector">The analytics collector.</param>
     public XpService(
-        DiscordShardedClient client,
+        FluxerClient client,
         IDataConnectionFactory dbFactory,
         IDataCache dataCache,
         EventHandler eventHandler,
@@ -170,7 +170,7 @@ public partial class XpService : INService, IUnloadableService
     /// </summary>
     private async Task HandleMessageXp(SocketMessage message)
     {
-        if (message.Author is not IGuildUser user || user.IsBot)
+        if (message.Author is not SocketGuildMember user || user.IsBot)
             return;
 
         try
@@ -230,7 +230,7 @@ public partial class XpService : INService, IUnloadableService
     /// </summary>
     private async Task OnMessageReceived(SocketMessage msg)
     {
-        if (msg.Author.IsBot || msg is not SocketUserMessage { Author: SocketGuildUser user })
+        if (msg.Author.IsBot || msg is not SocketMessage { Author: SocketGuildMember user })
             return;
 
         try
@@ -248,7 +248,7 @@ public partial class XpService : INService, IUnloadableService
     /// <summary>
     ///     Checks if a user can gain XP in a channel.
     /// </summary>
-    private async Task<bool> CanGainXp(IGuildUser user, ulong channelId)
+    private async Task<bool> CanGainXp(SocketGuildMember user, ulong channelId)
     {
         // Check server exclusion
         if (await cacheManager.IsServerExcludedAsync(user.GuildId))
@@ -270,7 +270,7 @@ public partial class XpService : INService, IUnloadableService
     /// <summary>
     ///     Calculates the message XP amount based on user and channel context.
     /// </summary>
-    private async Task<int> CalculateMessageXpAmount(IGuildUser user, ulong channelId)
+    private async Task<int> CalculateMessageXpAmount(SocketGuildMember user, ulong channelId)
     {
         var settings = await cacheManager.GetGuildXpSettingsAsync(user.GuildId);
         var baseAmount = settings.XpPerMessage <= 0 ? DefaultXpPerMessage : settings.XpPerMessage;

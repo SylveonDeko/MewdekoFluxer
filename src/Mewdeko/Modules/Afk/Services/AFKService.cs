@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Threading;
 using DataModel;
-using Discord.Net;
 using Humanizer;
 using LinqToDB;
 using LinqToDB.Async;
@@ -10,7 +9,6 @@ using Mewdeko.Services.Analytics;
 using Mewdeko.Services.Settings;
 using Mewdeko.Services.Strings;
 using ZiggyCreatures.Caching.Fusion;
-using DiscordShardedClient = Discord.WebSocket.DiscordShardedClient;
 
 namespace Mewdeko.Modules.Afk.Services;
 
@@ -22,7 +20,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
     private readonly ConcurrentDictionary<(ulong GuildId, ulong UserId), Timer> afkTimers = new();
     private readonly IFusionCache cache;
     private readonly Timer cleanupTimer;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly BotConfigService config;
     private readonly IDataConnectionFactory dbFactory;
@@ -51,7 +49,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
     /// <param name="collector">The analytics collector.</param>
     public AfkService(
         IDataConnectionFactory dbFactory,
-        DiscordShardedClient client,
+        FluxerClient client,
         IFusionCache cache,
         GuildSettingsService guildSettings,
         EventHandler eventHandler,
@@ -129,7 +127,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
     /// </summary>
     /// <param name="guild">The guild to get AFK users from.</param>
     /// <returns>A list of guild users who are currently AFK.</returns>
-    public async Task<List<IGuildUser>> GetAfkUsers(IGuild guild)
+    public async Task<List<SocketGuildMember>> GetAfkUsers(SocketGuild guild)
     {
         await EnsureGuildAfksLoaded(guild.Id);
 
@@ -145,7 +143,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
     /// <param name="guild">The guild to set the custom AFK message for.</param>
     /// <param name="afkMessage">The custom AFK message to set.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task SetCustomAfkMessage(IGuild guild, string afkMessage)
+    public async Task SetCustomAfkMessage(SocketGuild guild, string afkMessage)
     {
         var guildConfig = await guildSettings.GetGuildConfig(guild.Id);
         if (guildConfig == null) return;
@@ -243,7 +241,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
     /// <param name="guild">The guild to set the AFK type for.</param>
     /// <param name="num">The AFK type to set.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task AfkTypeSet(IGuild guild, int num)
+    public async Task AfkTypeSet(SocketGuild guild, int num)
     {
         var guildConfig = await guildSettings.GetGuildConfig(guild.Id);
         if (guildConfig == null) return;
@@ -257,7 +255,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
     /// <param name="guild">The guild to set the AFK deletion for.</param>
     /// <param name="inputNum">The input number representing AFK deletion time in seconds.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task AfkDelSet(IGuild guild, int inputNum)
+    public async Task AfkDelSet(SocketGuild guild, int inputNum)
     {
         var num = inputNum.ToString();
         var guildConfig = await guildSettings.GetGuildConfig(guild.Id);
@@ -272,7 +270,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
     /// <param name="guild">The guild to set the AFK length for.</param>
     /// <param name="num">The AFK length to set.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task AfkLengthSet(IGuild guild, int num)
+    public async Task AfkLengthSet(SocketGuild guild, int num)
     {
         var guildConfig = await guildSettings.GetGuildConfig(guild.Id);
         if (guildConfig == null) return;
@@ -286,7 +284,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
     /// <param name="guild">The guild to set the AFK timeout for.</param>
     /// <param name="num">The AFK timeout to set in seconds.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task AfkTimeoutSet(IGuild guild, int num)
+    public async Task AfkTimeoutSet(SocketGuild guild, int num)
     {
         var guildConfig = await guildSettings.GetGuildConfig(guild.Id);
         if (guildConfig == null) return;
@@ -300,7 +298,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
     /// <param name="guild">The guild to set the AFK disabled channels for.</param>
     /// <param name="channels">Comma-separated list of channel IDs where AFK is disabled.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task AfkDisabledSet(IGuild guild, string channels)
+    public async Task AfkDisabledSet(SocketGuild guild, string channels)
     {
         var guildConfig = await guildSettings.GetGuildConfig(guild.Id);
         if (guildConfig == null) return;
@@ -605,7 +603,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
 
     private async Task MessageReceived(SocketMessage msg)
     {
-        if (msg.Author.IsBot || msg.Author is not IGuildUser user)
+        if (msg.Author.IsBot || msg.Author is not SocketGuildMember user)
             return;
 
         // Deduplicate rapid message events for the same message
@@ -651,7 +649,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
                         {
                             await AfkSet(user.GuildId, user.Id, ""); // Clear AFK
                             var notifyMsg = await msg.Channel
-                                .SendMessageAsync(strings.WelcomeBackAfk(user.Guild.Id, user.Mention))
+                                .SendAsync(strings.WelcomeBackAfk(user.Guild.Id, user.Mention))
                                 .ConfigureAwait(false);
                             notifyMsg.DeleteAfter(5);
                             try
@@ -683,7 +681,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
                 foreach (var mentionedUser in msg.MentionedUsers.Take(5)) // Limit checks per message
                 {
                     if (mentionedUser.IsBot || mentionedUser.Id == user.Id) continue;
-                    if (mentionedUser is not IGuildUser mentionedGuildUser) continue;
+                    if (mentionedUser is not SocketGuildMember mentionedGuildUser) continue;
 
                     var mentionedAfk = await GetAfk(user.GuildId, mentionedUser.Id);
                     if (mentionedAfk == null) continue;
@@ -705,7 +703,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
                             .WithOkColor()
                             .Build();
 
-                        var sentMsg = await msg.Channel.SendMessageAsync(embed: embed);
+                        var sentMsg = await msg.Channel.SendAsync(embed: embed);
                         if (afkDeleteTime > 0) sentMsg.DeleteAfter(afkDeleteTime);
                     }
                     else
@@ -728,12 +726,12 @@ public class AfkService : INService, IReadyExecutor, IDisposable
 
                         if (SmartEmbed.TryParse(parsedMessage, user.GuildId, out var embed, out var plainText))
                         {
-                            var sentMsg = await msg.Channel.SendMessageAsync(plainText, embeds: embed);
+                            var sentMsg = await msg.Channel.SendAsync(plainText, embeds: embed);
                             if (afkDeleteTime > 0) sentMsg.DeleteAfter(afkDeleteTime);
                         }
                         else
                         {
-                            var sentMsg = await msg.Channel.SendMessageAsync(parsedMessage.SanitizeMentions(true));
+                            var sentMsg = await msg.Channel.SendAsync(parsedMessage.SanitizeMentions(true));
                             if (afkDeleteTime > 0) sentMsg.DeleteAfter(afkDeleteTime);
                         }
                     }
@@ -750,8 +748,8 @@ public class AfkService : INService, IReadyExecutor, IDisposable
         }
     }
 
-    private async Task MessageUpdated(Cacheable<IMessage, ulong> msg, SocketMessage updatedMsg,
-        ISocketMessageChannel channel)
+    private async Task MessageUpdated(Cacheable<Message> msg, SocketMessage updatedMsg,
+        Channel channel)
     {
         try
         {
@@ -763,7 +761,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
             if (DateTimeOffset.UtcNow - updatedMsg.EditedTimestamp.Value > TimeSpan.FromMinutes(5)) return;
 
             // Check if we have the message cached first
-            IMessage? message = null;
+            Message? message = null;
             if (msg.HasValue)
             {
                 message = msg.Value;
@@ -789,7 +787,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
                         msg.Id);
                     // Continue processing with updatedMsg which we already have
                 }
-                catch (HttpException httpEx) when (httpEx.HttpCode == HttpStatusCode.TooManyRequests)
+                catch (FluxerApiException httpEx) when (httpEx.HttpCode == HttpStatusCode.TooManyRequests)
                 {
                     logger.LogDebug("Rate limited when downloading message {MessageId} in MessageUpdated", msg.Id);
                     // Continue processing with updatedMsg
@@ -805,12 +803,12 @@ public class AfkService : INService, IReadyExecutor, IDisposable
         }
     }
 
-    private async Task UserTyping(Cacheable<IUser, ulong> userCache, Cacheable<IMessageChannel, ulong> chanCache)
+    private async Task UserTyping(Cacheable<IUser> userCache, Cacheable<Channel> chanCache)
     {
         try
         {
             var user = await userCache.GetOrDownloadAsync();
-            if (user is not IGuildUser guildUser) return;
+            if (user is not SocketGuildMember guildUser) return;
 
             var guildConfig = await GetGuildConfigCached(guildUser.GuildId);
             if (guildConfig == null) return;
@@ -830,7 +828,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
                     if (chan != null)
                     {
                         var notifyMsg =
-                            await chan.SendMessageAsync(
+                            await chan.SendAsync(
                                 strings.WelcomeBackAfk(guildUser.GuildId, user.Mention));
                         notifyMsg.DeleteAfter(5);
                     }

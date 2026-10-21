@@ -22,7 +22,7 @@ public class VoiceActivityService : INService, IReadyExecutor, IDisposable
 
     private readonly SemaphoreSlim checkpointLock = new(1, 1);
 
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly IDataConnectionFactory dbFactory;
     private readonly EventHandler eventHandler;
@@ -40,7 +40,7 @@ public class VoiceActivityService : INService, IReadyExecutor, IDisposable
     /// <param name="eventHandler">The event handler.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     /// <param name="collector">The analytics collector.</param>
-    public VoiceActivityService(DiscordShardedClient client, IDataConnectionFactory dbFactory,
+    public VoiceActivityService(FluxerClient client, IDataConnectionFactory dbFactory,
         ServerStatsSettingsService settings, EventHandler eventHandler, ILogger<VoiceActivityService> logger,
         IAnalyticsCollector collector)
     {
@@ -98,7 +98,7 @@ public class VoiceActivityService : INService, IReadyExecutor, IDisposable
 
     private async Task OnVoiceStateUpdated(SocketUser user, SocketVoiceState before, SocketVoiceState after)
     {
-        if (user is not SocketGuildUser guildUser)
+        if (user is not SocketGuildMember guildUser)
             return;
 
         var guild = guildUser.Guild;
@@ -134,7 +134,7 @@ public class VoiceActivityService : INService, IReadyExecutor, IDisposable
         }
     }
 
-    private void RestartPeers(SocketGuild guild, SocketVoiceChannel? channel, ulong changedUserId, DateTime now,
+    private void RestartPeers(SocketGuild guild, Channel? channel, ulong changedUserId, DateTime now,
         List<VoiceSegment> closed)
     {
         if (channel == null)
@@ -158,7 +158,7 @@ public class VoiceActivityService : INService, IReadyExecutor, IDisposable
         }
     }
 
-    private static VoiceStateFlags ComputeState(SocketGuild guild, SocketVoiceChannel channel, SocketGuildUser user)
+    private static VoiceStateFlags ComputeState(SocketGuild guild, Channel channel, SocketGuildMember user)
     {
         var state = VoiceStateFlags.Normal;
         if (user.IsSelfMuted) state |= VoiceStateFlags.SelfMuted;

@@ -21,7 +21,7 @@ namespace Mewdeko.Controllers;
 public class WizardController : Controller
 {
     private readonly IDashboardAuditContext auditContext;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly GuildSettingsService guildSettings;
     private readonly ILogger<WizardController> logger;
@@ -33,7 +33,7 @@ public class WizardController : Controller
     public WizardController(
         WizardDecisionService wizardService,
         IDataConnectionFactory dbFactory,
-        DiscordShardedClient client,
+        FluxerClient client,
         ILogger<WizardController> logger,
         GuildSettingsService guildSettings,
         IDashboardAuditContext auditContext)

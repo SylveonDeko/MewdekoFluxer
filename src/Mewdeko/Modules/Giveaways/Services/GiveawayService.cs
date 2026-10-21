@@ -19,7 +19,7 @@ namespace Mewdeko.Modules.Giveaways.Services;
 public class GiveawayService : INService, IDisposable
 {
     private readonly Timer cleanupTimer;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly BotConfig config;
     private readonly IDataConnectionFactory dbFactory;
@@ -55,7 +55,7 @@ public class GiveawayService : INService, IDisposable
     /// <param name="triggerEvents">Publishes giveaway events to chat triggers.</param>
     /// <param name="collector">The analytics collector.</param>
     public GiveawayService(
-        DiscordShardedClient client,
+        FluxerClient client,
         IDataConnectionFactory dbFactory,
         GuildSettingsService guildConfig,
         BotConfig config,
@@ -88,7 +88,7 @@ public class GiveawayService : INService, IDisposable
     /// <param name="guild">The guild where the emote is to be set.</param>
     /// <param name="emote">The emote to set.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task SetGiveawayEmote(IGuild guild, string emote)
+    public async Task SetGiveawayEmote(SocketGuild guild, string emote)
     {
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         var gc = await guildConfig.GetGuildConfig(guild.Id);
@@ -132,7 +132,7 @@ public class GiveawayService : INService, IDisposable
         Giveaway giveaway)
     {
         // Validate guild and channel
-        IGuild guild = client.GetGuild(serverId);
+        SocketGuild guild = client.GetGuild(serverId);
         if (guild == null)
             throw new Exception(strings.GiveawayGuildNotFound(serverId));
 
@@ -144,7 +144,7 @@ public class GiveawayService : INService, IDisposable
         var gconfig = await GetGuildConfigCached(serverId);
 
         // Prepare ping role
-        IRole? pingRole = null;
+        SocketRole? pingRole = null;
         if (gconfig.GiveawayPingRole != 0)
         {
             pingRole = guild.GetRole(gconfig.GiveawayPingRole);
@@ -158,7 +158,7 @@ public class GiveawayService : INService, IDisposable
         var eb = CreateGiveawayEmbed(guild, giveaway, emote, gconfig, hostUser);
 
         // Send giveaway message
-        var msg = await channel.SendMessageAsync(
+        var msg = await channel.SendAsync(
             pingRole != null ? pingRole.Mention : "",
             embed: eb.Build());
 
@@ -205,26 +205,26 @@ public class GiveawayService : INService, IDisposable
     /// <param name="messageCount">Minimum message count required to enter.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task GiveawaysInternal(
-        ITextChannel chan,
+        Channel chan,
         TimeSpan ts,
         string item,
         int winners,
         ulong host,
         ulong serverId,
-        ITextChannel currentChannel,
-        IGuild guild,
+        Channel currentChannel,
+        SocketGuild guild,
         string? reqroles = null,
         string? blacklistusers = null,
         string? blacklistroles = null,
         string? banner = null,
-        IRole? pingRole = null,
+        SocketRole? pingRole = null,
         ulong messageCount = 0)
     {
         // Get guild config
         var gconfig = await GetGuildConfigCached(serverId);
 
         // Determine ping role
-        IRole? role = null;
+        SocketRole? role = null;
         if (gconfig.GiveawayPingRole != 0)
         {
             role = guild.GetRole(gconfig.GiveawayPingRole);
@@ -260,7 +260,7 @@ public class GiveawayService : INService, IDisposable
         }
 
         // Send giveaway message
-        var msg = await chan.SendMessageAsync(
+        var msg = await chan.SendAsync(
             role is not null ? role.Mention : "",
             embed: eb.Build());
 
@@ -304,8 +304,8 @@ public class GiveawayService : INService, IDisposable
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task GiveawayTimerAction(
         Giveaway giveaway,
-        IGuild? inputGuild = null,
-        ITextChannel? inputChannel = null)
+        SocketGuild? inputGuild = null,
+        Channel? inputChannel = null)
     {
         try
         {
@@ -333,10 +333,10 @@ public class GiveawayService : INService, IDisposable
             }
 
             // Get giveaway message
-            IUserMessage? message;
+            Message? message;
             try
             {
-                if (await channel.GetMessageAsync(giveaway.MessageId) is not IUserMessage msg)
+                if (await channel.GetMessageAsync(giveaway.MessageId) is not Message msg)
                 {
                     logger.LogWarning(
                         "Message {MessageId} not found for giveaway {GiveawayId}, marking as completed to clean up",
@@ -451,7 +451,7 @@ public class GiveawayService : INService, IDisposable
             // Apply message count requirements if specified
             if (giveaway.MessageCountReq > 0 && eligibleUsers.Count > 0)
             {
-                var usersWithMessageCounts = new Dictionary<IGuildUser, ulong>();
+                var usersWithMessageCounts = new Dictionary<SocketGuildMember, ulong>();
                 foreach (var user in eligibleUsers)
                 {
                     var messageCount = await msgCntService.GetMessageCount(
@@ -522,7 +522,7 @@ public class GiveawayService : INService, IDisposable
 
     #region Private Helper Methods
 
-    private async Task<HashSet<IUser>> GetAllReactionUsers(IUserMessage message, IEmote emote)
+    private async Task<HashSet<IUser>> GetAllReactionUsers(Message message, Emoji emote)
     {
         HashSet<IUser> users = new();
 
@@ -558,10 +558,10 @@ public class GiveawayService : INService, IDisposable
 
     private async Task HandleSingleWinner(
         Giveaway giveaway,
-        List<IGuildUser> eligibleUsers,
-        IUserMessage message,
-        ITextChannel channel,
-        IGuild guild,
+        List<SocketGuildMember> eligibleUsers,
+        Message message,
+        Channel channel,
+        SocketGuild guild,
         GuildConfig guildSettings,
         string prefix)
     {
@@ -593,7 +593,7 @@ public class GiveawayService : INService, IDisposable
         });
 
         // Send winner announcement message
-        await channel.SendMessageAsync(
+        await channel.SendAsync(
             strings.GiveawayCongratulations(guild.Id, winner.Mention, giveaway.Emote),
             embed: new EmbedBuilder()
                 .WithErrorColor()
@@ -608,10 +608,10 @@ public class GiveawayService : INService, IDisposable
 
     private async Task HandleMultipleWinners(
         Giveaway giveaway,
-        List<IGuildUser> eligibleUsers,
-        IUserMessage message,
-        ITextChannel channel,
-        IGuild guild,
+        List<SocketGuildMember> eligibleUsers,
+        Message message,
+        Channel channel,
+        SocketGuild guild,
         string prefix)
     {
         // Select multiple winners randomly
@@ -640,7 +640,7 @@ public class GiveawayService : INService, IDisposable
         // Send winner announcement message in chunks to avoid message limits
         foreach (var winnerChunk in winners.Chunk(50))
         {
-            await channel.SendMessageAsync(
+            await channel.SendAsync(
                 strings.GiveawayCongratulations(guild.Id,
                     string.Join(strings.CommaSeparator(guild.Id), winnerChunk.Select(x => x.Mention)),
                     giveaway.Emote),
@@ -659,11 +659,11 @@ public class GiveawayService : INService, IDisposable
     }
 
     private async Task SendWinnerDm(
-        IGuildUser winner,
+        SocketGuildMember winner,
         Giveaway giveaway,
-        IGuild guild,
+        SocketGuild guild,
         GuildConfig guildSettings,
-        ITextChannel channel)
+        Channel channel)
     {
         try
         {
@@ -686,7 +686,7 @@ public class GiveawayService : INService, IDisposable
                 // Try to parse as SmartEmbed
                 if (SmartEmbed.TryParse(customMessage, guild.Id, out var embeds, out var plaintext))
                 {
-                    await winner.SendMessageAsync(plaintext, embeds: embeds);
+                    await winner.SendAsync(plaintext, embeds: embeds);
                 }
                 else
                 {
@@ -698,7 +698,7 @@ public class GiveawayService : INService, IDisposable
                                 giveaway.MessageId));
 
                     embed.AddField(strings.GiveawayMessageFromHost(guild.Id), customMessage);
-                    await winner.SendMessageAsync(embed: embed.Build());
+                    await winner.SendAsync(embed: embed.Build());
                 }
             }
             else
@@ -710,7 +710,7 @@ public class GiveawayService : INService, IDisposable
                         strings.GiveawayWinnerDm(guild.Id, giveaway.Item, giveaway.ServerId, giveaway.ChannelId,
                             giveaway.MessageId));
 
-                await winner.SendMessageAsync(embed: embed.Build());
+                await winner.SendAsync(embed: embed.Build());
             }
         }
         catch (Exception ex)
@@ -722,9 +722,9 @@ public class GiveawayService : INService, IDisposable
     }
 
     private EmbedBuilder CreateGiveawayEmbed(
-        IGuild guild,
+        SocketGuild guild,
         Giveaway giveaway,
-        IEmote emote,
+        Emoji emote,
         GuildConfig guildConfig,
         IUser? hostUser = null)
     {
@@ -756,7 +756,7 @@ public class GiveawayService : INService, IDisposable
                 .Where(s => ulong.TryParse(s, out _))
                 .Select(ulong.Parse);
 
-            var roles = new List<IRole>();
+            var roles = new List<SocketRole>();
             foreach (var roleId in roleIds)
             {
                 try

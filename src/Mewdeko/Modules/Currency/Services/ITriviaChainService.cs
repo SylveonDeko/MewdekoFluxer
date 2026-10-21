@@ -1,5 +1,4 @@
 using Mewdeko.Modules.Currency.Models;
-using Embed = Discord.Embed;
 
 namespace Mewdeko.Modules.Currency.Services;
 
@@ -51,7 +50,7 @@ public interface ITriviaChainService : INService
     /// <param name="chainState">The current trivia chain state.</param>
     /// <param name="currencyService">The currency service.</param>
     /// <returns>The question embed.</returns>
-    public Task<Embed> BuildQuestionEmbedAsync(TriviaChainState chainState, ICurrencyService currencyService);
+    public Task<EmbedRequest> BuildQuestionEmbedAsync(TriviaChainState chainState, ICurrencyService currencyService);
 
     /// <summary>
     ///     Removes the trivia chain state for a user.

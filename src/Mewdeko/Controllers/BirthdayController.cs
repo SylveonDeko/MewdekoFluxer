@@ -16,7 +16,7 @@ namespace Mewdeko.Controllers;
 public class BirthdayController : Controller
 {
     private readonly BirthdayService birthdayService;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly ILogger<BirthdayController> logger;
     private readonly IDashboardAuditContext auditContext;
@@ -31,7 +31,7 @@ public class BirthdayController : Controller
     /// <param name="auditContext">Records before/after state for the dashboard audit log.</param>
     public BirthdayController(
         BirthdayService birthdayService,
-        DiscordShardedClient client,
+        FluxerClient client,
         IDataConnectionFactory dbFactory,
         ILogger<BirthdayController> logger,
         IDashboardAuditContext auditContext)

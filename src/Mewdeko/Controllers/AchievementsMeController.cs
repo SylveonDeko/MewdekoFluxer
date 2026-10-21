@@ -17,7 +17,7 @@ namespace Mewdeko.Controllers;
 [SkipDashboardAccess]
 public class AchievementsMeController : Controller
 {
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly AchievementService service;
 
     /// <summary>
@@ -25,7 +25,7 @@ public class AchievementsMeController : Controller
     /// </summary>
     /// <param name="service">The achievement service.</param>
     /// <param name="client">The Discord client.</param>
-    public AchievementsMeController(AchievementService service, DiscordShardedClient client)
+    public AchievementsMeController(AchievementService service, FluxerClient client)
     {
         this.service = service;
         this.client = client;

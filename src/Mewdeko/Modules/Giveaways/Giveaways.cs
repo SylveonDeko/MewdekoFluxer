@@ -1,5 +1,4 @@
 ﻿using System.Text.RegularExpressions;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;
 using Mewdeko.Modules.Giveaways.Services;
@@ -37,8 +36,8 @@ public partial class Giveaways(
             {
                 var rep = new ReplacementBuilder()
                     .WithChannel(Context.Channel)
-                    .WithClient(Context.Client as DiscordShardedClient)
-                    .WithServer(Context.Client as DiscordShardedClient, Context.Guild as SocketGuild)
+                    .WithClient(Context.Client as FluxerClient)
+                    .WithServer(Context.Client as FluxerClient, Context.Guild as SocketGuild)
                     .WithUser(Context.User);
 
                 rep.WithOverride("%messagelink%",
@@ -52,7 +51,7 @@ public partial class Giveaways(
                         out var plaintext))
                 {
                     await ctx.Channel
-                        .SendMessageAsync(plaintext, embeds: embeds ?? null)
+                        .SendAsync(plaintext, embeds: embeds ?? null)
                         .ConfigureAwait(false);
                 }
 
@@ -177,7 +176,7 @@ public partial class Giveaways(
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageMessages)]
-    public async Task GEmote(IEmote emote)
+    public async Task GEmote(Emoji emote)
     {
         try
         {
@@ -241,7 +240,7 @@ public partial class Giveaways(
         }
         else
         {
-            List<ITextChannel> gchans = [];
+            List<Channel> gchans = [];
             foreach (var i in gways)
             {
                 var chan = await ctx.Guild.GetTextChannelAsync(i.ChannelId).ConfigureAwait(false);
@@ -260,7 +259,7 @@ public partial class Giveaways(
                     Strings.GiveawayStatsChannelEntry(ctx.Guild.Id, x.Mention, gways.Count(s => s.ChannelId == x.Id)))),
                 true);
 
-            await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+            await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
         }
     }
 
@@ -274,7 +273,7 @@ public partial class Giveaways(
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageMessages)]
-    public async Task GStart(ITextChannel chan, StoopidTime time, int winners, [Remainder] string what)
+    public async Task GStart(Channel chan, StoopidTime time, int winners, [Remainder] string what)
     {
         var emote = (await Service.GetGiveawayEmote(ctx.Guild.Id)).ToIEmote();
         try
@@ -306,7 +305,7 @@ public partial class Giveaways(
         }
 
         await Service.GiveawaysInternal(chan, time.Time, what, winners, ctx.User.Id, ctx.Guild.Id,
-            ctx.Channel as ITextChannel, ctx.Guild).ConfigureAwait(false);
+            ctx.Channel as Channel, ctx.Guild).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -334,7 +333,7 @@ public partial class Giveaways(
 
         var winners = 0;
         string banner = null;
-        IRole pingRole = null;
+        SocketRole pingRole = null;
         ulong messageCount = 0;
         var host = ctx.User;
         TimeSpan time;
@@ -351,17 +350,17 @@ public partial class Giveaways(
 
         // Prompt for Giveaway Channel
         var msg = await ctx.Channel
-            .SendMessageAsync(embed: promptEmbed
+            .SendAsync(embed: promptEmbed
                 .WithDescription(Strings.GiveawayStartChannelPrompt(ctx.Guild.Id))
                 .Build()).ConfigureAwait(false);
         var response = await NextMessageAsync(ctx.Channel.Id, ctx.User.Id).ConfigureAwait(false);
-        ITextChannel channel = null;
+        Channel channel = null;
 
-        var channelReader = new ChannelTypeReader<ITextChannel>();
+        var channelReader = new ChannelTypeReader<Channel>();
         var channelResult = await channelReader.ReadAsync(ctx, response, servs).ConfigureAwait(false);
         if (channelResult.IsSuccess)
         {
-            channel = (ITextChannel)channelResult.BestMatch;
+            channel = (Channel)channelResult.BestMatch;
         }
         else
         {
@@ -567,18 +566,18 @@ public partial class Giveaways(
 
         // Start the Giveaway
         await Service.GiveawaysInternal(channel, time, prize, winners, host.Id, ctx.Guild.Id,
-            ctx.Channel as ITextChannel, ctx.Guild, requiredRoles, null, null, banner,
+            ctx.Channel as Channel, ctx.Guild, requiredRoles, null, null, banner,
             pingRole, messageCount).ConfigureAwait(false);
     }
 
 // Helper Methods
-    private IRole? ParseRole(string input)
+    private SocketRole? ParseRole(string input)
     {
         var roleIdMatches = MyRegex1().Matches(input).Select(m => ulong.Parse(m.Value));
         return roleIdMatches.Select(id => ctx.Guild.GetRole(id)).FirstOrDefault(r => r != null);
     }
 
-    private List<IRole> ParseRoles(string input)
+    private List<SocketRole> ParseRoles(string input)
     {
         var roleIdMatches = MyRegex1().Matches(input).Select(m => ulong.Parse(m.Value));
         return roleIdMatches.Select(id => ctx.Guild.GetRole(id)).Where(r => r != null).ToList();

@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using Discord.Commands;
 using Mewdeko.Modules.Chat_Triggers.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -15,7 +14,7 @@ public class CommandTypeReader : MewdekoTypeReader<CommandInfo>
     /// </summary>
     /// <param name="client">The discord client</param>
     /// <param name="cmds">The command service</param>
-    public CommandTypeReader(DiscordShardedClient client, CommandService cmds) : base(client, cmds)
+    public CommandTypeReader(FluxerClient client, CommandService cmds) : base(client, cmds)
     {
     }
 
@@ -32,7 +31,7 @@ public class CommandTypeReader : MewdekoTypeReader<CommandInfo>
 
         var prefix =
             await guildSettingsService
-                ?.GetPrefix(context.Guild); // Retrieves the command prefix from guild settings
+                ?.GetPrefix(context.Guild as SocketGuild); // Retrieves the command prefix from guild settings
         if (input.StartsWith(prefix?.ToUpperInvariant()!)) // Removes the command prefix from the input if present
             input = input[prefix.Length..];
 
@@ -52,7 +51,7 @@ public class CommandTypeReader : MewdekoTypeReader<CommandInfo>
 /// </summary>
 public class CommandOrCrTypeReader : MewdekoTypeReader<CommandOrCrInfo>
 {
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly CommandService cmds;
 
     /// <summary>
@@ -60,7 +59,7 @@ public class CommandOrCrTypeReader : MewdekoTypeReader<CommandOrCrInfo>
     /// </summary>
     /// <param name="client">The discord client</param>
     /// <param name="cmds">The command service</param>
-    public CommandOrCrTypeReader(DiscordShardedClient client, CommandService cmds) : base(client, cmds)
+    public CommandOrCrTypeReader(FluxerClient client, CommandService cmds) : base(client, cmds)
     {
         this.client = client;
         this.cmds = cmds;

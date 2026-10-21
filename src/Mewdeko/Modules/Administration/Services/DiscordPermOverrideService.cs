@@ -1,14 +1,9 @@
 ﻿using DataModel;
-using Discord.Commands;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.Configs;
 using Mewdeko.Common.ModuleBehaviors;
 using Microsoft.Extensions.DependencyInjection;
-using CommandInfo = Discord.Commands.CommandInfo;
-using DiscordShardedClient = Discord.WebSocket.DiscordShardedClient;
-using PreconditionResult = Discord.Commands.PreconditionResult;
-using RequireUserPermissionAttribute = Discord.Commands.RequireUserPermissionAttribute;
 
 namespace Mewdeko.Modules.Administration.Services;
 
@@ -53,7 +48,7 @@ public class DiscordPermOverrideService : INService, ILateBlocker
     ///     A task that represents the asynchronous operation. The task result contains a boolean indicating whether the
     ///     command was blocked.
     /// </returns>
-    public async Task<bool> TryBlockLate(DiscordShardedClient client, ICommandContext context, string moduleName,
+    public async Task<bool> TryBlockLate(FluxerClient client, ICommandContext context, string moduleName,
         CommandInfo command)
     {
         if (!TryGetOverrides(context.Guild?.Id ?? 0, command.MethodName(), out var perm)) return false;

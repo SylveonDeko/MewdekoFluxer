@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using LinqToDB.Async;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Administration.Common;
@@ -39,7 +39,7 @@ public partial class ServerManagement
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [RequireServerOwner]
-        public async Task AddBlacklistedRole(IRole role, PunishmentAction? punishmentAction = null)
+        public async Task AddBlacklistedRole(SocketRole role, PunishmentAction? punishmentAction = null)
         {
             try
             {
@@ -62,7 +62,7 @@ public partial class ServerManagement
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [RequireServerOwner]
-        public async Task RemoveBlacklistedRole(IRole role)
+        public async Task RemoveBlacklistedRole(SocketRole role)
         {
             try
             {
@@ -133,7 +133,7 @@ public partial class ServerManagement
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [RequireServerOwner]
-        public async Task AddWhitelistedUser(IGuildUser user)
+        public async Task AddWhitelistedUser(SocketGuildMember user)
         {
             await Service.AddWhitelistedUserAsync(ctx.Guild, user);
             await SuccessAsync(Strings.UserWhitelisted(ctx.Guild.Id, user.Username)).ConfigureAwait(false);
@@ -148,7 +148,7 @@ public partial class ServerManagement
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [RequireServerOwner]
-        public async Task RemoveWhitelistedUser(IGuildUser user)
+        public async Task RemoveWhitelistedUser(SocketGuildMember user)
         {
             await Service.RemoveWhitelistedUserAsync(ctx.Guild, user);
             await SuccessAsync(Strings.UserUnwhitelisted(ctx.Guild.Id, user.Username)).ConfigureAwait(false);
@@ -163,7 +163,7 @@ public partial class ServerManagement
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [RequireServerOwner]
-        public async Task AddWhitelistedRole(IRole role)
+        public async Task AddWhitelistedRole(SocketRole role)
         {
             await Service.AddWhitelistedRoleAsync(ctx.Guild, role);
             await SuccessAsync(Strings.RoleWhitelisted(ctx.Guild.Id, role.Name)).ConfigureAwait(false);
@@ -178,7 +178,7 @@ public partial class ServerManagement
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [RequireServerOwner]
-        public async Task RemoveWhitelistedRole(IRole role)
+        public async Task RemoveWhitelistedRole(SocketRole role)
         {
             await Service.RemoveWhitelistedRoleAsync(ctx.Guild, role);
             await SuccessAsync(Strings.RoleUnwhitelisted(ctx.Guild.Id, role.Name)).ConfigureAwait(false);
@@ -281,7 +281,7 @@ public partial class ServerManagement
                 embed.AddField(Strings.WhitelistedUsers(ctx.Guild.Id), Strings.NoWhitelistedUsers(ctx.Guild.Id));
             }
 
-            await ctx.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+            await ctx.Channel.SendAsync(embed: embed.Build()).ConfigureAwait(false);
         }
     }
 }

@@ -37,7 +37,7 @@ public class BanPruneSettingRequest
 [ApiController]
 [Route("botapi/[controller]/{guildId}")]
 [Authorize("ApiKeyPolicy")]
-public class BanPruneController(BanPruneService banPruneService, DiscordShardedClient client) : Controller
+public class BanPruneController(BanPruneService banPruneService, FluxerClient client) : Controller
 {
     /// <summary>
     ///     Lists the actions that can carry a purge setting, with their built in defaults.
@@ -87,7 +87,7 @@ public class BanPruneController(BanPruneService banPruneService, DiscordShardedC
         if (action is null)
             return NotFound("Unknown ban action");
 
-        IChannel? channel = channelId is null
+        Channel? channel = channelId is null
             ? null
             : client.GetGuild(guildId)?.GetChannel(channelId.Value);
         var days = await banPruneService.GetPruneDaysAsync(guildId, action, channel);

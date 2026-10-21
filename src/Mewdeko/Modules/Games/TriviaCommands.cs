@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Games.Common.Trivia;
 using Mewdeko.Modules.Games.Services;
@@ -43,7 +43,7 @@ public partial class Games
         /// <param name="args">Optional arguments for trivia</param>
         public async Task InternalTrivia(params string[] args)
         {
-            var channel = (ITextChannel)ctx.Channel;
+            var channel = (Channel)ctx.Channel;
 
             var (opts, _) = OptionsParser.ParseFrom(new TriviaOptions(), args);
 
@@ -80,7 +80,7 @@ public partial class Games
         [RequireContext(ContextType.Guild)]
         public async Task Tl()
         {
-            var channel = (ITextChannel)ctx.Channel;
+            var channel = (Channel)ctx.Channel;
 
             if (Service.RunningTrivias.TryGetValue(channel.Guild.Id, out var trivia))
             {
@@ -101,7 +101,7 @@ public partial class Games
         [RequireContext(ContextType.Guild)]
         public async Task Tq()
         {
-            var channel = (ITextChannel)ctx.Channel;
+            var channel = (Channel)ctx.Channel;
 
             if (Service.RunningTrivias.TryGetValue(channel.Guild.Id, out var trivia))
             {

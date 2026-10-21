@@ -15,7 +15,7 @@ namespace Mewdeko.Controllers;
 [Authorize("ApiKeyPolicy")]
 public class StreamNotificationsController(
     StreamNotificationService service,
-    DiscordShardedClient client,
+    FluxerClient client,
     IDataConnectionFactory dbFactory,
     IDashboardAuditContext auditContext)
     : Controller

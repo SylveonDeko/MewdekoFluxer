@@ -68,7 +68,7 @@ public class ToneTagService
     /// <param name="result">The parsing result.</param>
     /// <param name="guild">The guild for which to get the embed.</param>
     /// <returns>An embed builder representing the parsing result.</returns>
-    public EmbedBuilder GetEmbed(ParseResult result, IGuild? guild = null)
+    public EmbedBuilder GetEmbed(ParseResult result, SocketGuild? guild = null)
     {
         var eb = new EmbedBuilder()
             .WithFooter(Strings.TonetagsUpsell(guild.Id));

@@ -13,7 +13,7 @@ namespace Mewdeko.Controllers;
 [Authorize("ApiKeyPolicy")]
 public class RoleStatesController : Controller
 {
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly RoleStatesService roleStatesService;
     private readonly IDashboardAuditContext auditContext;
 
@@ -25,7 +25,7 @@ public class RoleStatesController : Controller
     /// <param name="auditContext">Records before/after state for the dashboard audit log.</param>
     public RoleStatesController(
         RoleStatesService roleStatesService,
-        DiscordShardedClient client,
+        FluxerClient client,
         IDashboardAuditContext auditContext)
     {
         this.roleStatesService = roleStatesService;

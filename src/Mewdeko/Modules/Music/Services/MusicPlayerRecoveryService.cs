@@ -15,7 +15,7 @@ public class MusicPlayerRecoveryService : INService, IReadyExecutor
 {
     private readonly IAudioService audioService;
     private readonly IDataCache cache;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly ILogger<MusicPlayerRecoveryService> logger;
     private readonly GeneratedBotStrings strings;
 
@@ -31,7 +31,7 @@ public class MusicPlayerRecoveryService : INService, IReadyExecutor
     public MusicPlayerRecoveryService(
         IDataCache cache,
         IAudioService audioService,
-        DiscordShardedClient client,
+        FluxerClient client,
         IServiceProvider services,
         GeneratedBotStrings strings, ILogger<MusicPlayerRecoveryService> logger)
     {
@@ -145,7 +145,7 @@ public class MusicPlayerRecoveryService : INService, IReadyExecutor
                 guild.Id, currentTrack.Track.Title, state.CurrentPosition);
 
             // Get the music channel
-            IMessageChannel messageChannel = null;
+            Channel messageChannel = null;
             try
             {
                 var settings = await cache.GetMusicPlayerSettings(guild.Id);
@@ -219,7 +219,7 @@ public class MusicPlayerRecoveryService : INService, IReadyExecutor
                     .WithFooter(strings.MusicTrackFooter(guild.Id, currentTrack.Track.Title))
                     .Build();
 
-                await messageChannel.SendMessageAsync(embed: resumeEmbed);
+                await messageChannel.SendAsync(embed: resumeEmbed);
             }
             catch (Exception ex)
             {

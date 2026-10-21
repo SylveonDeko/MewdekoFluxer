@@ -2,7 +2,6 @@ using System.IO;
 using Mewdeko.Common.Palette;
 using Mewdeko.Modules.Achievements.Common;
 using Microsoft.Extensions.DependencyInjection;
-using Embed = Discord.Embed;
 
 namespace Mewdeko.Modules.Achievements.Services;
 
@@ -33,7 +32,7 @@ public sealed partial class AchievementService
     /// <param name="unlocked">What they unlocked.</param>
     /// <param name="channelId">Where it happened, or 0.</param>
     /// <returns>A task that completes when sent.</returns>
-    private async Task AnnounceAsync(SocketGuildUser user, IReadOnlyList<AchievementDefinition> unlocked,
+    private async Task AnnounceAsync(SocketGuildMember user, IReadOnlyList<AchievementDefinition> unlocked,
         ulong channelId)
     {
         if (unlocked.Count == 0)
@@ -53,7 +52,7 @@ public sealed partial class AchievementService
                          (mode == AchievementAnnounceMode.DmOnly || dmPref == AchievementDmPreference.Always ||
                           dmPref == AchievementDmPreference.ServerDefault && settings.Row.DmByDefault);
 
-            ITextChannel? target = null;
+            Channel? target = null;
             if (mode != AchievementAnnounceMode.DmOnly && prefs.ShowInLog)
             {
                 var logChannel = settings.Row.LogChannelId is { } logId ? guild.GetTextChannel(logId) : null;
@@ -113,10 +112,10 @@ public sealed partial class AchievementService
     /// <param name="channel">Where it happened.</param>
     /// <param name="settings">The server's settings.</param>
     /// <returns>True when the announcement can go there.</returns>
-    private static bool CanAnnounceWhereItHappened(SocketGuildUser user, SocketTextChannel channel,
+    private static bool CanAnnounceWhereItHappened(SocketGuildMember user, Channel channel,
         AchievementGuildSettings settings)
     {
-        var thread = channel as SocketThreadChannel;
+        var thread = channel as Channel;
         var parent = thread?.ParentChannel;
         if (settings.QuietChannels.Contains(channel.Id) || parent is not null && settings.QuietChannels.Contains(parent.Id))
             return false;
@@ -136,9 +135,9 @@ public sealed partial class AchievementService
         return parentPerms.ViewChannel && parentPerms.SendMessagesInThreads;
     }
 
-    private async Task SendAnnouncementAsync(IMessageChannel channel, SocketGuildUser user,
+    private async Task SendAnnouncementAsync(Channel channel, SocketGuildMember user,
         IReadOnlyList<AchievementDefinition> unlocked, AchievementMemberSummary summary,
-        AchievementGuildCatalog catalog, AchievementGuildSettings settings, bool mention, ITextChannel? context)
+        AchievementGuildCatalog catalog, AchievementGuildSettings settings, bool mention, Channel? context)
     {
         var guild = user.Guild;
         var allowed = mention
@@ -150,7 +149,7 @@ public sealed partial class AchievementService
 
         await using var image = settings.Row.UnlockImage ? await RenderUnlockImageAsync(user, unlocked, catalog) : null;
 
-        IUserMessage sent;
+        Message sent;
         if (!string.IsNullOrWhiteSpace(settings.Row.UnlockMessage))
         {
             var replacer = BuildReplacer(user, context, unlocked, summary, catalog);
@@ -165,7 +164,7 @@ public sealed partial class AchievementService
             sent = await SendAsync(channel, image, mention ? user.Mention : null, [embed], allowed);
         }
 
-        if (settings.Row.DeleteAfter > 0 && channel is not IDMChannel)
+        if (settings.Row.DeleteAfter > 0 && channel is not Channel)
             sent.DeleteAfter(settings.Row.DeleteAfter);
     }
 
@@ -179,13 +178,13 @@ public sealed partial class AchievementService
     /// </summary>
     public const int MaxDeleteAfter = 86400;
 
-    private static async Task<IUserMessage> SendAsync(IMessageChannel channel, Stream? image, string? text,
-        Embed[]? embeds, AllowedMentions allowed)
+    private static async Task<Message> SendAsync(Channel channel, Stream? image, string? text,
+        EmbedRequest[]? embeds, AllowedMentions allowed)
     {
         if (image is null)
-            return await channel.SendMessageAsync(text, embeds: embeds, allowedMentions: allowed);
+            return await channel.SendAsync(text, embeds: embeds, allowedMentions: allowed);
 
-        return await channel.SendFileAsync(new FileAttachment(image, UnlockImageFileName), text, embeds: embeds,
+        return await channel.SendFileAsync(new AttachmentRequest(image, UnlockImageFileName), text, embeds: embeds,
             allowedMentions: allowed);
     }
 
@@ -196,7 +195,7 @@ public sealed partial class AchievementService
     /// <param name="unlocked">What they unlocked.</param>
     /// <param name="catalog">The server's catalog.</param>
     /// <returns>The PNG, or null when drawing failed.</returns>
-    public async Task<MemoryStream?> RenderUnlockImageAsync(SocketGuildUser user,
+    public async Task<MemoryStream?> RenderUnlockImageAsync(SocketGuildMember user,
         IReadOnlyList<AchievementDefinition> unlocked, AchievementGuildCatalog catalog)
     {
         var best = unlocked.OrderByDescending(d => d.Grade).ThenByDescending(d => d.Points).First();
@@ -211,7 +210,7 @@ public sealed partial class AchievementService
     /// <param name="progress">Their progress on it.</param>
     /// <param name="catalog">The server's catalog.</param>
     /// <returns>The PNG, or null when drawing failed.</returns>
-    public Task<MemoryStream?> RenderProgressImageAsync(SocketGuildUser user, AchievementProgress progress,
+    public Task<MemoryStream?> RenderProgressImageAsync(SocketGuildMember user, AchievementProgress progress,
         AchievementGuildCatalog catalog)
     {
         var def = progress.Definition;
@@ -234,7 +233,7 @@ public sealed partial class AchievementService
     /// <param name="definition">The achievement as edited.</param>
     /// <param name="catalog">The server's catalog.</param>
     /// <returns>The PNG, or null when drawing failed.</returns>
-    public Task<MemoryStream?> RenderPreviewImageAsync(SocketGuildUser user, AchievementDefinition definition,
+    public Task<MemoryStream?> RenderPreviewImageAsync(SocketGuildMember user, AchievementDefinition definition,
         AchievementGuildCatalog catalog)
     {
         return RenderImageAsync(user, definition, catalog, strings.AchievementImageUnlocked(user.Guild.Id), null, null,
@@ -251,7 +250,7 @@ public sealed partial class AchievementService
     /// <param name="catalog">The server's catalog.</param>
     /// <param name="locked">Whether to draw the locked state.</param>
     /// <returns>The image and where each element landed, or null when drawing failed.</returns>
-    public async Task<AchievementUnlockRenderer.RenderResult?> RenderCardPreviewAsync(SocketGuildUser user,
+    public async Task<AchievementUnlockRenderer.RenderResult?> RenderCardPreviewAsync(SocketGuildMember user,
         AchievementCardTemplate template, AchievementDefinition definition, AchievementGuildCatalog catalog,
         bool locked)
     {
@@ -276,7 +275,7 @@ public sealed partial class AchievementService
         }
     }
 
-    private async Task<MemoryStream?> RenderImageAsync(SocketGuildUser user, AchievementDefinition def,
+    private async Task<MemoryStream?> RenderImageAsync(SocketGuildMember user, AchievementDefinition def,
         AchievementGuildCatalog catalog, string label, string? more, (float Value, string Label)? progress, bool locked)
     {
         try
@@ -292,7 +291,7 @@ public sealed partial class AchievementService
         }
     }
 
-    private async Task<AchievementUnlockRenderer.UnlockImageData> BuildImageDataAsync(SocketGuildUser user,
+    private async Task<AchievementUnlockRenderer.UnlockImageData> BuildImageDataAsync(SocketGuildMember user,
         AchievementDefinition def, AchievementGuildCatalog catalog, string label, string? more,
         (float Value, string Label)? progress, bool locked)
     {
@@ -330,7 +329,7 @@ public sealed partial class AchievementService
     ///     only lists achievements when there are several.
     /// </param>
     /// <returns>The embed.</returns>
-    public Embed BuildUnlockEmbed(SocketGuildUser user, IReadOnlyList<AchievementDefinition> unlocked,
+    public EmbedRequest BuildUnlockEmbed(SocketGuildMember user, IReadOnlyList<AchievementDefinition> unlocked,
         AchievementMemberSummary summary, AchievementGuildCatalog catalog, bool withImage = false)
     {
         var guildId = user.Guild.Id;
@@ -364,7 +363,7 @@ public sealed partial class AchievementService
         return embed.Build();
     }
 
-    private Replacer BuildReplacer(SocketGuildUser user, ITextChannel? channel,
+    private Replacer BuildReplacer(SocketGuildMember user, Channel? channel,
         IReadOnlyList<AchievementDefinition> unlocked, AchievementMemberSummary summary,
         AchievementGuildCatalog catalog)
     {
@@ -392,7 +391,7 @@ public sealed partial class AchievementService
     /// <param name="user">Who to preview as.</param>
     /// <param name="source">The message source, or null for the default embed.</param>
     /// <returns>The plain text and embeds Discord would get.</returns>
-    public async Task<(string? Text, Embed[]? Embeds)> PreviewUnlockAsync(SocketGuildUser user, string? source)
+    public async Task<(string? Text, EmbedRequest[]? Embeds)> PreviewUnlockAsync(SocketGuildMember user, string? source)
     {
         var catalog = await GetCatalogAsync(user.Guild.Id);
         var sample = catalog.Earnable.Where(d => !d.Hidden).Take(1).ToList();

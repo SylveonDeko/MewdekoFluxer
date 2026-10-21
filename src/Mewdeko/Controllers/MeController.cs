@@ -34,7 +34,7 @@ public class MeController(
     StarboardService starboardService,
     InviteCountService inviteCountService,
     MessageCountService messageCountService,
-    DiscordShardedClient client,
+    FluxerClient client,
     IDataConnectionFactory dbFactory,
     WizardDecisionService wizardService,
     IDashboardAuditContext auditContext) : Controller
@@ -688,7 +688,7 @@ public class MeController(
         return Ok(new
         {
             inviteCount,
-            invitedUsers = invitedUsers.OfType<IGuildUser>().Select(u => new
+            invitedUsers = invitedUsers.OfType<SocketGuildMember>().Select(u => new
             {
                 id = u.Id,
                 username = u.Username,

@@ -1,6 +1,6 @@
+using System.Threading.Channels;
+using Channel = Fluxer.Net.Channel;
 using System.Text;
-using Discord.Commands;
-using Discord.Net;
 using Humanizer;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;
@@ -19,7 +19,7 @@ public class Xp(
     ICurrencyService currencyService,
     XpRoleSyncService roleSyncService,
     ILogger<Xp> logger,
-    DiscordShardedClient client,
+    FluxerClient client,
     XpRewardManager xpRewardManager)
     : MewdekoModuleBase<XpService>
 {
@@ -31,9 +31,9 @@ public class Xp(
     /// <example>.rank @user</example>
     [Cmd]
     [Aliases]
-    public async Task Rank([Remainder] IGuildUser? user = null)
+    public async Task Rank([Remainder] SocketGuildMember? user = null)
     {
-        user ??= (IGuildUser)ctx.User;
+        user ??= (SocketGuildMember)ctx.User;
 
         // Prevent showing ranks for bots
         if (user.IsBot)
@@ -80,9 +80,9 @@ public class Xp(
     /// <example>.textrank @user</example>
     [Cmd]
     [Aliases]
-    public async Task TextRank([Remainder] IGuildUser? user = null)
+    public async Task TextRank([Remainder] SocketGuildMember? user = null)
     {
-        user ??= (IGuildUser)ctx.User;
+        user ??= (SocketGuildMember)ctx.User;
 
         // Prevent showing ranks for bots
         if (user.IsBot)
@@ -155,8 +155,8 @@ public class Xp(
                     .WithTitle(Strings.LeaderboardPickTitle(ctx.Guild.Id))
                     .WithDescription(Strings.LeaderboardPickDescription(ctx.Guild.Id)),
                 ctx.User.Id,
-                new ReactionChoice(new Emoji("⭐"), Strings.LeaderboardPickXp(ctx.Guild.Id), "xp"),
-                new ReactionChoice(new Emoji("💰"), Strings.LeaderboardPickCurrency(ctx.Guild.Id), "currency"));
+                new ReactionChoice(Emoji.FromUnicode("⭐"), Strings.LeaderboardPickXp(ctx.Guild.Id), "xp"),
+                new ReactionChoice(Emoji.FromUnicode("💰"), Strings.LeaderboardPickCurrency(ctx.Guild.Id), "currency"));
             _ = prompt.DeleteAsync();
 
             switch (picked)
@@ -207,7 +207,7 @@ public class Xp(
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task AddXp(IGuildUser user, int amount)
+    public async Task AddXp(SocketGuildMember user, int amount)
     {
         if (amount <= 0)
         {
@@ -234,7 +234,7 @@ public class Xp(
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task SetXp(IGuildUser user, long amount)
+    public async Task SetXp(SocketGuildMember user, long amount)
     {
         if (amount < 0)
         {
@@ -262,7 +262,7 @@ public class Xp(
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task ResetXp(IGuildUser user, bool resetBonus = false)
+    public async Task ResetXp(SocketGuildMember user, bool resetBonus = false)
     {
         await Service.ResetUserXpAsync(ctx.Guild.Id, user.Id, resetBonus);
 
@@ -566,7 +566,7 @@ public class Xp(
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task SetChannelXp(ITextChannel channel, double multiplier)
+    public async Task SetChannelXp(Channel channel, double multiplier)
     {
         if (multiplier <= 0)
         {
@@ -593,7 +593,7 @@ public class Xp(
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task SetRoleXp(IRole role, double multiplier)
+    public async Task SetRoleXp(SocketRole role, double multiplier)
     {
         if (multiplier <= 0)
         {
@@ -717,7 +717,7 @@ public class Xp(
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task XpExclude(IGuildUser user)
+    public async Task XpExclude(SocketGuildMember user)
     {
         await Service.ExcludeItemAsync(ctx.Guild.Id, user.Id, ExcludedItemType.User);
         await ReplyConfirmAsync(Strings.XpUserExcluded(ctx.Guild.Id, user.ToString())).ConfigureAwait(false);
@@ -731,7 +731,7 @@ public class Xp(
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task XpExclude(IRole role)
+    public async Task XpExclude(SocketRole role)
     {
         await Service.ExcludeItemAsync(ctx.Guild.Id, role.Id, ExcludedItemType.Role);
         await ReplyConfirmAsync(Strings.XpRoleExcluded(ctx.Guild.Id, role.Name)).ConfigureAwait(false);
@@ -745,7 +745,7 @@ public class Xp(
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task XpExclude(ITextChannel channel)
+    public async Task XpExclude(Channel channel)
     {
         await Service.ExcludeItemAsync(ctx.Guild.Id, channel.Id, ExcludedItemType.Channel);
         await ReplyConfirmAsync(Strings.XpChannelExcluded(ctx.Guild.Id, channel.Mention)).ConfigureAwait(false);
@@ -759,7 +759,7 @@ public class Xp(
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task XpInclude(IGuildUser user)
+    public async Task XpInclude(SocketGuildMember user)
     {
         await Service.IncludeItemAsync(ctx.Guild.Id, user.Id, ExcludedItemType.User);
         await ReplyConfirmAsync(Strings.XpUserIncluded(ctx.Guild.Id, user.ToString())).ConfigureAwait(false);
@@ -773,7 +773,7 @@ public class Xp(
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task XpInclude(IRole role)
+    public async Task XpInclude(SocketRole role)
     {
         await Service.IncludeItemAsync(ctx.Guild.Id, role.Id, ExcludedItemType.Role);
         await ReplyConfirmAsync(Strings.XpRoleIncluded(ctx.Guild.Id, role.Name)).ConfigureAwait(false);
@@ -787,7 +787,7 @@ public class Xp(
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task XpInclude(ITextChannel channel)
+    public async Task XpInclude(Channel channel)
     {
         await Service.IncludeItemAsync(ctx.Guild.Id, channel.Id, ExcludedItemType.Channel);
         await ReplyConfirmAsync(Strings.XpChannelIncluded(ctx.Guild.Id, channel.Mention)).ConfigureAwait(false);
@@ -889,7 +889,7 @@ public class Xp(
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageRoles)]
-    public async Task RoleReward(int level, IRole role)
+    public async Task RoleReward(int level, SocketRole role)
     {
         if (level <= 0)
         {
@@ -898,7 +898,7 @@ public class Xp(
         }
 
         // Check if the bot can assign this role
-        if (role.Position >= ((IGuildUser)ctx.User).GetRoles().Max(r => r.Position))
+        if (role.Position >= ((SocketGuildMember)ctx.User).GetRoles().Max(r => r.Position))
         {
             await ReplyErrorAsync(Strings.XpRoleHierarchy(ctx.Guild.Id)).ConfigureAwait(false);
             return;
@@ -1403,7 +1403,7 @@ public class Xp(
                 {
                     await message.ModifyAsync(msg => msg.Embed = progressEmbed.Build());
                 }
-                catch (HttpException ex) when (ex.DiscordCode == DiscordErrorCode.WriteRatelimitReached)
+                catch (FluxerApiException ex) when (ex.DiscordCode == DiscordErrorCode.WriteRatelimitReached)
                 {
                     logger.LogDebug("Hit rate limit updating progress message for guild {GuildId}", ctx.Guild.Id);
                 }
@@ -1545,7 +1545,7 @@ public class Xp(
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task LevelUpChannel(ITextChannel? channel = null)
+    public async Task LevelUpChannel(Channel? channel = null)
     {
         await Service.SetLevelUpChannelAsync(ctx.Guild.Id, channel?.Id ?? 0);
 
@@ -1694,7 +1694,7 @@ public class Xp(
     [UserPerm(GuildPermission.ManageGuild)]
     public async Task TestLevelUpMessage([Remainder] string? message = null)
     {
-        var testUser = (IGuildUser)ctx.User;
+        var testUser = (SocketGuildMember)ctx.User;
 
         // If no message provided, use a random custom message or fall back to default
         if (string.IsNullOrWhiteSpace(message))
@@ -1722,7 +1722,7 @@ public class Xp(
             .WithXpPlaceholders(
                 testUser,
                 ctx.Guild,
-                ctx.Channel as ITextChannel,
+                ctx.Channel as Channel,
                 9,
                 10,
                 5000,
@@ -1743,11 +1743,11 @@ public class Xp(
         {
             if (SmartEmbed.TryParse(processedMessage, ctx.Guild.Id, out var embed, out var plainText))
             {
-                await ctx.Channel.SendMessageAsync(plainText, embeds: embed);
+                await ctx.Channel.SendAsync(plainText, embeds: embed);
             }
             else
             {
-                await ctx.Channel.SendMessageAsync(
+                await ctx.Channel.SendAsync(
                     embed: new EmbedBuilder()
                         .WithColor(Color.Green)
                         .WithDescription(processedMessage)

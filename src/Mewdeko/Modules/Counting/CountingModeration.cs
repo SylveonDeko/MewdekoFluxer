@@ -1,5 +1,4 @@
 using DataModel;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Administration.Common;
 using Mewdeko.Modules.Counting.Services;
@@ -18,9 +17,9 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountmodShow(ITextChannel? channel = null)
+    public async Task CountmodShow(Channel? channel = null)
     {
-        channel ??= (ITextChannel)ctx.Channel;
+        channel ??= (Channel)ctx.Channel;
 
         var config = await Service.GetModerationConfigAsync(channel.Id);
         var guildDefaults = await Service.GetGuildDefaultsAsync(ctx.Guild.Id);
@@ -61,7 +60,7 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
                 $"Punishment: {(PunishmentAction)guildDefaults.PunishmentAction}");
         }
 
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -72,7 +71,7 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
     public async Task CountmodDefaults(bool enabled, int threshold = 3, int windowHours = 24,
-        PunishmentAction punishment = PunishmentAction.Mute, int durationMinutes = 0, IRole? punishmentRole = null)
+        PunishmentAction punishment = PunishmentAction.Mute, int durationMinutes = 0, SocketRole? punishmentRole = null)
     {
         var defaults = new CountingModerationDefaults
         {
@@ -102,7 +101,7 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
             if (punishmentRole != null)
                 embed.AddField("Punishment Role", punishmentRole.Mention, true);
 
-            await ctx.Channel.SendMessageAsync(embed: embed.Build());
+            await ctx.Channel.SendAsync(embed: embed.Build());
         }
         else
         {
@@ -117,9 +116,9 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountmodEnable(bool enabled, ITextChannel? channel = null)
+    public async Task CountmodEnable(bool enabled, Channel? channel = null)
     {
-        channel ??= (ITextChannel)ctx.Channel;
+        channel ??= (Channel)ctx.Channel;
 
         var config = new CountingModerationConfig
         {
@@ -146,7 +145,7 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountmodThreshold(int threshold, ITextChannel? channel = null)
+    public async Task CountmodThreshold(int threshold, Channel? channel = null)
     {
         if (threshold is < 1 or > 100)
         {
@@ -154,7 +153,7 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
             return;
         }
 
-        channel ??= (ITextChannel)ctx.Channel;
+        channel ??= (Channel)ctx.Channel;
 
         var config = new CountingModerationConfig
         {
@@ -181,7 +180,7 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountmodWindow(int hours, ITextChannel? channel = null)
+    public async Task CountmodWindow(int hours, Channel? channel = null)
     {
         if (hours is < 1 or > 168) // Max 1 week
         {
@@ -189,7 +188,7 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
             return;
         }
 
-        channel ??= (ITextChannel)ctx.Channel;
+        channel ??= (Channel)ctx.Channel;
 
         var config = new CountingModerationConfig
         {
@@ -217,9 +216,9 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
     public async Task CountmodPunishment(PunishmentAction punishment, int durationMinutes = 0,
-        IRole? role = null, ITextChannel? channel = null)
+        SocketRole? role = null, Channel? channel = null)
     {
-        channel ??= (ITextChannel)ctx.Channel;
+        channel ??= (Channel)ctx.Channel;
 
         if (punishment == PunishmentAction.AddRole && role == null)
         {
@@ -250,7 +249,7 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
             if (role != null)
                 embed.AddField("Role", role.Mention, true);
 
-            await ctx.Channel.SendMessageAsync(embed: embed.Build());
+            await ctx.Channel.SendAsync(embed: embed.Build());
         }
         else
         {
@@ -265,9 +264,9 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountmodIgnore(bool deleteMessages, ITextChannel? channel = null, params IRole[] roles)
+    public async Task CountmodIgnore(bool deleteMessages, Channel? channel = null, params SocketRole[] roles)
     {
-        channel ??= (ITextChannel)ctx.Channel;
+        channel ??= (Channel)ctx.Channel;
 
         var roleIds = string.Join(",", roles.Select(r => r.Id));
 
@@ -288,7 +287,7 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
 
             embed.AddField("Ignored Roles", roles.Any() ? string.Join(", ", roles.Select(r => r.Mention)) : "None");
 
-            await ctx.Channel.SendMessageAsync(embed: embed.Build());
+            await ctx.Channel.SendAsync(embed: embed.Build());
         }
         else
         {
@@ -303,9 +302,9 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountmodRequired(ITextChannel? channel = null, params IRole[] roles)
+    public async Task CountmodRequired(Channel? channel = null, params SocketRole[] roles)
     {
-        channel ??= (ITextChannel)ctx.Channel;
+        channel ??= (Channel)ctx.Channel;
 
         var roleIds = string.Join(",", roles.Select(r => r.Id));
 
@@ -328,7 +327,7 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
             else
                 embed.AddField("Required Roles", "None (everyone can count)");
 
-            await ctx.Channel.SendMessageAsync(embed: embed.Build());
+            await ctx.Channel.SendAsync(embed: embed.Build());
         }
         else
         {
@@ -343,9 +342,9 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountmodBanned(ITextChannel? channel = null, params IRole[] roles)
+    public async Task CountmodBanned(Channel? channel = null, params SocketRole[] roles)
     {
-        channel ??= (ITextChannel)ctx.Channel;
+        channel ??= (Channel)ctx.Channel;
 
         var roleIds = string.Join(",", roles.Select(r => r.Id));
 
@@ -368,7 +367,7 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
             else
                 embed.AddField("Banned Roles", "None");
 
-            await ctx.Channel.SendMessageAsync(embed: embed.Build());
+            await ctx.Channel.SendAsync(embed: embed.Build());
         }
         else
         {
@@ -383,9 +382,9 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountmodReset(ITextChannel? channel = null)
+    public async Task CountmodReset(Channel? channel = null)
     {
-        channel ??= (ITextChannel)ctx.Channel;
+        channel ??= (Channel)ctx.Channel;
 
         var config = new CountingModerationConfig
         {
@@ -412,7 +411,7 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
     public async Task CountmodPunish(int count, PunishmentAction punishment, int durationMinutes = 0,
-        IRole? role = null, ITextChannel? channel = null)
+        SocketRole? role = null, Channel? channel = null)
     {
         if (punishment == PunishmentAction.AddRole && role == null)
         {
@@ -440,7 +439,7 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
             if (role != null)
                 embed.AddField(Strings.CountingModerationRoleField(ctx.Guild.Id), role.Mention, true);
 
-            await ctx.Channel.SendMessageAsync(embed: embed.Build());
+            await ctx.Channel.SendAsync(embed: embed.Build());
         }
         else
         {
@@ -455,7 +454,7 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountmodUnpunish(int count, ITextChannel? channel = null)
+    public async Task CountmodUnpunish(int count, Channel? channel = null)
     {
         var success = await Service.RemoveTieredPunishmentAsync(ctx.Guild.Id, channel?.Id, count);
 
@@ -477,7 +476,7 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountmodPunishList(ITextChannel? channel = null)
+    public async Task CountmodPunishList(Channel? channel = null)
     {
         var punishments = await Service.GetTieredPunishmentsAsync(ctx.Guild.Id, channel?.Id);
 
@@ -507,7 +506,7 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
         if (punishments.Count > 10)
             embed.WithFooter(Strings.CountingModerationMorePunishments(ctx.Guild.Id, punishments.Count - 10));
 
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -517,9 +516,9 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageMessages)]
-    public async Task CountmodClear(IGuildUser user, ITextChannel? channel = null)
+    public async Task CountmodClear(SocketGuildMember user, Channel? channel = null)
     {
-        channel ??= (ITextChannel)ctx.Channel;
+        channel ??= (Channel)ctx.Channel;
 
         var success = await Service.ClearUserWrongCountsAsync(channel.Id, user.Id);
 
@@ -543,9 +542,9 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageMessages)]
-    public async Task CountmodClearAll(ITextChannel? channel = null)
+    public async Task CountmodClearAll(Channel? channel = null)
     {
-        channel ??= (ITextChannel)ctx.Channel;
+        channel ??= (Channel)ctx.Channel;
 
         var success = await Service.ClearChannelWrongCountsAsync(channel.Id);
 
@@ -568,9 +567,9 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountmodNonnumbers(bool punish, bool delete = true, ITextChannel? channel = null)
+    public async Task CountmodNonnumbers(bool punish, bool delete = true, Channel? channel = null)
     {
-        channel ??= (ITextChannel)ctx.Channel;
+        channel ??= (Channel)ctx.Channel;
 
         var config = new CountingModerationConfig
         {
@@ -588,7 +587,7 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
                 .AddField(Strings.CountingModerationPunishNonNumbersField(ctx.Guild.Id), punish ? "✅" : "❌", true)
                 .AddField(Strings.CountingModerationDeleteNonNumbersField(ctx.Guild.Id), delete ? "✅" : "❌", true);
 
-            await ctx.Channel.SendMessageAsync(embed: embed.Build());
+            await ctx.Channel.SendAsync(embed: embed.Build());
         }
         else
         {
@@ -603,9 +602,9 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountmodEdits(bool punish, bool delete = true, ITextChannel? channel = null)
+    public async Task CountmodEdits(bool punish, bool delete = true, Channel? channel = null)
     {
-        channel ??= (ITextChannel)ctx.Channel;
+        channel ??= (Channel)ctx.Channel;
 
         var config = new CountingModerationConfig
         {
@@ -623,7 +622,7 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
                 .AddField(Strings.CountingModerationPunishEditsField(ctx.Guild.Id), punish ? "✅" : "❌", true)
                 .AddField(Strings.CountingModerationDeleteEditsField(ctx.Guild.Id), delete ? "✅" : "❌", true);
 
-            await ctx.Channel.SendMessageAsync(embed: embed.Build());
+            await ctx.Channel.SendAsync(embed: embed.Build());
         }
         else
         {

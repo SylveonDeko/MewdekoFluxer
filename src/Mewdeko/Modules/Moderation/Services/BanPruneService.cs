@@ -75,7 +75,7 @@ public class BanPruneService : INService
     /// <param name="action">The moderation action issuing the ban.</param>
     /// <param name="channel">The channel the ban was issued from, if any.</param>
     /// <returns>A value between 0 and <see cref="MaxPruneDays" />.</returns>
-    public async Task<int> GetPruneDaysAsync(ulong guildId, BanPruneAction action, IChannel? channel = null)
+    public async Task<int> GetPruneDaysAsync(ulong guildId, BanPruneAction action, Channel? channel = null)
     {
         var settings = await GetSettingsAsync(guildId).ConfigureAwait(false);
         if (settings.Count == 0)
@@ -224,13 +224,13 @@ public class BanPruneService : INService
         return deleted;
     }
 
-    private static IEnumerable<(BanPruneScope Scope, ulong ScopeId)> ResolutionOrder(IChannel? channel)
+    private static IEnumerable<(BanPruneScope Scope, ulong ScopeId)> ResolutionOrder(Channel? channel)
     {
         if (channel is not null)
         {
             yield return (BanPruneScope.Channel, channel.Id);
 
-            if (channel is SocketThreadChannel { ParentChannel: not null } thread)
+            if (channel is Channel { ParentChannel: not null } thread)
                 yield return (BanPruneScope.Channel, thread.ParentChannel.Id);
 
             if (channel is INestedChannel { CategoryId: not null } nested)

@@ -1,5 +1,4 @@
 using System.Text;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Patreon.Services;
 
@@ -26,7 +25,7 @@ public class Patreon(IBotCredentials creds, PatreonApiClient patreonApiClient, I
     [UserPerm(GuildPermission.Administrator)]
     [BotPerm(GuildPermission.SendMessages)]
     [RequireContext(ContextType.Guild)]
-    public async Task PatreonChannel(ITextChannel? channel = null)
+    public async Task PatreonChannel(Channel? channel = null)
     {
         if (channel == null)
         {
@@ -215,7 +214,7 @@ public class Patreon(IBotCredentials creds, PatreonApiClient patreonApiClient, I
             }
         }
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -277,7 +276,7 @@ public class Patreon(IBotCredentials creds, PatreonApiClient patreonApiClient, I
                 "```🎉 It's %month%! Thanks to %supporters.summary%%revenue.summary%!%growth.summary%```\n" +
                 "This becomes: *🎉 It's December! Thanks to our 25 incredible supporters who help us raise $150/month! We gained 3 new supporters this month!*");
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -396,7 +395,7 @@ public class Patreon(IBotCredentials creds, PatreonApiClient patreonApiClient, I
         }
 
         embed.WithDescription(description.ToString());
-        await ctx.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: embed.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -410,7 +409,7 @@ public class Patreon(IBotCredentials creds, PatreonApiClient patreonApiClient, I
     [Priority(0)]
     [UserPerm(GuildPermission.Administrator)]
     [RequireContext(ContextType.Guild)]
-    public async Task PatreonLink(IGuildUser user, string patreonUserId)
+    public async Task PatreonLink(SocketGuildMember user, string patreonUserId)
     {
         if (await Service.LinkUserAsync(ctx.Guild.Id, user.Id, patreonUserId))
         {
@@ -459,7 +458,7 @@ public class Patreon(IBotCredentials creds, PatreonApiClient patreonApiClient, I
     [UserPerm(GuildPermission.ManageRoles)]
     [BotPerm(GuildPermission.ManageRoles)]
     [RequireContext(ContextType.Guild)]
-    public async Task PatreonTierMap(string tierId, IRole role)
+    public async Task PatreonTierMap(string tierId, SocketRole role)
     {
         if (await Service.MapTierToRoleAsync(ctx.Guild.Id, tierId, role.Id))
         {
@@ -539,7 +538,7 @@ public class Patreon(IBotCredentials creds, PatreonApiClient patreonApiClient, I
                     $"{topSupporter.FullName} - ${topSupporter.AmountCents / 100.0:F2}/month"));
         }
 
-        await ctx.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: embed.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -586,7 +585,7 @@ public class Patreon(IBotCredentials creds, PatreonApiClient patreonApiClient, I
         }
 
         embed.WithDescription(description.ToString());
-        await ctx.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: embed.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -628,7 +627,7 @@ public class Patreon(IBotCredentials creds, PatreonApiClient patreonApiClient, I
         }
 
         embed.WithDescription(description.ToString());
-        await ctx.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: embed.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -681,7 +680,7 @@ public class Patreon(IBotCredentials creds, PatreonApiClient patreonApiClient, I
             embed.AddField(Strings.PatreonAnalyticsTop(ctx.Guild.Id), topText);
         }
 
-        await ctx.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: embed.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -695,9 +694,9 @@ public class Patreon(IBotCredentials creds, PatreonApiClient patreonApiClient, I
     [UserPerm(GuildPermission.Administrator)]
     [BotPerm(GuildPermission.SendMessages)]
     [RequireContext(ContextType.Guild)]
-    public async Task PatreonRecognize(ITextChannel? channel = null)
+    public async Task PatreonRecognize(Channel? channel = null)
     {
-        var targetChannel = channel ?? ctx.Channel as ITextChannel;
+        var targetChannel = channel ?? ctx.Channel as Channel;
         if (targetChannel == null)
         {
             await ReplyErrorAsync(Strings.PatreonRecognizeInvalidChannel(ctx.Guild.Id)).ConfigureAwait(false);

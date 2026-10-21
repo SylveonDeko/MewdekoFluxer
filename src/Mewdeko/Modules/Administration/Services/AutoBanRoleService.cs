@@ -34,7 +34,7 @@ public class AutoBanRoleService : INService
     /// </summary>
     /// <param name="before">The cached state of the user before the update</param>
     /// <param name="after">The current state of the user after the update</param>
-    private async Task OnGuildMemberUpdated(Cacheable<SocketGuildUser, ulong> before, SocketGuildUser after)
+    private async Task OnGuildMemberUpdated(Cacheable<SocketGuildMember> before, SocketGuildMember after)
     {
         // Ensure we have the before state
         var beforeUser = before.HasValue ? before.Value : null;

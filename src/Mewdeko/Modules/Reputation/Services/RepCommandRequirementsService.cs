@@ -1,5 +1,4 @@
 using DataModel;
-using Discord.Commands;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.Configs;
@@ -66,7 +65,7 @@ public class RepCommandRequirementsService : INService, ILateBlocker
     /// <param name="moduleName">The module name.</param>
     /// <param name="command">The command info.</param>
     /// <returns>True if the command should be blocked, false if it can proceed.</returns>
-    public async Task<bool> TryBlockLate(DiscordShardedClient client, ICommandContext ctx, string moduleName,
+    public async Task<bool> TryBlockLate(FluxerClient client, ICommandContext ctx, string moduleName,
         CommandInfo command)
     {
         if (ctx.Guild == null) return false;
@@ -77,7 +76,7 @@ public class RepCommandRequirementsService : INService, ILateBlocker
             if (requirement is not { IsActive: true }) return false;
 
             // Check if user has bypass roles
-            if (await HasBypassRoleAsync(ctx.User as IGuildUser, requirement.BypassRoles))
+            if (await HasBypassRoleAsync(ctx.User as SocketGuildMember, requirement.BypassRoles))
                 return false;
 
             // Check if command is restricted to specific channels
@@ -261,7 +260,7 @@ public class RepCommandRequirementsService : INService, ILateBlocker
     /// <param name="user">The guild user.</param>
     /// <param name="bypassRoles">The bypass roles JSON string.</param>
     /// <returns>True if the user has bypass roles.</returns>
-    private static async Task<bool> HasBypassRoleAsync(IGuildUser? user, string? bypassRoles)
+    private static async Task<bool> HasBypassRoleAsync(SocketGuildMember? user, string? bypassRoles)
     {
         await Task.CompletedTask;
         if (user == null || string.IsNullOrEmpty(bypassRoles)) return false;

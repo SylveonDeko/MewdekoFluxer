@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 
 namespace Mewdeko.Common.TypeReaders;
 
@@ -6,14 +6,14 @@ namespace Mewdeko.Common.TypeReaders;
 ///     Type reader for parsing permission value inputs into PermValue objects.
 ///     Used instead of bool for more flexible keywords for true/false only in the permission module.
 /// </summary>
-public class PermValue : MewdekoTypeReader<PermValue>
+public class PermValueTypeReader : MewdekoTypeReader<PermValue>
 {
     /// <summary>
-    ///     Initializes a new instance of the <see cref="PermValue" /> class.
+    ///     Initializes a new instance of the <see cref="PermValueTypeReader" /> class.
     /// </summary>
-    /// <param name="client">The DiscordShardedClient instance.</param>
+    /// <param name="client">The FluxerClient instance.</param>
     /// <param name="cmds">The CommandService instance.</param>
-    public PermValue(DiscordShardedClient client, CommandService cmds) : base(client, cmds)
+    public PermValueTypeReader(FluxerClient client, CommandService cmds) : base(client, cmds)
     {
     }
 
@@ -26,30 +26,30 @@ public class PermValue : MewdekoTypeReader<PermValue>
         return input switch
         {
             // Allow values
-            "1" => Task.FromResult(TypeReaderResult.FromSuccess(Discord.PermValue.Allow)),
-            "T" => Task.FromResult(TypeReaderResult.FromSuccess(Discord.PermValue.Allow)),
-            "TRUE" => Task.FromResult(TypeReaderResult.FromSuccess(Discord.PermValue.Allow)),
-            "ENABLE" => Task.FromResult(TypeReaderResult.FromSuccess(Discord.PermValue.Allow)),
-            "ENABLED" => Task.FromResult(TypeReaderResult.FromSuccess(Discord.PermValue.Allow)),
-            "ALLOW" => Task.FromResult(TypeReaderResult.FromSuccess(Discord.PermValue.Allow)),
-            "PERMIT" => Task.FromResult(TypeReaderResult.FromSuccess(Discord.PermValue.Allow)),
-            "UNBAN" => Task.FromResult(TypeReaderResult.FromSuccess(Discord.PermValue.Allow)),
+            "1" => Task.FromResult(TypeReaderResult.FromSuccess(PermValue.Allow)),
+            "T" => Task.FromResult(TypeReaderResult.FromSuccess(PermValue.Allow)),
+            "TRUE" => Task.FromResult(TypeReaderResult.FromSuccess(PermValue.Allow)),
+            "ENABLE" => Task.FromResult(TypeReaderResult.FromSuccess(PermValue.Allow)),
+            "ENABLED" => Task.FromResult(TypeReaderResult.FromSuccess(PermValue.Allow)),
+            "ALLOW" => Task.FromResult(TypeReaderResult.FromSuccess(PermValue.Allow)),
+            "PERMIT" => Task.FromResult(TypeReaderResult.FromSuccess(PermValue.Allow)),
+            "UNBAN" => Task.FromResult(TypeReaderResult.FromSuccess(PermValue.Allow)),
 
             // Deny values
-            "0" => Task.FromResult(TypeReaderResult.FromSuccess(Discord.PermValue.Deny)),
-            "F" => Task.FromResult(TypeReaderResult.FromSuccess(Discord.PermValue.Deny)),
-            "FALSE" => Task.FromResult(TypeReaderResult.FromSuccess(Discord.PermValue.Deny)),
-            "DENY" => Task.FromResult(TypeReaderResult.FromSuccess(Discord.PermValue.Deny)),
-            "DISABLE" => Task.FromResult(TypeReaderResult.FromSuccess(Discord.PermValue.Deny)),
-            "DISABLED" => Task.FromResult(TypeReaderResult.FromSuccess(Discord.PermValue.Deny)),
-            "DISALLOW" => Task.FromResult(TypeReaderResult.FromSuccess(Discord.PermValue.Deny)),
-            "BAN" => Task.FromResult(TypeReaderResult.FromSuccess(Discord.PermValue.Deny)),
+            "0" => Task.FromResult(TypeReaderResult.FromSuccess(PermValue.Deny)),
+            "F" => Task.FromResult(TypeReaderResult.FromSuccess(PermValue.Deny)),
+            "FALSE" => Task.FromResult(TypeReaderResult.FromSuccess(PermValue.Deny)),
+            "DENY" => Task.FromResult(TypeReaderResult.FromSuccess(PermValue.Deny)),
+            "DISABLE" => Task.FromResult(TypeReaderResult.FromSuccess(PermValue.Deny)),
+            "DISABLED" => Task.FromResult(TypeReaderResult.FromSuccess(PermValue.Deny)),
+            "DISALLOW" => Task.FromResult(TypeReaderResult.FromSuccess(PermValue.Deny)),
+            "BAN" => Task.FromResult(TypeReaderResult.FromSuccess(PermValue.Deny)),
 
             // Inherit values
-            "2" => Task.FromResult(TypeReaderResult.FromSuccess(Discord.PermValue.Inherit)),
-            "N" => Task.FromResult(TypeReaderResult.FromSuccess(Discord.PermValue.Inherit)),
-            "NEUTRAL" => Task.FromResult(TypeReaderResult.FromSuccess(Discord.PermValue.Inherit)),
-            "INHERIT" => Task.FromResult(TypeReaderResult.FromSuccess(Discord.PermValue.Inherit)),
+            "2" => Task.FromResult(TypeReaderResult.FromSuccess(PermValue.Inherit)),
+            "N" => Task.FromResult(TypeReaderResult.FromSuccess(PermValue.Inherit)),
+            "NEUTRAL" => Task.FromResult(TypeReaderResult.FromSuccess(PermValue.Inherit)),
+            "INHERIT" => Task.FromResult(TypeReaderResult.FromSuccess(PermValue.Inherit)),
 
             // Error case
             _ => Task.FromResult(TypeReaderResult.FromError(CommandError.ParseFailed,

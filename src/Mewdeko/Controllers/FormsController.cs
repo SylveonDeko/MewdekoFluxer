@@ -21,7 +21,7 @@ namespace Mewdeko.Controllers;
 public class FormsController : Controller
 {
     private readonly IDashboardAuditContext auditContext;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly BotCredentials creds;
     private readonly HttpClient httpClient;
     private readonly ILogger<FormsController> logger;
@@ -38,7 +38,7 @@ public class FormsController : Controller
     /// <param name="auditContext">Records before/after state for the dashboard audit log.</param>
     public FormsController(
         FormsService service,
-        DiscordShardedClient client,
+        FluxerClient client,
         BotCredentials creds,
         HttpClient httpClient,
         ILogger<FormsController> logger,

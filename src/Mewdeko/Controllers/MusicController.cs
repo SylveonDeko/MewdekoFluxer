@@ -29,7 +29,7 @@ public class MusicController : Controller
     private readonly IAudioService audioService;
     private readonly IDashboardAuditContext auditContext;
     private readonly IDataCache cache;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IBotCredentials creds;
     private readonly IDataConnectionFactory dbFactory;
     private readonly MusicEventManager eventManager;
@@ -51,7 +51,7 @@ public class MusicController : Controller
     public MusicController(
         IAudioService audioService,
         IDataCache cache,
-        DiscordShardedClient client,
+        FluxerClient client,
         IDataConnectionFactory dbFactory,
         MusicEventManager eventManager,
         MusicLinkService musicLinkService, ILogger<MusicController> logger,

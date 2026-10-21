@@ -11,7 +11,7 @@ namespace Mewdeko.Modules.Reputation.Services;
 /// </summary>
 public class RepNotificationService : INService
 {
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly ILogger<RepNotificationService> logger;
 
@@ -27,7 +27,7 @@ public class RepNotificationService : INService
     /// <param name="strings">The localized bot strings.</param>
     /// <param name="logger">The logger instance.</param>
     public RepNotificationService(
-        DiscordShardedClient client,
+        FluxerClient client,
         IDataConnectionFactory dbFactory,
         GeneratedBotStrings strings,
         ILogger<RepNotificationService> logger)
@@ -124,7 +124,7 @@ public class RepNotificationService : INService
                 .WithFooter(strings.RepFooterGuild(guildId, guild.Name))
                 .WithTimestamp(DateTimeOffset.UtcNow);
 
-            await user.SendMessageAsync(embed: embed.Build());
+            await user.SendAsync(embed: embed.Build());
 
             // Update cooldown
             notificationCooldowns.TryAdd(cooldownKey, DateTime.UtcNow);
@@ -187,7 +187,7 @@ public class RepNotificationService : INService
             var channel = guild.GetTextChannel(config.NotificationChannel.Value);
             if (channel == null) return;
 
-            var user = guild.GetUser(userId) ?? await ((IGuild)guild).GetUserAsync(userId);
+            var user = guild.GetUser(userId) ?? await ((SocketGuild)guild).GetUserAsync(userId);
             var username = user?.ToString() ?? $"Unknown User ({userId})";
 
             var message = strings.RepMilestone(guildId, username, milestone);
@@ -200,7 +200,7 @@ public class RepNotificationService : INService
                 .WithTimestamp(DateTimeOffset.UtcNow)
                 .Build();
 
-            await channel.SendMessageAsync(embed: embed);
+            await channel.SendAsync(embed: embed);
 
             logger.LogInformation("Sent milestone notification for user {UserId} reaching {Milestone} reputation",
                 userId, milestone);
@@ -238,8 +238,8 @@ public class RepNotificationService : INService
             var channel = guild.GetTextChannel(config.NotificationChannel.Value);
             if (channel == null) return;
 
-            var receiver = guild.GetUser(receiverId) ?? await ((IGuild)guild).GetUserAsync(receiverId);
-            var giver = giverId == 0 ? null : guild.GetUser(giverId) ?? await ((IGuild)guild).GetUserAsync(giverId);
+            var receiver = guild.GetUser(receiverId) ?? await ((SocketGuild)guild).GetUserAsync(receiverId);
+            var giver = giverId == 0 ? null : guild.GetUser(giverId) ?? await ((SocketGuild)guild).GetUserAsync(giverId);
 
             var receiverName = receiver?.ToString() ?? $"Unknown User ({receiverId})";
             var giverName = giver?.ToString() ?? "System";
@@ -256,7 +256,7 @@ public class RepNotificationService : INService
                 .WithTimestamp(DateTimeOffset.UtcNow)
                 .Build();
 
-            await channel.SendMessageAsync(embed: embed);
+            await channel.SendAsync(embed: embed);
         }
         catch (Exception ex)
         {

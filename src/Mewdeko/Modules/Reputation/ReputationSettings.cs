@@ -1,5 +1,4 @@
 using System.Text;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Reputation.Services;
 using Newtonsoft.Json;
@@ -41,7 +40,7 @@ public partial class Reputation
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task RepChannel(ITextChannel channel, string state = "enabled", decimal multiplier = 1.0m)
+        public async Task RepChannel(Channel channel, string state = "enabled", decimal multiplier = 1.0m)
         {
             var validStates = new[]
             {
@@ -121,7 +120,7 @@ public partial class Reputation
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task RepMilestoneLost(IGuildUser user, IRole role, int threshold)
+        public async Task RepMilestoneLost(SocketGuildMember user, SocketRole role, int threshold)
         {
             await SuccessAsync(Strings.RepMilestoneLost(ctx.Guild.Id, user.Mention, role.Name, threshold))
                 .ConfigureAwait(false);
@@ -328,7 +327,7 @@ public partial class Reputation
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task RepNotificationChannel(ITextChannel? channel = null)
+        public async Task RepNotificationChannel(Channel? channel = null)
         {
             await Service.SetNotificationChannelAsync(ctx.Guild.Id, channel?.Id);
 
@@ -469,7 +468,7 @@ public partial class Reputation
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task RepTake(IGuildUser user, int amount = 1)
+        public async Task RepTake(SocketGuildMember user, int amount = 1)
         {
             if (amount <= 0)
             {
@@ -499,7 +498,7 @@ public partial class Reputation
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task RepSet(IGuildUser user, int amount)
+        public async Task RepSet(SocketGuildMember user, int amount)
         {
             if (amount < 0)
             {
@@ -569,7 +568,7 @@ public partial class Reputation
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task RepFreeze(IGuildUser user)
+        public async Task RepFreeze(SocketGuildMember user)
         {
             await Service.FreezeUserAsync(ctx.Guild.Id, user.Id);
             await SuccessAsync(Strings.RepFrozenUser(ctx.Guild.Id, user.Mention)).ConfigureAwait(false);
@@ -584,7 +583,7 @@ public partial class Reputation
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task RepUnfreeze(IGuildUser user)
+        public async Task RepUnfreeze(SocketGuildMember user)
         {
             var wasUnfrozen = await Service.UnfreezeUserAsync(ctx.Guild.Id, user.Id);
             if (!wasUnfrozen)
@@ -713,8 +712,8 @@ public partial class Reputation
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
-        public async Task RepRole(IRole? role = null, int? reputation = null, bool removeOnDrop = true,
-            ITextChannel? announceChannel = null, bool announceDm = false, int? xpReward = null,
+        public async Task RepRole(SocketRole? role = null, int? reputation = null, bool removeOnDrop = true,
+            Channel? announceChannel = null, bool announceDm = false, int? xpReward = null,
             string? detailed = null)
         {
             // If no role specified or "detailed" is the first parameter, show list
@@ -787,7 +786,7 @@ public partial class Reputation
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
-        public async Task RepRoleRemove(IRole role)
+        public async Task RepRoleRemove(SocketRole role)
         {
             var removed = await Service.RemoveRoleRewardAsync(ctx.Guild.Id, role.Id);
 
@@ -879,7 +878,7 @@ public partial class Reputation
         /// </summary>
         /// <param name="role">The role to show information for.</param>
         /// <returns>A task that represents the asynchronous operation.</returns>
-        private async Task ShowRoleRewardInfo(IRole role)
+        private async Task ShowRoleRewardInfo(SocketRole role)
         {
             var roleReward = await Service.GetRoleRewardAsync(ctx.Guild.Id, role.Id);
 
@@ -935,7 +934,7 @@ public partial class Reputation
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
         public async Task RepCommandReq(string commandName, int minReputation, string? repType = null,
-            params ITextChannel[] channels)
+            params Channel[] channels)
         {
             if (minReputation < 0)
             {
@@ -987,7 +986,7 @@ public partial class Reputation
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task RepCommandBypass(string commandName, params IRole[] roles)
+        public async Task RepCommandBypass(string commandName, params SocketRole[] roles)
         {
             if (roles.Length == 0)
             {
@@ -1266,7 +1265,7 @@ public partial class Reputation
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task RepRoleChannel(IRole role, ITextChannel? channel = null)
+        public async Task RepRoleChannel(SocketRole role, Channel? channel = null)
         {
             var updated = await Service.UpdateRoleRewardChannelAsync(ctx.Guild.Id, role.Id, channel?.Id);
 

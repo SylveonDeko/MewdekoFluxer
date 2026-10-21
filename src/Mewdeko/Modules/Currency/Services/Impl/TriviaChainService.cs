@@ -5,7 +5,6 @@ using System.Threading;
 using Mewdeko.Database.Enums;
 using Mewdeko.Modules.Currency.Models;
 using Mewdeko.Services.Strings;
-using Embed = Discord.Embed;
 
 namespace Mewdeko.Modules.Currency.Services.Impl;
 
@@ -175,7 +174,7 @@ public class TriviaChainService(GeneratedBotStrings strings) : ITriviaChainServi
     /// <param name="chainState">The current trivia chain state.</param>
     /// <param name="currencyService">The currency service.</param>
     /// <returns>The question embed.</returns>
-    public async Task<Embed> BuildQuestionEmbedAsync(TriviaChainState chainState, ICurrencyService currencyService)
+    public async Task<EmbedRequest> BuildQuestionEmbedAsync(TriviaChainState chainState, ICurrencyService currencyService)
     {
         var guildId = chainState.GuildId;
         var nextMultiplier = 1.0 + 0.5 * (chainState.ChainLength + 1);

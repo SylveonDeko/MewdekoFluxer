@@ -55,7 +55,7 @@ public static class PermissionExtensions
     /// <remarks>
     ///     This method evaluates the permissions in reverse order to prioritize more specific permissions over general ones.
     /// </remarks>
-    public static bool CheckPermissions(this IEnumerable<Permission1> permsEnumerable, IUserMessage message,
+    public static bool CheckPermissions(this IEnumerable<Permission1> permsEnumerable, Message message,
         string commandName, string moduleName, out int permIndex, string? altName = null)
     {
         var perms = permsEnumerable as List<Permission1> ?? permsEnumerable.ToList();
@@ -92,7 +92,7 @@ public static class PermissionExtensions
     ///     Similar to CheckPermissions, but tailored for slash commands and their distinct context.
     /// </remarks>
     public static bool CheckSlashPermissions(this IEnumerable<Permission1> permsEnumerable,
-        string moduleName, string commandName, IUser user, IMessageChannel chan, out int permIndex,
+        string moduleName, string commandName, IUser user, Channel chan, out int permIndex,
         string? altName = null)
     {
         var perms = permsEnumerable as List<Permission1> ?? permsEnumerable.ToList();
@@ -142,7 +142,7 @@ public static class PermissionExtensions
     /// <param name="altName">
     ///     An optional secondary key the permission entry may have been stored under, such as a chat trigger id.
     /// </param>
-    private static bool? CheckPermission(this Permission1 perm, IUserMessage message, string commandName,
+    private static bool? CheckPermission(this Permission1 perm, Message message, string commandName,
         string moduleName, string? altName = null)
     {
         if (!(perm.SecondaryTarget == (int)SecondaryPermissionType.Command &&
@@ -165,17 +165,17 @@ public static class PermissionExtensions
                     return perm.State;
                 break;
             case PrimaryPermissionType.Category:
-                if (perm.PrimaryTargetId == ((ITextChannel)message.Channel).CategoryId)
+                if (perm.PrimaryTargetId == ((Channel)message.Channel).CategoryId)
                     return perm.State;
                 break;
             case PrimaryPermissionType.Role:
-                if (message.Author is not IGuildUser guildUser)
+                if (message.Author is not SocketGuildMember guildUser)
                     break;
                 if (guildUser.RoleIds.Contains(perm.PrimaryTargetId))
                     return perm.State;
                 break;
             case PrimaryPermissionType.Server:
-                if (message.Author is not IGuildUser guildUser1)
+                if (message.Author is not SocketGuildMember guildUser1)
                     break;
                 if (guildUser1 == null)
                     break;
@@ -198,7 +198,7 @@ public static class PermissionExtensions
     ///     An optional secondary key the permission entry may have been stored under, such as a chat trigger id.
     /// </param>
     public static bool? CheckSlashPermission(this Permission1 perm, string moduleName, IUser user, string commandName,
-        IMessageChannel chan, string? altName = null)
+        Channel chan, string? altName = null)
     {
         if (!(perm.SecondaryTarget == (int)SecondaryPermissionType.Command &&
               perm.MatchesCommandName(commandName, altName) ||
@@ -220,17 +220,17 @@ public static class PermissionExtensions
                     return perm.State;
                 break;
             case PrimaryPermissionType.Category:
-                if (perm.PrimaryTargetId == ((ITextChannel)chan).CategoryId)
+                if (perm.PrimaryTargetId == ((Channel)chan).CategoryId)
                     return perm.State;
                 break;
             case PrimaryPermissionType.Role:
-                if (user is not IGuildUser guildUser)
+                if (user is not SocketGuildMember guildUser)
                     break;
                 if (guildUser.RoleIds.Contains(perm.PrimaryTargetId))
                     return perm.State;
                 break;
             case PrimaryPermissionType.Server:
-                if (user is not IGuildUser guildUser1)
+                if (user is not SocketGuildMember guildUser1)
                     break;
                 if (guildUser1 == null)
                     break;

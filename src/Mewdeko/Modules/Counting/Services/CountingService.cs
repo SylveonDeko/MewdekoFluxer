@@ -33,7 +33,7 @@ public class CountingService : INService, IReadyExecutor
     };
 
     private readonly IMemoryCache cache;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly IDataConnectionFactory dbFactory;
     private readonly EventHandler eventHandler;
@@ -49,7 +49,7 @@ public class CountingService : INService, IReadyExecutor
         IDataConnectionFactory dbFactory,
         IMemoryCache cache,
         ILogger<CountingService> logger,
-        DiscordShardedClient client,
+        FluxerClient client,
         CountingStatsService statsService,
         CountingModerationService moderationService,
         EventHandler eventHandler, GeneratedBotStrings strings, IAnalyticsCollector collector)
@@ -795,10 +795,10 @@ public class CountingService : INService, IReadyExecutor
     /// </summary>
     private async Task MessageReceived(SocketMessage msg)
     {
-        if (msg.Author.IsBot || msg.Author is not IGuildUser user)
+        if (msg.Author.IsBot || msg.Author is not SocketGuildMember user)
             return;
 
-        if (msg is not IUserMessage userMsg)
+        if (msg is not Message userMsg)
             return;
 
         try
@@ -876,7 +876,7 @@ public class CountingService : INService, IReadyExecutor
     /// <summary>
     ///     Checks if the bot has permission to add reactions in the channel.
     /// </summary>
-    private async Task<bool> CanBotReactInChannel(ITextChannel channel)
+    private async Task<bool> CanBotReactInChannel(Channel channel)
     {
         try
         {
@@ -922,11 +922,11 @@ public class CountingService : INService, IReadyExecutor
     /// <summary>
     ///     Checks if user has bot blocked by attempting to react.
     /// </summary>
-    private async Task<BotBlockResult> CheckBotBlockingAsync(IUserMessage message)
+    private async Task<BotBlockResult> CheckBotBlockingAsync(Message message)
     {
         try
         {
-            if (message.Channel is not ITextChannel textChannel)
+            if (message.Channel is not Channel textChannel)
                 return new BotBlockResult
                 {
                     IsBlocked = false
@@ -947,19 +947,19 @@ public class CountingService : INService, IReadyExecutor
                 };
 
             // Determine which emote to use for testing
-            IEmote testEmote;
+            Emoji testEmote;
             if (!string.IsNullOrEmpty(config.SuccessEmote))
             {
-                if (Emote.TryParse(config.SuccessEmote, out var customEmote))
+                if (Emoji.TryParse(config.SuccessEmote, out var customEmote))
                     testEmote = customEmote;
                 else if (Emoji.TryParse(config.SuccessEmote, out var customEmoji))
                     testEmote = customEmoji;
                 else
-                    testEmote = new Emoji("✅");
+                    testEmote = Emoji.FromUnicode("✅");
             }
             else
             {
-                testEmote = new Emoji("✅");
+                testEmote = Emoji.FromUnicode("✅");
             }
 
             // Try to react to check if user has bot blocked
@@ -977,7 +977,7 @@ public class CountingService : INService, IReadyExecutor
                             .WithDescription(strings.CountingUserBotBlocked(textChannel.GuildId))
                             .Build();
 
-                        var warningMessage = await textChannel.SendMessageAsync(embed: embed);
+                        var warningMessage = await textChannel.SendAsync(embed: embed);
 
                         // Delete warning message after 5 seconds
                         _ = Task.Run(async () =>
@@ -1013,7 +1013,7 @@ public class CountingService : INService, IReadyExecutor
     ///     Checks if a user has the bot blocked by attempting to react to their message.
     ///     Only call this after confirming bot has reaction permissions.
     /// </summary>
-    private async Task<bool> IsUserBlockingBotAsync(IUserMessage message, IEmote reactionEmote)
+    private async Task<bool> IsUserBlockingBotAsync(Message message, Emoji reactionEmote)
     {
         try
         {
@@ -1033,7 +1033,7 @@ public class CountingService : INService, IReadyExecutor
     /// <summary>
     /// Handles the result of a counting attempt.
     /// </summary>
-    private async Task HandleCountingResultAsync(IUserMessage message, CountingResult result)
+    private async Task HandleCountingResultAsync(Message message, CountingResult result)
     {
         try
         {
@@ -1041,7 +1041,7 @@ public class CountingService : INService, IReadyExecutor
             if (config == null) return;
 
             // Check if bot has permission to react
-            if (message.Channel is not ITextChannel textChannel || !await CanBotReactInChannel(textChannel))
+            if (message.Channel is not Channel textChannel || !await CanBotReactInChannel(textChannel))
             {
                 logger.LogWarning("Bot lacks permission to add reactions in channel {ChannelId}", message.Channel.Id);
                 return;
@@ -1052,32 +1052,32 @@ public class CountingService : INService, IReadyExecutor
             {
                 if (!string.IsNullOrEmpty(config.SuccessEmote))
                 {
-                    if (Emote.TryParse(config.SuccessEmote, out var emote))
+                    if (Emoji.TryParse(config.SuccessEmote, out var emote))
                         await message.AddReactionAsync(emote);
                     else if (Emoji.TryParse(config.SuccessEmote, out var emoji))
                         await message.AddReactionAsync(emoji);
                     else
-                        await message.AddReactionAsync(new Emoji("✅"));
+                        await message.AddReactionAsync(Emoji.FromUnicode("✅"));
                 }
                 else
                 {
-                    await message.AddReactionAsync(new Emoji("✅"));
+                    await message.AddReactionAsync(Emoji.FromUnicode("✅"));
                 }
             }
             else
             {
                 if (!string.IsNullOrEmpty(config.ErrorEmote))
                 {
-                    if (Emote.TryParse(config.ErrorEmote, out var emote))
+                    if (Emoji.TryParse(config.ErrorEmote, out var emote))
                         await message.AddReactionAsync(emote);
                     else if (Emoji.TryParse(config.ErrorEmote, out var emoji))
                         await message.AddReactionAsync(emoji);
                     else
-                        await message.AddReactionAsync(new Emoji("❌"));
+                        await message.AddReactionAsync(Emoji.FromUnicode("❌"));
                 }
                 else
                 {
-                    await message.AddReactionAsync(new Emoji("❌"));
+                    await message.AddReactionAsync(Emoji.FromUnicode("❌"));
                 }
 
                 // Delete wrong messages if configured
@@ -1097,13 +1097,13 @@ public class CountingService : INService, IReadyExecutor
     /// <summary>
     /// Handles message updated events for counting edit protection.
     /// </summary>
-    private async Task MessageUpdated(Cacheable<IMessage, ulong> before, SocketMessage after,
-        ISocketMessageChannel channel)
+    private async Task MessageUpdated(Cacheable<Message> before, SocketMessage after,
+        Channel channel)
     {
-        if (after.Author.IsBot || after.Author is not IGuildUser user)
+        if (after.Author.IsBot || after.Author is not SocketGuildMember user)
             return;
 
-        if (after is not IUserMessage userMsg)
+        if (after is not Message userMsg)
             return;
 
         try
@@ -1121,7 +1121,7 @@ public class CountingService : INService, IReadyExecutor
                 return;
 
             // Handle message edit - even if original message is not cached
-            if (before.HasValue && before.Value is IUserMessage originalUserMsg)
+            if (before.HasValue && before.Value is Message originalUserMsg)
             {
                 await moderationService.HandleMessageEditAsync(channel.Id, after.Author.Id, originalUserMsg, userMsg);
             }
@@ -1141,7 +1141,7 @@ public class CountingService : INService, IReadyExecutor
     /// <summary>
     ///     Handles message deleted events for counting channels.
     /// </summary>
-    private async Task MessageDeleted(Cacheable<IMessage, ulong> cachedMsg, Cacheable<IMessageChannel, ulong> channel)
+    private async Task MessageDeleted(Cacheable<Message> cachedMsg, Cacheable<Channel> channel)
     {
         try
         {
@@ -1160,7 +1160,7 @@ public class CountingService : INService, IReadyExecutor
                 {
                     try
                     {
-                        if (client.GetChannel(channelId) is ITextChannel textChannel)
+                        if (client.GetChannel(channelId) is Channel textChannel)
                         {
                             var nextNumber = countingChannel.CurrentNumber + countingChannel.Increment;
                             var embed = new EmbedBuilder()
@@ -1168,7 +1168,7 @@ public class CountingService : INService, IReadyExecutor
                                 .WithDescription(strings.CountingLastNumberWas(textChannel.GuildId,
                                     countingChannel.CurrentNumber, nextNumber))
                                 .Build();
-                            await textChannel.SendMessageAsync(embed: embed);
+                            await textChannel.SendAsync(embed: embed);
 
                             // Cache to prevent duplicates for 5 seconds
                             cache.Set(hintCacheKey, true, TimeSpan.FromSeconds(5));

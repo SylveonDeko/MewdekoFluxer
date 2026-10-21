@@ -1,5 +1,4 @@
 ﻿using DataModel;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Administration.Services;
 using LogType = Mewdeko.Modules.Administration.Services.LogCommandService.LogType;
@@ -30,7 +29,7 @@ public partial class Administration
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
         [Priority(1)]
-        public async Task LogCategory(LogCommandService.LogCategoryTypes type, ITextChannel? channel = null)
+        public async Task LogCategory(LogCommandService.LogCategoryTypes type, Channel? channel = null)
         {
             await Service.LogSetByType(ctx.Guild.Id, channel?.Id ?? 0, type);
             if (channel is null)
@@ -55,7 +54,7 @@ public partial class Administration
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
         [Priority(4)]
-        public async Task Log(ITextChannel channel) => await ShowLogTypes(channel);
+        public async Task Log(Channel channel) => await ShowLogTypes(channel);
 
         /// <summary>
         ///     Sets multiple logging channels for specified event types at once.
@@ -71,7 +70,7 @@ public partial class Administration
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
         [Priority(1)]
-        public async Task Log(ITextChannel channel, params LogType[]? types)
+        public async Task Log(Channel channel, params LogType[]? types)
         {
             if (types is null || types.Length == 0)
             {
@@ -79,7 +78,7 @@ public partial class Administration
                 return;
             }
 
-            await SetMultipleLogTypes(new Dictionary<ITextChannel, LogType[]>
+            await SetMultipleLogTypes(new Dictionary<Channel, LogType[]>
             {
                 {
                     channel, types
@@ -109,7 +108,7 @@ public partial class Administration
                 return;
             }
 
-            var channelTypeMap = new Dictionary<ITextChannel, LogType[]>();
+            var channelTypeMap = new Dictionary<Channel, LogType[]>();
             var errors = new List<string>();
 
             foreach (var pair in channelTypePairs)
@@ -167,7 +166,7 @@ public partial class Administration
             await SetMultipleLogTypes(channelTypeMap);
         }
 
-        private async Task SetMultipleLogTypes(Dictionary<ITextChannel, LogType[]> channelTypeMap)
+        private async Task SetMultipleLogTypes(Dictionary<Channel, LogType[]> channelTypeMap)
         {
             try
             {
@@ -279,11 +278,11 @@ public partial class Administration
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
         [Priority(0)]
-        public async Task Log(LogType type, ITextChannel? channel = null)
+        public async Task Log(LogType type, Channel? channel = null)
         {
             try
             {
-                channel ??= ctx.Channel as ITextChannel;
+                channel ??= ctx.Channel as Channel;
                 await Service.SetLogChannel(ctx.Guild.Id, channel?.Id ?? 0, type).ConfigureAwait(false);
                 if (channel is not null)
                 {
@@ -310,7 +309,7 @@ public partial class Administration
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task CommandLogChannel(ITextChannel? channel = null)
+        public async Task CommandLogChannel(Channel? channel = null)
         {
             if (channel is null)
             {
@@ -328,7 +327,7 @@ public partial class Administration
             }
         }
 
-        private async Task ShowLogTypes(ITextChannel channel)
+        private async Task ShowLogTypes(Channel channel)
         {
             var prefix = await gss.GetPrefix(ctx.Guild);
             Service.GuildLogSettings.TryGetValue(ctx.Guild.Id, out var currentSettings);
@@ -353,7 +352,7 @@ public partial class Administration
                 .AddField(Strings.LogUsage(ctx.Guild.Id),
                     Strings.LogUsageText(ctx.Guild.Id, prefix, channel.Mention));
 
-            await ctx.Channel.SendMessageAsync(embed: eb.Build());
+            await ctx.Channel.SendAsync(embed: eb.Build());
         }
 
         /// <summary>
@@ -370,9 +369,9 @@ public partial class Administration
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task LogIgnore(ITextChannel? channel = null)
+        public async Task LogIgnore(Channel? channel = null)
         {
-            channel ??= (ITextChannel)ctx.Channel;
+            channel ??= (Channel)ctx.Channel;
 
             var result = await Service.LogIgnore(ctx.Guild.Id, channel.Id);
 
@@ -421,7 +420,7 @@ public partial class Administration
             var channelMentions = ignoredChannels
                 .Select(channelId => ctx.Guild.GetChannelAsync(channelId).GetAwaiter().GetResult())
                 .Where(ch => ch != null)
-                .OfType<ITextChannel>()
+                .OfType<Channel>()
                 .Select(ch => ch.Mention)
                 .ToList();
 

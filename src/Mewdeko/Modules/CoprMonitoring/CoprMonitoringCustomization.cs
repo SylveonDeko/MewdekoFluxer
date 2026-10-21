@@ -1,4 +1,3 @@
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.CoprMonitoring.Common;
 using Mewdeko.Modules.CoprMonitoring.Services;
@@ -427,7 +426,7 @@ public partial class CoprMonitoring
                 .WithTitle(Strings.CoprTemplateShowTitle(ctx.Guild.Id, parts[0], parts[1], kind.ToString()))
                 .WithDescription(Format.Code(template.TrimTo(4000), string.Empty));
 
-            await ctx.Channel.SendMessageAsync(embed: embed.Build());
+            await ctx.Channel.SendAsync(embed: embed.Build());
         }
     }
 }

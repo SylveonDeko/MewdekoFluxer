@@ -3,7 +3,6 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using DataModel;
-using Discord.Commands;
 using LinqToDB;
 using LinqToDB.Async;
 using LinqToDB.Data;
@@ -150,13 +149,13 @@ public partial class Utility
 
             if (SmartEmbed.TryParse(rep.Replace(quote.Text), ctx.Guild?.Id, out var embed, out var plainText))
             {
-                await ctx.Channel.SendMessageAsync($"`#{quote.Id}` 📣 {plainText?.SanitizeAllMentions()}",
+                await ctx.Channel.SendAsync($"`#{quote.Id}` 📣 {plainText?.SanitizeAllMentions()}",
                     embeds: embed).ConfigureAwait(false);
                 return;
             }
 
             await ctx.Channel
-                .SendMessageAsync($"`#{quote.Id}` 📣 {rep.Replace(quote.Text)?.SanitizeAllMentions()}")
+                .SendAsync($"`#{quote.Id}` 📣 {rep.Replace(quote.Text)?.SanitizeAllMentions()}")
                 .ConfigureAwait(false);
         }
 
@@ -229,7 +228,7 @@ public partial class Utility
             if (keywordquote == null)
                 return;
 
-            await ctx.Channel.SendMessageAsync(
+            await ctx.Channel.SendAsync(
                     $"`#{keywordquote.Id}` 💬 {keyword.ToLowerInvariant()}:  {keywordquote.Text.SanitizeAllMentions()}")
                 .ConfigureAwait(false);
         }
@@ -264,12 +263,12 @@ public partial class Utility
 
             if (SmartEmbed.TryParse(rep.Replace(quote.Text), ctx.Guild?.Id, out var embed, out var plainText))
             {
-                await ctx.Channel.SendMessageAsync(infoText + plainText.SanitizeMentions(), embeds: embed)
+                await ctx.Channel.SendAsync(infoText + plainText.SanitizeMentions(), embeds: embed)
                     .ConfigureAwait(false);
             }
             else
             {
-                await ctx.Channel.SendMessageAsync(infoText + rep.Replace(quote.Text)?.SanitizeAllMentions())
+                await ctx.Channel.SendAsync(infoText + rep.Replace(quote.Text)?.SanitizeAllMentions())
                     .ConfigureAwait(false);
             }
         }
@@ -316,7 +315,7 @@ public partial class Utility
         [RequireContext(ContextType.Guild)]
         public async Task QuoteDelete(int id)
         {
-            var isAdmin = ((IGuildUser)ctx.Message.Author).GuildPermissions.Administrator;
+            var isAdmin = ((SocketGuildMember)ctx.Message.Author).GuildPermissions.Administrator;
 
             var success = false;
             string? response;
@@ -409,7 +408,7 @@ public partial class Utility
             var fileName = $"quotes-{ctx.Guild.Name.Replace(" ", "-")}-{DateTime.UtcNow:yyyy-MM-dd}.json";
 
             using var stream = new MemoryStream(Encoding.UTF8.GetBytes(jsonContent));
-            var fileAttachment = new FileAttachment(stream, fileName);
+            var fileAttachment = new AttachmentRequest(stream, fileName);
 
             await ctx.Channel.SendFileAsync(fileAttachment,
                     Strings.QuoteExportSuccess(ctx.Guild.Id, quotes.Count))

@@ -26,7 +26,7 @@ public static class SmartEmbed
     public static bool TryParse(
         string input,
         ulong? guildId,
-        out Discord.Embed[]? embeds,
+        out EmbedRequest[]? embeds,
         out string? plainText)
     {
         try

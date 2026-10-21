@@ -1,5 +1,4 @@
 ﻿using System.Net.Http;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Utility.Services;
 
@@ -20,9 +19,9 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
-        public async Task AiChannel(ITextChannel? channel = null, bool enabled = true)
+        public async Task AiChannel(Channel? channel = null, bool enabled = true)
         {
-            channel ??= (ITextChannel)ctx.Channel;
+            channel ??= (Channel)ctx.Channel;
             var config = await Service.GetOrCreateConfig(ctx.Guild.Id);
 
             config.Enabled = enabled;
@@ -251,7 +250,7 @@ public partial class Utility
                     true);
             }
 
-            await ctx.Channel.SendMessageAsync(embed: eb.Build());
+            await ctx.Channel.SendAsync(embed: eb.Build());
         }
     }
 }

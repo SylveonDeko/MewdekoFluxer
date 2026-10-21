@@ -1,4 +1,3 @@
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.ServerStats.Common;
 using Mewdeko.Modules.ServerStats.Services;
@@ -24,7 +23,7 @@ public class LiveBoardCommands(ServerReportService reports) : MewdekoModuleBase<
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageGuild)]
     [BotPerm(ChannelPermission.ManageMessages)]
-    public async Task LiveBoardAdd(ITextChannel channel, LiveBoardKind kind, StatsRange range = StatsRange.Weekly,
+    public async Task LiveBoardAdd(Channel channel, LiveBoardKind kind, StatsRange range = StatsRange.Weekly,
         int entries = 10, int intervalMinutes = 15)
     {
         var existing = await Service.GetAsync(ctx.Guild.Id);
@@ -61,7 +60,7 @@ public class LiveBoardCommands(ServerReportService reports) : MewdekoModuleBase<
             .WithTitle(Strings.LiveBoardListTitle(ctx.Guild.Id))
             .WithDescription(string.Join("\n", boards.Select(b =>
                 $"`#{b.Id}` **{(LiveBoardKind)b.Kind}** ({((StatsRange)b.Range).DisplayName()}) in <#{b.ChannelId}>, every {b.IntervalMinutes}m")));
-        await ctx.Channel.SendMessageAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -103,7 +102,7 @@ public class LiveBoardCommands(ServerReportService reports) : MewdekoModuleBase<
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task ServerReportChannel(ITextChannel? channel = null)
+    public async Task ServerReportChannel(Channel? channel = null)
     {
         await reports.UpdateSettingsAsync(ctx.Guild.Id, s =>
         {
@@ -140,7 +139,7 @@ public class LiveBoardCommands(ServerReportService reports) : MewdekoModuleBase<
     {
         var settings = await reports.GetSettingsAsync(ctx.Guild.Id);
         var lastSent = settings.LastSentAt.HasValue
-            ? TimestampTag.FromDateTime(settings.LastSentAt.Value, TimestampTagStyles.Relative).ToString()
+            ? TimestampTag.FromDateTime(settings.LastSentAt.Value, TimestampTagStyle.Relative).ToString()
             : Strings.None(ctx.Guild.Id);
         var eb = new EmbedBuilder()
             .WithOkColor()
@@ -149,7 +148,7 @@ public class LiveBoardCommands(ServerReportService reports) : MewdekoModuleBase<
                 settings.Enabled ? Strings.Yes(ctx.Guild.Id) : Strings.No(ctx.Guild.Id),
                 settings.ChannelId.HasValue ? $"<#{settings.ChannelId}>" : Strings.None(ctx.Guild.Id),
                 ((ReportFrequency)settings.Frequency).ToString(), lastSent));
-        await ctx.Channel.SendMessageAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>

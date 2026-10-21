@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders;
 using Mewdeko.Common.TypeReaders.Models;
@@ -53,7 +53,7 @@ public partial class Utility
 
             try
             {
-                await ctx.Message.AddReactionAsync(new Emoji("🔄")).ConfigureAwait(false);
+                await ctx.Message.AddReactionAsync(Emoji.FromUnicode("🔄")).ConfigureAwait(false);
             }
             catch
             {
@@ -241,7 +241,7 @@ public partial class Utility
                     realInterval,
                     message,
                     startTimeOfDay?.ToString(),
-                    ((IGuildUser)ctx.User).GuildPermissions.MentionEveryone);
+                    ((SocketGuildMember)ctx.User).GuildPermissions.MentionEveryone);
 
                 if (runner == null)
                 {
@@ -357,7 +357,7 @@ public partial class Utility
                 ctx.Guild.Id,
                 repeater.Repeater.Id,
                 message,
-                ((IGuildUser)ctx.User).GuildPermissions.MentionEveryone);
+                ((SocketGuildMember)ctx.User).GuildPermissions.MentionEveryone);
 
             if (!success)
             {
@@ -381,17 +381,17 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageMessages)]
-        public async Task RepeatChannel(int index, [Remainder] IGuildChannel? channel = null)
+        public async Task RepeatChannel(int index, [Remainder] Channel? channel = null)
         {
             if (!Service.RepeaterReady)
                 return;
 
-            channel ??= ctx.Channel as IGuildChannel;
+            channel ??= ctx.Channel as Channel;
             if (channel == null)
                 return;
 
             // Validate channel type - must be text channel or forum channel
-            if (channel is not (ITextChannel or IForumChannel))
+            if (channel is not (Channel or Channel))
             {
                 await ReplyErrorAsync(Strings.StickyInvalidChannelType(ctx.Guild.Id)).ConfigureAwait(false);
                 return;

@@ -19,7 +19,7 @@ public class ChannelCommandService : INService, IReadyExecutor
     private const string JoinBlockedGuildsKey = "join-blocked-guilds";
     private const string JoinBlockedActionsKey = "join-blocked-guild-actions";
     private readonly BanPruneService banPrune;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataCache dataCache;
     private readonly IDataConnectionFactory dbFactory;
 
@@ -35,7 +35,7 @@ public class ChannelCommandService : INService, IReadyExecutor
     /// <param name="client">The discord client</param>
     /// <param name="banPrune">The service resolving how many days of messages a ban purges</param>
     public ChannelCommandService(IDataCache dataCache, EventHandler handler, IDataConnectionFactory dbFactory,
-        DiscordShardedClient client, BanPruneService banPrune)
+        FluxerClient client, BanPruneService banPrune)
     {
         this.banPrune = banPrune;
         this.dataCache = dataCache;
@@ -117,7 +117,7 @@ public class ChannelCommandService : INService, IReadyExecutor
     /// <param name="guild">The guild to lockdown.</param>
     /// <param name="lockdownType">The type of lockdown (Joins, Readonly, Full).</param>
     /// <param name="action">Optional: Action to apply to users who try to join (Kick/Ban).</param>
-    public async Task<(bool, ServerManagement.LockdownType)> LockdownGuild(IGuild guild,
+    public async Task<(bool, ServerManagement.LockdownType)> LockdownGuild(SocketGuild guild,
         ServerManagement.LockdownType lockdownType, PunishmentAction? action = null)
     {
         if (lockdownGuilds.TryGetValue(guild.Id, out var lockdownGuild))
@@ -144,7 +144,7 @@ public class ChannelCommandService : INService, IReadyExecutor
     ///     Lifts the lockdown for the guild.
     /// </summary>
     /// <param name="guild">The guild to lift the lockdown for.</param>
-    public async Task LiftLockdown(IGuild guild)
+    public async Task LiftLockdown(SocketGuild guild)
     {
         if (!lockdownGuilds.TryRemove(guild.Id, out var lockdownInfo) ||
             lockdownInfo.Item1 != ServerManagement.LockdownType.Joins &&
@@ -166,7 +166,7 @@ public class ChannelCommandService : INService, IReadyExecutor
     /// </summary>
     /// <param name="guild">The guild to check.</param>
     /// <returns>True if the guild is in lockdown, otherwise false.</returns>
-    public bool IsGuildInLockdown(IGuild guild)
+    public bool IsGuildInLockdown(SocketGuild guild)
     {
         return lockdownGuilds.ContainsKey(guild.Id);
     }
@@ -177,7 +177,7 @@ public class ChannelCommandService : INService, IReadyExecutor
     /// <param name="guild">The guild to check.</param>
     /// <param name="lockdownType">The lockdown type to check for.</param>
     /// <returns>True if the guild is in the specified lockdown type, otherwise false.</returns>
-    public bool IsGuildInLockdown(IGuild guild, ServerManagement.LockdownType lockdownType)
+    public bool IsGuildInLockdown(SocketGuild guild, ServerManagement.LockdownType lockdownType)
     {
         return lockdownGuilds.TryGetValue(guild.Id, out var info) &&
                (info.Item1 == lockdownType || info.Item1 == ServerManagement.LockdownType.Full);
@@ -188,7 +188,7 @@ public class ChannelCommandService : INService, IReadyExecutor
     /// </summary>
     /// <param name="guild">The guild to retrieve the lockdown info from.</param>
     /// <returns>A tuple containing the lockdown type and action, or null if the guild is not in lockdown.</returns>
-    public (ServerManagement.LockdownType lockdownType, PunishmentAction? action)? GetLockdownInfo(IGuild guild)
+    public (ServerManagement.LockdownType lockdownType, PunishmentAction? action)? GetLockdownInfo(SocketGuild guild)
     {
         return lockdownGuilds.TryGetValue(guild.Id, out var lockdownInfo) ? lockdownInfo : null;
     }
@@ -199,7 +199,7 @@ public class ChannelCommandService : INService, IReadyExecutor
     /// <param name="guild">The guild where the lockdown will be applied.</param>
     /// <param name="overrideCheck">Whether to override permission failures.</param>
     /// <returns>A list of missing permissions, if any.</returns>
-    public async Task<List<string>> CheckLockdownPermissions(IGuild guild, bool overrideCheck)
+    public async Task<List<string>> CheckLockdownPermissions(SocketGuild guild, bool overrideCheck)
     {
         var missingPermissions = new List<string>();
         var botUser = await guild.GetCurrentUserAsync().ConfigureAwait(false);
@@ -223,7 +223,7 @@ public class ChannelCommandService : INService, IReadyExecutor
     /// <param name="guild">The guild where the join lockdown will run.</param>
     /// <param name="action">The punishment action to apply to new joins.</param>
     /// <returns>A list of missing permissions, if any.</returns>
-    public async Task<List<string>> CheckJoinLockdownActionPermissions(IGuild guild, PunishmentAction action)
+    public async Task<List<string>> CheckJoinLockdownActionPermissions(SocketGuild guild, PunishmentAction action)
     {
         var missingPermissions = new List<string>();
         var botUser = await guild.GetCurrentUserAsync().ConfigureAwait(false);
@@ -246,7 +246,7 @@ public class ChannelCommandService : INService, IReadyExecutor
     /// </summary>
     /// <param name="user">The user that has joined the guild.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    private async Task HandleUserJoinDuringLockdown(IGuildUser user)
+    private async Task HandleUserJoinDuringLockdown(SocketGuildMember user)
     {
         if (lockdownGuilds.TryGetValue(user.Guild.Id, out var lockdownInfo) &&
             lockdownInfo.Item1 is ServerManagement.LockdownType.Joins or ServerManagement.LockdownType.Full)
@@ -313,7 +313,7 @@ public class ChannelCommandService : INService, IReadyExecutor
     /// </summary>
     /// <param name="guild">The guild whose channel permissions are being stored.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task StoreOriginalPermissions(IGuild guild)
+    public async Task StoreOriginalPermissions(SocketGuild guild)
     {
         await using var context = await dbFactory.CreateConnectionAsync();
         var channels = await guild.GetChannelsAsync();
@@ -351,7 +351,7 @@ public class ChannelCommandService : INService, IReadyExecutor
     /// </summary>
     /// <param name="guild">The guild whose permissions are being removed.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    private static async Task RemovePermissions(IGuild guild)
+    private static async Task RemovePermissions(SocketGuild guild)
     {
         var channels = await guild.GetChannelsAsync();
 
@@ -364,7 +364,7 @@ public class ChannelCommandService : INService, IReadyExecutor
             if (permissionOverrides.Any())
             {
                 await channel.ModifyAsync(x =>
-                    x.PermissionOverwrites = new Optional<IEnumerable<Overwrite>>(permissionOverrides));
+                    x.PermissionOverwrites = new Optional<IEnumerable<PermissionOverwrite>>(permissionOverrides));
             }
         }
     }
@@ -376,7 +376,7 @@ public class ChannelCommandService : INService, IReadyExecutor
     /// </summary>
     /// <param name="guild">The guild to apply the lockdown to.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task ApplyLockdown(IGuild guild)
+    public async Task ApplyLockdown(SocketGuild guild)
     {
         await StoreOriginalPermissions(guild);
         await RemovePermissions(guild);
@@ -387,7 +387,7 @@ public class ChannelCommandService : INService, IReadyExecutor
         await using var context = await dbFactory.CreateConnectionAsync();
 
         var relevantChannels = channels.Where(IsRelevantChannel).ToList();
-        var channelPermissions = new List<(IGuildChannel Channel, OverwritePermissions Permissions)>();
+        var channelPermissions = new List<(Channel Channel, OverwritePermissions Permissions)>();
 
         foreach (var channel in relevantChannels)
         {
@@ -401,9 +401,9 @@ public class ChannelCommandService : INService, IReadyExecutor
 
             var lockdownPerms = channel switch
             {
-                IVoiceChannel => existingPerms.Modify(connect: PermValue.Deny, speak: PermValue.Deny,
+                Channel => existingPerms.Modify(connect: PermValue.Deny, speak: PermValue.Deny,
                     sendMessages: PermValue.Deny, sendMessagesInThreads: PermValue.Deny),
-                IForumChannel => existingPerms.Modify(sendMessagesInThreads: PermValue.Deny,
+                Channel => existingPerms.Modify(sendMessagesInThreads: PermValue.Deny,
                     createPublicThreads: PermValue.Deny,
                     createPrivateThreads: PermValue.Deny,
                     sendMessages: PermValue.Allow),
@@ -418,63 +418,63 @@ public class ChannelCommandService : INService, IReadyExecutor
 
         foreach (var group in groupedChannels)
         {
-            if (group.Key == typeof(SocketTextChannel))
+            if (group.Key == typeof(Channel))
             {
-                var textChannels = group.Select(x => x.Channel).Cast<ITextChannel>().ToList();
+                var textChannels = group.Select(x => x.Channel).Cast<Channel>().ToList();
                 await ModifyTextChannelsAsync(textChannels, everyoneRole, group.Select(x => x.Permissions));
             }
-            else if (group.Key == typeof(SocketVoiceChannel))
+            else if (group.Key == typeof(Channel))
             {
-                var voiceChannels = group.Select(x => x.Channel).Cast<IVoiceChannel>().ToList();
+                var voiceChannels = group.Select(x => x.Channel).Cast<Channel>().ToList();
                 await ModifyVoiceChannelsAsync(voiceChannels, everyoneRole, group.Select(x => x.Permissions));
             }
-            else if (group.Key == typeof(SocketForumChannel))
+            else if (group.Key == typeof(Channel))
             {
-                var forumChannels = group.Select(x => x.Channel).Cast<IForumChannel>().ToList();
+                var forumChannels = group.Select(x => x.Channel).Cast<Channel>().ToList();
                 await ModifyForumChannelsAsync(forumChannels, everyoneRole, group.Select(x => x.Permissions));
             }
         }
     }
 
-    private static async Task ModifyTextChannelsAsync(List<ITextChannel> channels, IRole everyoneRole,
+    private static async Task ModifyTextChannelsAsync(List<Channel> channels, SocketRole everyoneRole,
         IEnumerable<OverwritePermissions> permissions)
     {
         await Task.WhenAll(channels.Select((channel, index) =>
             channel.ModifyAsync(x =>
             {
-                x.PermissionOverwrites = new Optional<IEnumerable<Overwrite>>(
+                x.PermissionOverwrites = new Optional<IEnumerable<PermissionOverwrite>>(
                     [
-                        new Overwrite(everyoneRole.Id, PermissionTarget.Role, permissions.ElementAt(index))
+                        new PermissionOverwrite(everyoneRole.Id, PermissionTarget.Role, permissions.ElementAt(index))
                     ]
                 );
             })
         ));
     }
 
-    private static async Task ModifyForumChannelsAsync(List<IForumChannel> channels, IRole everyoneRole,
+    private static async Task ModifyForumChannelsAsync(List<Channel> channels, SocketRole everyoneRole,
         IEnumerable<OverwritePermissions> permissions)
     {
         await Task.WhenAll(channels.Select((channel, index) =>
             channel.ModifyAsync(x =>
             {
-                x.PermissionOverwrites = new Optional<IEnumerable<Overwrite>>(
+                x.PermissionOverwrites = new Optional<IEnumerable<PermissionOverwrite>>(
                     [
-                        new Overwrite(everyoneRole.Id, PermissionTarget.Role, permissions.ElementAt(index))
+                        new PermissionOverwrite(everyoneRole.Id, PermissionTarget.Role, permissions.ElementAt(index))
                     ]
                 );
             })
         ));
     }
 
-    private static async Task ModifyVoiceChannelsAsync(List<IVoiceChannel> channels, IRole everyoneRole,
+    private static async Task ModifyVoiceChannelsAsync(List<Channel> channels, SocketRole everyoneRole,
         IEnumerable<OverwritePermissions> permissions)
     {
         await Task.WhenAll(channels.Select((channel, index) =>
             channel.ModifyAsync(x =>
             {
-                x.PermissionOverwrites = new Optional<IEnumerable<Overwrite>>(
+                x.PermissionOverwrites = new Optional<IEnumerable<PermissionOverwrite>>(
                     [
-                        new Overwrite(everyoneRole.Id, PermissionTarget.Role, permissions.ElementAt(index))
+                        new PermissionOverwrite(everyoneRole.Id, PermissionTarget.Role, permissions.ElementAt(index))
                     ]
                 );
             })
@@ -488,7 +488,7 @@ public class ChannelCommandService : INService, IReadyExecutor
     /// <param name="guild">The guild where the lockdown is being lifted.</param>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task RestoreOriginalPermissions(IGuild guild)
+    public async Task RestoreOriginalPermissions(SocketGuild guild)
     {
         await using var context = await dbFactory.CreateConnectionAsync();
         var channels = await guild.GetChannelsAsync();
@@ -509,7 +509,7 @@ public class ChannelCommandService : INService, IReadyExecutor
             if (!storedPermissionsByChannel.TryGetValue(channel.Id, out var storedPermissions))
                 continue;
 
-            var overwrites = new List<Overwrite>();
+            var overwrites = new List<PermissionOverwrite>();
 
             foreach (var storedPerm in storedPermissions)
             {
@@ -518,18 +518,18 @@ public class ChannelCommandService : INService, IReadyExecutor
                 switch ((PermissionTarget)storedPerm.TargetType)
                 {
                     case PermissionTarget.Role when guildRoleIds.Contains(storedPerm.TargetId):
-                        overwrites.Add(new Overwrite(storedPerm.TargetId, PermissionTarget.Role, permissions));
+                        overwrites.Add(new PermissionOverwrite(storedPerm.TargetId, PermissionTarget.Role, permissions));
                         break;
 
                     case PermissionTarget.User when guildUserIds.Contains(storedPerm.TargetId):
-                        overwrites.Add(new Overwrite(storedPerm.TargetId, PermissionTarget.User, permissions));
+                        overwrites.Add(new PermissionOverwrite(storedPerm.TargetId, PermissionTarget.User, permissions));
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
             }
 
-            await channel.ModifyAsync(x => x.PermissionOverwrites = new Optional<IEnumerable<Overwrite>>(overwrites));
+            await channel.ModifyAsync(x => x.PermissionOverwrites = new Optional<IEnumerable<PermissionOverwrite>>(overwrites));
 
             await context.DeleteAsync(storedPermissions);
         }
@@ -539,9 +539,9 @@ public class ChannelCommandService : INService, IReadyExecutor
     /// <summary>
     ///     Determines if the channel is relevant for lockdown.
     /// </summary>
-    private static bool IsRelevantChannel(IGuildChannel channel)
+    private static bool IsRelevantChannel(Channel channel)
     {
-        return channel is (ITextChannel or IVoiceChannel or IForumChannel) and not IThreadChannel;
+        return channel is (Channel or Channel or Channel) and not Channel;
     }
 
 

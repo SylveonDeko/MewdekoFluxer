@@ -2,7 +2,6 @@
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Discord.Commands;
 using GScraper;
 using GScraper.DuckDuckGo;
 using GScraper.Google;
@@ -152,7 +151,7 @@ public partial class Searches(
     /// </example>
     [Cmd]
     [Aliases]
-    public async Task Rip([Remainder] IGuildUser usr)
+    public async Task Rip([Remainder] SocketGuildMember usr)
     {
         var av = usr.RealAvatarUrl();
         var picStream =
@@ -191,7 +190,7 @@ public partial class Searches(
             return;
         }
 
-        await ctx.Channel.SendMessageAsync(embed: BuildWeatherEmbed(data).Build(),
+        await ctx.Channel.SendAsync(embed: BuildWeatherEmbed(data).Build(),
                 allowedMentions: AllowedMentions.None)
             .ConfigureAwait(false);
     }
@@ -364,7 +363,7 @@ public partial class Searches(
 
         if (candidates.Count == 1)
         {
-            await ctx.Channel.SendMessageAsync(embed: BuildTimeEmbed(candidates[0].Time, candidates[0].Address,
+            await ctx.Channel.SendAsync(embed: BuildTimeEmbed(candidates[0].Time, candidates[0].Address,
                 candidates[0].TimeZoneName).Build()).ConfigureAwait(false);
             return;
         }
@@ -400,9 +399,9 @@ public partial class Searches(
                 $"{Strings.TimezoneDisambiguationDescription(ctx.Guild.Id, candidates.Count, originalQuery)}\n\n{string.Join("\n", lines)}");
 
         var shownAt = DateTime.UtcNow;
-        var msg = await ctx.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+        var msg = await ctx.Channel.SendAsync(embed: embed.Build()).ConfigureAwait(false);
         var picked = await Interactive.WaitForReactionAsync(msg, ctx.User.Id,
-            shown.Select((_, i) => (IEmote)new Emoji(TimezoneChoiceEmotes[i])).ToList()).ConfigureAwait(false);
+            shown.Select((_, i) => (Emoji)Emoji.FromUnicode(TimezoneChoiceEmotes[i])).ToList()).ConfigureAwait(false);
 
         if (picked is not { } index)
             return;
@@ -572,7 +571,7 @@ public partial class Searches(
     /// <param name="tag">The category of image to display.</param>
     /// <returns>A task representing the asynchronous operation, containing the sent message.</returns>
     /// <exception cref="ApiException">Thrown when the API request fails.</exception>
-    private async Task<IUserMessage> InternalRandomImage(SearchesService.ImageTag tag)
+    private async Task<Message> InternalRandomImage(SearchesService.ImageTag tag)
     {
         var msg = await ctx.Channel.SendConfirmAsync(Strings.FetchingImage(ctx.Guild.Id)).ConfigureAwait(false);
         try
@@ -1033,9 +1032,9 @@ public partial class Searches(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public Task Revav([Remainder] IGuildUser? usr = null)
+    public Task Revav([Remainder] SocketGuildMember? usr = null)
     {
-        usr ??= (IGuildUser)ctx.User;
+        usr ??= (SocketGuildMember)ctx.User;
 
         var av = usr.RealAvatarUrl();
         // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
@@ -1145,7 +1144,7 @@ public partial class Searches(
         if (data.Query.Pages[0].Missing || string.IsNullOrWhiteSpace(data.Query.Pages[0].FullUrl))
             await ReplyErrorAsync(Strings.WikiPageNotFound(ctx.Guild.Id)).ConfigureAwait(false);
         else
-            await ctx.Channel.SendMessageAsync(data.Query.Pages[0].FullUrl).ConfigureAwait(false);
+            await ctx.Channel.SendAsync(data.Query.Pages[0].FullUrl).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1234,7 +1233,7 @@ public partial class Searches(
                             `{Strings.Title(ctx.Guild.Id)}` {title.SanitizeMentions()}
                             `{Strings.Url(ctx.Guild.Id)}:` {url}
                             """;
-            await ctx.Channel.SendMessageAsync(response).ConfigureAwait(false);
+            await ctx.Channel.SendAsync(response).ConfigureAwait(false);
         }
         catch
         {
@@ -1348,7 +1347,7 @@ public partial class Searches(
         await ctx.Channel.EmbedAsync(embed).ConfigureAwait(false);
     }
 
-    private async Task InternalDapiCommand(IMessage umsg, string? tag, DapiSearchType type)
+    private async Task InternalDapiCommand(Message umsg, string? tag, DapiSearchType type)
     {
         var channel = umsg.Channel;
 
@@ -1440,7 +1439,7 @@ public partial class Searches(
     /// <example>
     ///     This method is called internally by commands requiring input validation and does not have a direct command example.
     /// </example>
-    public async Task<bool> ValidateQuery(IMessageChannel ch, string query)
+    public async Task<bool> ValidateQuery(Channel ch, string query)
     {
         if (!string.IsNullOrWhiteSpace(query))
             return true;

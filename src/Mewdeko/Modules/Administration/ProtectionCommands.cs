@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Humanizer;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;
@@ -90,7 +90,7 @@ public partial class Administration
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task AntiAlt(StoopidTime minAge, PunishmentAction action, [Remainder] IRole role)
+        public async Task AntiAlt(StoopidTime minAge, PunishmentAction action, [Remainder] SocketRole role)
         {
             var minAgeMinutes = (int)minAge.Time.TotalMinutes;
 
@@ -272,7 +272,7 @@ public partial class Administration
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
         [Priority(0)]
-        public Task AntiSpam(int messageCount, PunishmentAction action, [Remainder] IRole role)
+        public Task AntiSpam(int messageCount, PunishmentAction action, [Remainder] SocketRole role)
         {
             if (action != PunishmentAction.AddRole)
                 return Task.CompletedTask;
@@ -313,7 +313,7 @@ public partial class Administration
         ///     This method is internally used by the AntiSpam command and is restricted to users with Administrator permissions.
         /// </remarks>
         private async Task InternalAntiSpam(int messageCount, PunishmentAction action,
-            StoopidTime? timeData = null, IRole? role = null)
+            StoopidTime? timeData = null, SocketRole? role = null)
         {
             if (messageCount is < 2 or > 10)
                 return;
@@ -463,7 +463,7 @@ public partial class Administration
         [UserPerm(GuildPermission.Administrator)]
         public async Task AntiMassMention(int mentionThreshold, int timeWindowSeconds, int maxMentionsInTimeWindow,
             bool ignoreBots,
-            PunishmentAction action, [Remainder] IRole role)
+            PunishmentAction action, [Remainder] SocketRole role)
         {
             if (mentionThreshold < 1 || timeWindowSeconds < 1 || maxMentionsInTimeWindow < 1)
                 return;
@@ -706,7 +706,7 @@ public partial class Administration
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task AntiPattern(PunishmentAction action, [Remainder] IRole role)
+        public async Task AntiPattern(PunishmentAction action, [Remainder] SocketRole role)
         {
             var stats = await Service.StartAntiPatternAsync(ctx.Guild.Id, action, roleId: role.Id)
                 .ConfigureAwait(false);
@@ -1170,7 +1170,7 @@ public partial class Administration
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task AntiPostChannelAdd(ITextChannel channel)
+        public async Task AntiPostChannelAdd(Channel channel)
         {
             if (await Service.AddAntiPostChannelAsync(ctx.Guild.Id, channel.Id).ConfigureAwait(false))
             {
@@ -1190,7 +1190,7 @@ public partial class Administration
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task AntiPostChannelRemove(ITextChannel channel)
+        public async Task AntiPostChannelRemove(Channel channel)
         {
             if (await Service.RemoveAntiPostChannelAsync(ctx.Guild.Id, channel.Id).ConfigureAwait(false))
             {
@@ -1551,7 +1551,7 @@ public partial class Administration
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task AntiImageHashIgnore([Remainder] IRole role)
+        public async Task AntiImageHashIgnore([Remainder] SocketRole role)
         {
             var added = await Service.ToggleAntiImageHashIgnoredRoleAsync(ctx.Guild.Id, role.Id).ConfigureAwait(false);
 
@@ -1569,7 +1569,7 @@ public partial class Administration
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task AntiImageHashIgnore([Remainder] ITextChannel channel)
+        public async Task AntiImageHashIgnore([Remainder] Channel channel)
         {
             var added = await Service.ToggleAntiImageHashIgnoredChannelAsync(ctx.Guild.Id, channel.Id)
                 .ConfigureAwait(false);

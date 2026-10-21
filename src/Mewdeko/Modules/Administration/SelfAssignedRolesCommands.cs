@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Administration.Services;
 
@@ -57,7 +56,7 @@ public partial class Administration
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
         [Priority(1)]
-        public Task Asar([Remainder] IRole role)
+        public Task Asar([Remainder] SocketRole role)
         {
             return Asar(0, role);
         }
@@ -78,9 +77,9 @@ public partial class Administration
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
         [Priority(0)]
-        public async Task Asar(int group, [Remainder] IRole role)
+        public async Task Asar(int group, [Remainder] SocketRole role)
         {
-            var guser = (IGuildUser)ctx.User;
+            var guser = (SocketGuildMember)ctx.User;
             if (ctx.User.Id != guser.Guild.OwnerId && guser.GetRoles().Max(x => x.Position) <= role.Position)
                 return;
 
@@ -143,9 +142,9 @@ public partial class Administration
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
-        public async Task Rsar([Remainder] IRole role)
+        public async Task Rsar([Remainder] SocketRole role)
         {
-            var guser = (IGuildUser)ctx.User;
+            var guser = (SocketGuildMember)ctx.User;
             if (ctx.User.Id != guser.Guild.OwnerId && guser.GetRoles().Max(x => x.Position) <= role.Position)
                 return;
 
@@ -257,7 +256,7 @@ public partial class Administration
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
-        public async Task RoleLevelReq(int level, [Remainder] IRole role)
+        public async Task RoleLevelReq(int level, [Remainder] SocketRole role)
         {
             if (level < 0)
                 return;
@@ -286,9 +285,9 @@ public partial class Administration
         [Cmd]
         [Aliases]
         [RequireContext(ContextType.Guild)]
-        public async Task Iam([Remainder] IRole role)
+        public async Task Iam([Remainder] SocketRole role)
         {
-            var guildUser = (IGuildUser)ctx.User;
+            var guildUser = (SocketGuildMember)ctx.User;
 
             var (result, autoDelete, extra) = await Service.Assign(guildUser, role).ConfigureAwait(false);
 
@@ -328,13 +327,13 @@ public partial class Administration
         [Cmd]
         [Aliases]
         [RequireContext(ContextType.Guild)]
-        public async Task Iamnot([Remainder] IRole role)
+        public async Task Iamnot([Remainder] SocketRole role)
         {
-            var guildUser = (IGuildUser)ctx.User;
+            var guildUser = (SocketGuildMember)ctx.User;
 
             var (result, autoDelete) = await Service.Remove(guildUser, role).ConfigureAwait(false);
 
-            IUserMessage msg;
+            Message msg;
             switch (result)
             {
                 case SelfAssignedRolesService.RemoveResult.ErrNotAssignable:

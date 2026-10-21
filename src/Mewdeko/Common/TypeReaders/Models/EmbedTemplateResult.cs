@@ -9,7 +9,7 @@ public class EmbedTemplateResult
     /// <summary>
     ///     The parsed Discord embeds.
     /// </summary>
-    public Discord.Embed[]? Embeds { get; set; }
+    public EmbedRequest[]? Embeds { get; set; }
 
     /// <summary>
     ///     The plain text content.

@@ -2,7 +2,6 @@ using System.IO;
 using System.Net;
 using System.Threading;
 using DataModel;
-using Discord.Net;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.ModuleBehaviors;
@@ -10,7 +9,6 @@ using Mewdeko.Modules.ServerStats.Common;
 using Mewdeko.Modules.Utility.Common;
 using Mewdeko.Modules.Utility.Services;
 using Mewdeko.Services.Strings;
-using Embed = Discord.Embed;
 
 namespace Mewdeko.Modules.ServerStats.Services;
 
@@ -27,7 +25,7 @@ public class LiveBoardService : INService, IReadyExecutor, IDisposable
 
     private static readonly TimeSpan TickInterval = TimeSpan.FromMinutes(1);
 
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly InviteCountService invites;
     private readonly ILogger<LiveBoardService> logger;
@@ -52,7 +50,7 @@ public class LiveBoardService : INService, IReadyExecutor, IDisposable
     /// <param name="invites">The invite tracking service.</param>
     /// <param name="strings">Localized strings.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
-    public LiveBoardService(DiscordShardedClient client, IDataConnectionFactory dbFactory, ServerStatsService stats,
+    public LiveBoardService(FluxerClient client, IDataConnectionFactory dbFactory, ServerStatsService stats,
         InviteCountService invites, GeneratedBotStrings strings, ILogger<LiveBoardService> logger)
     {
         this.client = client;
@@ -101,7 +99,7 @@ public class LiveBoardService : INService, IReadyExecutor, IDisposable
     /// <param name="entries">Rows for leaderboards.</param>
     /// <param name="intervalMinutes">Refresh interval.</param>
     /// <returns>The board.</returns>
-    public async Task<LiveBoard> CreateAsync(SocketGuild guild, ITextChannel channel, LiveBoardKind kind,
+    public async Task<LiveBoard> CreateAsync(SocketGuild guild, Channel channel, LiveBoardKind kind,
         StatsRange range, bool pin, int entries, int intervalMinutes)
     {
         var board = new LiveBoard
@@ -289,7 +287,7 @@ public class LiveBoardService : INService, IReadyExecutor, IDisposable
     /// <param name="embed">The new embed.</param>
     /// <param name="image">The new chart image, if any.</param>
     /// <returns>False only when Discord reports the message no longer exists.</returns>
-    private static async Task<bool> TryEditAsync(ITextChannel channel, ulong messageId, Embed embed,
+    private static async Task<bool> TryEditAsync(Channel channel, ulong messageId, EmbedRequest embed,
         MemoryStream? image)
     {
         try
@@ -301,12 +299,12 @@ public class LiveBoardService : INService, IReadyExecutor, IDisposable
                 if (image != null)
                     props.Attachments = new[]
                     {
-                        new FileAttachment(image, "graph.png")
+                        new AttachmentRequest(image, "graph.png")
                     };
             });
             return true;
         }
-        catch (HttpException ex) when (ex.HttpCode == HttpStatusCode.NotFound)
+        catch (FluxerApiException ex) when (ex.HttpCode == HttpStatusCode.NotFound)
         {
             return false;
         }
@@ -320,11 +318,11 @@ public class LiveBoardService : INService, IReadyExecutor, IDisposable
     /// <param name="embed">The embed.</param>
     /// <param name="image">The chart image, if any.</param>
     /// <returns>The new message ID.</returns>
-    private async Task<ulong> SendAsync(ITextChannel channel, LiveBoard board, Embed embed, MemoryStream? image)
+    private async Task<ulong> SendAsync(Channel channel, LiveBoard board, EmbedRequest embed, MemoryStream? image)
     {
         var message = image != null
             ? await channel.SendFileAsync(image, "graph.png", embed: embed)
-            : await channel.SendMessageAsync(embed: embed);
+            : await channel.SendAsync(embed: embed);
 
         if (board.Pin)
         {
@@ -358,7 +356,7 @@ public class LiveBoardService : INService, IReadyExecutor, IDisposable
     /// <param name="guild">The guild.</param>
     /// <param name="board">The board.</param>
     /// <returns>The embed and, for charts, the PNG to attach as graph.png.</returns>
-    public async Task<(Embed Embed, MemoryStream? Image)> RenderAsync(SocketGuild guild, LiveBoard board)
+    public async Task<(EmbedRequest Embed, MemoryStream? Image)> RenderAsync(SocketGuild guild, LiveBoard board)
     {
         var kind = (LiveBoardKind)board.Kind;
         var range = (StatsRange)board.Range;

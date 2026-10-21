@@ -1,7 +1,6 @@
 ﻿using System.Globalization;
 using System.Text.RegularExpressions;
 using DataModel;
-using Discord.Net;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.Configs;
@@ -23,7 +22,7 @@ public class FilterService : IEarlyBehavior, INService
     private readonly AdministrationService ass;
     private readonly BanPruneService banPrune;
 
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly BotConfig config;
     private readonly CultureInfo? cultureInfo = new("en-US");
     private readonly IDataConnectionFactory dbFactory;
@@ -52,7 +51,7 @@ public class FilterService : IEarlyBehavior, INService
     /// <param name="config">The bot configuration settings.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     /// <param name="banPrune">The service resolving how many days of messages a ban purges</param>
-    public FilterService(DiscordShardedClient client, IDataConnectionFactory dbFactory, IPubSub pubSub,
+    public FilterService(FluxerClient client, IDataConnectionFactory dbFactory, IPubSub pubSub,
         UserPunishService upun2, GeneratedBotStrings strng, AdministrationService ass,
         GuildSettingsService gss, EventHandler eventHandler, BotConfig config, BanPruneService banPrune,
         ILogger<FilterService> logger)
@@ -68,11 +67,11 @@ public class FilterService : IEarlyBehavior, INService
         this.logger = logger;
 
         eventHandler.Subscribe("MessageUpdated", "FilterService",
-            (Cacheable<IMessage, ulong> _, SocketMessage newMsg, ISocketMessageChannel channel) =>
+            (Cacheable<Message> _, SocketMessage newMsg, Channel channel) =>
             {
-                var guild = (channel as ITextChannel)?.Guild;
+                var guild = (channel as Channel)?.Guild;
 
-                if (guild == null || newMsg is not IUserMessage usrMsg)
+                if (guild == null || newMsg is not Message usrMsg)
                     return Task.CompletedTask;
 
                 return RunBehavior(null, guild, usrMsg);
@@ -115,9 +114,9 @@ public class FilterService : IEarlyBehavior, INService
     /// <param name="guild">The guild where the message was posted.</param>
     /// <param name="msg">The user message to be checked against the filters.</param>
     /// <returns>A task that resolves to true if the message was acted upon due to a filter match; otherwise, false.</returns>
-    public async Task<bool> RunBehavior(DiscordShardedClient socketClient, IGuild guild, IUserMessage msg)
+    public async Task<bool> RunBehavior(FluxerClient socketClient, SocketGuild guild, Message msg)
     {
-        return msg.Author is IGuildUser gu && !gu.RoleIds.Contains(await ass.GetStaffRole(guild.Id)) &&
+        return msg.Author is SocketGuildMember gu && !gu.RoleIds.Contains(await ass.GetStaffRole(guild.Id)) &&
                !gu.GuildPermissions.Administrator && (await FilterInvites(guild, msg).ConfigureAwait(false)
                                                       || await FilterWords(guild, msg).ConfigureAwait(false)
                                                       || await FilterLinks(guild, msg).ConfigureAwait(false)
@@ -185,7 +184,7 @@ public class FilterService : IEarlyBehavior, INService
     /// </summary>
     /// <param name="guild">The guild for which to set the warning count.</param>
     /// <param name="yesnt">The warning count to set.</param>
-    public async Task InvWarn(IGuild guild, string yesnt)
+    public async Task InvWarn(SocketGuild guild, string yesnt)
     {
         var yesno = -1;
         yesno = yesnt switch
@@ -215,7 +214,7 @@ public class FilterService : IEarlyBehavior, INService
     /// </summary>
     /// <param name="guild">The guild for which to set the warning count.</param>
     /// <param name="yesnt">The warning count to set.</param>
-    public async Task SetFwarn(IGuild guild, string yesnt)
+    public async Task SetFwarn(SocketGuild guild, string yesnt)
     {
         var yesno = -1;
         yesno = yesnt switch
@@ -284,7 +283,7 @@ public class FilterService : IEarlyBehavior, INService
     /// <param name="guild">The guild in which the message was posted.</param>
     /// <param name="msg">The message to check for banned words.</param>
     /// <returns>True if the message contained banned words and was acted upon; otherwise, false.</returns>
-    private async Task<bool> FilterBannedWords(IGuild? guild, IUserMessage? msg)
+    private async Task<bool> FilterBannedWords(SocketGuild? guild, Message? msg)
     {
         if (guild is null || msg is null)
             return false;
@@ -312,7 +311,7 @@ public class FilterService : IEarlyBehavior, INService
     /// <param name="guild">The guild in which the message was posted.</param>
     /// <param name="usrMsg">The message to check for specified words.</param>
     /// <returns>True if the message contained specified words and was acted upon; otherwise, false.</returns>
-    public async Task<bool> FilterWords(IGuild? guild, IUserMessage? usrMsg)
+    public async Task<bool> FilterWords(SocketGuild? guild, Message? usrMsg)
     {
         if (guild is null || usrMsg?.Author is null)
             return false;
@@ -400,7 +399,7 @@ public class FilterService : IEarlyBehavior, INService
             .DeleteAsync();
     }
 
-    private async Task<bool> HandleBannedWord(IUserMessage msg, IGuild guild, string word, string matchedText)
+    private async Task<bool> HandleBannedWord(Message msg, SocketGuild guild, string word, string matchedText)
     {
         try
         {
@@ -412,13 +411,13 @@ public class FilterService : IEarlyBehavior, INService
             {
                 var embed = await userPunServ.GetBanUserDmEmbed(client, guild as SocketGuild,
                     await guild.GetUserAsync(client.CurrentUser.Id).ConfigureAwait(false),
-                    msg.Author as IGuildUser,
+                    msg.Author as SocketGuildMember,
                     defaultMessage,
                     $"Banned for saying autoban word {matchedText}",
                     null).ConfigureAwait(false);
 
                 await (await msg.Author.CreateDMChannelAsync().ConfigureAwait(false))
-                    .SendMessageAsync(embed.Item2, embeds: embed.Item1)
+                    .SendAsync(embed.Item2, embeds: embed.Item1)
                     .ConfigureAwait(false);
             }
             catch
@@ -477,7 +476,7 @@ public class FilterService : IEarlyBehavior, INService
             .DeleteAsync();
     }
 
-    private async Task<bool> HandleFilteredWord(IUserMessage usrMsg, IGuild guild, string word)
+    private async Task<bool> HandleFilteredWord(Message usrMsg, SocketGuild guild, string word)
     {
         try
         {
@@ -488,7 +487,7 @@ public class FilterService : IEarlyBehavior, INService
             await user.SendErrorAsync(Strings.FilteredWordWarning(guild.Id, Format.Code(word)), config);
             return true;
         }
-        catch (HttpException ex)
+        catch (FluxerApiException ex)
         {
             logger.LogWarning(ex, Strings.FilterError(guild.Id, usrMsg.Channel.Id));
             return false;
@@ -501,7 +500,7 @@ public class FilterService : IEarlyBehavior, INService
     /// <param name="guild">The guild in which the message was posted.</param>
     /// <param name="usrMsg">The message to check for invites.</param>
     /// <returns>True if the message contained invites and was acted upon; otherwise, false.</returns>
-    private async Task<bool> FilterInvites(IGuild? guild, IUserMessage? usrMsg)
+    private async Task<bool> FilterInvites(SocketGuild? guild, Message? usrMsg)
     {
         if (guild is null || usrMsg?.Author is null)
             return false;
@@ -540,7 +539,7 @@ public class FilterService : IEarlyBehavior, INService
 
             return true;
         }
-        catch (HttpException ex)
+        catch (FluxerApiException ex)
         {
             logger.LogWarning(ex, Strings.InviteFilterError(guild.Id, usrMsg.Channel.Id));
             return false;
@@ -558,7 +557,7 @@ public class FilterService : IEarlyBehavior, INService
     /// <param name="guild">The guild where the message was sent.</param>
     /// <param name="usrMsg">The user message to check for links.</param>
     /// <returns>True if a link was filtered, false otherwise.</returns>
-    private async Task<bool> FilterLinks(IGuild? guild, IUserMessage? usrMsg)
+    private async Task<bool> FilterLinks(SocketGuild? guild, Message? usrMsg)
     {
         if (guild is null || usrMsg is null)
             return false;
@@ -588,7 +587,7 @@ public class FilterService : IEarlyBehavior, INService
             await usrMsg.DeleteAsync();
             return true;
         }
-        catch (HttpException ex)
+        catch (FluxerApiException ex)
         {
             logger.LogWarning(ex, Strings.LinkFilterError(guild.Id, usrMsg.Channel.Id));
             return false;

@@ -3,9 +3,6 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading;
 using DataModel;
-using Discord.Commands;
-using Discord.Net;
-using Discord.Rest;
 using LinqToDB;
 using Mewdeko.Common.Collections;
 using Mewdeko.Common.ModuleBehaviors;
@@ -19,7 +16,6 @@ using Mewdeko.Services.Impl;
 using Mewdeko.Services.Settings;
 using Mewdeko.Services.Strings;
 using Microsoft.Extensions.DependencyInjection;
-using ExecuteResult = Discord.Commands.ExecuteResult;
 
 namespace Mewdeko.Services;
 
@@ -44,7 +40,7 @@ public class CommandHandler : INService
 
     // ReSharper disable once NotAccessedField.Local
     private readonly Timer clearUsersOnShortCooldown;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly CommandService commandService;
     private readonly IDataConnectionFactory dbFactory;
@@ -67,7 +63,7 @@ public class CommandHandler : INService
     /// <param name="logger">The logger instance for structured logging.</param>
     /// <param name="collector">The analytics collector that records command executions.</param>
     /// <param name="localization">Resolves the guild locale recorded with each command.</param>
-    public CommandHandler(DiscordShardedClient client, IDataConnectionFactory dbFactory, CommandService commandService,
+    public CommandHandler(FluxerClient client, IDataConnectionFactory dbFactory, CommandService commandService,
         BotConfigService bss, Mewdeko bot, IServiceProvider services,
         GuildSettingsService gss, EventHandler eventHandler, IDataCache cache, ILogger<CommandHandler> logger,
         IAnalyticsCollector collector, Localization localization)
@@ -85,13 +81,19 @@ public class CommandHandler : INService
         this.Services = services;
         clearUsersOnShortCooldown = new Timer(_ => UsersOnShortCooldown.Clear(), null, GlobalCommandsCooldown,
             GlobalCommandsCooldown);
-        eventHandler.Subscribe("MessageReceived", "CommandHandler", MessageReceivedHandler);
+        eventHandler.MessageReceived.Subscribe("CommandHandler", MessageReceivedHandler);
     }
+
+    /// <summary>
+    ///     Nonces of messages the bot sent through <see cref="ExecuteExternal" />, which run as commands even though
+    ///     the bot wrote them.
+    /// </summary>
+    private NonBlocking.ConcurrentDictionary<string, byte> ExternalCommandNonces { get; } = new();
 
     /// <summary>
     ///     A thread-safe dictionary mapping channel IDs to command parse queues.
     /// </summary>
-    private NonBlocking.ConcurrentDictionary<ulong, ConcurrentQueue<IUserMessage>> CommandParseQueue { get; } = new();
+    private NonBlocking.ConcurrentDictionary<ulong, ConcurrentQueue<SocketMessage>> CommandParseQueue { get; } = new();
 
     /// <summary>
     ///     A thread-safe dictionary indicating whether a command parse lock is active for a channel.
@@ -103,12 +105,12 @@ public class CommandHandler : INService
     /// <summary>
     ///     Event that occurs when a command is executed.
     /// </summary>
-    public event Func<IUserMessage, CommandInfo, Task> CommandExecuted = delegate { return Task.CompletedTask; };
+    public event Func<Message, CommandInfo, Task> CommandExecuted = delegate { return Task.CompletedTask; };
 
     /// <summary>
     ///     Event that occurs when a command is errored.w
     /// </summary>
-    public event Func<CommandInfo, ITextChannel, string, IUser?, Task> CommandErrored = delegate
+    public event Func<CommandInfo, Channel, string, IUser?, Task> CommandErrored = delegate
     {
         return Task.CompletedTask;
     };
@@ -116,7 +118,7 @@ public class CommandHandler : INService
     /// <summary>
     ///     Used for xp, for some reason.
     /// </summary>
-    public event Func<IUserMessage, Task> OnMessageNoTrigger = delegate { return Task.CompletedTask; };
+    public event Func<Message, Task> OnMessageNoTrigger = delegate { return Task.CompletedTask; };
 
     /// <summary>
     ///     Executes an external command within a specific guild and channel context.
@@ -130,7 +132,7 @@ public class CommandHandler : INService
         if (guildId != null)
         {
             var guild = client.GetGuild(guildId.Value);
-            if (guild?.GetChannel(channelId) is not SocketTextChannel channel)
+            if (guild?.GetChannel(channelId) is not Channel channel)
             {
                 logger.LogWarning("Channel for external execution not found");
                 return;
@@ -138,9 +140,9 @@ public class CommandHandler : INService
 
             try
             {
-                IUserMessage msg = await channel.SendMessageAsync(commandText).ConfigureAwait(false);
-                msg = (IUserMessage)await channel.GetMessageAsync(msg.Id).ConfigureAwait(false);
-                await TryRunCommand(guild, channel, msg).ConfigureAwait(false);
+                var nonce = Guid.NewGuid().ToString("N");
+                ExternalCommandNonces[nonce] = 0;
+                await channel.SendMessageAsync(commandText, nonce: nonce).ConfigureAwait(false);
             }
             catch
             {
@@ -149,18 +151,16 @@ public class CommandHandler : INService
         }
     }
 
-    private async Task MessageReceivedHandler(IMessage msg)
+    private async Task MessageReceivedHandler(SocketMessage usrMsg)
     {
         try
         {
-            if (msg.Author.IsBot ||
+            var isExternal = usrMsg.Nonce is { } nonce && ExternalCommandNonces.TryRemove(nonce, out _);
+            if ((usrMsg.Author.IsBot && !isExternal) ||
                 !bot.Ready.Task.IsCompleted) //no bots, wait until bot connected and initialized
             {
                 return;
             }
-
-            if (msg is not SocketUserMessage usrMsg)
-                return;
 
             AddCommandToParseQueue(usrMsg);
             await ExecuteCommandsInChannelAsync(usrMsg.Channel.Id);
@@ -177,10 +177,10 @@ public class CommandHandler : INService
     ///     Adds a command to the parse queue for a given channel.
     /// </summary>
     /// <param name="usrMsg">The user message to add to the queue.</param>
-    public void AddCommandToParseQueue(IUserMessage usrMsg)
+    public void AddCommandToParseQueue(SocketMessage usrMsg)
     {
         CommandParseQueue.AddOrUpdate(usrMsg.Channel.Id,
-            _ => new ConcurrentQueue<IUserMessage>(new List<IUserMessage>
+            _ => new ConcurrentQueue<SocketMessage>(new List<SocketMessage>
             {
                 usrMsg
             }), (_, y) =>
@@ -208,17 +208,17 @@ public class CommandHandler : INService
             {
                 try
                 {
-                    await TryRunCommand((msg.Channel as IGuildChannel)?.Guild, msg.Channel, msg).ConfigureAwait(false);
+                    await TryRunCommand(msg.Guild, msg.Channel, msg).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
                     collector.Error(e, "CommandHandler.ExecuteCommandsInChannelAsync", null,
-                        (msg.Channel as IGuildChannel)?.GuildId);
+                        msg.Channel.GuildId);
                     logger.LogError("Error occured in the handler: {E}", e);
                 }
             }
 
-            CommandParseQueue[channelId] = new ConcurrentQueue<IUserMessage>();
+            CommandParseQueue[channelId] = new ConcurrentQueue<SocketMessage>();
             return true;
         }
         catch
@@ -231,7 +231,7 @@ public class CommandHandler : INService
         }
     }
 
-    private async Task TryRunCommand(IGuild? guild, IChannel channel, IUserMessage usrMsg)
+    private async Task TryRunCommand(SocketGuild? guild, Channel channel, SocketMessage usrMsg)
     {
         var execTime = Environment.TickCount;
 
@@ -289,7 +289,7 @@ public class CommandHandler : INService
 
         if (success)
         {
-            await LogCommandExecution(usrMsg, channel as ITextChannel, info, true, execTime).ConfigureAwait(false);
+            await LogCommandExecution(usrMsg, channel as Channel, info, true, execTime).ConfigureAwait(false);
             await CommandExecuted(usrMsg, info).ConfigureAwait(false);
         }
         else if (!string.IsNullOrEmpty(error))
@@ -297,19 +297,19 @@ public class CommandHandler : INService
             if (info is null)
             {
                 var serv = Services.GetRequiredService<HelpService>();
-                if (channel is IDMChannel)
+                if (channel is Channel)
                     await serv.BadCommand(client, null, usrMsg);
                 return;
             }
 
-            await LogCommandExecution(usrMsg, channel as ITextChannel, info, false, execTime, error)
+            await LogCommandExecution(usrMsg, channel as Channel, info, false, execTime, error)
                 .ConfigureAwait(false);
             if (guild != null)
             {
                 var permissionService = Services.GetService<PermissionService>();
                 var pc = await permissionService.GetCacheFor(guild.Id).ConfigureAwait(false);
                 if (pc?.Permissions.CheckPermissions(usrMsg, info?.Name, info?.Module.Name, out _) ?? true)
-                    await CommandErrored(info, channel as ITextChannel, error, usrMsg.Author).ConfigureAwait(false);
+                    await CommandErrored(info, channel as Channel, error, usrMsg.Author).ConfigureAwait(false);
             }
         }
 
@@ -395,9 +395,9 @@ public class CommandHandler : INService
 
         if (result is not ExecuteResult executeResult)
             return (result.IsSuccess, result.ErrorReason, cmd, result.Error?.ToString());
-        if (executeResult.Exception != null && executeResult.Exception is not HttpException
+        if (executeResult.Exception != null && executeResult.Exception is not FluxerApiException
             {
-                DiscordCode: DiscordErrorCode.InsufficientPermissions
+                ErrorCode: FluxerErrorCodes.MissingPermissions
             })
         {
             var guild = context.Guild as SocketGuild;
@@ -412,7 +412,7 @@ public class CommandHandler : INService
                 : Innermost(executeResult.Exception).GetType().Name);
     }
 
-    private async Task LogCommandExecution(IMessage usrMsg, ITextChannel? channel, CommandInfo? commandInfo,
+    private async Task LogCommandExecution(Message usrMsg, Channel? channel, CommandInfo? commandInfo,
         bool success, int executionTime, string errorMessage = null)
     {
         var logBuilder = new StringBuilder()
@@ -452,18 +452,18 @@ public class CommandHandler : INService
 
         if (bss.Data.CommandLogChannel > 0)
         {
-            if (await client.Rest.GetChannelAsync(bss.Data.CommandLogChannel) is ITextChannel logChannel)
-                await logChannel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+            if (await client.Rest.GetChannelAsync(bss.Data.CommandLogChannel) is Channel logChannel)
+                await logChannel.SendAsync(embed: embed.Build()).ConfigureAwait(false);
         }
 
-        if (channel is null)
+        if (channel?.GuildId is not { } guildId)
             return;
 
-        var gc = await gss.GetGuildConfig(channel.GuildId);
+        var gc = await gss.GetGuildConfig(guildId);
         if (gc.CommandLogChannel != 0)
         {
-            if (await client.Rest.GetChannelAsync(gc.CommandLogChannel) is ITextChannel commandLogChannel)
-                await commandLogChannel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+            if (await client.Rest.GetChannelAsync(gc.CommandLogChannel) is Channel commandLogChannel)
+                await commandLogChannel.SendAsync(embed: embed.Build()).ConfigureAwait(false);
         }
     }
 
@@ -495,7 +495,7 @@ public class CommandHandler : INService
             select mention.Length + 1).FirstOrDefault();
     }
 
-    private async Task<bool> UpdateCommandStats(IGuild? guild, IChannel channel, IUserMessage usrMsg,
+    private async Task<bool> UpdateCommandStats(SocketGuild? guild, Channel channel, Message usrMsg,
         CommandInfo? info)
     {
         if (guild == null || info == null) return false;

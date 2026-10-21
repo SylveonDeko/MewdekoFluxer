@@ -1,7 +1,5 @@
 using System.Net;
 using DataModel;
-using Discord.Commands;
-using Discord.Net;
 using Humanizer;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;
@@ -65,8 +63,8 @@ public partial class Administration
                             return null;
                         }
 
-                        var role = (IRole)roleResult.BestMatch;
-                        if (role.Position > ((IGuildUser)ctx.User).GetRoles().Select(r => r.Position).Max()
+                        var role = (SocketRole)roleResult.BestMatch;
+                        if (role.Position > ((SocketGuildMember)ctx.User).GetRoles().Select(r => r.Position).Max()
                             && ctx.User.Id != ctx.Guild.OwnerId)
                         {
                             return null;
@@ -97,7 +95,7 @@ public partial class Administration
                             }).ConfigureAwait(false);
                         }
                     }
-                    catch (HttpException ex) when (ex.HttpCode == HttpStatusCode.BadRequest)
+                    catch (FluxerApiException ex) when (ex.HttpCode == HttpStatusCode.BadRequest)
                     {
                         await ReplyErrorAsync(Strings.ReactionCantAccess(ctx.Guild.Id, Format.Code(x.emote.ToString())))
                             .ConfigureAwait(false);
@@ -274,9 +272,9 @@ public partial class Administration
                     var rr = rrs.Skip(page).FirstOrDefault();
                     var g = ctx.Guild;
                     var ch = await g.GetTextChannelAsync(rr.ChannelId).ConfigureAwait(false);
-                    IUserMessage? msg = null;
+                    Message? msg = null;
                     if (ch is not null)
-                        msg = await ch.GetMessageAsync(rr.MessageId).ConfigureAwait(false) as IUserMessage;
+                        msg = await ch.GetMessageAsync(rr.MessageId).ConfigureAwait(false) as Message;
                     var eb = new PageBuilder().WithOkColor();
                     return
                         eb.AddField("ID", rr.Index + 1)
@@ -338,9 +336,9 @@ public partial class Administration
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
         [Priority(0)]
-        public async Task SetRole(IRole roleToAdd, IGuildUser targetUser)
+        public async Task SetRole(SocketRole roleToAdd, SocketGuildMember targetUser)
         {
-            var runnerUser = (IGuildUser)ctx.User;
+            var runnerUser = (SocketGuildMember)ctx.User;
             var runnerMaxRolePosition = runnerUser.GetRoles().Max(x => x.Position);
             if (ctx.User.Id != ctx.Guild.OwnerId && runnerMaxRolePosition <= roleToAdd.Position)
                 return;
@@ -376,9 +374,9 @@ public partial class Administration
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
         [Priority(1)]
-        public async Task SetRole(IRole roleToAdd, IGuildUser targetUser, StoopidTime time)
+        public async Task SetRole(SocketRole roleToAdd, SocketGuildMember targetUser, StoopidTime time)
         {
-            var runnerUser = (IGuildUser)ctx.User;
+            var runnerUser = (SocketGuildMember)ctx.User;
             var runnerMaxRolePosition = runnerUser.GetRoles().Max(x => x.Position);
             if (ctx.User.Id != ctx.Guild.OwnerId && runnerMaxRolePosition <= roleToAdd.Position)
                 return;
@@ -414,9 +412,9 @@ public partial class Administration
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
         [Priority(0)]
-        public async Task SetRole(IGuildUser targetUser, IRole roleToAdd)
+        public async Task SetRole(SocketGuildMember targetUser, SocketRole roleToAdd)
         {
-            var runnerUser = (IGuildUser)ctx.User;
+            var runnerUser = (SocketGuildMember)ctx.User;
             var runnerMaxRolePosition = runnerUser.GetRoles().Max(x => x.Position);
             if (ctx.User.Id != ctx.Guild.OwnerId && runnerMaxRolePosition <= roleToAdd.Position)
                 return;
@@ -452,9 +450,9 @@ public partial class Administration
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
         [Priority(1)]
-        public async Task SetRole(IGuildUser targetUser, IRole roleToAdd, StoopidTime time)
+        public async Task SetRole(SocketGuildMember targetUser, SocketRole roleToAdd, StoopidTime time)
         {
-            var runnerUser = (IGuildUser)ctx.User;
+            var runnerUser = (SocketGuildMember)ctx.User;
             var runnerMaxRolePosition = runnerUser.GetRoles().Max(x => x.Position);
             if (ctx.User.Id != ctx.Guild.OwnerId && runnerMaxRolePosition <= roleToAdd.Position)
                 return;
@@ -489,9 +487,9 @@ public partial class Administration
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
-        public async Task RemoveRole(IRole roleToRemove, [Remainder] IGuildUser targetUser)
+        public async Task RemoveRole(SocketRole roleToRemove, [Remainder] SocketGuildMember targetUser)
         {
-            var runnerUser = (IGuildUser)ctx.User;
+            var runnerUser = (SocketGuildMember)ctx.User;
             if (ctx.User.Id != runnerUser.Guild.OwnerId &&
                 runnerUser.GetRoles().Max(x => x.Position) <= roleToRemove.Position)
             {
@@ -526,9 +524,9 @@ public partial class Administration
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
-        public async Task RemoveRole(IGuildUser targetUser, [Remainder] IRole roleToRemove)
+        public async Task RemoveRole(SocketGuildMember targetUser, [Remainder] SocketRole roleToRemove)
         {
-            var runnerUser = (IGuildUser)ctx.User;
+            var runnerUser = (SocketGuildMember)ctx.User;
             if (ctx.User.Id != runnerUser.Guild.OwnerId &&
                 runnerUser.GetRoles().Max(x => x.Position) <= roleToRemove.Position)
             {
@@ -562,9 +560,9 @@ public partial class Administration
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
-        public async Task RenameRole(IRole roleToEdit, [Remainder] string newname)
+        public async Task RenameRole(SocketRole roleToEdit, [Remainder] string newname)
         {
-            var guser = (IGuildUser)ctx.User;
+            var guser = (SocketGuildMember)ctx.User;
             if (ctx.User.Id != guser.Guild.OwnerId && guser.GetRoles().Max(x => x.Position) <= roleToEdit.Position)
                 return;
             try
@@ -601,9 +599,9 @@ public partial class Administration
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
-        public async Task RemoveAllRoles([Remainder] IGuildUser user)
+        public async Task RemoveAllRoles([Remainder] SocketGuildMember user)
         {
-            var guser = (IGuildUser)ctx.User;
+            var guser = (SocketGuildMember)ctx.User;
 
             var userRoles = user.GetRoles()
                 .Where(x => !x.IsManaged && x != x.Guild.EveryoneRole)
@@ -664,9 +662,9 @@ public partial class Administration
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
-        public async Task DeleteRole([Remainder] IRole role)
+        public async Task DeleteRole([Remainder] SocketRole role)
         {
-            var guser = (IGuildUser)ctx.User;
+            var guser = (SocketGuildMember)ctx.User;
             if (ctx.User.Id != guser.Guild.OwnerId
                 && guser.GetRoles().Max(x => x.Position) <= role.Position)
             {
@@ -692,7 +690,7 @@ public partial class Administration
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
-        public async Task RoleHoist(IRole role)
+        public async Task RoleHoist(SocketRole role)
         {
             var newHoisted = !role.IsHoisted;
             await role.ModifyAsync(r => r.Hoist = newHoisted).ConfigureAwait(false);
@@ -720,7 +718,7 @@ public partial class Administration
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [Priority(1)]
-        public async Task RoleColor([Remainder] IRole role)
+        public async Task RoleColor([Remainder] SocketRole role)
         {
             await ctx.Channel.SendConfirmAsync(Strings.Rolecolor(ctx.Guild.Id), role.Colors.PrimaryColor.RawValue.ToString("x6"))
                 .ConfigureAwait(false);
@@ -742,7 +740,7 @@ public partial class Administration
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
         [Priority(0)]
-        public async Task RoleColor(IRole role, SKColor color)
+        public async Task RoleColor(SocketRole role, SKColor color)
         {
             try
             {

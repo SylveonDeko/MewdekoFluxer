@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Games.Common;
 using Mewdeko.Modules.Games.Services;
@@ -13,7 +13,7 @@ public partial class Games
     [Group]
     public class SpeedTypingCommands : MewdekoSubmodule<GamesService>
     {
-        private readonly DiscordShardedClient client;
+        private readonly FluxerClient client;
         private readonly GamesService games;
         private readonly GuildSettingsService guildSettings;
         private readonly EventHandler handler;
@@ -25,7 +25,7 @@ public partial class Games
         /// <param name="games">The games service for fetching configs</param>
         /// <param name="guildSettings">The guild settings service</param>
         /// <param name="handler">Async Event handler because again, discord sucks.</param>
-        public SpeedTypingCommands(DiscordShardedClient client, GamesService games,
+        public SpeedTypingCommands(FluxerClient client, GamesService games,
             GuildSettingsService guildSettings, EventHandler handler)
         {
             this.client = client;
@@ -46,7 +46,7 @@ public partial class Games
         public async Task TypeStart(params string[] args)
         {
             var (options, _) = OptionsParser.ParseFrom(new TypingGame.Options(), args);
-            var channel = (ITextChannel)ctx.Channel;
+            var channel = (Channel)ctx.Channel;
 
             var game = Service.RunningContests.GetOrAdd(channel.Guild.Id,
                 _ => new TypingGame(games, client, channel,
@@ -72,7 +72,7 @@ public partial class Games
         [RequireContext(ContextType.Guild)]
         public async Task TypeStop()
         {
-            var channel = (ITextChannel)ctx.Channel;
+            var channel = (Channel)ctx.Channel;
             if (Service.RunningContests.TryRemove(channel.Guild.Id, out var game))
             {
                 await game.Stop().ConfigureAwait(false);
@@ -93,7 +93,7 @@ public partial class Games
         [OwnerOnly]
         public async Task Typeadd([Remainder] string text)
         {
-            var channel = (ITextChannel)ctx.Channel;
+            var channel = (Channel)ctx.Channel;
             if (string.IsNullOrWhiteSpace(text))
                 return;
 
@@ -112,7 +112,7 @@ public partial class Games
         [RequireContext(ContextType.Guild)]
         public async Task Typelist(int page = 1)
         {
-            var channel = (ITextChannel)ctx.Channel;
+            var channel = (Channel)ctx.Channel;
 
             if (page < 1)
                 return;

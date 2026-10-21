@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Humanizer;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;
@@ -206,7 +206,7 @@ public class Afk(InteractiveService serv) : MewdekoModuleBase<AfkService>
 
         await Service.AfkSet(ctx.Guild.Id, ctx.User.Id, message, true, DateTime.UtcNow + time.Time);
         await ConfirmAsync(Strings.AfkTimedSet(ctx.Guild.Id,
-            TimestampTag.FromDateTimeOffset(DateTimeOffset.UtcNow + time.Time, TimestampTagStyles.Relative), message));
+            TimestampTag.FromDateTimeOffset(DateTimeOffset.UtcNow + time.Time, TimestampTagStyle.Relative), message));
     }
 
     /// <summary>
@@ -282,7 +282,7 @@ public class Afk(InteractiveService serv) : MewdekoModuleBase<AfkService>
     [Aliases]
     [Priority(0)]
     [UserPerm(GuildPermission.ManageMessages)]
-    public async Task AfkView(IGuildUser? user)
+    public async Task AfkView(SocketGuildMember? user)
     {
         if (!await CheckRoleHierarchy(user))
             return;
@@ -431,7 +431,7 @@ public class Afk(InteractiveService serv) : MewdekoModuleBase<AfkService>
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task AfkUndisable(params ITextChannel[] chan)
+    public async Task AfkUndisable(params Channel[] chan)
     {
         if (Environment.GetEnvironmentVariable("AFK_CACHED") != "1")
         {
@@ -484,7 +484,7 @@ public class Afk(InteractiveService serv) : MewdekoModuleBase<AfkService>
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task AfkDisable(params ITextChannel[] chan)
+    public async Task AfkDisable(params Channel[] chan)
     {
         if (Environment.GetEnvironmentVariable("AFK_CACHED") != "1")
         {
@@ -546,7 +546,7 @@ public class Afk(InteractiveService serv) : MewdekoModuleBase<AfkService>
     [Aliases]
     [UserPerm(GuildPermission.ManageMessages)]
     [Priority(0)]
-    public async Task AfkRemove(params IGuildUser[] user)
+    public async Task AfkRemove(params SocketGuildMember[] user)
     {
         foreach (var i in user)
         {

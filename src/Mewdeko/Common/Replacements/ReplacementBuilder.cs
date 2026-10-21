@@ -1,5 +1,4 @@
 ﻿using System.Text.RegularExpressions;
-using Discord.Commands;
 using Mewdeko.Modules.Administration.Services;
 using NekosBestApiNet;
 
@@ -19,7 +18,7 @@ public partial class ReplacementBuilder
     /// <summary>
     ///     The Discord client.
     /// </summary>
-    private readonly DiscordShardedClient? client;
+    private readonly FluxerClient? client;
 
     /// <summary>
     ///     The NekosBest API client.
@@ -38,10 +37,15 @@ public partial class ReplacementBuilder
     private readonly ConcurrentDictionary<string, Func<string?>> reps = new();
 
     /// <summary>
+    ///     The members behind the users given, for placeholders that read guild data such as the join date.
+    /// </summary>
+    private readonly ConcurrentDictionary<ulong, GuildMember> members = new();
+
+    /// <summary>
     ///     Initializes a new instance of the ReplacementBuilder class.
     /// </summary>
-    /// <param name="client">The Discord client.</param>
-    public ReplacementBuilder(DiscordShardedClient? client = null)
+    /// <param name="client">The Fluxer client.</param>
+    public ReplacementBuilder(FluxerClient? client = null)
     {
         nekosBestApi = new NekosBestApi(client?.CurrentUser.Username ?? "Mewdeko");
         this.client = client;
@@ -56,8 +60,8 @@ public partial class ReplacementBuilder
     /// <param name="g">The guild.</param>
     /// <param name="socketClient">The client.</param>
     /// <returns>The ReplacementBuilder instance.</returns>
-    public ReplacementBuilder WithDefault(IUser usr, IMessageChannel ch, SocketGuild? g,
-        DiscordShardedClient socketClient)
+    public ReplacementBuilder WithDefault(IUser usr, Channel ch, SocketGuild? g,
+        FluxerClient socketClient)
     {
         return WithUser(usr)
             .WithChannel(ch)
@@ -67,25 +71,30 @@ public partial class ReplacementBuilder
     }
 
     /// <summary>
+    ///     Sets up default replacements for a member, channel, guild, and client.
+    /// </summary>
+    /// <param name="member">The member.</param>
+    /// <param name="ch">The channel.</param>
+    /// <param name="g">The guild.</param>
+    /// <param name="socketClient">The client.</param>
+    /// <returns>The ReplacementBuilder instance.</returns>
+    public ReplacementBuilder WithDefault(GuildMember member, Channel ch, SocketGuild? g,
+        FluxerClient socketClient)
+    {
+        members[member.Id] = member;
+        return WithDefault(member.User, ch, g, socketClient);
+    }
+
+    /// <summary>
     ///     Sets up default replacements for a command context.
     /// </summary>
     /// <param name="ctx">The command context.</param>
     /// <returns>The ReplacementBuilder instance.</returns>
-    public ReplacementBuilder WithDefault(ICommandContext ctx)
+    public ReplacementBuilder WithDefault(CommandContext ctx)
     {
-        return WithDefault(ctx.User, ctx.Channel,
-            ctx.Guild as SocketGuild, (DiscordShardedClient)ctx.Client);
-    }
-
-    /// <summary>
-    ///     Sets up default replacements for an interaction context.
-    /// </summary>
-    /// <param name="ctx">The interaction context.</param>
-    /// <returns>The ReplacementBuilder instance.</returns>
-    public ReplacementBuilder WithDefault(IInteractionContext ctx)
-    {
-        return WithDefault(ctx.User, ctx.Channel,
-            ctx.Guild as SocketGuild, (DiscordShardedClient)ctx.Client);
+        return ctx.Member is { } member
+            ? WithDefault(member, ctx.Channel, ctx.Guild, ctx.Client)
+            : WithDefault(ctx.User, ctx.Channel, ctx.Guild, ctx.Client);
     }
 
     /// <summary>
@@ -93,7 +102,7 @@ public partial class ReplacementBuilder
     /// </summary>
     /// <param name="socketClient">The client.</param>
     /// <returns>The ReplacementBuilder instance.</returns>
-    public ReplacementBuilder WithClient(DiscordShardedClient socketClient)
+    public ReplacementBuilder WithClient(FluxerClient socketClient)
     {
         /*NEW*/
         reps.TryAdd("%bot.status%", () => socketClient.Status.ToString());
@@ -116,12 +125,12 @@ public partial class ReplacementBuilder
     /// <param name="socketClient">The client.</param>
     /// <param name="g">The server.</param>
     /// <returns>The ReplacementBuilder instance.</returns>
-    public ReplacementBuilder WithServer(DiscordShardedClient socketClient, SocketGuild? g)
+    public ReplacementBuilder WithServer(FluxerClient socketClient, SocketGuild? g)
     {
         /*OBSOLETE*/
         reps.TryAdd("%sid%", () => g == null ? "DM" : g.Id.ToString());
         reps.TryAdd("%server%", () => g == null ? "DM" : g.Name);
-        reps.TryAdd("%members%", () => g is { } sg ? sg.MemberCount.ToString() : "?");
+        reps.TryAdd("%members%", () => g is { } sg ? sg.TotalMembers.ToString() : "?");
         reps.TryAdd("%server_time%", () =>
         {
             var to = TimeZoneInfo.Local;
@@ -141,12 +150,8 @@ public partial class ReplacementBuilder
         reps.TryAdd("%server.id%", () => g == null ? "DM" : g.Id.ToString());
         reps.TryAdd("%server.name%", () => g == null ? "DM" : g.Name.EscapeWeirdStuff());
         reps.TryAdd("%server.banner%", () => g == null ? "DM" : g.BannerUrl);
-        reps.TryAdd("%server.boostlevel%", () =>
-        {
-            var e = g.PremiumTier.ToString();
-            return e.StartsWith("Tier") ? e.Replace("Tier", "") : "0";
-        });
-        reps.TryAdd("%server.boostcount%", () => g.PremiumSubscriptionCount.ToString());
+        reps.TryAdd("%server.boostlevel%", () => "0");
+        reps.TryAdd("%server.boostcount%", () => "0");
         reps.TryAdd("%server.members%", () => g is { } sg ? sg.Users.Count.ToString() : "?");
         reps.TryAdd("%server.members.online%",
             () => g is { } sg ? sg.Users.Count(x => x.Status == UserStatus.Online).ToString() : "?");
@@ -165,7 +170,7 @@ public partial class ReplacementBuilder
 
             return TimestampTag.FromDateTime(TimeZoneInfo.ConvertTime(DateTime.UtcNow,
                 TimeZoneInfo.Utc,
-                to), TimestampTagStyles.LongDateTime).ToString();
+                to), TimestampTagStyle.LongDateTime).ToString();
         });
         reps.TryAdd("%server.timestamp.longtime%", () =>
         {
@@ -176,7 +181,7 @@ public partial class ReplacementBuilder
 
             return TimestampTag.FromDateTime(TimeZoneInfo.ConvertTime(DateTime.UtcNow,
                 TimeZoneInfo.Utc,
-                to), TimestampTagStyles.LongTime).ToString();
+                to), TimestampTagStyle.LongTime).ToString();
         });
         reps.TryAdd("%server.timestamp.longdate%", () =>
         {
@@ -187,7 +192,7 @@ public partial class ReplacementBuilder
 
             return TimestampTag.FromDateTime(TimeZoneInfo.ConvertTime(DateTime.UtcNow,
                 TimeZoneInfo.Utc,
-                to), TimestampTagStyles.LongDate).ToString();
+                to), TimestampTagStyle.LongDate).ToString();
         });
         reps.TryAdd("%server.timestamp.shortdatetime%", () =>
         {
@@ -264,19 +269,19 @@ public partial class ReplacementBuilder
     /// </summary>
     /// <param name="ch">The channel.</param>
     /// <returns>The ReplacementBuilder instance.</returns>
-    public ReplacementBuilder WithChannel(IMessageChannel? ch)
+    public ReplacementBuilder WithChannel(Channel? ch)
     {
         /*OBSOLETE*/
-        reps.TryAdd("%channel%", () => (ch as ITextChannel)?.Mention ?? $"#{ch.Name}");
+        reps.TryAdd("%channel%", () => (ch as Channel)?.Mention ?? $"#{ch.Name}");
         reps.TryAdd("%chname%", () => ch.Name);
         reps.TryAdd("%cid%", () => ch?.Id.ToString());
         /*NEW*/
-        reps.TryAdd("%channel.mention%", () => (ch as ITextChannel)?.Mention ?? $"#{ch.Name}");
+        reps.TryAdd("%channel.mention%", () => (ch as Channel)?.Mention ?? $"#{ch.Name}");
         reps.TryAdd("%channel.name%", () => ch.Name.EscapeWeirdStuff());
         reps.TryAdd("%channel.id%", () => ch.Id.ToString());
         reps.TryAdd("%channel.created%", () => ch.CreatedAt.ToString("HH:mm dd.MM.yyyy"));
-        reps.TryAdd("%channel.nsfw%", () => (ch as ITextChannel)?.IsNsfw.ToString() ?? "-");
-        reps.TryAdd("%channel.topic%", () => (ch as ITextChannel)?.Topic?.EscapeWeirdStuff() ?? "-");
+        reps.TryAdd("%channel.nsfw%", () => (ch as Channel)?.IsNsfw.ToString() ?? "-");
+        reps.TryAdd("%channel.topic%", () => (ch as Channel)?.Topic?.EscapeWeirdStuff() ?? "-");
         return this;
     }
 
@@ -291,6 +296,30 @@ public partial class ReplacementBuilder
             user
         ]);
         return this;
+    }
+
+    /// <summary>
+    ///     Sets up replacements for a member.
+    /// </summary>
+    /// <param name="member">The member.</param>
+    /// <returns>The ReplacementBuilder instance.</returns>
+    public ReplacementBuilder WithUser(GuildMember member)
+    {
+        members[member.Id] = member;
+        return WithUser(member.User);
+    }
+
+    /// <summary>
+    ///     Sets up replacements for multiple members.
+    /// </summary>
+    /// <param name="many">The members.</param>
+    /// <returns>The ReplacementBuilder instance.</returns>
+    public ReplacementBuilder WithManyUsers(IEnumerable<GuildMember> many)
+    {
+        var list = many.ToList();
+        foreach (var member in list)
+            members[member.Id] = member;
+        return WithManyUsers(list.Select(member => (IUser)member.User));
     }
 
     /// <summary>
@@ -316,8 +345,9 @@ public partial class ReplacementBuilder
         reps.TryAdd("%user.name%", () => string.Join(" ", users.Select(user => user.Username.EscapeWeirdStuff())));
         reps.TryAdd("%user.banner%",
             () => string.Join(" ",
-                users.Select(async user =>
-                    (await client.Rest.GetUserAsync(user.Id).ConfigureAwait(false)).GetBannerUrl(size: 2048))));
+                users.Select(user => members.TryGetValue(user.Id, out var member)
+                    ? member.GetBannerUrl(2048) ?? ""
+                    : "")));
         reps.TryAdd("%user.discrim%", () => string.Join(" ", users.Select(user => user.Discriminator)));
         reps.TryAdd("%user.avatar%",
             () => string.Join(" ", users.Select(user => user.RealAvatarUrl().ToString())));
@@ -327,10 +357,13 @@ public partial class ReplacementBuilder
         reps.TryAdd("%user.created_date%",
             () => string.Join(" ", users.Select(user => user.CreatedAt.ToString("dd.MM.yyyy"))));
         reps.TryAdd("%user.joined_time%",
-            () => string.Join(" ", users.Select(user => (user as IGuildUser)?.JoinedAt?.ToString("HH:mm") ?? "-")));
+            () => string.Join(" ", users.Select(user => members.TryGetValue(user.Id, out var member)
+                ? member.JoinedAt.ToString("HH:mm")
+                : "-")));
         reps.TryAdd("%user.joined_date%",
-            () => string.Join(" ",
-                users.Select(user => (user as IGuildUser)?.JoinedAt?.ToString("dd.MM.yyyy") ?? "-")));
+            () => string.Join(" ", users.Select(user => members.TryGetValue(user.Id, out var member)
+                ? member.JoinedAt.ToString("dd.MM.yyyy")
+                : "-")));
         return this;
     }
 
@@ -338,7 +371,7 @@ public partial class ReplacementBuilder
     ///     Sets up replacements for RNG placeholders.
     /// </summary>
     /// <returns>The ReplacementBuilder instance.</returns>
-    private void WithStats(DiscordShardedClient c)
+    private void WithStats(FluxerClient c)
     {
         /*OBSOLETE*/
         reps.TryAdd("%servers%", () => c.Guilds.Count.ToString());

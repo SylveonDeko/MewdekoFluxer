@@ -1,10 +1,9 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using DataModel;
 using LinqToDB;
 using LinqToDB.Async;
 using LinqToDB.Data;
-using Mewdeko.Common.DiscordImplementations;
 using Mewdeko.Common.ModuleBehaviors;
 using Mewdeko.Common.PubSub;
 using Mewdeko.Common.TriggerPlaceholders;
@@ -144,7 +143,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// </summary>
     private static readonly ConditionalWeakTable<CTModel[], TriggerIndex> IndexCache = new();
 
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly CmdCdService cmdCds;
     private readonly IAnalyticsCollector collector;
     private readonly BotConfigService configService;
@@ -219,7 +218,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
         PermissionService perms,
         IDataConnectionFactory dbFactory,
         Mewdeko bot,
-        DiscordShardedClient client,
+        FluxerClient client,
         GlobalPermissionService gperm,
         CmdCdService cmdCds,
         IPubSub pubSub,
@@ -309,7 +308,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     ///     A <see cref="Task{TResult}" /> representing the asynchronous operation, returning <c>true</c> if the behavior
     ///     is executed successfully, otherwise <c>false</c>.
     /// </returns>
-    public Task<bool> RunBehavior(DiscordShardedClient socketClient, IGuild guild, IUserMessage msg)
+    public Task<bool> RunBehavior(FluxerClient socketClient, SocketGuild guild, Message msg)
     {
         return RunBehaviorInternal(guild, msg, false);
     }
@@ -336,7 +335,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// <param name="forced">A specific trigger to run instead of matching, used when running a chained trigger.</param>
     /// <param name="visited">The triggers this chain has already run, or null at the start of a chain.</param>
     /// <returns>True if a trigger handled the message.</returns>
-    private async Task<bool> RunBehaviorInternal(IGuild guild, IUserMessage msg, bool fromBot, int chainDepth = 0,
+    private async Task<bool> RunBehaviorInternal(SocketGuild guild, Message msg, bool fromBot, int chainDepth = 0,
         CTModel? forced = null, HashSet<int>? visited = null)
     {
         // Maybe this message is a custom reaction
@@ -392,7 +391,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
                 // Check if there are any guild-specific permission overrides for the trigger
                 if (discordPermOverride.TryGetOverrides(guild.Id, ct.Trigger, out var guildPermission))
                 {
-                    var user = msg.Author as IGuildUser;
+                    var user = msg.Author as SocketGuildMember;
                     if (!user.GuildPermissions.Has(guildPermission))
                     {
                         if (configService.Data.LogChatTriggerFires)
@@ -421,7 +420,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
             await RecordTriggerFireAsync(ct, guild.Id, msg.Channel.Id, msg.Author).ConfigureAwait(false);
 
             // Send the chat trigger response
-            IUserMessage? sentMsg = null;
+            Message? sentMsg = null;
             foreach (var response in await SelectResponsesAsync(ct).ConfigureAwait(false))
             {
                 sentMsg = await ct.Send(msg, client, false, dbFactory, placeholders, regexMatch, response)
@@ -443,7 +442,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
             }
 
             // Grant or remove roles from users based on the trigger
-            if (ct.GuildId is null || msg?.Author is not IGuildUser guildUser) return true;
+            if (ct.GuildId is null || msg?.Author is not SocketGuildMember guildUser) return true;
             {
                 var effectedUsers = (CtRoleGrantType)ct.RoleGrantType switch
                 {
@@ -638,7 +637,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// <param name="user">The user initiating the import operation.</param>
     /// <param name="input">The input string containing the chat triggers data to import.</param>
     /// <returns>True if the import operation is successful, false otherwise.</returns>
-    public async Task<bool> ImportCrsAsync(IGuildUser user, string input)
+    public async Task<bool> ImportCrsAsync(SocketGuildMember user, string input)
     {
         try
         {
@@ -1018,7 +1017,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     ///     are considered.
     /// </param>
     /// <returns>The matched chat trigger model, or null if no match is found.</returns>
-    private async Task<(CTModel? Trigger, Match? Match)> TryGetChatTriggers(IUserMessage umsg,
+    private async Task<(CTModel? Trigger, Match? Match)> TryGetChatTriggers(Message umsg,
         bool fromBot = false)
     {
         // Check if the chat triggers are ready
@@ -1026,7 +1025,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
             return (null, null);
 
         // Check if the message channel is a text channel
-        if (umsg.Channel is not SocketTextChannel channel)
+        if (umsg.Channel is not Channel channel)
             return (null, null);
 
         // Trim and convert message content to lowercase for comparison
@@ -1932,8 +1931,8 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     ///     same checks the live paths run, in the same order, and reports the first one that rejects. Nothing here
     ///     mutates state: no currency is charged, no counter advances and no usage is recorded.
     /// </remarks>
-    public async Task<(bool Matched, string? Blocker)> TestTriggerAsync(CTModel ct, SocketGuild guild, IGuildUser user,
-        IMessageChannel channel, string sample)
+    public async Task<(bool Matched, string? Blocker)> TestTriggerAsync(CTModel ct, SocketGuild guild, SocketGuildMember user,
+        Channel channel, string sample)
     {
         if (ct.IsDisabled)
             return (false, strings.CtTestBlockedDisabled(guild.Id, ct.Id));
@@ -1947,10 +1946,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
         if (matched is null)
             return (false, strings.CtTestBlockedNoMatch(guild.Id));
 
-        var fakeMsg = new MewdekoUserMessage
-        {
-            Author = user, Content = sample, Channel = channel
-        };
+        var fakeMsg = SyntheticMessage.Create(user, channel, sample);
 
         var pc = await perms.GetCacheFor(guild.Id).ConfigureAwait(false);
         if (!pc.Permissions.CheckPermissions(fakeMsg, ct.Trigger, "ActualChatTriggers", out var index,
@@ -2046,7 +2042,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     ///     apply. A trigger cannot run twice in one chain and the depth is capped, so a cycle terminates on its first
     ///     repeat instead of spinning up to the limit.
     /// </remarks>
-    private async Task RunChainedTriggerAsync(CTModel ct, IGuild guild, IUserMessage msg, bool fromBot,
+    private async Task RunChainedTriggerAsync(CTModel ct, SocketGuild guild, Message msg, bool fromBot,
         int chainDepth, HashSet<int>? visited)
     {
         if (ct.NextTriggerId is not { } nextId)
@@ -2086,14 +2082,14 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// </remarks>
     private async Task OnMessageReceived(SocketMessage msg)
     {
-        if (!ready || msg is not SocketUserMessage userMsg)
+        if (!ready || msg is not SocketMessage userMsg)
             return;
 
         // Human messages are handled by the command pipeline; our own messages would loop
         if (!msg.Author.IsBot || msg.Author.Id == client.CurrentUser?.Id)
             return;
 
-        if (msg.Channel is not SocketTextChannel channel)
+        if (msg.Channel is not Channel channel)
             return;
 
         try
@@ -2117,7 +2113,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     ///     inside the early behaviour the command pipeline awaits, which stalled the channel's message processing for
     ///     up to six seconds per fire. Running it detached keeps the pacing without holding up the pipeline.
     /// </remarks>
-    private void QueueTriggerReactions(CTModel ct, IUserMessage? responseMsg, IUserMessage? triggerMsg)
+    private void QueueTriggerReactions(CTModel ct, Message? responseMsg, Message? triggerMsg)
     {
         var reactions = ct.GetReactions();
         if (reactions.Length == 0)
@@ -2216,7 +2212,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     ///     its own rules by being driven from an event.
     /// </remarks>
     public async Task FireEventTriggersAsync(ulong guildId, CtEventType eventType, IUser user,
-        IMessageChannel? fallbackChannel = null)
+        Channel? fallbackChannel = null)
     {
         if (!ready || eventType == CtEventType.None)
             return;
@@ -2236,7 +2232,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
             try
             {
                 var channel = ct.EventChannelId != 0
-                    ? guild.GetTextChannel(ct.EventChannelId) as IMessageChannel
+                    ? guild.GetTextChannel(ct.EventChannelId) as Channel
                     : fallbackChannel;
 
                 if (channel is null)
@@ -2251,10 +2247,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
                 await IncrementTriggerUsage(ct).ConfigureAwait(false);
                 await RecordTriggerFireAsync(ct, guildId, channel.Id, user).ConfigureAwait(false);
 
-                var fakeMsg = new MewdekoUserMessage
-                {
-                    Author = user, Content = ct.Trigger ?? "", Channel = channel
-                };
+                var fakeMsg = SyntheticMessage.Create(user, channel, ct.Trigger ?? "");
 
                 foreach (var response in await SelectResponsesAsync(ct).ConfigureAwait(false))
                 {
@@ -2283,7 +2276,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
         if (user is null)
             return;
 
-        var channel = args.ChannelId == 0 ? null : guild.GetTextChannel(args.ChannelId) as IMessageChannel;
+        var channel = args.ChannelId == 0 ? null : guild.GetTextChannel(args.ChannelId) as Channel;
 
         await FireEventTriggersAsync(args.GuildId,
             args.IsLevelUp ? CtEventType.XpLevelUp : CtEventType.XpLevelDown, user, channel).ConfigureAwait(false);
@@ -2293,7 +2286,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     ///     Fires event triggers when a member joins the guild.
     /// </summary>
     /// <param name="user">The member that joined.</param>
-    private Task OnUserJoined(IGuildUser user)
+    private Task OnUserJoined(SocketGuildMember user)
     {
         return FireEventTriggersAsync(user.Guild.Id, CtEventType.MemberJoin, user);
     }
@@ -2303,7 +2296,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// </summary>
     /// <param name="guild">The guild the member left.</param>
     /// <param name="user">The member that left.</param>
-    private Task OnUserLeft(IGuild guild, IUser user)
+    private Task OnUserLeft(SocketGuild guild, IUser user)
     {
         return FireEventTriggersAsync(guild.Id, CtEventType.MemberLeave, user);
     }
@@ -2313,7 +2306,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// </summary>
     /// <param name="before">The member's previous state, which may not be cached.</param>
     /// <param name="after">The member's new state.</param>
-    private async Task OnGuildMemberUpdated(Cacheable<SocketGuildUser, ulong> before, SocketGuildUser after)
+    private async Task OnGuildMemberUpdated(Cacheable<SocketGuildMember> before, SocketGuildMember after)
     {
         // Without the previous state there is no way to tell a new boost from an existing one, so nothing fires
         if (!before.HasValue)
@@ -2337,7 +2330,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// <param name="after">The new voice state.</param>
     private async Task OnVoiceStateUpdated(SocketUser user, SocketVoiceState before, SocketVoiceState after)
     {
-        if (user is not IGuildUser guildUser || before.VoiceChannel?.Id == after.VoiceChannel?.Id)
+        if (user is not SocketGuildMember guildUser || before.VoiceChannel?.Id == after.VoiceChannel?.Id)
             return;
 
         if (after.VoiceChannel is not null && before.VoiceChannel is null)
@@ -2392,7 +2385,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
 
         if (ct.MinServerMembershipMinutes > 0)
         {
-            if (user is not IGuildUser { JoinedAt: not null } guildUser)
+            if (user is not SocketGuildMember { JoinedAt: not null } guildUser)
                 return false;
 
             if (DateTimeOffset.UtcNow - guildUser.JoinedAt.Value <
@@ -2535,7 +2528,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     ///     never pay out when the user could not afford it. A failure only reports back to the channel when the trigger
     ///     defines a message for it, which keeps gated triggers from becoming a source of spam.
     /// </remarks>
-    private async Task<bool> TryApplyEconomyAsync(CTModel ct, ulong guildId, IUser user, IMessageChannel? channel)
+    private async Task<bool> TryApplyEconomyAsync(CTModel ct, ulong guildId, IUser user, Channel? channel)
     {
         if (ct.RequiredXpLevel <= 0 && ct.CurrencyCost <= 0 && ct.CurrencyReward <= 0 && ct.XpReward <= 0)
             return true;
@@ -2593,7 +2586,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// <param name="ct">The trigger whose requirement was not met.</param>
     /// <param name="guildId">The guild the trigger fired in.</param>
     /// <param name="channel">The channel to report in, or null to stay silent.</param>
-    private async Task ReportRequirementFailureAsync(CTModel ct, ulong guildId, IMessageChannel? channel)
+    private async Task ReportRequirementFailureAsync(CTModel ct, ulong guildId, Channel? channel)
     {
         if (channel is null || string.IsNullOrWhiteSpace(ct.RequirementFailMessage))
             return;
@@ -2814,9 +2807,9 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
             try
             {
                 using var discordWebhookClient =
-                    new DiscordWebhookClient(webhookUrl); // Initialize a Discord webhook client
+                    new FluxerWebhookClient(webhookUrl); // Initialize a Discord webhook client
                 await discordWebhookClient
-                    .SendMessageAsync(strings.CrosspostTest(guildId)) // Send a test message
+                    .SendAsync(strings.CrosspostTest(guildId)) // Send a test message
                     .ConfigureAwait(false);
             }
             catch // Handle exceptions
@@ -3137,8 +3130,8 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// <param name="channel">The cached channel where the reaction occurred.</param>
     /// <param name="reaction">The reaction that was added.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    private Task OnReactionAdded(Cacheable<IUserMessage, ulong> message,
-        Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
+    private Task OnReactionAdded(Cacheable<Message> message,
+        Cacheable<Channel> channel, SocketReaction reaction)
     {
         return HandleReactionAsync(message, channel, reaction, ChatTriggerType.Reactions);
     }
@@ -3149,8 +3142,8 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// <param name="message">The message the reaction was removed from.</param>
     /// <param name="channel">The channel the message is in.</param>
     /// <param name="reaction">The reaction that was removed.</param>
-    private Task OnReactionRemoved(Cacheable<IUserMessage, ulong> message,
-        Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
+    private Task OnReactionRemoved(Cacheable<Message> message,
+        Cacheable<Channel> channel, SocketReaction reaction)
     {
         return HandleReactionAsync(message, channel, reaction, ChatTriggerType.ReactionsRemoved);
     }
@@ -3162,8 +3155,8 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// <param name="channel">The channel the message is in.</param>
     /// <param name="reaction">The reaction that was added or removed.</param>
     /// <param name="triggerType">The trigger type the reaction corresponds to.</param>
-    private async Task HandleReactionAsync(Cacheable<IUserMessage, ulong> message,
-        Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction, ChatTriggerType triggerType)
+    private async Task HandleReactionAsync(Cacheable<Message> message,
+        Cacheable<Channel> channel, SocketReaction reaction, ChatTriggerType triggerType)
     {
         if (!ready)
             return;
@@ -3172,7 +3165,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
         if (cachedUser?.IsBot == true)
             return;
 
-        var cachedChannel = channel.HasValue ? channel.Value as IGuildChannel : client.GetChannel(channel.Id) as IGuildChannel;
+        var cachedChannel = channel.HasValue ? channel.Value as Channel : client.GetChannel(channel.Id) as Channel;
         if (cachedChannel is null)
             return;
 
@@ -3180,7 +3173,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
         var reactionTriggers = triggers.Where(ct =>
             !ct.IsDisabled &&
             ((ChatTriggerType)ct.ValidTriggerTypes).HasFlag(triggerType) &&
-            IsReactionMatch(ct, reaction.Emote)).ToArray();
+            IsReactionMatch(ct, reaction.Emoji)).ToArray();
 
         if (reactionTriggers.Length == 0)
             return;
@@ -3188,7 +3181,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
         var msg = await message.GetOrDownloadAsync().ConfigureAwait(false);
         var ch = await channel.GetOrDownloadAsync().ConfigureAwait(false);
 
-        if (msg is null || ch is not IGuildChannel guildChannel)
+        if (msg is null || ch is not Channel guildChannel)
             return;
 
         var guild = guildChannel.Guild;
@@ -3218,10 +3211,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
                     var pc = await perms.GetCacheFor(guild.Id);
 
                     // Create a fake message for permission checking
-                    var fakeMsg = new MewdekoUserMessage
-                    {
-                        Author = user, Content = ct.Trigger, Channel = ch
-                    };
+                    var fakeMsg = SyntheticMessage.Create(user, ch, ct.Trigger);
 
                     if (!pc.Permissions.CheckPermissions(fakeMsg, ct.Trigger, "ActualChatTriggers", out var index,
                             ct.Id.ToString()))
@@ -3263,7 +3253,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// <param name="trigger">The trigger to check against.</param>
     /// <param name="emote">The emote that was reacted with.</param>
     /// <returns>True if the reaction matches the trigger pattern.</returns>
-    private static bool IsReactionMatch(CTModel trigger, IEmote emote)
+    private static bool IsReactionMatch(CTModel trigger, Emoji emote)
     {
         // For reaction triggers, the Trigger field contains the emoji/emote to match
         if (string.IsNullOrWhiteSpace(trigger.Trigger))
@@ -3275,7 +3265,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
         return emote switch
         {
             Emoji emoji => triggerEmote.Equals(emoji.Name, StringComparison.OrdinalIgnoreCase),
-            Emote customEmote => triggerEmote.Equals(customEmote.Name, StringComparison.OrdinalIgnoreCase) ||
+            Emoji customEmote => triggerEmote.Equals(customEmote.Name, StringComparison.OrdinalIgnoreCase) ||
                                  triggerEmote.Equals(customEmote.ToString(), StringComparison.OrdinalIgnoreCase),
             _ => false
         };
@@ -3291,8 +3281,8 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// <param name="message">The message that was reacted to.</param>
     /// <param name="reaction">The reaction that was added.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    private async Task TryExecuteReactionTrigger(CTModel ct, IGuild guild, IMessageChannel channel, IUser user,
-        IUserMessage message, SocketReaction reaction)
+    private async Task TryExecuteReactionTrigger(CTModel ct, SocketGuild guild, Channel channel, IUser user,
+        Message message, SocketReaction reaction)
     {
         // Update usage count
         await IncrementTriggerUsage(ct).ConfigureAwait(false);
@@ -3305,16 +3295,11 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
         }
 
         // Create a fake message for the reaction trigger
-        var fakeMsg = new MewdekoUserMessage
-        {
-            Author = user,
-            Content =
-                $"{reaction.Emote} {strings.CtReactionOn(guild.Id)} {(message.Content?.Length > 50 ? message.Content[..50] + strings.CtContentTruncated(guild.Id) : message.Content ?? "")}",
-            Channel = channel
-        };
+        var fakeMsg = SyntheticMessage.Create(user, channel,
+            $"{reaction.Emoji} {strings.CtReactionOn(guild.Id)} {(message.Content?.Length > 50 ? message.Content[..50] + strings.CtContentTruncated(guild.Id) : message.Content ?? "")}");
 
         // Send the response using the same method as regular triggers
-        IUserMessage? sentMsg = null;
+        Message? sentMsg = null;
         foreach (var response in await SelectResponsesAsync(ct).ConfigureAwait(false))
         {
             sentMsg = await ct.Send(fakeMsg, client, false, dbFactory, placeholders, null, response)
@@ -3357,8 +3342,8 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// <param name="message">The message that was reacted to.</param>
     /// <param name="channel">The channel where the reaction occurred.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    private async Task HandleRoleOperations(CTModel ct, IGuild guild, IUser user, IUserMessage? message,
-        IMessageChannel channel)
+    private async Task HandleRoleOperations(CTModel ct, SocketGuild guild, IUser user, Message? message,
+        Channel channel)
     {
         try
         {
@@ -3366,7 +3351,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
             if (guildUser is null)
                 return;
 
-            var targetUsers = new List<IGuildUser>();
+            var targetUsers = new List<SocketGuildMember>();
 
             // Determine target users based on RoleGrantType
             switch ((CtRoleGrantType)ct.RoleGrantType)

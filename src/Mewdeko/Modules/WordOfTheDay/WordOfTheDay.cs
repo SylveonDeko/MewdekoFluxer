@@ -1,4 +1,3 @@
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.WordOfTheDay.Common;
 using Mewdeko.Modules.WordOfTheDay.Services;
@@ -65,7 +64,7 @@ public class WordOfTheDay : MewdekoModuleBase<WordOfTheDayService>
         if (usedFallback)
             note = Strings.WotdTemplateFallback(ctx.Guild.Id);
         var content = note ?? (posted is null ? text : null);
-        await ctx.Channel.SendMessageAsync(content, embeds: embeds);
+        await ctx.Channel.SendAsync(content, embeds: embeds);
     }
 
     /// <summary>
@@ -107,7 +106,7 @@ public class WordOfTheDay : MewdekoModuleBase<WordOfTheDayService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task WotdChannel(ITextChannel? channel = null)
+    public async Task WotdChannel(Channel? channel = null)
     {
         if (channel is null)
         {
@@ -177,7 +176,7 @@ public class WordOfTheDay : MewdekoModuleBase<WordOfTheDayService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task WotdPingRole(IRole? role = null)
+    public async Task WotdPingRole(SocketRole? role = null)
     {
         await Service.UpdateConfigAsync(ctx.Guild.Id, c => c.PingRoleId = role?.Id);
 
@@ -380,7 +379,7 @@ public class WordOfTheDay : MewdekoModuleBase<WordOfTheDayService>
         var title = Strings.WotdHistoryTitle(ctx.Guild.Id);
         var body = WotdFormatter.FormatHistory(history);
         var embed = new EmbedBuilder().WithOkColor().WithTitle(title).WithDescription(body);
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -395,7 +394,7 @@ public class WordOfTheDay : MewdekoModuleBase<WordOfTheDayService>
         var customCount = (await Service.GetCustomWordsAsync(ctx.Guild.Id)).Count;
         var ruleCount = (await Service.GetScheduleRulesAsync(ctx.Guild.Id)).Count;
         var embed = WotdFormatter.BuildConfigEmbed(Strings, ctx.Guild.Id, config, customCount, ruleCount);
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -497,7 +496,7 @@ public class WordOfTheDay : MewdekoModuleBase<WordOfTheDayService>
         }
 
         var embed = WotdFormatter.BuildScheduleEmbed(Strings, ctx.Guild.Id, rules, today);
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>

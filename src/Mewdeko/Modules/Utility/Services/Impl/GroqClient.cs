@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System.Threading.Channels;
+using Channel = Fluxer.Net.Channel;
+using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -115,7 +117,7 @@ public class GroqClient : IAiClient
             var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
 
             // Create a channel to stream the responses
-            var channel = Channel.CreateUnbounded<string>();
+            var channel = System.Threading.Channels.Channel.CreateUnbounded<string>();
 
             // Process the stream in a separate task
             _ = Task.Run(async () =>

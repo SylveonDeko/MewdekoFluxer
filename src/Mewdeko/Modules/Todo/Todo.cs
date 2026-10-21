@@ -1,6 +1,5 @@
 using System.Text;
 using DataModel;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Todo.Services;
 
@@ -34,7 +33,7 @@ public class Todo : MewdekoModuleBase<TodoService>
             .WithColor(Color.Green)
             .WithTimestamp(todoList.CreatedAt);
 
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -62,7 +61,7 @@ public class Todo : MewdekoModuleBase<TodoService>
             .WithColor(Color.Blue)
             .WithTimestamp(todoList.CreatedAt);
 
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -98,7 +97,7 @@ public class Todo : MewdekoModuleBase<TodoService>
             .WithColor(Color.Purple)
             .WithFooter(Strings.TodoListsFooter(ctx.Guild.Id));
 
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -123,7 +122,7 @@ public class Todo : MewdekoModuleBase<TodoService>
             .WithColor(Color.Green)
             .WithTimestamp(item.CreatedAt);
 
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -157,7 +156,7 @@ public class Todo : MewdekoModuleBase<TodoService>
             .WithColor(Color.Green)
             .WithTimestamp(item.CreatedAt);
 
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -183,7 +182,7 @@ public class Todo : MewdekoModuleBase<TodoService>
                 .WithTitle(Strings.TodoListTitle(ctx.Guild.Id, list.Name))
                 .WithDescription(Strings.TodoListEmpty(ctx.Guild.Id))
                 .WithColor(Color.LightGrey);
-            await ctx.Channel.SendMessageAsync(embed: embedBuilder.Build());
+            await ctx.Channel.SendAsync(embed: embedBuilder.Build());
             return;
         }
 
@@ -233,7 +232,7 @@ public class Todo : MewdekoModuleBase<TodoService>
             .WithColor(Color.Parse(list.Color ?? "#7289da"))
             .WithFooter(Strings.TodoShowFooter(ctx.Guild.Id, listId));
 
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -576,7 +575,7 @@ public class Todo : MewdekoModuleBase<TodoService>
             .WithDescription(sb.ToString())
             .WithColor(Color.Blue);
 
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -648,7 +647,7 @@ public class Todo : MewdekoModuleBase<TodoService>
             .WithDescription(sb.ToString())
             .WithColor(Color.Orange);
 
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -730,6 +729,6 @@ public class Todo : MewdekoModuleBase<TodoService>
             .WithDescription(sb.ToString())
             .WithColor(Color.Gold);
 
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 }

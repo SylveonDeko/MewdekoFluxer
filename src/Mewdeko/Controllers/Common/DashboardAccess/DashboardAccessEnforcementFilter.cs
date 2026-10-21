@@ -16,7 +16,7 @@ namespace Mewdeko.Controllers.Common.DashboardAccess;
 ///     with <see cref="SkipDashboardAccessAttribute" />, are left alone.
 /// </summary>
 public sealed class DashboardAccessEnforcementFilter(
-    DiscordShardedClient client,
+    FluxerClient client,
     DashboardAccessService dashboardAccessService) : IAsyncActionFilter
 {
     /// <inheritdoc />

@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Humanizer;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Suggestions.Services;
@@ -22,7 +22,7 @@ public partial class Suggestions : MewdekoModuleBase<SuggestionsService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task SetSuggestChannel(ITextChannel? channel = null)
+    public async Task SetSuggestChannel(Channel? channel = null)
     {
         if (channel == null)
         {
@@ -78,8 +78,8 @@ public partial class Suggestions : MewdekoModuleBase<SuggestionsService>
             .AddField("Last Changed By",
                 suggest.StateChangeUser == 0 ? "Nobody" : $"<@{suggest.StateChangeUser}> `{suggest.StateChangeUser}`")
             .AddField("State Change Count", suggest.StateChangeCount)
-            .AddField("Emote Count", string.Join("\n", emoteCount));
-        await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+            .AddField("Emoji Count", string.Join("\n", emoteCount));
+        await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
     }
 
 
@@ -152,8 +152,8 @@ public partial class Suggestions : MewdekoModuleBase<SuggestionsService>
             return;
         }
 
-        await Service.SendSuggestion(ctx.Guild, ctx.User as IGuildUser, ctx.Client as DiscordShardedClient,
-            suggestion, ctx.Channel as ITextChannel).ConfigureAwait(false);
+        await Service.SendSuggestion(ctx.Guild, ctx.User as SocketGuildMember, ctx.Client as FluxerClient,
+            suggestion, ctx.Channel as Channel).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -173,7 +173,7 @@ public partial class Suggestions : MewdekoModuleBase<SuggestionsService>
         try
         {
             await Service.SendDenyEmbed(ctx.Guild, ctx.User, sid,
-                ctx.Channel as ITextChannel, reason is null ? "" : reason.EscapeWeirdStuff());
+                ctx.Channel as Channel, reason is null ? "" : reason.EscapeWeirdStuff());
         }
         catch (InvalidOperationException e)
         {
@@ -198,7 +198,7 @@ public partial class Suggestions : MewdekoModuleBase<SuggestionsService>
         try
         {
             await Service.SendAcceptEmbed(ctx.Guild, ctx.User, sid,
-                ctx.Channel as ITextChannel, reason is null ? "" : reason.EscapeWeirdStuff());
+                ctx.Channel as Channel, reason is null ? "" : reason.EscapeWeirdStuff());
         }
         catch (InvalidOperationException e)
         {
@@ -223,7 +223,7 @@ public partial class Suggestions : MewdekoModuleBase<SuggestionsService>
         try
         {
             await Service.SendImplementEmbed(ctx.Guild, ctx.User, sid,
-                ctx.Channel as ITextChannel, reason is null ? "" : reason.EscapeWeirdStuff());
+                ctx.Channel as Channel, reason is null ? "" : reason.EscapeWeirdStuff());
         }
         catch (InvalidOperationException e)
         {
@@ -248,7 +248,7 @@ public partial class Suggestions : MewdekoModuleBase<SuggestionsService>
         try
         {
             await Service.SendConsiderEmbed(ctx.Guild, ctx.User, sid,
-                ctx.Channel as ITextChannel, reason is null ? "" : reason.EscapeWeirdStuff());
+                ctx.Channel as Channel, reason is null ? "" : reason.EscapeWeirdStuff());
         }
         catch (InvalidOperationException e)
         {

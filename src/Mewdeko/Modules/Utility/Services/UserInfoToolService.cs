@@ -9,7 +9,7 @@ namespace Mewdeko.Modules.Utility.Services;
 /// </summary>
 public class UserInfoToolService : INService
 {
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly XpService xpService;
 
@@ -19,7 +19,7 @@ public class UserInfoToolService : INService
     /// <param name="dbFactory">Database connection factory</param>
     /// <param name="xpService">XP service for user stats</param>
     /// <param name="client">Discord client for guild/user access</param>
-    public UserInfoToolService(IDataConnectionFactory dbFactory, XpService xpService, DiscordShardedClient client)
+    public UserInfoToolService(IDataConnectionFactory dbFactory, XpService xpService, FluxerClient client)
     {
         this.dbFactory = dbFactory;
         this.xpService = xpService;

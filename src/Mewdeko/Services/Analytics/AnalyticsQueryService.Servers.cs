@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Threading;
 using LinqToDB.Async;
 using Mewdeko.Controllers.Common.Analytics;
@@ -68,7 +68,7 @@ public sealed partial class AnalyticsQueryService
                 guild.Name,
                 client.GetShardIdFor(guild),
                 Shape(guild),
-                guild.CurrentUser?.JoinedAt?.UtcDateTime,
+                guild.CurrentUser?.JoinedAt.UtcDateTime,
                 commandsByGuild.GetValueOrDefault(guild.Id),
                 eventsByGuild.GetValueOrDefault(guild.Id),
                 used.Count,
@@ -94,9 +94,9 @@ public sealed partial class AnalyticsQueryService
             if (user.Status is UserStatus.Online or UserStatus.Idle or UserStatus.DoNotDisturb) online++;
         }
 
-        var humans = Math.Max(0, guild.MemberCount - bots);
-        return new GuildShape(guild.MemberCount, humans, bots, online, guild.PremiumSubscriptionCount,
-            (int)guild.PremiumTier, guild.Channels.Count, guild.Roles.Count,
+        var humans = Math.Max(0, guild.TotalMembers - bots);
+        return new GuildShape(guild.TotalMembers, humans, bots, online, 0, 0, guild.Channels.Count,
+            guild.Roles.Count,
             guild.OwnerId.ToString(CultureInfo.InvariantCulture), guild.CreatedAt.UtcDateTime);
     }
 

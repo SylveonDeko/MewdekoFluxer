@@ -15,7 +15,7 @@ namespace Mewdeko.Controllers;
 [Route("botapi/[controller]/{guildId}")]
 [Authorize("ApiKeyPolicy")]
 public class ChatController(
-    DiscordShardedClient client,
+    FluxerClient client,
     ChatLogService chatLogService,
     IDashboardAuditContext auditContext) : Controller
 {
@@ -34,7 +34,7 @@ public class ChatController(
         if (!DateTime.TryParse(after, out var afterDate))
             return BadRequest("Invalid date format");
 
-        var messagesResult = new List<IMessage>();
+        var messagesResult = new List<Message>();
         var messagesAsync = await channel.GetMessagesAsync(1000).FlattenAsync();
         messagesResult.AddRange(messagesAsync.Where(m => m.Timestamp >= afterDate));
 

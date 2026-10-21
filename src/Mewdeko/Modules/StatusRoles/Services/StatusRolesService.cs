@@ -12,7 +12,7 @@ namespace Mewdeko.Modules.StatusRoles.Services;
 public class StatusRolesService : INService
 {
     private readonly IFusionCache cache;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly ConcurrentDictionary<ulong, HashSet<StatusRole>> guildStatusRoles = new();
     private readonly ILogger<StatusRolesService> logger;
@@ -25,14 +25,14 @@ public class StatusRolesService : INService
     /// <param name="eventHandler">The event handler.</param>
     /// <param name="cache">The data cache service.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
-    public StatusRolesService(DiscordShardedClient client, IDataConnectionFactory dbFactory, EventHandler eventHandler,
+    public StatusRolesService(FluxerClient client, IDataConnectionFactory dbFactory, EventHandler eventHandler,
         IFusionCache cache, ILogger<StatusRolesService> logger)
     {
         this.client = client;
         this.dbFactory = dbFactory;
         this.cache = cache;
         this.logger = logger;
-        eventHandler.Subscribe("PresenceUpdated", "StatusRolesService", EventHandlerOnPresenceUpdated);
+        eventHandler.PresenceUpdated.Subscribe("StatusRolesService", EventHandlerOnPresenceUpdated);
         _ = OnReadyAsync();
     }
 
@@ -74,7 +74,7 @@ public class StatusRolesService : INService
         return statusRoles;
     }
 
-    private async Task EventHandlerOnPresenceUpdated(SocketUser args, SocketPresence args2, SocketPresence args3)
+    private async Task EventHandlerOnPresenceUpdated(User args, PresenceSnapshot? args2, PresenceSnapshot args3)
     {
         var isOffline = args3?.Status == UserStatus.Offline || args3?.Status == UserStatus.Invisible;
         if (isOffline)
@@ -83,8 +83,8 @@ public class StatusRolesService : INService
         if (guildStatusRoles.IsEmpty)
             return;
 
-        var status = args3.Activities?.FirstOrDefault() as CustomStatusGame;
-        var currentState = status?.State;
+        var status = args3.CustomStatusText;
+        var currentState = status;
         var currentEncodedStatus = currentState?.ToBase64();
 
         string cachedStatus;
@@ -105,11 +105,11 @@ public class StatusRolesService : INService
         await cache.SetAsync($"userStatus_{args.Id}", currentEncodedStatus);
 
         // Process role changes using cached status as "before"
-        CustomStatusGame beforeStatus = null;
+        string? beforeStatus = null;
         if (!string.IsNullOrEmpty(cachedStatus))
         {
             var decodedStatus = Encoding.UTF8.GetString(Convert.FromBase64String(cachedStatus));
-            beforeStatus = new CustomStatusGame(decodedStatus);
+            beforeStatus = decodedStatus;
         }
 
         foreach (var (guildId, statusRoles) in guildStatusRoles)
@@ -125,7 +125,7 @@ public class StatusRolesService : INService
         }
     }
 
-    private async Task ProcessStatusRole(SocketGuildUser user, CustomStatusGame status, CustomStatusGame? beforeStatus,
+    private async Task ProcessStatusRole(SocketGuildMember user, string? status, string? beforeStatus,
         StatusRole? statusRole)
     {
         var toAdd = string.IsNullOrWhiteSpace(statusRole.ToAdd)
@@ -135,9 +135,9 @@ public class StatusRolesService : INService
             ? []
             : statusRole.ToRemove.Split(" ").Select(ulong.Parse).ToList();
 
-        if (status?.State?.Contains(statusRole.Status) != true)
+        if (status?.Contains(statusRole.Status) != true)
         {
-            if (beforeStatus?.State?.Contains(statusRole.Status) == true)
+            if (beforeStatus?.Contains(statusRole.Status) == true)
             {
                 await HandleRoleRemoval(user, statusRole, toAdd, toRemove);
             }
@@ -145,13 +145,13 @@ public class StatusRolesService : INService
             return;
         }
 
-        if (beforeStatus?.State?.Contains(statusRole.Status) == true)
+        if (beforeStatus?.Contains(statusRole.Status) == true)
             return;
 
         await HandleRoleAddition(user, statusRole, toAdd, toRemove);
     }
 
-    private async Task HandleRoleRemoval(SocketGuildUser user, StatusRole statusRole, List<ulong> toAdd,
+    private async Task HandleRoleRemoval(SocketGuildMember user, StatusRole statusRole, List<ulong> toAdd,
         List<ulong> toRemove)
     {
         if (statusRole.RemoveAdded)
@@ -165,7 +165,7 @@ public class StatusRolesService : INService
         }
     }
 
-    private async Task HandleRoleAddition(SocketGuildUser user, StatusRole statusRole, List<ulong> toAdd,
+    private async Task HandleRoleAddition(SocketGuildMember user, StatusRole statusRole, List<ulong> toAdd,
         List<ulong> toRemove)
     {
         await RemoveRoles(user, toRemove);
@@ -178,7 +178,7 @@ public class StatusRolesService : INService
         }
     }
 
-    private async Task RemoveRoles(SocketGuildUser user, IEnumerable<ulong> roleIds)
+    private async Task RemoveRoles(SocketGuildMember user, IEnumerable<ulong> roleIds)
     {
         try
         {
@@ -190,7 +190,7 @@ public class StatusRolesService : INService
         }
     }
 
-    private async Task AddRoles(SocketGuildUser user, IEnumerable<ulong> roleIds)
+    private async Task AddRoles(SocketGuildMember user, IEnumerable<ulong> roleIds)
     {
         try
         {
@@ -202,17 +202,17 @@ public class StatusRolesService : INService
         }
     }
 
-    private async Task SendStatusEmbed(SocketGuildUser user, ITextChannel channel, string embedText)
+    private async Task SendStatusEmbed(SocketGuildMember user, Channel channel, string embedText)
     {
         var rep = new ReplacementBuilder().WithDefault(user, channel, user.Guild, client).Build();
 
         if (SmartEmbed.TryParse(rep.Replace(embedText), user.Guild.Id, out var embeds, out var plainText))
         {
-            await channel.SendMessageAsync(plainText, embeds: embeds);
+            await channel.SendAsync(plainText, embeds: embeds);
         }
         else
         {
-            await channel.SendMessageAsync(rep.Replace(embedText));
+            await channel.SendAsync(rep.Replace(embedText));
         }
     }
 

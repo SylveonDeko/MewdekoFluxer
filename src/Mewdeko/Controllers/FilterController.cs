@@ -225,8 +225,8 @@ public class FilterController(
     [HttpPut("warnings")]
     public async Task<IActionResult> UpdateWarningSettings(ulong guildId, [FromBody] WarningSettingsRequest request)
     {
-        // Note: These methods require an IGuild object, so we'll need to fetch it
-        var client = HttpContext.RequestServices.GetRequiredService<DiscordShardedClient>();
+        // Note: These methods require an SocketGuild object, so we'll need to fetch it
+        var client = HttpContext.RequestServices.GetRequiredService<FluxerClient>();
         var guild = client.GetGuild(guildId);
 
         if (guild == null)

@@ -1,5 +1,4 @@
 using DataModel;
-using Discord.Commands;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.Attributes.TextCommands;
@@ -87,7 +86,7 @@ public partial class Permissions(
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
     [Priority(0)]
-    public async Task PermRole([Remainder] IRole? role = null)
+    public async Task PermRole([Remainder] SocketRole? role = null)
     {
         if (role != null && role == role.Guild.EveryoneRole)
             return;
@@ -395,7 +394,7 @@ public partial class Permissions(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task UsrCmd(CommandOrCrInfo command, PermissionAction action, [Remainder] IGuildUser user)
+    public async Task UsrCmd(CommandOrCrInfo command, PermissionAction action, [Remainder] SocketGuildMember user)
     {
         await Service.AddPermissions(ctx.Guild.Id, new Permission1
         {
@@ -435,7 +434,7 @@ public partial class Permissions(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task UsrMdl(ModuleOrCrInfo module, PermissionAction action, [Remainder] IGuildUser user)
+    public async Task UsrMdl(ModuleOrCrInfo module, PermissionAction action, [Remainder] SocketGuildMember user)
     {
         await Service.AddPermissions(ctx.Guild.Id, new Permission1
         {
@@ -474,7 +473,7 @@ public partial class Permissions(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task RoleCmd(CommandOrCrInfo command, PermissionAction action, [Remainder] IRole role)
+    public async Task RoleCmd(CommandOrCrInfo command, PermissionAction action, [Remainder] SocketRole role)
     {
         if (role == role.Guild.EveryoneRole)
             return;
@@ -517,7 +516,7 @@ public partial class Permissions(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task RoleMdl(ModuleOrCrInfo module, PermissionAction action, [Remainder] IRole role)
+    public async Task RoleMdl(ModuleOrCrInfo module, PermissionAction action, [Remainder] SocketRole role)
     {
         if (role == role.Guild.EveryoneRole)
             return;
@@ -559,7 +558,7 @@ public partial class Permissions(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task ChnlCmd(CommandOrCrInfo command, PermissionAction action, [Remainder] ITextChannel chnl)
+    public async Task ChnlCmd(CommandOrCrInfo command, PermissionAction action, [Remainder] Channel chnl)
     {
         await Service.AddPermissions(ctx.Guild.Id, new Permission1
         {
@@ -599,7 +598,7 @@ public partial class Permissions(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task ChnlMdl(ModuleOrCrInfo module, PermissionAction action, [Remainder] ITextChannel chnl)
+    public async Task ChnlMdl(ModuleOrCrInfo module, PermissionAction action, [Remainder] Channel chnl)
     {
         await Service.AddPermissions(ctx.Guild.Id, new Permission1
         {
@@ -637,7 +636,7 @@ public partial class Permissions(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task AllChnlMdls(PermissionAction action, [Remainder] ITextChannel chnl)
+    public async Task AllChnlMdls(PermissionAction action, [Remainder] Channel chnl)
     {
         await Service.AddPermissions(ctx.Guild.Id, new Permission1
         {
@@ -672,7 +671,7 @@ public partial class Permissions(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task CatCmd(CommandOrCrInfo command, PermissionAction action, [Remainder] ICategoryChannel chnl)
+    public async Task CatCmd(CommandOrCrInfo command, PermissionAction action, [Remainder] Channel chnl)
     {
         await Service.AddPermissions(ctx.Guild.Id, new Permission1
         {
@@ -712,7 +711,7 @@ public partial class Permissions(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task CatMdl(ModuleOrCrInfo module, PermissionAction action, [Remainder] ICategoryChannel chnl)
+    public async Task CatMdl(ModuleOrCrInfo module, PermissionAction action, [Remainder] Channel chnl)
     {
         await Service.AddPermissions(ctx.Guild.Id, new Permission1
         {
@@ -750,7 +749,7 @@ public partial class Permissions(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task AllCatMdls(PermissionAction action, [Remainder] ICategoryChannel chnl)
+    public async Task AllCatMdls(PermissionAction action, [Remainder] Channel chnl)
     {
         await Service.AddPermissions(ctx.Guild.Id, new Permission1
         {
@@ -784,7 +783,7 @@ public partial class Permissions(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task AllRoleMdls(PermissionAction action, [Remainder] IRole role)
+    public async Task AllRoleMdls(PermissionAction action, [Remainder] SocketRole role)
     {
         if (role == role.Guild.EveryoneRole)
             return;

@@ -16,7 +16,7 @@ namespace Mewdeko.Controllers;
 public class AfkController : Controller
 {
     private readonly AfkService afk;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly ILogger<AfkController> logger;
     private readonly IDashboardAuditContext auditContext;
@@ -29,7 +29,7 @@ public class AfkController : Controller
     /// <param name="dbFactory">The factory for creating database connections.</param>
     /// <param name="logger">Logger for this class.</param>
     /// <param name="auditContext">Records before/after state for the dashboard audit log.</param>
-    public AfkController(AfkService afk, DiscordShardedClient client, IDataConnectionFactory dbFactory,
+    public AfkController(AfkService afk, FluxerClient client, IDataConnectionFactory dbFactory,
         ILogger<AfkController> logger, IDashboardAuditContext auditContext)
     {
         this.afk = afk;

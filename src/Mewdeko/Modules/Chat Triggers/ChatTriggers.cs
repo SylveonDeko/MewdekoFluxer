@@ -1,7 +1,8 @@
+using System.Threading.Channels;
+using Channel = Fluxer.Net.Channel;
 using System.Net.Http;
 using System.Text.Json;
 using DataModel;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;
 using Mewdeko.Modules.Chat_Triggers.Common;
@@ -81,7 +82,7 @@ public class ChatTriggers(
             input = await client.GetStringAsync(input).ConfigureAwait(false);
         }
 
-        var succ = await Service.ImportCrsAsync(ctx.User as IGuildUser, input).ConfigureAwait(false);
+        var succ = await Service.ImportCrsAsync(ctx.User as SocketGuildMember, input).ConfigureAwait(false);
         if (!succ)
         {
             await ReplyErrorAsync(Strings.ExprImportInvalidData(ctx.Guild.Id)).ConfigureAwait(false);
@@ -577,9 +578,9 @@ public class ChatTriggers(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task CtrGrantToggle(int id, IRole role)
+    public async Task CtrGrantToggle(int id, SocketRole role)
     {
-        var gUsr = ctx.User as IGuildUser;
+        var gUsr = ctx.User as SocketGuildMember;
 
         if (!role.CanManageRole(gUsr))
         {
@@ -620,9 +621,9 @@ public class ChatTriggers(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task CtrRemoveToggle(int id, IRole role)
+    public async Task CtrRemoveToggle(int id, SocketRole role)
     {
-        var gUsr = ctx.User as IGuildUser;
+        var gUsr = ctx.User as SocketGuildMember;
 
         if (!role.CanManageRole(gUsr))
         {
@@ -673,7 +674,7 @@ public class ChatTriggers(
         else
         {
             await ctx.Channel
-                .SendMessageAsync(embed: Service.GetEmbed(res, ctx.Guild?.Id, Strings.EditedChatTrig(ctx.Guild.Id))
+                .SendAsync(embed: Service.GetEmbed(res, ctx.Guild?.Id, Strings.EditedChatTrig(ctx.Guild.Id))
                     .Build())
                 .ConfigureAwait(false);
         }
@@ -716,7 +717,7 @@ public class ChatTriggers(
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task CtCpSetChannel(int id, ITextChannel channel)
+    public async Task CtCpSetChannel(int id, Channel channel)
     {
         var res = await Service.SetCrosspostingChannelId(ctx.Guild?.Id, id, channel.Id).ConfigureAwait(false);
         if (res is null)
@@ -821,7 +822,7 @@ public class ChatTriggers(
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task CtEventChannel(int id, ITextChannel? channel = null)
+    public async Task CtEventChannel(int id, Channel? channel = null)
     {
         var res = await Service.ModifyAsync(ctx.Guild?.Id, id, ct => ct.EventChannelId = channel?.Id ?? 0)
             .ConfigureAwait(false);
@@ -1019,7 +1020,7 @@ public class ChatTriggers(
         }
 
         var (matched, blocker) = await Service
-            .TestTriggerAsync(ct, (SocketGuild)ctx.Guild, (IGuildUser)ctx.User, ctx.Channel, sample)
+            .TestTriggerAsync(ct, (SocketGuild)ctx.Guild, (SocketGuildMember)ctx.User, ctx.Channel, sample)
             .ConfigureAwait(false);
 
         var eb = new EmbedBuilder()
@@ -1079,7 +1080,7 @@ public class ChatTriggers(
         var lines = recent.Select(x =>
         {
             var when = x.DateAdded.HasValue
-                ? TimestampTag.FromDateTime(x.DateAdded.Value, TimestampTagStyles.Relative).ToString()
+                ? TimestampTag.FromDateTime(x.DateAdded.Value, TimestampTagStyle.Relative).ToString()
                 : "-";
             return $"<@{x.UserId}> in <#{x.ChannelId}> {when}";
         }).ToList();

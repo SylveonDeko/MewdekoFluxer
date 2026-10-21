@@ -10,5 +10,5 @@ public record MewdekoPlayerOptions : LavalinkPlayerOptions
     /// <summary>
     ///     The text channel the player was started in.
     /// </summary>
-    public IMessageChannel Channel { get; init; }
+    public Channel Channel { get; init; }
 }

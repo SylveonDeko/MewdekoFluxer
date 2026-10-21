@@ -1,5 +1,4 @@
 ﻿using DataModel;
-using Discord.Commands;
 using Humanizer;
 using LinqToDB;
 using LinqToDB.Async;
@@ -52,7 +51,7 @@ public partial class Permissions
         public async Task CmdCooldown(CommandOrCrInfo command, StoopidTime? time = null)
         {
             time ??= StoopidTime.FromInput("0s");
-            var channel = (ITextChannel)ctx.Channel;
+            var channel = (Channel)ctx.Channel;
             var guildId = channel.Guild.Id;
 
             if (time.Time.TotalSeconds is < 0 or > 90000)
@@ -114,7 +113,7 @@ public partial class Permissions
         [RequireContext(ContextType.Guild)]
         public async Task AllCmdCooldowns()
         {
-            var channel = (ITextChannel)ctx.Channel;
+            var channel = (Channel)ctx.Channel;
             var guildId = channel.Guild.Id;
 
             await using var db = await dbFactory.CreateConnectionAsync();

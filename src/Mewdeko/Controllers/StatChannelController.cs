@@ -13,7 +13,7 @@ namespace Mewdeko.Controllers;
 [Authorize("ApiKeyPolicy")]
 public class StatChannelController(
     StatChannelService statChannelService,
-    DiscordShardedClient client,
+    FluxerClient client,
     IDashboardAuditContext auditContext) : Controller
 {
     /// <summary>

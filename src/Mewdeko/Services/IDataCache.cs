@@ -1,5 +1,4 @@
 ﻿using DataModel;
-using Mewdeko.Modules.Music.Common;
 using Mewdeko.Modules.Searches.Services;
 using Mewdeko.Modules.Utility.Common;
 using StackExchange.Redis;
@@ -97,64 +96,12 @@ public interface IDataCache
     public Task<List<MusicPlaylist>> GetPlaylists(ulong userId);
 
     /// <summary>
-    ///     Sets the player state for a specific guild.
-    /// </summary>
-    /// <param name="guildId">The ID of the guild.</param>
-    /// <param name="state">The player state to save.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    public Task SetPlayerState(ulong guildId, MusicPlayerState state);
-
-    /// <summary>
-    ///     Retrieves the player state for a specific guild.
-    /// </summary>
-    /// <param name="guildId">The ID of the guild.</param>
-    /// <returns>The player state if found; otherwise, null.</returns>
-    public Task<MusicPlayerState?> GetPlayerState(ulong guildId);
-
-    /// <summary>
-    ///     Removes the player state for a specific guild.
-    /// </summary>
-    /// <param name="guildId">The ID of the guild.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    public Task RemovePlayerState(ulong guildId);
-
-    /// <summary>
     ///     Deletes a playlist.
     /// </summary>
     /// <param name="userId">The guild ID.</param>
     /// <param name="name">The name of the playlist to delete.</param>
     /// <returns>True if playlist was deleted, false if not found.</returns>
     public Task<bool> DeletePlaylist(ulong userId, string name);
-
-    /// <summary>
-    ///     Retrieves music queue for a server.
-    /// </summary>
-    /// <param name="id">The server ID.</param>
-    /// <returns>The music queue.</returns>
-    public Task<List<MewdekoTrack>> GetMusicQueue(ulong id);
-
-    /// <summary>
-    ///     Sets music queue for a server.
-    /// </summary>
-    /// <param name="id">The server ID.</param>
-    /// <param name="tracks">The music queue.</param>
-    /// <returns>A task representing the operation.</returns>
-    public Task SetMusicQueue(ulong id, List<MewdekoTrack> tracks);
-
-    /// <summary>
-    ///     Sets the current track for a server.
-    /// </summary>
-    /// <param name="id">The server ID.</param>
-    /// <param name="track">The current track.</param>
-    /// <returns>A task representing the operation.</returns>
-    public Task SetCurrentTrack(ulong id, MewdekoTrack? track);
-
-    /// <summary>
-    ///     Retrieves the current track for a server.
-    /// </summary>
-    /// <param name="id">The server ID.</param>
-    /// <returns>The current track.</returns>
-    public Task<MewdekoTrack?> GetCurrentTrack(ulong id);
 
     /// <summary>
     ///     Gets music player settings for a server.

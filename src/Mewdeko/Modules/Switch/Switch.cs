@@ -1,6 +1,5 @@
 using System.Net.Http;
 using System.Text.RegularExpressions;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Switch.Common;
 using Mewdeko.Modules.Switch.Services;

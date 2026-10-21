@@ -1,5 +1,4 @@
 ﻿using DataModel;
-using Discord.Net;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Modules.Utility.Services;
@@ -16,7 +15,7 @@ public class RoleGreetService : INService
     /// </summary>
     private const string DefaultMessage = "Welcome %user.mention%!";
 
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly InviteCountService inviteCountService;
     private readonly ILogger<RoleGreetService> logger;
@@ -29,7 +28,7 @@ public class RoleGreetService : INService
     /// <param name="eventHandler">The event handler for guild member update events.</param>
     /// <param name="inviteCountService">The invite count service</param>
     /// <param name="logger">The logger instance for structured logging.</param>
-    public RoleGreetService(IDataConnectionFactory dbFactory, DiscordShardedClient client, EventHandler eventHandler,
+    public RoleGreetService(IDataConnectionFactory dbFactory, FluxerClient client, EventHandler eventHandler,
         InviteCountService inviteCountService, ILogger<RoleGreetService> logger)
     {
         this.client = client;
@@ -186,7 +185,7 @@ public class RoleGreetService : INService
         }
     }
 
-    private async Task DoRoleGreet(Cacheable<SocketGuildUser, ulong> cacheable, SocketGuildUser socketGuildUser)
+    private async Task DoRoleGreet(Cacheable<SocketGuildMember> cacheable, SocketGuildMember socketGuildUser)
     {
         var user = await cacheable.GetOrDownloadAsync().ConfigureAwait(false);
         if (user == null)
@@ -213,7 +212,7 @@ public class RoleGreetService : INService
         }
     }
 
-    private async Task HandleGreet(RoleGreet greet, SocketGuildUser user, ReplacementBuilder replacer)
+    private async Task HandleGreet(RoleGreet greet, SocketGuildMember user, ReplacementBuilder replacer)
     {
         if (user.IsBot && !greet.GreetBots)
             return;
@@ -236,7 +235,7 @@ public class RoleGreetService : INService
         {
             if (greet.WebhookUrl != null)
             {
-                var webhook = new DiscordWebhookClient(greet.WebhookUrl);
+                var webhook = new FluxerWebhookClient(greet.WebhookUrl);
                 var msgId = await SendSmartEmbedWebhookMessage(webhook, content, user.Guild.Id);
                 if (greet.DeleteTime > 0)
                 {
@@ -249,7 +248,7 @@ public class RoleGreetService : INService
                 await SendSmartEmbedMessage(channel, content, user.Guild.Id, greet.DeleteTime);
             }
         }
-        catch (HttpException ex)
+        catch (FluxerApiException ex)
         {
             if (ex.DiscordCode is DiscordErrorCode.UnknownWebhook or DiscordErrorCode.InvalidWebhookToken
                 or DiscordErrorCode.MissingPermissions)
@@ -260,32 +259,32 @@ public class RoleGreetService : INService
         }
     }
 
-    private static async Task SendSmartEmbedMessage(IMessageChannel channel, string content, ulong guildId,
+    private static async Task SendSmartEmbedMessage(Channel channel, string content, ulong guildId,
         int deleteTime = 0)
     {
         SmartEmbed.TryParse(content, guildId, out var embedData, out var plainText);
         if (!string.IsNullOrWhiteSpace(plainText) || embedData?.Length > 0)
         {
-            var msg = await channel.SendMessageAsync(plainText, embeds: embedData);
+            var msg = await channel.SendAsync(plainText, embeds: embedData);
             if (deleteTime > 0)
                 msg.DeleteAfter(deleteTime);
         }
         else if (!string.IsNullOrWhiteSpace(content))
         {
-            var msg = await channel.SendMessageAsync(content);
+            var msg = await channel.SendAsync(content);
             if (deleteTime > 0)
                 msg.DeleteAfter(deleteTime);
         }
     }
 
-    private async Task<ulong> SendSmartEmbedWebhookMessage(DiscordWebhookClient webhook, string content, ulong guildId)
+    private async Task<ulong> SendSmartEmbedWebhookMessage(FluxerWebhookClient webhook, string content, ulong guildId)
     {
         SmartEmbed.TryParse(content, guildId, out var embedData, out var plainText);
         if (!string.IsNullOrWhiteSpace(plainText) || embedData?.Length > 0)
         {
-            return await webhook.SendMessageAsync(plainText, embeds: embedData);
+            return await webhook.SendAsync(plainText, embeds: embedData);
         }
 
-        return await webhook.SendMessageAsync(content);
+        return await webhook.SendAsync(content);
     }
 }

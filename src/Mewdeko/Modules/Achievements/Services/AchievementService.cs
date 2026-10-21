@@ -80,7 +80,7 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
     /// </summary>
     private static readonly TimeSpan UnlockCacheIdle = TimeSpan.FromMinutes(30);
 
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly CommandHandler commandHandler;
     private readonly IServiceProvider services;
@@ -118,7 +118,7 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
     /// <param name="collector">Analytics collector.</param>
     /// <param name="logger">Logger instance.</param>
     public AchievementService(
-        DiscordShardedClient client,
+        FluxerClient client,
         IDataConnectionFactory dbFactory,
         GeneratedBotStrings strings,
         EventHandler eventHandler,
@@ -196,7 +196,7 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
     /// </summary>
     /// <param name="guild">The guild.</param>
     /// <returns>The prefix.</returns>
-    public Task<string> GetPrefixAsync(IGuild guild)
+    public Task<string> GetPrefixAsync(SocketGuild guild)
     {
         return guildSettings.GetPrefix(guild);
     }

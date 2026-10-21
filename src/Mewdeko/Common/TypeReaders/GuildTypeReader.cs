@@ -1,20 +1,20 @@
-﻿using Discord.Commands;
+﻿
 
 namespace Mewdeko.Common.TypeReaders;
 
 /// <summary>
-///     Type reader for parsing guild inputs into IGuild objects.
+///     Type reader for parsing guild inputs into SocketGuild objects.
 /// </summary>
-public class GuildTypeReader : MewdekoTypeReader<IGuild>
+public class GuildTypeReader : MewdekoTypeReader<SocketGuild>
 {
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="GuildTypeReader" /> class.
     /// </summary>
-    /// <param name="client">The DiscordShardedClient instance.</param>
+    /// <param name="client">The FluxerClient instance.</param>
     /// <param name="cmds">The CommandService instance.</param>
-    public GuildTypeReader(DiscordShardedClient client, CommandService cmds) : base(client, cmds)
+    public GuildTypeReader(FluxerClient client, CommandService cmds) : base(client, cmds)
     {
         this.client = client;
     }

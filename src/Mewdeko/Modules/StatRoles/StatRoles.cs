@@ -1,5 +1,4 @@
 using DataModel;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.StatRoles.Common;
 using Mewdeko.Modules.StatRoles.Services;
@@ -25,7 +24,7 @@ public class StatRoles : MewdekoModuleBase<StatRoleService>
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageRoles)]
     [BotPerm(GuildPermission.ManageRoles)]
-    public async Task StatRoleAdd(IRole role, StatRoleStat stat, long minimum, int lookbackDays = 0,
+    public async Task StatRoleAdd(SocketRole role, StatRoleStat stat, long minimum, int lookbackDays = 0,
         [Remainder] string? name = null)
     {
         await CreateAsync(new StatRole
@@ -53,7 +52,7 @@ public class StatRoles : MewdekoModuleBase<StatRoleService>
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageRoles)]
     [BotPerm(GuildPermission.ManageRoles)]
-    public async Task StatRoleTop(IRole role, StatRoleStat stat, int topEnd, int lookbackDays = 0,
+    public async Task StatRoleTop(SocketRole role, StatRoleStat stat, int topEnd, int lookbackDays = 0,
         [Remainder] string? name = null)
     {
         await CreateAsync(new StatRole
@@ -82,7 +81,7 @@ public class StatRoles : MewdekoModuleBase<StatRoleService>
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageRoles)]
     [BotPerm(GuildPermission.ManageRoles)]
-    public async Task StatRolePercent(IRole role, StatRoleStat stat, int topPercent, int lookbackDays = 0,
+    public async Task StatRolePercent(SocketRole role, StatRoleStat stat, int topPercent, int lookbackDays = 0,
         [Remainder] string? name = null)
     {
         await CreateAsync(new StatRole
@@ -113,7 +112,7 @@ public class StatRoles : MewdekoModuleBase<StatRoleService>
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageRoles)]
     [BotPerm(GuildPermission.ManageRoles)]
-    public async Task StatRoleStreak(IRole role, StatRoleStat stat, long perDay, int requiredDays,
+    public async Task StatRoleStreak(SocketRole role, StatRoleStat stat, long perDay, int requiredDays,
         int lookbackDays = 7, [Remainder] string? name = null)
     {
         if (stat is not (StatRoleStat.Messages or StatRoleStat.VoiceMinutes or StatRoleStat.ActivityMinutes))
@@ -135,7 +134,7 @@ public class StatRoles : MewdekoModuleBase<StatRoleService>
         }, role);
     }
 
-    private async Task CreateAsync(StatRole statRole, IRole role)
+    private async Task CreateAsync(StatRole statRole, SocketRole role)
     {
         if (role.Position >= ((SocketGuild)ctx.Guild).CurrentUser.Hierarchy)
         {
@@ -169,7 +168,7 @@ public class StatRoles : MewdekoModuleBase<StatRoleService>
             return;
         }
 
-        await ctx.Channel.SendMessageAsync(embed: StatRoleEmbeds.List(Strings, ctx.Guild.Id, roles).Build());
+        await ctx.Channel.SendAsync(embed: StatRoleEmbeds.List(Strings, ctx.Guild.Id, roles).Build());
     }
 
     /// <summary>
@@ -188,7 +187,7 @@ public class StatRoles : MewdekoModuleBase<StatRoleService>
             return;
         }
 
-        await ctx.Channel.SendMessageAsync(embed: StatRoleEmbeds.Info(Strings, ctx.Guild.Id, role).Build());
+        await ctx.Channel.SendAsync(embed: StatRoleEmbeds.Info(Strings, ctx.Guild.Id, role).Build());
     }
 
     /// <summary>
@@ -249,7 +248,7 @@ public class StatRoles : MewdekoModuleBase<StatRoleService>
         }
 
         var result = await Service.RunAsync((SocketGuild)ctx.Guild, role, true);
-        await ctx.Channel.SendMessageAsync(embed: StatRoleEmbeds.Result(Strings, ctx.Guild.Id, role, result, true)
+        await ctx.Channel.SendAsync(embed: StatRoleEmbeds.Result(Strings, ctx.Guild.Id, role, result, true)
             .Build());
     }
 
@@ -278,7 +277,7 @@ public class StatRoles : MewdekoModuleBase<StatRoleService>
         }
 
         var result = await Service.RunAsync((SocketGuild)ctx.Guild, role, false);
-        await ctx.Channel.SendMessageAsync(embed: StatRoleEmbeds.Result(Strings, ctx.Guild.Id, role, result, false)
+        await ctx.Channel.SendAsync(embed: StatRoleEmbeds.Result(Strings, ctx.Guild.Id, role, result, false)
             .Build());
     }
 
@@ -404,7 +403,7 @@ public class StatRoles : MewdekoModuleBase<StatRoleService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageRoles)]
-    public async Task StatRoleFilter(int id, IGuildChannel channel)
+    public async Task StatRoleFilter(int id, Channel channel)
     {
         await ToggleListAsync(id, r => r.ChannelFilter, (r, v) => r.ChannelFilter = v, channel.Id, $"<#{channel.Id}>");
     }
@@ -419,7 +418,7 @@ public class StatRoles : MewdekoModuleBase<StatRoleService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageRoles)]
-    public async Task StatRoleFilter(int id, IRole role, bool blacklist = false)
+    public async Task StatRoleFilter(int id, SocketRole role, bool blacklist = false)
     {
         if (blacklist)
             await ToggleListAsync(id, r => r.RoleBlacklist, (r, v) => r.RoleBlacklist = v, role.Id, role.Mention);
@@ -436,7 +435,7 @@ public class StatRoles : MewdekoModuleBase<StatRoleService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageRoles)]
-    public async Task StatRoleFilter(int id, IGuildUser user)
+    public async Task StatRoleFilter(int id, SocketGuildMember user)
     {
         await ToggleListAsync(id, r => r.IgnoredUsers, (r, v) => r.IgnoredUsers = v, user.Id, user.Mention);
     }

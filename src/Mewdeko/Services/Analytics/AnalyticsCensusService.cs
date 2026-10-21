@@ -24,7 +24,7 @@ public sealed class AnalyticsCensusService : INService, IReadyExecutor, IDisposa
     ];
 
     private static readonly TimeSpan RunAt = new(0, 5, 0);
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
 
     private readonly AnalyticsCollector collector;
     private readonly BotCredentials credentials;
@@ -44,7 +44,7 @@ public sealed class AnalyticsCensusService : INService, IReadyExecutor, IDisposa
     /// <param name="credentials">Bot credentials, for the master instance flag.</param>
     /// <param name="dbFactory">Creates database connections.</param>
     /// <param name="logger">Records failures.</param>
-    public AnalyticsCensusService(AnalyticsCollector collector, DiscordShardedClient client,
+    public AnalyticsCensusService(AnalyticsCollector collector, FluxerClient client,
         BotCredentials credentials, IDataConnectionFactory dbFactory, ILogger<AnalyticsCensusService> logger)
     {
         this.collector = collector;

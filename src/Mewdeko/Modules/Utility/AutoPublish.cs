@@ -1,4 +1,3 @@
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Utility.Services;
 
@@ -21,9 +20,9 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task AddAutoPublish(ITextChannel channel)
+        public async Task AddAutoPublish(Channel channel)
         {
-            if (channel is not INewsChannel chan)
+            if (channel is not Channel chan)
             {
                 await ReplyErrorAsync(Strings.AutopublishChannelNotNews(ctx.Guild.Id));
                 return;
@@ -52,7 +51,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task AddPublishBlacklist(IUser user, ITextChannel channel)
+        public async Task AddPublishBlacklist(IUser user, Channel channel)
         {
             if (await Service.CheckIfExists(channel.Id))
             {
@@ -60,7 +59,7 @@ public partial class Utility
                 return;
             }
 
-            if (channel is not INewsChannel chan)
+            if (channel is not Channel chan)
             {
                 await ReplyErrorAsync(Strings.AutopublishChannelNotNews(ctx.Guild.Id));
                 return;
@@ -89,7 +88,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task AddPublishBlacklist(ITextChannel channel, [Remainder] string word)
+        public async Task AddPublishBlacklist(Channel channel, [Remainder] string word)
         {
             if (await Service.CheckIfExists(channel.Id))
             {
@@ -97,7 +96,7 @@ public partial class Utility
                 return;
             }
 
-            if (channel is not INewsChannel chan)
+            if (channel is not Channel chan)
             {
                 await ReplyErrorAsync(Strings.AutopublishChannelNotNews(ctx.Guild.Id));
                 return;
@@ -132,7 +131,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task RemovePublishBlacklist(IUser user, ITextChannel channel)
+        public async Task RemovePublishBlacklist(IUser user, Channel channel)
         {
             if (await Service.CheckIfExists(channel.Id))
             {
@@ -158,7 +157,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task RemovePublishBlacklist(ITextChannel channel, [Remainder] string word)
+        public async Task RemovePublishBlacklist(Channel channel, [Remainder] string word)
         {
             if (await Service.CheckIfExists(channel.Id))
             {
@@ -183,9 +182,9 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task RemoveAutoPublish(ITextChannel channel)
+        public async Task RemoveAutoPublish(Channel channel)
         {
-            if (channel is not INewsChannel)
+            if (channel is not Channel)
             {
                 await ReplyErrorAsync(Strings.AutopublishChannelNotNews(ctx.Guild.Id));
                 return;

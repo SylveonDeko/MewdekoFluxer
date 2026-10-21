@@ -1,5 +1,4 @@
 ﻿using Mewdeko.Services.Strings;
-using Embed = Discord.Embed;
 
 namespace Mewdeko.Modules.Currency.Services;
 
@@ -115,10 +114,10 @@ public class BlackjackService(GeneratedBotStrings strings) : INService
     /// <param name="addTransactionAsync">A function to add a transaction for the player.</param>
     /// <param name="currencyEmote">The currency emote for the game.</param>
     /// <returns>An embed representing the final state of the game.</returns>
-    public async Task<Embed[]> HandleStandAsync(IUser user, ulong guildId, Func<ulong, long, Task> updateBalanceAsync,
+    public async Task<EmbedRequest[]> HandleStandAsync(IUser user, ulong guildId, Func<ulong, long, Task> updateBalanceAsync,
         Func<ulong, long, string, Task> addTransactionAsync, string currencyEmote)
     {
-        var embeds = new List<Embed>();
+        var embeds = new List<EmbedRequest>();
         var game = GetGame(user);
 
         while (BlackjackGame.CalculateHandTotal(game.DealerHand) < 17)
@@ -275,9 +274,9 @@ public class BlackjackService(GeneratedBotStrings strings) : INService
         /// <param name="guildId">The guild ID for localization.</param>
         /// <param name="strings">The strings service for localization.</param>
         /// <returns>An embed representing the current state of the game.</returns>
-        public Embed[] CreateGameEmbed(string title, ulong guildId, GeneratedBotStrings strings)
+        public EmbedRequest[] CreateGameEmbed(string title, ulong guildId, GeneratedBotStrings strings)
         {
-            var embedList = new List<Embed>();
+            var embedList = new List<EmbedRequest>();
             var embed = new EmbedBuilder()
                 .WithTitle(title)
                 .WithColor(Color.Blue)

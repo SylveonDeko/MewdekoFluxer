@@ -18,7 +18,7 @@ namespace Mewdeko.Controllers;
 public class MinecraftController(
     MinecraftService minecraftService,
     IDataConnectionFactory dbFactory,
-    DiscordShardedClient client,
+    FluxerClient client,
     IDashboardAuditContext auditContext) : Controller
 {
     /// <summary>

@@ -1,4 +1,3 @@
-using Embed = Discord.Embed;
 
 namespace Mewdeko.Modules.Currency.Models;
 
@@ -17,5 +16,5 @@ public record TriviaAnswerResult(
     bool GameFailed,
     TriviaChainState? UpdatedState,
     string ResultMessage,
-    Embed? ResultEmbed
+    EmbedRequest? ResultEmbed
 );

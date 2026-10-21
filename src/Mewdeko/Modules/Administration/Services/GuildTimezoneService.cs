@@ -13,7 +13,7 @@ public class GuildTimezoneService : INService
     /// <param name="client">The Discord client.</param>
     /// <param name="dbFactory">The database service.</param>
     /// <param name="gss">The guild config service.</param>
-    public GuildTimezoneService(DiscordShardedClient client, IDataConnectionFactory dbFactory,
+    public GuildTimezoneService(FluxerClient client, IDataConnectionFactory dbFactory,
         GuildSettingsService gss)
     {
         var curUser = client.CurrentUser;

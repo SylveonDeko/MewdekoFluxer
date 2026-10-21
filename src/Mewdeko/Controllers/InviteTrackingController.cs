@@ -16,7 +16,7 @@ namespace Mewdeko.Controllers;
 public class InviteTrackingController : Controller
 {
     private readonly IDashboardAuditContext auditContext;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly InviteCountService inviteService;
 
     /// <summary>
@@ -27,7 +27,7 @@ public class InviteTrackingController : Controller
     /// <param name="auditContext">Records before/after state for the dashboard audit log.</param>
     public InviteTrackingController(
         InviteCountService inviteService,
-        DiscordShardedClient client,
+        FluxerClient client,
         IDashboardAuditContext auditContext)
     {
         this.inviteService = inviteService;

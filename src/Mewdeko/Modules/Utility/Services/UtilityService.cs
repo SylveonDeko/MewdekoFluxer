@@ -14,7 +14,7 @@ namespace Mewdeko.Modules.Utility.Services;
 public partial class UtilityService : INService
 {
     private readonly IDataCache cache;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly GuildSettingsService guildSettings;
 
@@ -31,7 +31,7 @@ public partial class UtilityService : INService
         IDataCache cache,
         GuildSettingsService guildSettings,
         EventHandler eventHandler,
-        DiscordShardedClient client)
+        FluxerClient client)
     {
         eventHandler.Subscribe("MessageDeleted", "UtilityService", MsgStore);
         eventHandler.Subscribe("MessageUpdated", "UtilityService", MsgStore2);
@@ -71,7 +71,7 @@ public partial class UtilityService : INService
     /// </summary>
     /// <param name="guild">The guild to toggle link previewing for.</param>
     /// <param name="yesnt">A string indicating whether to enable or disable link previewing.</param>
-    public async Task PreviewLinks(IGuild guild, string yesnt)
+    public async Task PreviewLinks(SocketGuild guild, string yesnt)
     {
         var yesno = -1;
 
@@ -112,7 +112,7 @@ public partial class UtilityService : INService
     /// </summary>
     /// <param name="guild">The guild to set the snipe set status for.</param>
     /// <param name="enabled">A boolean indicating whether to enable or disable snipe set.</param>
-    public async Task SnipeSet(IGuild guild, bool enabled)
+    public async Task SnipeSet(SocketGuild guild, bool enabled)
     {
         await using var db = await dbFactory.CreateConnectionAsync();
 
@@ -131,13 +131,13 @@ public partial class UtilityService : INService
         await guildSettings.UpdateGuildConfig(guild.Id, gc);
     }
 
-    private async Task BulkMsgStore(IReadOnlyCollection<Cacheable<IMessage, ulong>> messages,
-        Cacheable<IMessageChannel, ulong> channel)
+    private async Task BulkMsgStore(IReadOnlyCollection<Cacheable<Message>> messages,
+        Cacheable<Channel> channel)
     {
         if (!channel.HasValue)
             return;
 
-        if (channel.Value is not SocketTextChannel chan)
+        if (channel.Value is not Channel chan)
             return;
 
         if (!await GetSnipeSet(chan.Guild.Id))
@@ -152,9 +152,9 @@ public partial class UtilityService : INService
             GuildId = chan.Guild.Id,
             ChannelId = chan.Id,
             ReferenceMessage =
-                (x.Value as IUserMessage).ReferencedMessage == null
+                (x.Value as Message).ReferencedMessage == null
                     ? null
-                    : $"{Format.Bold((x.Value as IUserMessage).ReferencedMessage.Author.ToString())}: {(x.Value as IUserMessage).ReferencedMessage.Content.TrimTo(400)}",
+                    : $"{Format.Bold((x.Value as Message).ReferencedMessage.Author.ToString())}: {(x.Value as Message).ReferencedMessage.Content.TrimTo(400)}",
             Message = x.Value.Content,
             UserId = x.Value.Author.Id,
             Edited = false,
@@ -167,14 +167,14 @@ public partial class UtilityService : INService
         await cache.AddSnipeToCache(chan.Guild.Id, msgs).ConfigureAwait(false);
     }
 
-    private async Task MsgStore(Cacheable<IMessage, ulong> optMsg, Cacheable<IMessageChannel, ulong> ch)
+    private async Task MsgStore(Cacheable<Message> optMsg, Cacheable<Channel> ch)
     {
-        if (!ch.HasValue || ch.Value is not IGuildChannel channel)
+        if (!ch.HasValue || ch.Value is not Channel channel)
             return;
 
         if (!await GetSnipeSet(channel.Guild.Id)) return;
 
-        if ((optMsg.HasValue ? optMsg.Value : null) is not IUserMessage msg) return;
+        if ((optMsg.HasValue ? optMsg.Value : null) is not Message msg) return;
         if (msg.Author is null /*for some reason*/) return;
         var snipemsg = new SnipeStore
         {
@@ -192,13 +192,13 @@ public partial class UtilityService : INService
         await cache.AddSnipeToCache(channel.Guild.Id, [snipemsg]).ConfigureAwait(false);
     }
 
-    private async Task MsgStore2(Cacheable<IMessage, ulong> optMsg, SocketMessage imsg2, ISocketMessageChannel ch)
+    private async Task MsgStore2(Cacheable<Message> optMsg, SocketMessage imsg2, Channel ch)
     {
-        if (ch is not IGuildChannel channel) return;
+        if (ch is not Channel channel) return;
 
         if (!await GetSnipeSet(channel.Guild.Id)) return;
 
-        if ((optMsg.HasValue ? optMsg.Value : null) is not IUserMessage msg) return;
+        if ((optMsg.HasValue ? optMsg.Value : null) is not Message msg) return;
         var snipemsg = new SnipeStore
         {
             GuildId = channel.GuildId,
@@ -226,9 +226,9 @@ public partial class UtilityService : INService
         return vcheck.GetUrlReportAsync(url, true);
     }
 
-    private async Task MsgReciev(IMessage msg)
+    private async Task MsgReciev(Message msg)
     {
-        if (msg.Channel is SocketTextChannel t)
+        if (msg.Channel is Channel t)
         {
             if (msg.Author.IsBot) return;
             var gid = t.Guild;
@@ -260,7 +260,7 @@ public partial class UtilityService : INService
 
                     if (guild != t.Guild)
                         return;
-                    var em = await ((IGuild)guild).GetTextChannelAsync(linkChannelId).ConfigureAwait(false);
+                    var em = await ((SocketGuild)guild).GetTextChannelAsync(linkChannelId).ConfigureAwait(false);
                     if (em == null) return;
                     var msg2 = await em.GetMessageAsync(linkMessageId).ConfigureAwait(false);
                     if (msg2 is null) return;
@@ -273,7 +273,7 @@ public partial class UtilityService : INService
                         },
                         Footer = new EmbedFooterBuilder
                         {
-                            IconUrl = ((IGuild)guild).IconUrl, Text = $"{((IGuild)guild).Name}: {em.Name}"
+                            IconUrl = ((SocketGuild)guild).IconUrl, Text = $"{((SocketGuild)guild).Name}: {em.Name}"
                         }
                     };
                     if (msg2.Embeds.Count > 0)
@@ -291,7 +291,7 @@ public partial class UtilityService : INService
 
                     if (msg2.Attachments.Count > 0) en2.ImageUrl = msg2.Attachments.FirstOrDefault().Url;
 
-                    await msg.Channel.SendMessageAsync(embed: en2.WithTimestamp(msg2.Timestamp).Build())
+                    await msg.Channel.SendAsync(embed: en2.WithTimestamp(msg2.Timestamp).Build())
                         .ConfigureAwait(false);
                 }
             }

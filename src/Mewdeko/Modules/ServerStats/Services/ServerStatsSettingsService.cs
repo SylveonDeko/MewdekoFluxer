@@ -93,7 +93,7 @@ public class ServerStatsSettingsService : INService, IReadyExecutor
     /// <param name="channelId">The channel the activity happened in.</param>
     /// <param name="user">The member.</param>
     /// <returns>True when the activity must not be counted.</returns>
-    public bool IsExcluded(ulong guildId, ulong channelId, IGuildUser user)
+    public bool IsExcluded(ulong guildId, ulong channelId, SocketGuildMember user)
     {
         if (optedOut.ContainsKey(user.Id))
             return true;

@@ -13,7 +13,7 @@ namespace Mewdeko.Modules.Games.Services;
 /// </summary>
 public class PollSchedulerService : INService, IReadyExecutor, IDisposable
 {
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly ILogger<PollSchedulerService> logger;
     private readonly PollMessageService pollMessages;
@@ -31,7 +31,7 @@ public class PollSchedulerService : INService, IReadyExecutor, IDisposable
     /// <param name="logger">The logger instance.</param>
     public PollSchedulerService(IDataConnectionFactory dbFactory, PollService pollService,
         PollMessageService pollMessages,
-        DiscordShardedClient client, ILogger<PollSchedulerService> logger)
+        FluxerClient client, ILogger<PollSchedulerService> logger)
     {
         this.dbFactory = dbFactory;
         this.pollService = pollService;

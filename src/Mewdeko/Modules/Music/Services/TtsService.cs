@@ -50,7 +50,7 @@ public class TtsService : INService, IReadyExecutor
     /// </summary>
     private readonly NonBlocking.ConcurrentDictionary<ulong, ulong> autoJoinedChannels = new();
     private readonly IDataCache cache;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly NonBlocking.ConcurrentDictionary<(ulong GuildId, ulong UserId), DateTime> cooldowns = new();
     private readonly IDataConnectionFactory dbFactory;
     private readonly GuildSettingsService guildSettingsService;
@@ -69,7 +69,7 @@ public class TtsService : INService, IReadyExecutor
     public TtsService(
         IAudioService audioService,
         IDataCache cache,
-        DiscordShardedClient client,
+        FluxerClient client,
         IDataConnectionFactory dbFactory,
         GuildSettingsService guildSettingsService,
         EventHandler eventHandler,
@@ -218,13 +218,13 @@ public class TtsService : INService, IReadyExecutor
     ///     Joins the given voice channel because a member arrived and the channel has auto-join turned on.
     ///     Returns the new player, or null when joining failed (for example, missing Connect permission).
     /// </summary>
-    private async Task<MewdekoPlayer?> TryAutoJoinAsync(SocketGuild guild, SocketVoiceChannel vc,
+    private async Task<MewdekoPlayer?> TryAutoJoinAsync(SocketGuild guild, Channel vc,
         TtsVoiceChannelSetting vcSetting)
     {
         try
         {
-            IMessageChannel messageChannel = vcSetting.LinkedTextChannelId.HasValue
-                ? guild.GetTextChannel(vcSetting.LinkedTextChannelId.Value) ?? (IMessageChannel)vc
+            Channel messageChannel = vcSetting.LinkedTextChannelId.HasValue
+                ? guild.GetTextChannel(vcSetting.LinkedTextChannelId.Value) ?? (Channel)vc
                 : vc;
 
             var result = await audioService.Players
@@ -310,7 +310,7 @@ public class TtsService : INService, IReadyExecutor
         }
     }
 
-    private static bool HasHumans(SocketVoiceChannel vc)
+    private static bool HasHumans(Channel vc)
     {
         return vc.ConnectedUsers.Any(u => !u.IsBot);
     }
@@ -326,13 +326,13 @@ public class TtsService : INService, IReadyExecutor
 
     private async Task HandleMessage(SocketMessage msg)
     {
-        if (msg is not SocketUserMessage userMsg)
+        if (msg is not SocketMessage userMsg)
             return;
 
         if (msg.Author.IsBot || msg.Author.IsWebhook)
             return;
 
-        if (userMsg.Channel is not SocketGuildChannel guildChannel)
+        if (userMsg.Channel is not Channel guildChannel)
             return;
 
         var guildId = guildChannel.Guild.Id;
@@ -356,7 +356,7 @@ public class TtsService : INService, IReadyExecutor
 
         if (settings?.TtsRoleId is not null)
         {
-            var guildUser = msg.Author as IGuildUser;
+            var guildUser = msg.Author as SocketGuildMember;
             if (guildUser is not null && !guildUser.RoleIds.Contains(settings.TtsRoleId.Value)
                                       && !guildUser.GuildPermissions.Administrator)
                 return;
@@ -365,7 +365,7 @@ public class TtsService : INService, IReadyExecutor
         if (await player.IsTtsUserBlockedAsync(msg.Author.Id))
             return;
 
-        var authorAsGuildUser = msg.Author as IGuildUser;
+        var authorAsGuildUser = msg.Author as SocketGuildMember;
         if (authorAsGuildUser?.VoiceChannel is null || authorAsGuildUser.VoiceChannel.Id != player.VoiceChannelId)
             return;
 
@@ -397,7 +397,7 @@ public class TtsService : INService, IReadyExecutor
 
         if (ttsReplyContext && userMsg.ReferencedMessage is not null)
         {
-            var replyAuthor = userMsg.ReferencedMessage.Author as IGuildUser;
+            var replyAuthor = userMsg.ReferencedMessage.Author as SocketGuildMember;
             var replyName = replyAuthor?.DisplayName ?? userMsg.ReferencedMessage.Author?.Username ?? "someone";
             parts.Add($"replying to {replyName}");
         }

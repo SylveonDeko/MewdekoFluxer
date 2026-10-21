@@ -18,7 +18,7 @@ namespace Mewdeko.Controllers;
 [Authorize("ApiKeyPolicy")]
 public class SuggestionsController(
     SuggestionsService service,
-    DiscordShardedClient client,
+    FluxerClient client,
     IDataConnectionFactory dbFactory,
     IDashboardAuditContext auditContext)
     : Controller
@@ -43,7 +43,7 @@ public class SuggestionsController(
         var uniqueUserIds = suggestions.Select(s => s.UserId).Distinct().ToList();
 
         // Bulk fetch all cached guild users at once instead of individual GetUser calls
-        var guildUsersLookup = guild?.Users.ToDictionary(u => u.Id) ?? new Dictionary<ulong, SocketGuildUser>();
+        var guildUsersLookup = guild?.Users.ToDictionary(u => u.Id) ?? new Dictionary<ulong, SocketGuildMember>();
         var userInfoMap = new Dictionary<ulong, object>();
 
         foreach (var uid in uniqueUserIds)

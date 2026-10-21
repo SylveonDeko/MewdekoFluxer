@@ -1,6 +1,5 @@
 ﻿using System.Net.Http;
 using System.Text.Json;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Searches.Common;
 
@@ -158,7 +157,7 @@ public partial class Searches
         [Aliases]
         public async Task Osu5(string user, [Remainder] string? mode = null)
         {
-            var channel = (ITextChannel)ctx.Channel;
+            var channel = (Channel)ctx.Channel;
             if (string.IsNullOrWhiteSpace(creds.OsuApiKey))
             {
                 await channel.SendErrorAsync(Strings.OsuApiKeyRequired(ctx.Guild.Id), Config).ConfigureAwait(false);

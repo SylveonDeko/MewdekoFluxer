@@ -1,6 +1,5 @@
 using System.IO;
 using System.Text;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Utility.Services;
 using SkiaSharp;
@@ -59,7 +58,7 @@ public partial class Utility
                     leastActive.ChannelId, leastActive.Count))
                 .WithOkColor();
 
-            await ctx.Channel.SendMessageAsync(embed: eb.Build());
+            await ctx.Channel.SendAsync(embed: eb.Build());
         }
 
         /// <summary>
@@ -70,9 +69,9 @@ public partial class Utility
         [Cmd]
         [Aliases]
         [RequireContext(ContextType.Guild)]
-        public async Task ChannelMessages(IGuildChannel? channel = null)
+        public async Task ChannelMessages(Channel? channel = null)
         {
-            channel ??= ctx.Channel as IGuildChannel;
+            channel ??= ctx.Channel as Channel;
             var (cnt, enabled) = await Service.GetAllCountsForEntity(MessageCountService.CountQueryType.Channel,
                 channel.Id,
                 ctx.Guild.Id);
@@ -94,7 +93,7 @@ public partial class Utility
                     leastActive.UserId, leastActive.Count))
                 .WithOkColor();
 
-            await ctx.Channel.SendMessageAsync(embed: eb.Build());
+            await ctx.Channel.SendAsync(embed: eb.Build());
         }
 
         /// <summary>
@@ -147,7 +146,7 @@ public partial class Utility
                     leastActiveChannel.ChannelId, leastActiveChannel.Count))
                 .WithOkColor();
 
-            await ctx.Channel.SendMessageAsync(embed: eb.Build());
+            await ctx.Channel.SendAsync(embed: eb.Build());
         }
 
         /// <summary>
@@ -195,7 +194,7 @@ public partial class Utility
 
             eb.WithDescription(description.ToString());
 
-            await ctx.Channel.SendMessageAsync(embed: eb.Build());
+            await ctx.Channel.SendAsync(embed: eb.Build());
         }
 
         /// <summary>
@@ -334,7 +333,7 @@ public partial class Utility
                 .WithFooter(Strings.TimezoneSelectFooter(ctx.Guild.Id))
                 .WithOkColor();
 
-            await ctx.Channel.SendMessageAsync(embed: eb.Build());
+            await ctx.Channel.SendAsync(embed: eb.Build());
 
             while (true)
             {
@@ -354,7 +353,7 @@ public partial class Utility
                         .ThenBy(tz => tz.DisplayName);
 
                     var tzList = string.Join("\n", allTimeZones.Select(tz => $"{tz.Id}: {tz.DisplayName}"));
-                    await ctx.Channel.SendMessageAsync(Strings.TimezoneFullList(ctx.Guild.Id, tzList));
+                    await ctx.Channel.SendAsync(Strings.TimezoneFullList(ctx.Guild.Id, tzList));
                     continue;
                 }
 
@@ -380,11 +379,11 @@ public partial class Utility
                             .WithDescription(Strings.TimezoneMultipleMatchesDescription(ctx.Guild.Id,
                                 string.Join("\n", matchingTimeZones.Select(tz => $"{tz.Id}: {tz.DisplayName}"))))
                             .WithColor(Color.Orange);
-                        await ctx.Channel.SendMessageAsync(embed: matchEmbed.Build());
+                        await ctx.Channel.SendAsync(embed: matchEmbed.Build());
                         break;
                     }
                     default:
-                        await ctx.Channel.SendMessageAsync(Strings.TimezoneNoMatch(ctx.Guild.Id));
+                        await ctx.Channel.SendAsync(Strings.TimezoneNoMatch(ctx.Guild.Id));
                         break;
                 }
             }
@@ -400,7 +399,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageMessages)]
-        public async Task ResetMessageCounts(IUser? user = null, ITextChannel? channel = null)
+        public async Task ResetMessageCounts(IUser? user = null, Channel? channel = null)
         {
             var confirmMessage = (user, channel) switch
             {
@@ -436,7 +435,7 @@ public partial class Utility
         }
 
         /// <summary>
-        ///     Overload for <see cref="ResetMessageCounts(Discord.IUser?,Discord.ITextChannel?)" />
+        ///     Overload for <see cref="ResetMessageCounts(Discord.IUser?,Discord.Channel?)" />
         /// </summary>
         /// <param name="channel">Optional: The channel to reset message counts in.</param>
         /// <returns>A task that represents the asynchronous operation.</returns>
@@ -444,7 +443,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageMessages)]
-        public async Task ResetMessageCounts(ITextChannel? channel)
+        public async Task ResetMessageCounts(Channel? channel)
         {
             await ResetMessageCounts(null, channel);
         }

@@ -8,15 +8,15 @@ namespace Mewdeko.Modules.Utility.Extensions;
 /// </summary>
 public static class InviteReplacementExtensions
 {
-    private static readonly (string Suffix, TimestampTagStyles Style)[] TimestampStyles =
+    private static readonly (string Suffix, TimestampTagStyle Style)[] TimestampStyles =
     [
-        ("t", TimestampTagStyles.ShortTime),
-        ("T", TimestampTagStyles.LongTime),
-        ("d", TimestampTagStyles.ShortDate),
-        ("D", TimestampTagStyles.LongDate),
-        ("f", TimestampTagStyles.ShortDateTime),
-        ("F", TimestampTagStyles.LongDateTime),
-        ("R", TimestampTagStyles.Relative)
+        ("t", TimestampTagStyle.ShortTime),
+        ("T", TimestampTagStyle.LongTime),
+        ("d", TimestampTagStyle.ShortDate),
+        ("D", TimestampTagStyle.LongDate),
+        ("f", TimestampTagStyle.ShortDateTime),
+        ("F", TimestampTagStyle.LongDateTime),
+        ("R", TimestampTagStyle.Relative)
     ];
 
     /// <summary>
@@ -69,7 +69,7 @@ public static class InviteReplacementExtensions
     /// <param name="builder">The replacement builder.</param>
     /// <param name="user">The member.</param>
     /// <returns>The builder, for chaining.</returns>
-    public static ReplacementBuilder WithJoinTimestamps(this ReplacementBuilder builder, IGuildUser user)
+    public static ReplacementBuilder WithJoinTimestamps(this ReplacementBuilder builder, SocketGuildMember user)
     {
         foreach (var (suffix, style) in TimestampStyles)
         {
@@ -93,14 +93,14 @@ public static class InviteReplacementExtensions
     /// <param name="builder">The replacement builder.</param>
     /// <param name="guild">The guild.</param>
     /// <returns>The builder, for chaining.</returns>
-    public static ReplacementBuilder WithMemberOrdinal(this ReplacementBuilder builder, IGuild guild)
+    public static ReplacementBuilder WithMemberOrdinal(this ReplacementBuilder builder, SocketGuild guild)
     {
         builder.WithOverride("%server.members.ordinal%", () => Ordinal(GetMemberCount(guild)));
         builder.WithOverride("%server.members.count%", () => GetMemberCount(guild).ToString("N0"));
         return builder;
     }
 
-    private static int GetMemberCount(IGuild guild)
+    private static int GetMemberCount(SocketGuild guild)
     {
         return guild is SocketGuild sg ? sg.MemberCount : guild.ApproximateMemberCount ?? 0;
     }

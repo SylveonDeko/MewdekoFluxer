@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.StatusRoles.Services;
 using Mewdeko.Services.Settings;
@@ -102,8 +102,8 @@ public class StatusRoles(BotConfigService bss, InteractiveService interactivity)
                     .WithOkColor()
                     .WithDescription(Strings.StatusRoleTextSelect(ctx.Guild.Id, bss.Data.LoadingEmote)),
                 ctx.User.Id,
-                new ReactionChoice(new Emoji("👁️"), Strings.Preview(ctx.Guild.Id), "preview"),
-                new ReactionChoice(new Emoji("📝"), Strings.ViewRaw(ctx.Guild.Id), "viewraw"));
+                new ReactionChoice(Emoji.FromUnicode("👁️"), Strings.Preview(ctx.Guild.Id), "preview"),
+                new ReactionChoice(Emoji.FromUnicode("📝"), Strings.ViewRaw(ctx.Guild.Id), "viewraw"));
             switch (button)
             {
                 case "preview":
@@ -111,9 +111,9 @@ public class StatusRoles(BotConfigService bss, InteractiveService interactivity)
                         .WithDefault(ctx).Build();
                     if (SmartEmbed.TryParse(rep.Replace(potentialStatusRole.StatusEmbed), ctx.Guild.Id, out var embeds,
                             out var plainText))
-                        await ctx.Channel.SendMessageAsync(plainText, embeds: embeds);
+                        await ctx.Channel.SendAsync(plainText, embeds: embeds);
                     else
-                        await ctx.Channel.SendMessageAsync(rep.Replace(potentialStatusRole.StatusEmbed));
+                        await ctx.Channel.SendAsync(rep.Replace(potentialStatusRole.StatusEmbed));
                     break;
                 case "viewraw":
                     await ctx.Channel.SendConfirmAsync(potentialStatusRole.StatusEmbed);
@@ -138,7 +138,7 @@ public class StatusRoles(BotConfigService bss, InteractiveService interactivity)
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task SetStatusRoleChannel(int index, ITextChannel channel)
+    public async Task SetStatusRoleChannel(int index, Channel channel)
     {
         var statusRoles = await Service.GetStatusRoleConfig(ctx.Guild.Id);
         if (!statusRoles.Any())
@@ -175,7 +175,7 @@ public class StatusRoles(BotConfigService bss, InteractiveService interactivity)
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task SetAddRoles(int index, params IRole[] roles)
+    public async Task SetAddRoles(int index, params SocketRole[] roles)
     {
         var statusRoles = await Service.GetStatusRoleConfig(ctx.Guild.Id);
         if (!statusRoles.Any())
@@ -219,7 +219,7 @@ public class StatusRoles(BotConfigService bss, InteractiveService interactivity)
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task SetRemoveRoles(int index, params IRole[] roles)
+    public async Task SetRemoveRoles(int index, params SocketRole[] roles)
     {
         var statusRoles = await Service.GetStatusRoleConfig(ctx.Guild.Id);
         if (!statusRoles.Any())
@@ -263,7 +263,7 @@ public class StatusRoles(BotConfigService bss, InteractiveService interactivity)
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task RemoveAddRoles(int index, params IRole[] roles)
+    public async Task RemoveAddRoles(int index, params SocketRole[] roles)
     {
         var statusRoles = await Service.GetStatusRoleConfig(ctx.Guild.Id);
         if (!statusRoles.Any())
@@ -303,7 +303,7 @@ public class StatusRoles(BotConfigService bss, InteractiveService interactivity)
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task RemoveRemoveRoles(int index, params IRole[] roles)
+    public async Task RemoveRemoveRoles(int index, params SocketRole[] roles)
     {
         var statusRoles = await Service.GetStatusRoleConfig(ctx.Guild.Id);
         if (!statusRoles.Any())

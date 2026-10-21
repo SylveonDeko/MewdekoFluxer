@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Mewdeko.Modules.Administration.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -14,7 +14,7 @@ public class GuildDateTimeTypeReader : MewdekoTypeReader<GuildDateTime>
     /// </summary>
     /// <param name="client">The discord client</param>
     /// <param name="cmds">The command service</param>
-    public GuildDateTimeTypeReader(DiscordShardedClient client, CommandService cmds) : base(client, cmds)
+    public GuildDateTimeTypeReader(FluxerClient client, CommandService cmds) : base(client, cmds)
     {
     }
 

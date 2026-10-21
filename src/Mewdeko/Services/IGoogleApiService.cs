@@ -1,5 +1,6 @@
 ﻿using Google.Apis.YouTube.v3.Data;
 using Google.Cloud.Vision.V1;
+using SearchResult = Google.Apis.YouTube.v3.Data.SearchResult;
 
 namespace Mewdeko.Services;
 

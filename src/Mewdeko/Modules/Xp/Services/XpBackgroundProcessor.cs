@@ -31,7 +31,7 @@ public class XpBackgroundProcessor : INService, IDisposable
 
     private readonly XpCacheManager cacheManager;
     private readonly Timer cleanupTimer;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly XpCompetitionManager competitionManager;
     private readonly IDataConnectionFactory dbFactory;
     private readonly SemaphoreSlim dbThrottle;
@@ -70,7 +70,7 @@ public class XpBackgroundProcessor : INService, IDisposable
     public XpBackgroundProcessor(
         IDataConnectionFactory dbFactory,
         XpCacheManager cacheManager,
-        XpCompetitionManager competitionManager, DiscordShardedClient client, EventHandler eventHandler,
+        XpCompetitionManager competitionManager, FluxerClient client, EventHandler eventHandler,
         ILogger<XpBackgroundProcessor> logger)
     {
         this.dbFactory = dbFactory;
@@ -272,7 +272,7 @@ public class XpBackgroundProcessor : INService, IDisposable
     /// <param name="user">The guild user.</param>
     /// <param name="channelId">The channel ID.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task ProcessFirstMessageOfDay(SocketGuildUser user, ulong channelId)
+    public async Task ProcessFirstMessageOfDay(SocketGuildMember user, ulong channelId)
     {
         // Quick check for server exclusion
         if (await cacheManager.IsServerExcludedAsync(user.Guild.Id).ConfigureAwait(false))

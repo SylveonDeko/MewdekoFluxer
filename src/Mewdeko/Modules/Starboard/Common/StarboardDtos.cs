@@ -135,8 +135,8 @@ public class UserStarboardStatsDto
 /// </summary>
 /// <param name="MessageId">The message ID.</param>
 /// <param name="StarCount">Number of stars.</param>
-/// <param name="Emote">The emote used.</param>
-public record TopStarredPost(ulong MessageId, int StarCount, string Emote);
+/// <param name="Emoji">The emote used.</param>
+public record TopStarredPost(ulong MessageId, int StarCount, string Emoji);
 
 /// <summary>
 ///     Represents a user and how many stars they've given/received

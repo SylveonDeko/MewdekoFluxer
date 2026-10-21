@@ -65,7 +65,7 @@ public class UserPunishService2 : INService, IDisposable
     /// </summary>
     /// <param name="guild">The guild</param>
     /// <param name="channel">The channel</param>
-    public async Task SetMWarnlogChannelId(IGuild guild, ITextChannel channel)
+    public async Task SetMWarnlogChannelId(SocketGuild guild, Channel channel)
     {
         var gc = await guildSettings.GetGuildConfig(guild.Id);
         gc.MiniWarnlogChannelId = channel.Id;
@@ -80,7 +80,7 @@ public class UserPunishService2 : INService, IDisposable
     /// <param name="mod">The moderator</param>
     /// <param name="reason">The reason</param>
     /// <returns></returns>
-    public async Task<WarningPunishment2?>? Warn(IGuild guild, ulong userId, IUser mod, string reason)
+    public async Task<WarningPunishment2?>? Warn(SocketGuild guild, ulong userId, IUser mod, string reason)
     {
         var modName = mod.ToString();
 
@@ -200,7 +200,7 @@ public class UserPunishService2 : INService, IDisposable
     /// <param name="guild">The guild</param>
     /// <param name="userId">The user ID</param>
     /// <returns></returns>
-    public async Task<int> GetWarnings(IGuild guild, ulong userId)
+    public async Task<int> GetWarnings(SocketGuild guild, ulong userId)
     {
         await using var dbContext = await dbFactory.CreateConnectionAsync();
 
@@ -357,7 +357,7 @@ public class UserPunishService2 : INService, IDisposable
     /// <param name="role">The role</param>
     /// <returns></returns>
     public async Task<bool> WarnPunish(ulong guildId, int number, int punish, StoopidTime? time,
-        IRole? role = null)
+        SocketRole? role = null)
     {
         // these 3 don't make sense with time
         if ((PunishmentAction)punish is PunishmentAction.Softban or PunishmentAction.Kick

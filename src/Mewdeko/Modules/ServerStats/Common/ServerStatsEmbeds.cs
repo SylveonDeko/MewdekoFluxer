@@ -3,7 +3,6 @@ using DataModel;
 using Mewdeko.Modules.ServerStats.Services;
 using Mewdeko.Services.Strings;
 using SkiaSharp;
-using Embed = Discord.Embed;
 
 namespace Mewdeko.Modules.ServerStats.Common;
 
@@ -55,7 +54,7 @@ public static class ServerStatsEmbeds
     /// <param name="rows">The ranking.</param>
     /// <param name="user">The member, when the ranking is for one member.</param>
     /// <returns>The embed.</returns>
-    public static EmbedBuilder Activities(GeneratedBotStrings strings, IGuild guild, int lookbackDays,
+    public static EmbedBuilder Activities(GeneratedBotStrings strings, SocketGuild guild, int lookbackDays,
         IReadOnlyList<ActivitySummary> rows, IUser? user = null)
     {
         var eb = new EmbedBuilder()
@@ -109,7 +108,7 @@ public static class ServerStatsEmbeds
     /// <summary>
     ///     Builds the server overview embed.
     /// </summary>
-    public static EmbedBuilder Overview(GeneratedBotStrings strings, IGuild guild, ServerOverview o,
+    public static EmbedBuilder Overview(GeneratedBotStrings strings, SocketGuild guild, ServerOverview o,
         ActivitySummary? topActivity = null)
     {
         var eb = new EmbedBuilder()
@@ -156,7 +155,7 @@ public static class ServerStatsEmbeds
     /// <summary>
     ///     Builds a member's activity embed.
     /// </summary>
-    public static EmbedBuilder User(GeneratedBotStrings strings, IGuild guild, IGuildUser user, UserActivity a,
+    public static EmbedBuilder User(GeneratedBotStrings strings, SocketGuild guild, SocketGuildMember user, UserActivity a,
         IReadOnlyList<ActivitySummary>? topActivities = null)
     {
         var eb = new EmbedBuilder()
@@ -188,9 +187,9 @@ public static class ServerStatsEmbeds
 
         if (user.JoinedAt.HasValue)
             eb.AddField(strings.StatsJoined(guild.Id),
-                TimestampTag.FromDateTimeOffset(user.JoinedAt.Value, TimestampTagStyles.Relative).ToString(), true);
+                TimestampTag.FromDateTimeOffset(user.JoinedAt.Value, TimestampTagStyle.Relative).ToString(), true);
         eb.AddField(strings.StatsAccountAge(guild.Id),
-            TimestampTag.FromDateTimeOffset(user.CreatedAt, TimestampTagStyles.Relative).ToString(), true);
+            TimestampTag.FromDateTimeOffset(user.CreatedAt, TimestampTagStyle.Relative).ToString(), true);
 
         return eb;
     }
@@ -198,7 +197,7 @@ public static class ServerStatsEmbeds
     /// <summary>
     ///     Builds a channel's activity embed.
     /// </summary>
-    public static EmbedBuilder Channel(GeneratedBotStrings strings, IGuild guild, IGuildChannel channel,
+    public static EmbedBuilder Channel(GeneratedBotStrings strings, SocketGuild guild, Channel channel,
         ChannelActivity a)
     {
         var eb = new EmbedBuilder()
@@ -260,7 +259,7 @@ public static class ServerStatsEmbeds
     /// <param name="kind">What to chart.</param>
     /// <param name="lookbackDays">The window in days, 1 to 90.</param>
     /// <returns>The PNG stream and an embed referencing it as graph.png.</returns>
-    public static async Task<(MemoryStream Stream, Embed Embed)> ChartAsync(ServerStatsService service, IGuild guild,
+    public static async Task<(MemoryStream Stream, EmbedRequest Embed)> ChartAsync(ServerStatsService service, SocketGuild guild,
         StatChartKind kind, int lookbackDays)
     {
         var window = WindowName(lookbackDays);

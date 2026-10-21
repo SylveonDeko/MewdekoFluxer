@@ -1,9 +1,6 @@
 using System.Net.Http;
-using Discord.Commands;
-using Discord.Net;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Services.Settings;
-using Image = Discord.Image;
 
 namespace Mewdeko.Modules.Server_Management;
 
@@ -23,7 +20,7 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
     [RequireContext(ContextType.Guild)]
     public async Task PermView()
     {
-        var perms = ((IGuildUser)ctx.User).GuildPermissions;
+        var perms = ((SocketGuildMember)ctx.User).GuildPermissions;
         var eb = new EmbedBuilder();
         eb.WithTitle(Strings.ListAllowedPerms(ctx.Guild.Id));
         eb.WithOkColor();
@@ -32,7 +29,7 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
             .Select(i => $"**{i}**");
 
         eb.WithDescription(string.Join("\n", allowed));
-        await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -43,7 +40,7 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [Priority(0)]
-    public async Task PermView(IGuildUser user)
+    public async Task PermView(SocketGuildMember user)
     {
         var perms = user.GuildPermissions;
         var eb = new EmbedBuilder();
@@ -54,7 +51,7 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
             .Select(i => $"**{i}**");
 
         eb.WithDescription(string.Join("\n", allowed));
-        await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -65,7 +62,7 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [Priority(1)]
-    public async Task PermView(IRole user)
+    public async Task PermView(SocketRole user)
     {
         var perms = user.Permissions;
         var eb = new EmbedBuilder();
@@ -76,7 +73,7 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
             .Select(i => $"**{i}**");
 
         eb.WithDescription(string.Join("\n", allowed));
-        await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -165,8 +162,8 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    [UserPerm(GuildPermission.ManageEmojisAndStickers)]
-    [BotPerm(GuildPermission.ManageEmojisAndStickers)]
+    [UserPerm(GuildPermission.ManageExpressions)]
+    [BotPerm(GuildPermission.ManageExpressions)]
     [Priority(0)]
     public async Task AddEmote(string name, string? url = null)
     {
@@ -178,7 +175,7 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
         }
         else if (url.StartsWith("<"))
         {
-            var tags = ctx.Message.Tags.Where(t => t.Type == TagType.Emoji).Select(x => (Emote)x.Value);
+            var tags = ctx.Message.Tags.Where(t => t.Type == TagType.Emoji).Select(x => (Emoji)x.Value);
             var result = tags.Select(m => m.Url);
             acturl = string.Join("", result);
         }
@@ -214,12 +211,12 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
     /// <param name="_">Placeholder parameter to satisfy command signature requirements.</param>
     [Cmd]
     [Aliases]
-    [UserPerm(GuildPermission.ManageEmojisAndStickers)]
-    [BotPerm(GuildPermission.ManageEmojisAndStickers)]
+    [UserPerm(GuildPermission.ManageExpressions)]
+    [BotPerm(GuildPermission.ManageExpressions)]
     [RequireContext(ContextType.Guild)]
     public async Task RemoveEmote(string _)
     {
-        var tags = ctx.Message.Tags.Where(t => t.Type == TagType.Emoji).Select(x => (Emote)x.Value)
+        var tags = ctx.Message.Tags.Where(t => t.Type == TagType.Emoji).Select(x => (Emoji)x.Value)
             .FirstOrDefault();
         try
         {
@@ -227,7 +224,7 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
             await ctx.Guild.DeleteEmoteAsync(emote1).ConfigureAwait(false);
             await ctx.Channel.SendConfirmAsync(Strings.EmoteDeleted(ctx.Guild.Id, emote1)).ConfigureAwait(false);
         }
-        catch (HttpException)
+        catch (FluxerApiException)
         {
             await ctx.Channel.SendErrorAsync(Strings.EmoteNotFromGuild(ctx.Guild.Id), Config).ConfigureAwait(false);
         }
@@ -240,8 +237,8 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
     /// <param name="name">The new name for the emote.</param>
     [Cmd]
     [Aliases]
-    [UserPerm(GuildPermission.ManageEmojisAndStickers)]
-    [BotPerm(GuildPermission.ManageEmojisAndStickers)]
+    [UserPerm(GuildPermission.ManageExpressions)]
+    [BotPerm(GuildPermission.ManageExpressions)]
     [RequireContext(ContextType.Guild)]
     public async Task RenameEmote(string emote, string name)
     {
@@ -251,7 +248,7 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
             return;
         }
 
-        var tags = ctx.Message.Tags.Where(t => t.Type == TagType.Emoji).Select(x => (Emote)x.Value)
+        var tags = ctx.Message.Tags.Where(t => t.Type == TagType.Emoji).Select(x => (Emoji)x.Value)
             .FirstOrDefault();
         try
         {
@@ -263,7 +260,7 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
                     Strings.EmoteRenamed(ctx.Guild.Id, emote1, Format.Code(ogname), Format.Code(emote2.Name)))
                 .ConfigureAwait(false);
         }
-        catch (HttpException)
+        catch (FluxerApiException)
         {
             await ctx.Channel.SendErrorAsync(Strings.EmoteWrongGuild(ctx.Guild.Id), Config).ConfigureAwait(false);
         }
@@ -276,8 +273,8 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    [UserPerm(GuildPermission.ManageEmojisAndStickers)]
-    [BotPerm(GuildPermission.ManageEmojisAndStickers)]
+    [UserPerm(GuildPermission.ManageExpressions)]
+    [BotPerm(GuildPermission.ManageExpressions)]
     [Priority(1)]
     public async Task StealEmotes([Remainder] string e)
     {
@@ -287,9 +284,9 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
         };
         var errored = new List<string>();
         var emotes = new List<string>();
-        var tags = ctx.Message.Tags.Where(t => t.Type == TagType.Emoji).Select(x => (Emote)x.Value).Distinct();
+        var tags = ctx.Message.Tags.Where(t => t.Type == TagType.Emoji).Select(x => (Emoji)x.Value).Distinct();
         if (!tags.Any()) return;
-        var msg = await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+        var msg = await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
         foreach (var i in tags)
         {
             using var http = factory.CreateClient();
@@ -328,23 +325,23 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    [UserPerm(GuildPermission.ManageEmojisAndStickers)]
-    [BotPerm(GuildPermission.ManageEmojisAndStickers)]
+    [UserPerm(GuildPermission.ManageExpressions)]
+    [BotPerm(GuildPermission.ManageExpressions)]
     [Priority(0)]
-    public async Task StealForRole(IRole role, [Remainder] string e)
+    public async Task StealForRole(SocketRole role, [Remainder] string e)
     {
         var eb = new EmbedBuilder
         {
             Description = Strings.AddingEmotesToRole(ctx.Guild.Id, config.Data.LoadingEmote, role.Mention), Color = Mewdeko.OkColor
         };
-        var list = new Optional<IEnumerable<IRole>>([
+        var list = new Optional<IEnumerable<SocketRole>>([
             role
         ]);
         var errored = new List<string>();
         var emotes = new List<string>();
-        var tags = ctx.Message.Tags.Where(t => t.Type == TagType.Emoji).Select(x => (Emote)x.Value).Distinct();
+        var tags = ctx.Message.Tags.Where(t => t.Type == TagType.Emoji).Select(x => (Emoji)x.Value).Distinct();
         if (!tags.Any()) return;
-        var msg = await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+        var msg = await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
 
         foreach (var i in tags)
         {

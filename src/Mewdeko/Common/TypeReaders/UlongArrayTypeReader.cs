@@ -1,4 +1,3 @@
-using Discord.Commands;
 
 namespace Mewdeko.Common.TypeReaders;
 
@@ -10,9 +9,9 @@ public class UlongArrayTypeReader : MewdekoTypeReader<ulong[]>
     /// <summary>
     ///     Initializes a new instance of the <see cref="UlongArrayTypeReader" /> class.
     /// </summary>
-    /// <param name="client">The DiscordShardedClient instance.</param>
+    /// <param name="client">The FluxerClient instance.</param>
     /// <param name="cmds">The CommandService instance.</param>
-    public UlongArrayTypeReader(DiscordShardedClient client, CommandService cmds) : base(client, cmds)
+    public UlongArrayTypeReader(FluxerClient client, CommandService cmds) : base(client, cmds)
     {
     }
 

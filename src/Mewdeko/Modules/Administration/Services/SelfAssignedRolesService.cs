@@ -79,7 +79,7 @@ public class SelfAssignedRolesService(
     ///     A task that represents the asynchronous operation and contains a boolean indicating whether the operation was
     ///     successful.
     /// </returns>
-    public async Task<bool> AddNew(ulong guildId, IRole role, int group)
+    public async Task<bool> AddNew(ulong guildId, SocketRole role, int group)
     {
         await using var db = await dbFactory.CreateConnectionAsync();
 
@@ -126,7 +126,7 @@ public class SelfAssignedRolesService(
     ///     indicating whether auto-deletion is enabled, and an extra object containing additional information about the
     ///     operation.
     /// </returns>
-    public async Task<(AssignResult Result, bool AutoDelete, object? extra)> Assign(IGuildUser guildUser, IRole role)
+    public async Task<(AssignResult Result, bool AutoDelete, object? extra)> Assign(SocketGuildMember guildUser, SocketRole role)
     {
         object? extra = null;
         var (autoDelete, exclusive, roles) = await GetAdAndRoles(guildUser.Guild.Id);
@@ -238,7 +238,7 @@ public class SelfAssignedRolesService(
     ///     A task that represents the asynchronous operation and contains the result of the operation and a boolean
     ///     indicating whether auto-deletion is enabled.
     /// </returns>
-    public async Task<(RemoveResult Result, bool AutoDelete)> Remove(IGuildUser guildUser, IRole role)
+    public async Task<(RemoveResult Result, bool AutoDelete)> Remove(SocketGuildMember guildUser, SocketRole role)
     {
         var (autoDelete, _, roles) = await GetAdAndRoles(guildUser.Guild.Id);
 
@@ -313,7 +313,7 @@ public class SelfAssignedRolesService(
     ///     A task that represents the asynchronous operation and contains a boolean indicating whether the operation was
     ///     successful.
     /// </returns>
-    public async Task<bool> SetLevelReq(ulong guildId, IRole role, int level)
+    public async Task<bool> SetLevelReq(ulong guildId, SocketRole role, int level)
     {
         await using var db = await dbFactory.CreateConnectionAsync();
         var sar = await db.SelfAssignableRoles
@@ -358,9 +358,9 @@ public class SelfAssignedRolesService(
     ///     their corresponding roles, and a dictionary mapping group numbers to their names.
     /// </returns>
     public async
-        Task<(bool Exclusive, IEnumerable<(SelfAssignableRole Model, IRole Role)> Roles, IDictionary<int, string>
+        Task<(bool Exclusive, IEnumerable<(SelfAssignableRole Model, SocketRole Role)> Roles, IDictionary<int, string>
             GroupNames
-            )> GetRoles(IGuild guild)
+            )> GetRoles(SocketGuild guild)
     {
         var config = await gss.GetGuildConfig(guild.Id);
         var exclusive = config?.ExclusiveSelfAssignedRoles ?? false;

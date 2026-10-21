@@ -118,7 +118,7 @@ public class SearchesService : INService, IUnloadableService
         {
             try
             {
-                if (msg is not SocketUserMessage umsg)
+                if (msg is not SocketMessage umsg)
                     return;
 
                 if (!TranslatedChannels.TryGetValue(umsg.Channel.Id, out var autoDelete))
@@ -155,7 +155,7 @@ public class SearchesService : INService, IUnloadableService
                 }
 
                 await umsg.Channel.SendConfirmAsync(
-                        strings.SearchResultUser(((IGuildChannel)umsg.Channel).GuildId, umsg.Author.Mention,
+                        strings.SearchResultUser(((Channel)umsg.Channel).GuildId, umsg.Author.Mention,
                             text.Replace("<@ ", "<@", StringComparison.InvariantCulture)
                                 .Replace("<@! ", "<@!", StringComparison.InvariantCulture)))
                     .ConfigureAwait(false);
@@ -1326,7 +1326,7 @@ public record RedditCache
     /// <summary>
     ///     The guild where the post was posted.
     /// </summary>
-    public IGuild Guild { get; set; }
+    public SocketGuild Guild { get; set; }
 
     /// <summary>
     ///     The url of the post.

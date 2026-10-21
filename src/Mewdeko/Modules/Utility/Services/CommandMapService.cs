@@ -19,7 +19,7 @@ public class CommandMapService(IDataConnectionFactory dbFactory) : IInputTransfo
     /// <param name="user">The user who issued the command.</param>
     /// <param name="input">The original command input.</param>
     /// <returns>The transformed command input if an alias is matched; otherwise, the original input.</returns>
-    public async Task<string> TransformInput(IGuild? guild, IMessageChannel channel, IUser user, string input)
+    public async Task<string> TransformInput(SocketGuild? guild, Channel channel, IUser user, string input)
     {
         await Task.Yield();
 

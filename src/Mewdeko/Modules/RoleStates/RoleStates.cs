@@ -9,7 +9,7 @@ namespace Mewdeko.Modules.RoleStates;
 /// <param name="bss">The BotConfigService instance.</param>
 /// <param name="interactivity">The InteractiveService instance.</param>
 /// <param name="client">The Discord client instance.</param>
-public class RoleStates(BotConfigService bss, InteractiveService interactivity, DiscordShardedClient client)
+public class RoleStates(BotConfigService bss, InteractiveService interactivity, FluxerClient client)
     : MewdekoModuleBase<RoleStatesService>
 {
     /// <summary>
@@ -196,7 +196,7 @@ public class RoleStates(BotConfigService bss, InteractiveService interactivity, 
                                  $"`Skip auto-assign roles:` {roleStateSettings.SkipAutoAssignRoles}\n" +
                                  $"`Denied roles:` {(deniedRoles.Any() ? string.Join("|", deniedRoles.Select(x => $"<@&{x}>")) : "None")}\n" +
                                  $"`Denied users:` {(deniedUsers.Any() ? string.Join("|", deniedUsers.Select(x => $"<@{x}>")) : "None")}\n");
-            await ctx.Channel.SendMessageAsync(embed: eb.Build());
+            await ctx.Channel.SendAsync(embed: eb.Build());
         }
     }
 
@@ -260,7 +260,7 @@ public class RoleStates(BotConfigService bss, InteractiveService interactivity, 
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task DeleteUserRoleState(IGuildUser user)
+    public async Task DeleteUserRoleState(SocketGuildMember user)
     {
         var userRoleStates = await Service.DeleteUserRoleState(ctx.Guild.Id, user.Id);
         if (!userRoleStates)
@@ -280,7 +280,7 @@ public class RoleStates(BotConfigService bss, InteractiveService interactivity, 
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task RoleStatesAddDenyRole(params IRole[] roles)
+    public async Task RoleStatesAddDenyRole(params SocketRole[] roles)
     {
         var roleStateSettings = await Service.GetRoleStateSettings(ctx.Guild.Id);
 
@@ -318,7 +318,7 @@ public class RoleStates(BotConfigService bss, InteractiveService interactivity, 
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task RoleStatesRemoveDenyRole(params IRole[] roles)
+    public async Task RoleStatesRemoveDenyRole(params SocketRole[] roles)
     {
         var roleStateSettings = await Service.GetRoleStateSettings(ctx.Guild.Id);
 
@@ -356,7 +356,7 @@ public class RoleStates(BotConfigService bss, InteractiveService interactivity, 
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task RoleStatesAddDenyUser(params IGuildUser[] users)
+    public async Task RoleStatesAddDenyUser(params SocketGuildMember[] users)
     {
         var roleStateSettings = await Service.GetRoleStateSettings(ctx.Guild.Id);
 
@@ -394,7 +394,7 @@ public class RoleStates(BotConfigService bss, InteractiveService interactivity, 
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task RoleStatesRemoveDenyUser(params IGuildUser[] users)
+    public async Task RoleStatesRemoveDenyUser(params SocketGuildMember[] users)
     {
         var roleStateSettings = await Service.GetRoleStateSettings(ctx.Guild.Id);
 
@@ -433,7 +433,7 @@ public class RoleStates(BotConfigService bss, InteractiveService interactivity, 
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task SetUserRoleState(IGuildUser user, params IRole[] roles)
+    public async Task SetUserRoleState(SocketGuildMember user, params SocketRole[] roles)
     {
         var roleIds = roles.Where(x => x.Id != ctx.Guild.Id && !x.IsManaged).Select(x => x.Id);
         if (!roleIds.Any())
@@ -452,7 +452,7 @@ public class RoleStates(BotConfigService bss, InteractiveService interactivity, 
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task RemoveRolesFromRoleState(IUser user, params IRole[] roles)
+    public async Task RemoveRolesFromRoleState(IUser user, params SocketRole[] roles)
     {
         var removed = await Service.RemoveRolesFromUserRoleState(ctx.Guild.Id, user.Id, roles.Select(x => x.Id));
         if (!removed.Item1)
@@ -471,7 +471,7 @@ public class RoleStates(BotConfigService bss, InteractiveService interactivity, 
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task AddRolesToRoleState(IUser user, params IRole[] roles)
+    public async Task AddRolesToRoleState(IUser user, params SocketRole[] roles)
     {
         var removed = await Service.AddRolesToUserRoleState(ctx.Guild.Id, user.Id, roles.Select(x => x.Id));
         if (!removed.Item1)

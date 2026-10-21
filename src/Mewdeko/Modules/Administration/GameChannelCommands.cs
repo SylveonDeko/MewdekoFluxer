@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Administration.Services;
 
@@ -26,7 +26,7 @@ public partial class Administration
         [BotPerm(GuildPermission.MoveMembers)]
         public async Task GameVoiceChannel()
         {
-            var vch = ((IGuildUser)ctx.User).VoiceChannel;
+            var vch = ((SocketGuildMember)ctx.User).VoiceChannel;
 
             if (vch == null)
             {

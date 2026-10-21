@@ -14,7 +14,7 @@ namespace Mewdeko.Controllers;
 public class RoleGreetController : Controller
 {
     private readonly IDashboardAuditContext auditContext;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly RoleGreetService roleGreetService;
 
     /// <summary>
@@ -25,7 +25,7 @@ public class RoleGreetController : Controller
     /// <param name="auditContext">Records before/after state for the dashboard audit log.</param>
     public RoleGreetController(
         RoleGreetService roleGreetService,
-        DiscordShardedClient client,
+        FluxerClient client,
         IDashboardAuditContext auditContext)
     {
         this.roleGreetService = roleGreetService;

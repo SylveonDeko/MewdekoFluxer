@@ -18,7 +18,7 @@ public sealed partial class AnalyticsQueryService : INService
 
     private static readonly string[] SizeBuckets = ["tiny", "small", "medium", "large", "huge", "unknown"];
 
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly AnalyticsCollector collector;
     private readonly IDataConnectionFactory dbFactory;
     private readonly InstanceManagementService instances;
@@ -34,7 +34,7 @@ public sealed partial class AnalyticsQueryService : INService
     /// <param name="writer">The writer, for pipeline timestamps.</param>
     /// <param name="instances">The instance registry.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
-    public AnalyticsQueryService(IDataConnectionFactory dbFactory, DiscordShardedClient client,
+    public AnalyticsQueryService(IDataConnectionFactory dbFactory, FluxerClient client,
         AnalyticsCollector collector, AnalyticsWriter writer, InstanceManagementService instances,
         ILogger<AnalyticsQueryService> logger)
     {

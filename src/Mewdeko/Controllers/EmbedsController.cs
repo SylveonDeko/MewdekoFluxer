@@ -1,5 +1,4 @@
 using System.IO;
-using Discord.Net;
 using Mewdeko.AuthHandlers;
 using Mewdeko.Controllers.Common.AuditLog;
 using Mewdeko.Controllers.Common.DashboardAccess;
@@ -12,7 +11,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Embed = DataModel.Embed;
 using EmbedWebhookPersona = DataModel.EmbedWebhookPersona;
-using Image = Discord.Image;
 
 namespace Mewdeko.Controllers;
 
@@ -32,7 +30,7 @@ public class EmbedsController(
     CdnStorageService cdn,
     IBotCredentials creds,
     IDashboardAuditContext auditContext,
-    DiscordShardedClient client,
+    FluxerClient client,
     DashboardAccessService dashboardAccessService) : Controller
 {
     private const string Section = "Embeds";
@@ -434,7 +432,7 @@ public class EmbedsController(
         var bot = guild.CurrentUser;
 
         var channels = guild.Channels
-            .OfType<ITextChannel>()
+            .OfType<Channel>()
             .Concat(guild.ThreadChannels)
             .DistinctBy(channel => channel.Id)
             .Select(channel => BuildChannelResponse(guild, user, bot, channel))
@@ -474,7 +472,7 @@ public class EmbedsController(
         if (user == null)
             return Forbid();
 
-        var channel = guild.GetChannel(request.ChannelId) as ITextChannel
+        var channel = guild.GetChannel(request.ChannelId) as Channel
                       ?? guild.ThreadChannels.FirstOrDefault(thread => thread.Id == request.ChannelId);
         if (channel == null)
             return NotFound("Channel not found");
@@ -482,7 +480,7 @@ public class EmbedsController(
         var bot = guild.CurrentUser;
         var userPerms = user.GetPermissions(channel);
         var botPerms = bot.GetPermissions(channel);
-        var isThread = channel is IThreadChannel;
+        var isThread = channel is Channel;
 
         // Anything that isn't a recognised embed payload is sent as plain message content, matching how
         // the rest of the bot treats embed strings.
@@ -552,7 +550,7 @@ public class EmbedsController(
                 "could not be set up there. Delete an unused webhook, or give the persona an avatar URL " +
                 "instead of an uploaded image.");
         }
-        catch (HttpException ex)
+        catch (FluxerApiException ex)
         {
             return BadRequest($"Discord rejected the message: {ex.Reason ?? ex.Message}");
         }
@@ -600,12 +598,12 @@ public class EmbedsController(
     ///     Sends the message as the bot itself.
     /// </summary>
     private static async Task<ulong> SendAsBotAsync(
-        ITextChannel channel,
+        Channel channel,
         string? plainText,
-        Discord.Embed[]? embeds,
+        EmbedRequest[]? embeds,
         AllowedMentions allowedMentions)
     {
-        var message = await channel.SendMessageAsync(plainText, embeds: embeds, allowedMentions: allowedMentions);
+        var message = await channel.SendAsync(plainText, embeds: embeds, allowedMentions: allowedMentions);
         return message.Id;
     }
 
@@ -623,18 +621,18 @@ public class EmbedsController(
     /// <param name="avatarUrl">The avatar to post with, or null to use the webhook's own avatar.</param>
     /// <param name="uploadedAvatarPersona">The persona whose uploaded avatar should be used, if any.</param>
     private static async Task<ulong> SendViaWebhookAsync(
-        ITextChannel channel,
+        Channel channel,
         string? plainText,
-        Discord.Embed[]? embeds,
+        EmbedRequest[]? embeds,
         AllowedMentions allowedMentions,
         string? username,
         string? avatarUrl,
         EmbedWebhookPersona? uploadedAvatarPersona)
     {
         ulong? threadId = null;
-        IChannel webhookChannel = channel;
+        Channel webhookChannel = channel;
 
-        if (channel is SocketThreadChannel thread)
+        if (channel is Channel thread)
         {
             threadId = thread.Id;
             webhookChannel = thread.ParentChannel ??
@@ -650,9 +648,9 @@ public class EmbedsController(
             ? await ResolveSharedWebhookAsync(integrationChannel, webhooks)
             : await ResolvePersonaWebhookAsync(integrationChannel, webhooks, uploadedAvatarPersona);
 
-        using var webhookClient = new DiscordWebhookClient(webhook);
+        using var webhookClient = new FluxerWebhookClient(webhook);
 
-        return await webhookClient.SendMessageAsync(plainText, embeds: embeds, username: username,
+        return await webhookClient.SendAsync(plainText, embeds: embeds, username: username,
             avatarUrl: avatarUrl, allowedMentions: allowedMentions,
             threadId: threadId);
     }
@@ -662,7 +660,7 @@ public class EmbedsController(
     ///     a URL, and one-off sends, ride on this one using per-message name and avatar overrides.
     /// </summary>
     private static async Task<IWebhook> ResolveSharedWebhookAsync(
-        IIntegrationChannel channel, IReadOnlyCollection<IWebhook> webhooks)
+        Channel channel, IReadOnlyCollection<IWebhook> webhooks)
     {
         return webhooks.FirstOrDefault(hook => hook.Name == WebhookName && hook.Token != null)
                ?? await channel.CreateWebhookAsync(WebhookName);
@@ -678,7 +676,7 @@ public class EmbedsController(
     ///     persona costs nothing and replacing its avatar refreshes the webhook exactly once.
     /// </summary>
     private static async Task<IWebhook> ResolvePersonaWebhookAsync(
-        IIntegrationChannel channel, IReadOnlyCollection<IWebhook> webhooks, EmbedWebhookPersona persona)
+        Channel channel, IReadOnlyCollection<IWebhook> webhooks, EmbedWebhookPersona persona)
     {
         var targetName = PersonaWebhookName(persona);
 
@@ -808,14 +806,14 @@ public class EmbedsController(
     ///     Builds the permission summary for a single channel, or null when the user cannot see it at all.
     /// </summary>
     private static SendableChannelResponse? BuildChannelResponse(
-        SocketGuild guild, SocketGuildUser user, SocketGuildUser bot, ITextChannel channel)
+        SocketGuild guild, SocketGuildMember user, SocketGuildMember bot, Channel channel)
     {
         var userPerms = user.GetPermissions(channel);
         if (!userPerms.ViewChannel)
             return null;
 
         var botPerms = bot.GetPermissions(channel);
-        var isThread = channel is IThreadChannel;
+        var isThread = channel is Channel;
         var canSend = isThread ? userPerms.SendMessagesInThreads : userPerms.SendMessages;
         var botCanSend = isThread ? botPerms.SendMessagesInThreads : botPerms.SendMessages;
 
@@ -842,7 +840,7 @@ public class EmbedsController(
             CategoryName = isThread ? "Threads" : categoryName,
             Position = channel.Position,
             IsThread = isThread,
-            IsAnnouncement = channel is INewsChannel,
+            IsAnnouncement = channel is Channel,
             CanSend = canSend,
             CanEmbed = userPerms.EmbedLinks,
             CanMentionEveryone = userPerms.MentionEveryone,

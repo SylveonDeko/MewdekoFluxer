@@ -1,6 +1,5 @@
 using System.Text;
 using System.Text.Json;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Tickets.Common;
 using Mewdeko.Modules.Tickets.Services;
@@ -262,7 +261,7 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                 .WithFooter("Type your response for #1 (Placeholder)")
                 .WithOkColor();
 
-            var setupMsg = await ctx.Channel.SendMessageAsync(embed: embed.Build());
+            var setupMsg = await ctx.Channel.SendAsync(embed: embed.Build());
 
             var placeholder = await NextMessageAsync(ctx.Channel.Id, ctx.User.Id);
             if (string.IsNullOrEmpty(placeholder))
@@ -323,7 +322,7 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                         $"Use `{Config.Prefix}addoption {menu.Id} <label>` to add more options.")
                     .WithOkColor();
 
-                await ctx.Channel.SendMessageAsync(embed: confirmEmbed.Build());
+                await ctx.Channel.SendAsync(embed: confirmEmbed.Build());
             }
             catch (Exception ex)
             {
@@ -380,7 +379,7 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                         $"Emoji: {emoji ?? "None"}")
                     .WithOkColor();
 
-                await ctx.Channel.SendMessageAsync(embed: embed.Build());
+                await ctx.Channel.SendAsync(embed: embed.Build());
             }
             catch (Exception ex)
             {
@@ -419,7 +418,7 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                     $"Emoji: {option.Emoji ?? "None"}");
             }
 
-            await ctx.Channel.SendMessageAsync(embed: embed.Build());
+            await ctx.Channel.SendAsync(embed: embed.Build());
         }
 
         /// <summary>
@@ -560,7 +559,7 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                 }
             }
 
-            await ctx.Channel.SendMessageAsync(embed: embed.Build());
+            await ctx.Channel.SendAsync(embed: embed.Build());
         }
 
         /// <summary>
@@ -663,7 +662,7 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                 embed.AddField("Viewer Roles", string.Join(", ", roles));
             }
 
-            await ctx.Channel.SendMessageAsync(embed: embed.Build());
+            await ctx.Channel.SendAsync(embed: embed.Build());
         }
 
         /// <summary>
@@ -781,7 +780,7 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                     true)
                 .WithOkColor();
 
-            await ctx.Channel.SendMessageAsync(embed: embed.Build());
+            await ctx.Channel.SendAsync(embed: embed.Build());
         }
 
         /// <summary>
@@ -857,7 +856,7 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                     $"Length: {config.MinLength ?? 0}-{config.MaxLength ?? 4000}");
             }
 
-            await ctx.Channel.SendMessageAsync(embed: embed.Build());
+            await ctx.Channel.SendAsync(embed: embed.Build());
         }
 
         private static ModalConfiguration ParseQuestions(string? json)
@@ -960,7 +959,7 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                     embed.WithDescription(Strings.NoPanelComponents(ctx.Guild.Id));
                 }
 
-                await ctx.Channel.SendMessageAsync(embed: embed.Build());
+                await ctx.Channel.SendAsync(embed: embed.Build());
             }
             catch (Exception ex)
             {
@@ -1015,7 +1014,7 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
 
                     foreach (var panel in pagePanels)
                     {
-                        var channel = await Context.Guild.GetChannelAsync(panel.ChannelId) as ITextChannel;
+                        var channel = await Context.Guild.GetChannelAsync(panel.ChannelId) as Channel;
                         var fieldBuilder = new StringBuilder();
 
                         fieldBuilder.AppendLine($"Channel: #{channel?.Name ?? "deleted-channel"}");

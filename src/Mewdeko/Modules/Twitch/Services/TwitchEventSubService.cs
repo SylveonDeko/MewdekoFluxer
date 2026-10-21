@@ -20,7 +20,7 @@ public class TwitchEventSubService : INService, IReadyExecutor
 
     private readonly IBotCredentials credentials;
     private readonly IDataConnectionFactory dbFactory;
-    private readonly DiscordShardedClient discordClient;
+    private readonly FluxerClient discordClient;
     private readonly ILogger<TwitchEventSubService> logger;
     private readonly ConcurrentDictionary<string, DateTime> processedMessages = new();
     private readonly TwitchApiClient twitchApiClient;
@@ -30,7 +30,7 @@ public class TwitchEventSubService : INService, IReadyExecutor
     public TwitchEventSubService(
         IBotCredentials credentials,
         IDataConnectionFactory dbFactory,
-        DiscordShardedClient discordClient,
+        FluxerClient discordClient,
         ILogger<TwitchEventSubService> logger,
         TwitchApiClient twitchApiClient,
         TwitchService twitchService)

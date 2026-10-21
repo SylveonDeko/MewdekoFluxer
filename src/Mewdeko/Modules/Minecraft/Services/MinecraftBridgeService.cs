@@ -6,7 +6,6 @@ using DataModel;
 using Mewdeko.Modules.Minecraft.Common;
 using Mewdeko.Services.Strings;
 using Microsoft.AspNetCore.Http;
-using Embed = Discord.Embed;
 
 namespace Mewdeko.Modules.Minecraft.Services;
 
@@ -21,7 +20,7 @@ public class MinecraftBridgeService : INService
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true
     };
 
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly ConcurrentDictionary<int, BridgeConnection> connections = new();
     private readonly ILogger<MinecraftBridgeService> logger;
 
@@ -33,7 +32,7 @@ public class MinecraftBridgeService : INService
     /// </summary>
     public MinecraftBridgeService(
         MinecraftService minecraftService,
-        DiscordShardedClient client,
+        FluxerClient client,
         EventHandler eventHandler,
         GeneratedBotStrings strings,
         ILogger<MinecraftBridgeService> logger)
@@ -48,10 +47,10 @@ public class MinecraftBridgeService : INService
 
     private async Task OnDiscordMessageReceived(SocketMessage socketMessage)
     {
-        if (socketMessage is not SocketUserMessage { Author.IsBot: false } msg)
+        if (socketMessage is not SocketMessage { Author.IsBot: false } msg)
             return;
 
-        if (msg.Channel is not SocketTextChannel textChannel)
+        if (msg.Channel is not Channel textChannel)
             return;
 
         var guildId = textChannel.Guild.Id;
@@ -77,7 +76,7 @@ public class MinecraftBridgeService : INService
                 catch { }
             }
 
-            var displayName = (msg.Author as SocketGuildUser)?.DisplayName ??
+            var displayName = (msg.Author as SocketGuildMember)?.DisplayName ??
                               msg.Author.GlobalName ?? msg.Author.Username;
             await SendChatToServerAsync(conn.ServerId, displayName, msg.CleanContent, textChannel.Name, templates);
         }
@@ -228,7 +227,7 @@ public class MinecraftBridgeService : INService
             var guild = client.GetGuild(server.GuildId);
             if (guild == null) return;
 
-            ITextChannel? GetChannel(ulong? channelId)
+            Channel? GetChannel(ulong? channelId)
             {
                 return channelId.HasValue ? guild.GetTextChannel(channelId.Value) : null;
             }
@@ -387,11 +386,11 @@ public class MinecraftBridgeService : INService
     }
 
     private async Task SendEventToChannelAsync(
-        ITextChannel channel,
-        IGuild guild,
+        Channel channel,
+        SocketGuild guild,
         string? template,
         Dictionary<string, string> placeholders,
-        Func<Embed?> defaultEmbed,
+        Func<EmbedRequest?> defaultEmbed,
         string? defaultText = null)
     {
         if (!string.IsNullOrWhiteSpace(template))
@@ -404,22 +403,22 @@ public class MinecraftBridgeService : INService
 
             if (SmartEmbed.TryParse(parsed, guild.Id, out var embeds, out var plainText))
             {
-                await channel.SendMessageAsync(
+                await channel.SendAsync(
                     plainText,
                     embeds: embeds,
                     allowedMentions: AllowedMentions.None);
                 return;
             }
 
-            await channel.SendMessageAsync(Sanitize(parsed), allowedMentions: AllowedMentions.None);
+            await channel.SendAsync(Sanitize(parsed), allowedMentions: AllowedMentions.None);
             return;
         }
 
         var embed = defaultEmbed();
         if (embed != null)
-            await channel.SendMessageAsync(embed: embed, allowedMentions: AllowedMentions.None);
+            await channel.SendAsync(embed: embed, allowedMentions: AllowedMentions.None);
         else if (defaultText != null)
-            await channel.SendMessageAsync(defaultText, allowedMentions: AllowedMentions.None);
+            await channel.SendAsync(defaultText, allowedMentions: AllowedMentions.None);
     }
 
     private static string Sanitize(string input)

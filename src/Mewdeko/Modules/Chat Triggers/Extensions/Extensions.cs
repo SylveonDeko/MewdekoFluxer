@@ -1,14 +1,12 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using AngleSharp;
 using AngleSharp.Html.Dom;
 using LinqToDB.Async;
-using Mewdeko.Common.DiscordImplementations;
 using Mewdeko.Common.TriggerPlaceholders;
 using Serilog;
 using ChatTrigger = DataModel.ChatTrigger;
-using Embed = Discord.Embed;
 
 namespace Mewdeko.Modules.Chat_Triggers.Extensions;
 
@@ -110,7 +108,7 @@ public static class Extensions
     /// <param name="str">The trigger string containing the placeholder.</param>
     /// <param name="client">The Discord socket client.</param>
     /// <returns>The trigger string with the placeholder replaced.</returns>
-    private static string ResolveTriggerString(this string str, DiscordShardedClient client)
+    private static string ResolveTriggerString(this string str, FluxerClient client)
     {
         return str.Replace("%bot.mention%", client.CurrentUser?.Mention ?? "",
             StringComparison.Ordinal); // Handle potential null CurrentUser
@@ -127,8 +125,8 @@ public static class Extensions
     /// <param name="dbFactory">Optional: The LinqToDB database factory. Default is null.</param>
     /// <param name="triggerId">Optional: The ID of the trigger. Default is 0.</param>
     /// <returns>The resolved response string.</returns>
-    private static async Task<string?> ResolveResponseStringAsync(this string? str, IUserMessage ctx,
-        DiscordShardedClient client, string resolvedTrigger, bool containsAnywhere,
+    private static async Task<string?> ResolveResponseStringAsync(this string? str, Message ctx,
+        FluxerClient client, string resolvedTrigger, bool containsAnywhere,
         IDataConnectionFactory? dbFactory = null,
         int triggerId = 0)
     {
@@ -161,8 +159,8 @@ public static class Extensions
             }
         }
 
-        var canMentionEveryone = (ctx.Author as IGuildUser)?.GuildPermissions.MentionEveryone ?? true;
-        var textChannel = ctx.Channel as ITextChannel;
+        var canMentionEveryone = (ctx.Author as SocketGuildMember)?.GuildPermissions.MentionEveryone ?? true;
+        var textChannel = ctx.Channel as Channel;
         var guild = textChannel?.Guild as SocketGuild;
         var repliedMessage = await GetRepliedMessageAsync(ctx).ConfigureAwait(false);
 
@@ -174,7 +172,7 @@ public static class Extensions
                 await using var db = await dbFactory.CreateConnectionAsync();
                 // Only trigger fires count, and only in this guild: a plain command whose name happens to be the
                 // same number would otherwise inflate the total
-                var guildId = (ctx.Channel as ITextChannel)?.GuildId ?? 0;
+                var guildId = (ctx.Channel as Channel)?.GuildId ?? 0;
                 var count = await db.CommandStats
                     .CountAsync(x => x.Trigger && x.GuildId == guildId && x.NameOrId == $"{triggerId}")
                     .ConfigureAwait(false);
@@ -238,8 +236,8 @@ public static class Extensions
     ///     response.
     /// </param>
     /// <returns>The response string with context.</returns>
-    public static Task<string?> ResponseWithContextAsync(this ChatTrigger cr, IUserMessage ctx,
-        DiscordShardedClient client, bool containsAnywhere, IDataConnectionFactory? dbFactory = null,
+    public static Task<string?> ResponseWithContextAsync(this ChatTrigger cr, Message ctx,
+        FluxerClient client, bool containsAnywhere, IDataConnectionFactory? dbFactory = null,
         string? response = null)
     {
         return (response ?? cr.Response).ResolveResponseStringAsync(ctx, client,
@@ -268,8 +266,8 @@ public static class Extensions
     ///     several responses.
     /// </param>
     /// <returns>The sent user message or null if no response is required.</returns>
-    public static async Task<IUserMessage>? Send(this ChatTrigger ct, IUserMessage ctx,
-        DiscordShardedClient client, bool sanitize, IDataConnectionFactory dbProvider = null,
+    public static async Task<Message>? Send(this ChatTrigger ct, Message ctx,
+        FluxerClient client, bool sanitize, IDataConnectionFactory dbProvider = null,
         TriggerPlaceholderService? placeholders = null, Match? regexMatch = null,
         string? responseOverride = null)
     {
@@ -278,7 +276,7 @@ public static class Extensions
             : ctx.Channel;
 
         var response = await ct.ResolveContextualPlaceholdersAsync(placeholders, client,
-            (ctx.Channel as IGuildChannel)?.Guild, ctx.Channel, ctx.Author,
+            (ctx.Channel as Channel)?.Guild, ctx.Channel, ctx.Author,
             ctx.MentionedUserIds.FirstOrDefault(), regexMatch, responseOverride).ConfigureAwait(false);
 
         if (SmartEmbed.TryParse(response, ct.GuildId, out var crembed, out var plainText))
@@ -302,12 +300,12 @@ public static class Extensions
                 }
             }
 
-            var canMentionEveryone = (ctx.Author as IGuildUser)?.GuildPermissions.MentionEveryone ?? true;
+            var canMentionEveryone = (ctx.Author as SocketGuildMember)?.GuildPermissions.MentionEveryone ?? true;
             await using var dbContext = await dbProvider.CreateConnectionAsync();
             var repliedMessage = await GetRepliedMessageAsync(ctx).ConfigureAwait(false);
 
             var rep = new ReplacementBuilder()
-                .WithDefault(ctx.Author, ctx.Channel, (ctx.Channel as ITextChannel)?.Guild as SocketGuild, client)
+                .WithDefault(ctx.Author, ctx.Channel, (ctx.Channel as Channel)?.Guild as SocketGuild, client)
                 .WithOverride("%target%", () => canMentionEveryone
                     ? ctx.Content[substringIndex..].Trim()
                     : ctx.Content[substringIndex..].Trim().SanitizeMentions(true))
@@ -351,7 +349,7 @@ public static class Extensions
             if (ct.NoRespond)
                 return null;
 
-            var sent = await channel.SendMessageAsync(plainText, embeds: crembed, messageReference: ct.BuildReference(ctx, channel))
+            var sent = await channel.SendAsync(plainText, embeds: crembed, messageReference: ct.BuildReference(ctx, channel))
                 .ConfigureAwait(false);
 
             ct.QueueResponseDeletion(sent);
@@ -367,7 +365,7 @@ public static class Extensions
             return null;
 
         var sentMsg = await channel
-            .SendMessageAsync(context, messageReference: ct.BuildReference(ctx, channel))
+            .SendAsync(context, messageReference: ct.BuildReference(ctx, channel))
             .ConfigureAwait(false);
 
         ct.QueueResponseDeletion(sentMsg);
@@ -386,9 +384,9 @@ public static class Extensions
     ///     response driven by an event never replies. The reference is built as a soft reply: if the original message
     ///     is gone, Discord sends it as a normal message rather than failing.
     /// </remarks>
-    private static MessageReference? BuildReference(this ChatTrigger ct, IUserMessage ctx, IMessageChannel channel)
+    private static MessageReference? BuildReference(this ChatTrigger ct, Message ctx, Channel channel)
     {
-        if (!ct.ReplyToTrigger || ct.DmResponse || ctx is MewdekoUserMessage || ctx.Channel?.Id != channel.Id)
+        if (!ct.ReplyToTrigger || ct.DmResponse || ctx.IsSynthetic || ctx.Channel?.Id != channel.Id)
             return null;
 
         return new MessageReference(ctx.Id, channel.Id, failIfNotExists: false);
@@ -399,7 +397,7 @@ public static class Extensions
     /// </summary>
     /// <param name="ct">The trigger that was sent.</param>
     /// <param name="msg">The response message.</param>
-    private static void QueueResponseDeletion(this ChatTrigger ct, IUserMessage? msg)
+    private static void QueueResponseDeletion(this ChatTrigger ct, Message? msg)
     {
         if (msg is null || ct.DeleteResponseAfter <= 0)
             return;
@@ -418,7 +416,7 @@ public static class Extensions
         });
     }
 
-    private static async Task<IMessage?> GetRepliedMessageAsync(IUserMessage ctx)
+    private static async Task<Message?> GetRepliedMessageAsync(Message ctx)
     {
         return ctx.Reference?.MessageId.IsSpecified == true
             ? await ctx.Channel.GetMessageAsync(ctx.Reference.MessageId.Value).ConfigureAwait(false)
@@ -439,7 +437,7 @@ public static class Extensions
     /// <param name="responseOverride">The response to resolve instead of the trigger's primary response.</param>
     /// <returns>The response with contextual placeholders replaced.</returns>
     private static async Task<string?> ResolveContextualPlaceholdersAsync(this ChatTrigger ct,
-        TriggerPlaceholderService? placeholders, DiscordShardedClient client, IGuild? guild, IMessageChannel? channel,
+        TriggerPlaceholderService? placeholders, FluxerClient client, SocketGuild? guild, Channel? channel,
         IUser user, ulong targetUserId, Match? regexMatch = null, string? responseOverride = null)
     {
         var response = (responseOverride ?? ct.Response).ApplyRegexGroups(regexMatch);
@@ -478,13 +476,13 @@ public static class Extensions
         });
     }
 
-    private static async Task SendCrosspostAsync(this ChatTrigger ct, DiscordShardedClient client, string? plainText,
-        Embed[]? embeds = null)
+    private static async Task SendCrosspostAsync(this ChatTrigger ct, FluxerClient client, string? plainText,
+        EmbedRequest[]? embeds = null)
     {
         if (ct.CrosspostingChannelId != 0 && ct.GuildId is > 0)
         {
             await client.GetGuild(ct.GuildId ?? 0).GetTextChannel(ct.CrosspostingChannelId)
-                .SendMessageAsync(plainText, embeds: embeds)
+                .SendAsync(plainText, embeds: embeds)
                 .ConfigureAwait(false);
             return;
         }
@@ -494,8 +492,8 @@ public static class Extensions
 
         try
         {
-            using var whClient = new DiscordWebhookClient(ct.CrosspostingWebhookUrl);
-            await whClient.SendMessageAsync(plainText, embeds: embeds).ConfigureAwait(false);
+            using var whClient = new FluxerWebhookClient(ct.CrosspostingWebhookUrl);
+            await whClient.SendAsync(plainText, embeds: embeds).ConfigureAwait(false);
         }
         catch (TaskCanceledException)
         {

@@ -14,7 +14,7 @@ public sealed class UserSpamStats : IDisposable
     ///     Initializes a new instance of the <see cref="UserSpamStats" /> class with the specified message.
     /// </summary>
     /// <param name="msg">The message to initialize the statistics.</param>
-    public UserSpamStats(IUserMessage msg)
+    public UserSpamStats(Message msg)
     {
         LastMessage = msg.Content.ToUpperInvariant();
         Timers = new ConcurrentQueue<Timer>();
@@ -53,7 +53,7 @@ public sealed class UserSpamStats : IDisposable
     ///     Applies the next message to update the statistics.
     /// </summary>
     /// <param name="message">The message to apply.</param>
-    public void ApplyNextMessage(IUserMessage message)
+    public void ApplyNextMessage(Message message)
     {
         lock (applyLock)
         {

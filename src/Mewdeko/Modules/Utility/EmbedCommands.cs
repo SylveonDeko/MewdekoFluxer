@@ -1,4 +1,3 @@
-using Discord.Commands;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.Attributes.TextCommands;
@@ -300,7 +299,7 @@ public partial class Utility
 
             if (SmartEmbed.TryParse(content, ctx.Guild?.Id, out var embedData, out var plainText))
             {
-                await ctx.Channel.SendMessageAsync(plainText ?? "", embeds: embedData)
+                await ctx.Channel.SendAsync(plainText ?? "", embeds: embedData)
                     .ConfigureAwait(false);
             }
             else

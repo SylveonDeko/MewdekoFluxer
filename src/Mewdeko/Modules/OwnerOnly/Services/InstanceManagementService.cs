@@ -30,7 +30,7 @@ public class InstanceManagementService : INService, IReadyExecutor
     private static readonly TimeSpan StatusProbeTimeout = TimeSpan.FromSeconds(10);
 
     private readonly string apiKey;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly IHttpClientFactory factory;
     private readonly ILogger<InstanceManagementService> logger;
@@ -44,7 +44,7 @@ public class InstanceManagementService : INService, IReadyExecutor
     /// <param name="logger">The logger instance for structured logging.</param>
     public InstanceManagementService(
         IDataConnectionFactory dbFactory,
-        IHttpClientFactory factory, DiscordShardedClient client, ILogger<InstanceManagementService> logger)
+        IHttpClientFactory factory, FluxerClient client, ILogger<InstanceManagementService> logger)
     {
         var creds = new BotCredentials();
         apiKey = creds.ApiKey;

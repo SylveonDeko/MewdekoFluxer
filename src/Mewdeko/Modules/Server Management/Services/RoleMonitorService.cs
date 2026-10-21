@@ -17,7 +17,7 @@ public class RoleMonitorService : INService, IReadyExecutor
 {
     private readonly BanPruneService banPrune;
     private readonly BotConfigService botConfigService;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataCache dataCache;
     private readonly IDataConnectionFactory dbFactory;
 
@@ -39,7 +39,7 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// <param name="muteService">The mute service for handling user mutes.</param>
     /// <param name="strings">The localized strings service.</param>
     /// <param name="banPrune">The service resolving how many days of messages a ban purges</param>
-    public RoleMonitorService(DiscordShardedClient client, EventHandler handler, IDataConnectionFactory dbFactory,
+    public RoleMonitorService(FluxerClient client, EventHandler handler, IDataConnectionFactory dbFactory,
         IDataCache dataCache, UserPunishService userPunishService, BotConfigService botConfigService,
         MuteService muteService, GeneratedBotStrings strings, BanPruneService banPrune)
     {
@@ -126,7 +126,7 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// <param name="guild">The guild where the audit log was created.</param>
     /// <param name="entry">The audit log entry.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    private async Task OnAuditLogCreatedAsync(SocketAuditLogEntry entry, SocketGuild guild)
+    private async Task OnAuditLogCreatedAsync(SocketAuditLog entry, SocketGuild guild)
     {
         switch (entry.Action)
         {
@@ -142,7 +142,7 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// <summary>
     ///     Handles role assignments, checking for blacklisted roles and permissions.
     /// </summary>
-    private async Task HandleMemberRoleUpdatedAsync(IGuild guild, IAuditLogEntry entry)
+    private async Task HandleMemberRoleUpdatedAsync(SocketGuild guild, SocketAuditLog entry)
     {
         if (entry.Data is not SocketMemberRoleAuditLogData roleUpdate)
             return;
@@ -173,7 +173,7 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// <summary>
     ///     Handles role permission updates, checking for blacklisted permissions.
     /// </summary>
-    private async Task HandleRoleUpdatedAsync(IGuild guild, IAuditLogEntry entry)
+    private async Task HandleRoleUpdatedAsync(SocketGuild guild, SocketAuditLog entry)
     {
         if (entry.Data is not SocketRoleUpdateAuditLogData roleUpdate)
             return;
@@ -210,7 +210,7 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// <summary>
     ///     Checks if a user is whitelisted in the guild.
     /// </summary>
-    private async Task<bool> IsUserWhitelistedAsync(IGuild guild, ulong userId)
+    private async Task<bool> IsUserWhitelistedAsync(SocketGuild guild, ulong userId)
     {
         if (guild.OwnerId == userId)
             return true;
@@ -237,7 +237,7 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// <summary>
     ///     Checks the roles assigned to a user for blacklisted roles and permissions.
     /// </summary>
-    private async Task CheckRolesAsync(IGuildUser user, IEnumerable<ulong> roleIds, IGuildUser? executor)
+    private async Task CheckRolesAsync(SocketGuildMember user, IEnumerable<ulong> roleIds, SocketGuildMember? executor)
     {
         var guild = user.Guild;
         var guildId = guild.Id;
@@ -293,7 +293,7 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// <summary>
     ///     Checks the updated permissions of a role for blacklisted permissions.
     /// </summary>
-    private async Task CheckRolePermissionsAsync(IGuild guild, IRole role,
+    private async Task CheckRolePermissionsAsync(SocketGuild guild, SocketRole role,
         IEnumerable<GuildPermission> addedPermissions, ulong executorId, GuildPermissions beforePermissions)
     {
         var guildId = guild.Id;
@@ -351,7 +351,7 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// <summary>
     ///     Applies the specified punishment to the user.
     /// </summary>
-    private async Task ApplyPunishmentAsync(IGuildUser? user, PunishmentAction? punishmentAction, IRole role,
+    private async Task ApplyPunishmentAsync(SocketGuildMember? user, PunishmentAction? punishmentAction, SocketRole role,
         bool selfAssigned = false, bool permissionChange = false)
     {
         var guild = user.Guild;
@@ -473,7 +473,7 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// </summary>
     /// <param name="guild">The Discord guild.</param>
     /// <param name="user">The user parameter.</param>
-    public async Task AddWhitelistedUserAsync(IGuild guild, IGuildUser user)
+    public async Task AddWhitelistedUserAsync(SocketGuild guild, SocketGuildMember user)
     {
         await using var context = await dbFactory.CreateConnectionAsync();
         var existing = await context.WhitelistedUsers
@@ -496,7 +496,7 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// </summary>
     /// <param name="guild">The Discord guild.</param>
     /// <param name="user">The user parameter.</param>
-    public async Task RemoveWhitelistedUserAsync(IGuild guild, IGuildUser user)
+    public async Task RemoveWhitelistedUserAsync(SocketGuild guild, SocketGuildMember user)
     {
         await using var context = await dbFactory.CreateConnectionAsync();
         var existing = await context.WhitelistedUsers
@@ -516,7 +516,7 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// </summary>
     /// <param name="guild">The Discord guild.</param>
     /// <param name="role">The role parameter.</param>
-    public async Task AddWhitelistedRoleAsync(IGuild guild, IRole role)
+    public async Task AddWhitelistedRoleAsync(SocketGuild guild, SocketRole role)
     {
         await using var context = await dbFactory.CreateConnectionAsync();
         var existing = await context.WhitelistedRoles
@@ -540,7 +540,7 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// </summary>
     /// <param name="guild">The Discord guild.</param>
     /// <param name="role">The role parameter.</param>
-    public async Task RemoveWhitelistedRoleAsync(IGuild guild, IRole role)
+    public async Task RemoveWhitelistedRoleAsync(SocketGuild guild, SocketRole role)
     {
         await using var context = await dbFactory.CreateConnectionAsync();
         var existing = await context.WhitelistedRoles
@@ -562,7 +562,7 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// <param name="guild">The guild to set the default punishment for.</param>
     /// <param name="punishmentAction">The default punishment action.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task SetDefaultPunishmentAsync(IGuild guild, PunishmentAction punishmentAction)
+    public async Task SetDefaultPunishmentAsync(SocketGuild guild, PunishmentAction punishmentAction)
     {
         await using var context = await dbFactory.CreateConnectionAsync();
         var existing = await context.RoleMonitoringSettings
@@ -604,7 +604,7 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// <param name="guild">The Discord guild.</param>
     /// <param name="role">The role parameter.</param>
     /// <param name="punishmentAction">The punishmentAction parameter.</param>
-    public async Task AddBlacklistedRoleAsync(IGuild guild, IRole role, PunishmentAction? punishmentAction)
+    public async Task AddBlacklistedRoleAsync(SocketGuild guild, SocketRole role, PunishmentAction? punishmentAction)
     {
         await using var context = await dbFactory.CreateConnectionAsync();
         var existing = await context.BlacklistedRoles
@@ -657,7 +657,7 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// </summary>
     /// <param name="guild">The Discord guild.</param>
     /// <param name="role">The role parameter.</param>
-    public async Task RemoveBlacklistedRoleAsync(IGuild guild, IRole role)
+    public async Task RemoveBlacklistedRoleAsync(SocketGuild guild, SocketRole role)
     {
         await using var context = await dbFactory.CreateConnectionAsync();
         var existing = await context.BlacklistedRoles
@@ -686,7 +686,7 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// <summary>
     ///     Adds a permission to the blacklist.
     /// </summary>
-    public async Task AddBlacklistedPermissionAsync(IGuild guild, GuildPermission permission,
+    public async Task AddBlacklistedPermissionAsync(SocketGuild guild, GuildPermission permission,
         PunishmentAction? punishmentAction)
     {
         await using var context = await dbFactory.CreateConnectionAsync();
@@ -741,7 +741,7 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// </summary>
     /// <param name="guild">The Discord guild.</param>
     /// <param name="permission">The permission parameter.</param>
-    public async Task RemoveBlacklistedPermissionAsync(IGuild guild, GuildPermission permission)
+    public async Task RemoveBlacklistedPermissionAsync(SocketGuild guild, GuildPermission permission)
     {
         await using var context = await dbFactory.CreateConnectionAsync();
         var existing = await context.BlacklistedPermissions

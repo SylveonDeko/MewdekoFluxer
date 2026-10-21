@@ -20,7 +20,7 @@ public class XpRewardManager : INService
 {
     private readonly BotConfigService bss;
     private readonly XpCacheManager cacheManager;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly ICurrencyService currencyService;
     private readonly IDataConnectionFactory dbFactory;
     private readonly ILogger<XpRewardManager> logger;
@@ -40,7 +40,7 @@ public class XpRewardManager : INService
     /// <param name="xpService">The xp service.</param>
     /// <param name="bss">The bot configuration service.</param>
     public XpRewardManager(
-        DiscordShardedClient client,
+        FluxerClient client,
         IDataConnectionFactory dbFactory,
         ICurrencyService currencyService,
         XpCacheManager cacheManager, GeneratedBotStrings strings, ILogger<XpRewardManager> logger,
@@ -302,7 +302,7 @@ public class XpRewardManager : INService
                     .Build();
 
                 // Determine the target channel
-                ITextChannel? targetChannel = null;
+                Channel? targetChannel = null;
                 if (notification.NotificationType == XpNotificationType.Channel)
                 {
                     // Use custom level-up channel if set, otherwise use the notification channel
@@ -365,7 +365,7 @@ public class XpRewardManager : INService
     /// <param name="user">The user to send the notification to.</param>
     /// <param name="message">The processed message content.</param>
     /// <param name="guildId">The guild ID for localization.</param>
-    private async Task SendDmNotificationAsync(IGuildUser user, string message, ulong guildId)
+    private async Task SendDmNotificationAsync(SocketGuildMember user, string message, ulong guildId)
     {
         try
         {
@@ -375,12 +375,12 @@ public class XpRewardManager : INService
                 // Try to parse as embed first, fall back to plain text
                 if (SmartEmbed.TryParse(message, guildId, out var embed, out var plainText))
                 {
-                    await dmChannel.SendMessageAsync(plainText, embeds: embed);
+                    await dmChannel.SendAsync(plainText, embeds: embed);
                 }
                 else
                 {
                     // Create a default embed with the message
-                    await dmChannel.SendMessageAsync(
+                    await dmChannel.SendAsync(
                         embed: new EmbedBuilder()
                             .WithColor(Color.Green)
                             .WithDescription(message)
@@ -402,7 +402,7 @@ public class XpRewardManager : INService
     /// <param name="channel">The channel to send the notification to.</param>
     /// <param name="message">The processed message content.</param>
     /// <param name="guild">The guild for permission checking.</param>
-    private async Task SendChannelNotificationAsync(ITextChannel channel, string message, IGuild guild)
+    private async Task SendChannelNotificationAsync(Channel channel, string message, SocketGuild guild)
     {
         try
         {
@@ -415,12 +415,12 @@ public class XpRewardManager : INService
             // Try to parse as embed first, fall back to plain text
             if (SmartEmbed.TryParse(message, guild.Id, out var embed, out var plainText))
             {
-                await channel.SendMessageAsync(plainText, embeds: embed);
+                await channel.SendAsync(plainText, embeds: embed);
             }
             else
             {
                 // Create a default embed with the message
-                await channel.SendMessageAsync(
+                await channel.SendAsync(
                     embed: new EmbedBuilder()
                         .WithColor(Color.Green)
                         .WithDescription(message)
@@ -444,7 +444,7 @@ public class XpRewardManager : INService
     /// <param name="totalXp">The user's total XP.</param>
     /// <param name="rank">The user's rank.</param>
     /// <param name="pingsDisabled">Whether pings are disabled.</param>
-    private async Task SendDefaultDmNotificationAsync(IGuildUser user, Replacer replacer, ulong guildId, int level,
+    private async Task SendDefaultDmNotificationAsync(SocketGuildMember user, Replacer replacer, ulong guildId, int level,
         long totalXp, int rank, bool pingsDisabled)
     {
         try
@@ -466,7 +466,7 @@ public class XpRewardManager : INService
                     .WithCurrentTimestamp()
                     .Build();
 
-                await dmChannel.SendMessageAsync(embed: embed);
+                await dmChannel.SendAsync(embed: embed);
             }
         }
         catch (Exception ex)
@@ -486,8 +486,8 @@ public class XpRewardManager : INService
     /// <param name="totalXp">The user's total XP.</param>
     /// <param name="rank">The user's rank.</param>
     /// <param name="pingsDisabled">Whether pings are disabled.</param>
-    private async Task SendDefaultChannelNotificationAsync(ITextChannel channel, Replacer replacer, IGuild guild,
-        IGuildUser user, int level, long totalXp, int rank, bool pingsDisabled)
+    private async Task SendDefaultChannelNotificationAsync(Channel channel, Replacer replacer, SocketGuild guild,
+        SocketGuildMember user, int level, long totalXp, int rank, bool pingsDisabled)
     {
         try
         {
@@ -511,7 +511,7 @@ public class XpRewardManager : INService
                 .WithCurrentTimestamp()
                 .Build();
 
-            await channel.SendMessageAsync(embed: embed);
+            await channel.SendAsync(embed: embed);
         }
         catch (Exception ex)
         {
@@ -526,8 +526,8 @@ public class XpRewardManager : INService
     /// <param name="guild">The guild.</param>
     /// <param name="notificationType">The notification type preference.</param>
     /// <param name="targetChannel">The target channel (if channel notification).</param>
-    private async Task SendFirstTimeInfoMessageAsync(IGuildUser user, IGuild guild, XpNotificationType notificationType,
-        ITextChannel? targetChannel)
+    private async Task SendFirstTimeInfoMessageAsync(SocketGuildMember user, SocketGuild guild, XpNotificationType notificationType,
+        Channel? targetChannel)
     {
         try
         {
@@ -543,7 +543,7 @@ public class XpRewardManager : INService
                 var dmChannel = await user.CreateDMChannelAsync();
                 if (dmChannel != null)
                 {
-                    await dmChannel.SendMessageAsync(embed: embed);
+                    await dmChannel.SendAsync(embed: embed);
                 }
             }
             else if (targetChannel != null)
@@ -553,7 +553,7 @@ public class XpRewardManager : INService
 
                 if (perms.Has(ChannelPermission.SendMessages))
                 {
-                    await targetChannel.SendMessageAsync(embed: embed);
+                    await targetChannel.SendAsync(embed: embed);
                 }
             }
         }

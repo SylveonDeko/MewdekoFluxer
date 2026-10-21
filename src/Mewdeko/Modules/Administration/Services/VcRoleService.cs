@@ -3,7 +3,6 @@ using System.Data;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.ModuleBehaviors;
-using DiscordShardedClient = Discord.WebSocket.DiscordShardedClient;
 using VcRole = DataModel.VcRole;
 
 
@@ -14,7 +13,7 @@ namespace Mewdeko.Modules.Administration.Services;
 /// </summary>
 public class VcRoleService : INService, IReadyExecutor
 {
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly EventHandler eventHandler;
     private readonly ILogger<VcRoleService> logger;
@@ -27,7 +26,7 @@ public class VcRoleService : INService, IReadyExecutor
     /// <param name="dbFactory">The database service.</param>
     /// <param name="eventHandler">The event handler.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
-    public VcRoleService(DiscordShardedClient client, IDataConnectionFactory dbFactory,
+    public VcRoleService(FluxerClient client, IDataConnectionFactory dbFactory,
         EventHandler eventHandler, ILogger<VcRoleService> logger)
     {
         this.dbFactory = dbFactory;
@@ -37,7 +36,7 @@ public class VcRoleService : INService, IReadyExecutor
         this.eventHandler = eventHandler;
         eventHandler.Subscribe("UserVoiceStateUpdated", "VcRoleService", ClientOnUserVoiceStateUpdated);
 
-        ToAssign = new NonBlocking.ConcurrentDictionary<ulong, ConcurrentQueue<(bool, IGuildUser, IRole)>>();
+        ToAssign = new NonBlocking.ConcurrentDictionary<ulong, ConcurrentQueue<(bool, SocketGuildMember, SocketRole)>>();
 
         Task.Run(async () =>
         {
@@ -84,14 +83,14 @@ public class VcRoleService : INService, IReadyExecutor
     /// <summary>
     ///     A dictionary that maps guild IDs to another dictionary, which maps voice channel IDs to roles.
     /// </summary>
-    public NonBlocking.ConcurrentDictionary<ulong, NonBlocking.ConcurrentDictionary<ulong, IRole>> VcRoles { get; } =
+    public NonBlocking.ConcurrentDictionary<ulong, NonBlocking.ConcurrentDictionary<ulong, SocketRole>> VcRoles { get; } =
         new();
 
     /// <summary>
     ///     A dictionary that maps guild IDs to a queue of tuples, each containing a boolean indicating whether to add or
     ///     remove a role, a guild user, and a role.
     /// </summary>
-    private NonBlocking.ConcurrentDictionary<ulong, ConcurrentQueue<(bool, IGuildUser, IRole)>> ToAssign { get; }
+    private NonBlocking.ConcurrentDictionary<ulong, ConcurrentQueue<(bool, SocketGuildMember, SocketRole)>> ToAssign { get; }
 
     /// <inheritdoc />
     public async Task OnReadyAsync()
@@ -169,7 +168,7 @@ public class VcRoleService : INService, IReadyExecutor
         if (g == null)
             return;
 
-        var infos = new NonBlocking.ConcurrentDictionary<ulong, IRole>();
+        var infos = new NonBlocking.ConcurrentDictionary<ulong, SocketRole>();
         VcRoles.AddOrUpdate(guildId, infos, (_, _) => infos); // Use AddOrUpdate correctly
 
         var missingRoles = new List<VcRole>();
@@ -211,11 +210,11 @@ public class VcRoleService : INService, IReadyExecutor
     /// <param name="role">The role to add.</param>
     /// <param name="vcId">The ID of the voice channel to associate the role with.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task AddVcRole(ulong guildId, IRole role, ulong vcId)
+    public async Task AddVcRole(ulong guildId, SocketRole role, ulong vcId)
     {
         ArgumentNullException.ThrowIfNull(role);
 
-        var guildVcRoles = VcRoles.GetOrAdd(guildId, new NonBlocking.ConcurrentDictionary<ulong, IRole>());
+        var guildVcRoles = VcRoles.GetOrAdd(guildId, new NonBlocking.ConcurrentDictionary<ulong, SocketRole>());
         guildVcRoles.AddOrUpdate(vcId, role, (_, _) => role);
 
         const int maxRetries = 3;
@@ -305,7 +304,7 @@ public class VcRoleService : INService, IReadyExecutor
     /// <returns>A task that represents the asynchronous operation.</returns>
     private Task ClientOnUserVoiceStateUpdated(SocketUser usr, SocketVoiceState oldState, SocketVoiceState newState)
     {
-        if (usr is not SocketGuildUser gusr)
+        if (usr is not SocketGuildMember gusr)
             return Task.CompletedTask;
 
         var oldVc = oldState.VoiceChannel;
@@ -343,9 +342,9 @@ public class VcRoleService : INService, IReadyExecutor
     /// <param name="addRole">A boolean indicating whether to add or remove the role.</param>
     /// <param name="gusr">The user in the guild.</param>
     /// <param name="role">The role to assign or remove.</param>
-    private void Assign(bool addRole, SocketGuildUser gusr, IRole role)
+    private void Assign(bool addRole, SocketGuildMember gusr, SocketRole role)
     {
-        var queue = ToAssign.GetOrAdd(gusr.Guild.Id, _ => new ConcurrentQueue<(bool, IGuildUser, IRole)>());
+        var queue = ToAssign.GetOrAdd(gusr.Guild.Id, _ => new ConcurrentQueue<(bool, SocketGuildMember, SocketRole)>());
         queue.Enqueue((addRole, gusr, role));
     }
 }

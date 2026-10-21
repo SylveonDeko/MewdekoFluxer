@@ -1,8 +1,6 @@
 using System.IO;
 using System.Net.Http;
 using System.Text;
-using Discord.Commands;
-using Discord.Net;
 using Humanizer;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;
@@ -30,7 +28,7 @@ public partial class ServerManagement
         [Cmd]
         [Aliases]
         [UserPerm(GuildPermission.ManageRoles)]
-        [BotPerm(ChannelPermission.ManageRoles)]
+        [BotPerm(ChannelPermission.ManagePermissions)]
         public async Task CreateRoles([Remainder] string roles)
         {
             var roleList = roles.Split(" ");
@@ -64,9 +62,9 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageChannels)]
         [BotPerm(GuildPermission.ManageChannels)]
-        public async Task SyncRoleToAll(IRole role)
+        public async Task SyncRoleToAll(SocketRole role)
         {
-            var ch = ctx.Channel as ITextChannel;
+            var ch = ctx.Channel as Channel;
             var perms = ch.GetPermissionOverwrite(role);
             if (perms is null)
             {
@@ -76,10 +74,10 @@ public partial class ServerManagement
             }
 
             var msg = await ctx.Channel.SendConfirmAsync(
-                    Strings.SyncingRolePerms(ctx.Guild.Id, config.Data.LoadingEmote, role.Mention, (await ctx.Guild.GetTextChannelsAsync().ConfigureAwait(false)).Count(x => x is not SocketThreadChannel), (await ctx.Guild.GetTextChannelsAsync().ConfigureAwait(false)).Count(x => x is not SocketThreadChannel)))
+                    Strings.SyncingRolePerms(ctx.Guild.Id, config.Data.LoadingEmote, role.Mention, (await ctx.Guild.GetTextChannelsAsync().ConfigureAwait(false)).Count(x => x is not Channel), (await ctx.Guild.GetTextChannelsAsync().ConfigureAwait(false)).Count(x => x is not Channel)))
                 .ConfigureAwait(false);
             foreach (var i in (await ctx.Guild.GetChannelsAsync().ConfigureAwait(false)).Where(x =>
-                         x is not (SocketThreadChannel or SocketVoiceChannel)))
+                         x is not (Channel or Channel)))
             {
                 if (perms != null)
                     await i.AddPermissionOverwriteAsync(role, (OverwritePermissions)perms).ConfigureAwait(false);
@@ -97,7 +95,7 @@ public partial class ServerManagement
                 Description =
                     Strings.SuccessfullySyncedPermsChannelsCategories(ctx.Guild.Id, role.Mention,
                         (await ctx.Guild.GetTextChannelsAsync().ConfigureAwait(false)).Count(x =>
-                            x is not SocketThreadChannel),
+                            x is not Channel),
                         (await ctx.Guild.GetCategoriesAsync().ConfigureAwait(false)).Count)
             };
             await msg.ModifyAsync(x => x.Embed = eb.Build()).ConfigureAwait(false);
@@ -112,9 +110,9 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageChannels)]
         [BotPerm(GuildPermission.ManageChannels)]
-        public async Task SyncRoleToAllChannels(IRole role)
+        public async Task SyncRoleToAllChannels(SocketRole role)
         {
-            var ch = ctx.Channel as ITextChannel;
+            var ch = ctx.Channel as Channel;
             var perms = ch.GetPermissionOverwrite(role);
             if (perms is null)
             {
@@ -124,10 +122,10 @@ public partial class ServerManagement
             }
 
             var msg = await ctx.Channel.SendConfirmAsync(
-                    Strings.SyncingRolePermsChannels(ctx.Guild.Id, config.Data.LoadingEmote, role.Mention, (await ctx.Guild.GetTextChannelsAsync().ConfigureAwait(false)).Count(x => x is not SocketThreadChannel)))
+                    Strings.SyncingRolePermsChannels(ctx.Guild.Id, config.Data.LoadingEmote, role.Mention, (await ctx.Guild.GetTextChannelsAsync().ConfigureAwait(false)).Count(x => x is not Channel)))
                 .ConfigureAwait(false);
             foreach (var i in (await ctx.Guild.GetTextChannelsAsync().ConfigureAwait(false)).Where(x =>
-                         x is not SocketThreadChannel))
+                         x is not Channel))
             {
                 if (perms != null)
                     await i.AddPermissionOverwriteAsync(role, (OverwritePermissions)perms).ConfigureAwait(false);
@@ -139,7 +137,7 @@ public partial class ServerManagement
                 Description =
                     Strings.SuccessfullySyncedPermsChannels(ctx.Guild.Id, role.Mention,
                         (await ctx.Guild.GetTextChannelsAsync().ConfigureAwait(false)).Count(x =>
-                            x is not SocketThreadChannel))
+                            x is not Channel))
             };
             await msg.ModifyAsync(x => x.Embed = eb.Build()).ConfigureAwait(false);
         }
@@ -153,9 +151,9 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageChannels)]
         [BotPerm(GuildPermission.ManageChannels)]
-        public async Task SyncRoleToAllCategories(IRole role)
+        public async Task SyncRoleToAllCategories(SocketRole role)
         {
-            var ch = ctx.Channel as ITextChannel;
+            var ch = ctx.Channel as Channel;
             var perms = ch.GetPermissionOverwrite(role);
             if (perms is null)
             {
@@ -192,7 +190,7 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
-        public async Task DeleteRoles(params IRole[] roles)
+        public async Task DeleteRoles(params SocketRole[] roles)
         {
             if (roles.Count(x => !x.IsManaged) is 0)
             {
@@ -203,7 +201,7 @@ public partial class ServerManagement
             }
 
             var secondlist = new List<string>();
-            var runnerUser = (IGuildUser)ctx.User;
+            var runnerUser = (SocketGuildMember)ctx.User;
             var currentUser = await ctx.Guild.GetUserAsync(ctx.Client.CurrentUser.Id).ConfigureAwait(false);
             foreach (var i in roles.Where(x => !x.IsManaged))
             {
@@ -280,7 +278,7 @@ public partial class ServerManagement
                 return;
             }
 
-            await Service.StopJob(ctx.Channel as ITextChannel, jobnum, ctx.Guild).ConfigureAwait(false);
+            await Service.StopJob(ctx.Channel as Channel, jobnum, ctx.Guild).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -294,19 +292,19 @@ public partial class ServerManagement
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
         [Priority(0)]
-        public async Task SetRoles(IGuildUser user, params IRole[] roles)
+        public async Task SetRoles(SocketGuildMember user, params SocketRole[] roles)
         {
             foreach (var i in roles)
             {
                 if (ctx.User.Id != ctx.Guild.OwnerId &&
-                    ((IGuildUser)ctx.User).GetRoles().Max(x => x.Position) <= i.Position)
+                    ((SocketGuildMember)ctx.User).GetRoles().Max(x => x.Position) <= i.Position)
                 {
                     await ctx.Channel.SendErrorAsync(Strings.CannotManageUser(ctx.Guild.Id, i.Mention), Config)
                         .ConfigureAwait(false);
                     return;
                 }
 
-                if (((IGuildUser)ctx.User).GetRoles().Max(x => x.Position) > i.Position) continue;
+                if (((SocketGuildMember)ctx.User).GetRoles().Max(x => x.Position) > i.Position) continue;
                 await ctx.Channel.SendErrorAsync(Strings.CannotManageRoleMention(ctx.Guild.Id, i.Mention), Config)
                     .ConfigureAwait(false);
                 return;
@@ -330,19 +328,19 @@ public partial class ServerManagement
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
         [Priority(1)]
-        public async Task SetRoles(IGuildUser user, StoopidTime time, params IRole[] roles)
+        public async Task SetRoles(SocketGuildMember user, StoopidTime time, params SocketRole[] roles)
         {
             foreach (var i in roles)
             {
                 if (ctx.User.Id != ctx.Guild.OwnerId &&
-                    ((IGuildUser)ctx.User).GetRoles().Max(x => x.Position) <= i.Position)
+                    ((SocketGuildMember)ctx.User).GetRoles().Max(x => x.Position) <= i.Position)
                 {
                     await ctx.Channel.SendErrorAsync(Strings.CannotManageUser(ctx.Guild.Id, i.Mention), Config)
                         .ConfigureAwait(false);
                     return;
                 }
 
-                if (((IGuildUser)ctx.User).GetRoles().Max(x => x.Position) > i.Position) continue;
+                if (((SocketGuildMember)ctx.User).GetRoles().Max(x => x.Position) > i.Position) continue;
                 await ctx.Channel.SendErrorAsync(Strings.CannotManageRoleMention(ctx.Guild.Id, i.Mention), Config)
                     .ConfigureAwait(false);
                 return;
@@ -371,23 +369,23 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
-        public async Task AddUsersToRole(IRole role, params IUser[] users)
+        public async Task AddUsersToRole(SocketRole role, params IUser[] users)
         {
             if (ctx.User.Id != ctx.Guild.OwnerId &&
-                ((IGuildUser)ctx.User).GetRoles().Max(x => x.Position) <= role.Position)
+                ((SocketGuildMember)ctx.User).GetRoles().Max(x => x.Position) <= role.Position)
             {
                 await ctx.Channel.SendErrorAsync(Strings.CannotManageRole(ctx.Guild.Id), Config).ConfigureAwait(false);
                 return;
             }
 
-            if (((IGuildUser)ctx.User).GetRoles().Max(x => x.Position) <= role.Position)
+            if (((SocketGuildMember)ctx.User).GetRoles().Max(x => x.Position) <= role.Position)
             {
                 await ctx.Channel.SendErrorAsync(Strings.BotCannotManageRole(ctx.Guild.Id), Config)
                     .ConfigureAwait(false);
                 return;
             }
 
-            foreach (var i in users.Select(x => x as IGuildUser))
+            foreach (var i in users.Select(x => x as SocketGuildMember))
             {
                 await i.AddRoleAsync(role).ConfigureAwait(false);
             }
@@ -408,24 +406,24 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
-        public async Task RemoveUsersFromRole(IRole role, params IUser[] users)
+        public async Task RemoveUsersFromRole(SocketRole role, params IUser[] users)
         {
             if (ctx.User.Id != ctx.Guild.OwnerId &&
-                ((IGuildUser)ctx.User).GetRoles().Max(x => x.Position) <= role.Position)
+                ((SocketGuildMember)ctx.User).GetRoles().Max(x => x.Position) <= role.Position)
             {
                 await ctx.Channel.SendErrorAsync(Strings.CannotManageRole(ctx.Guild.Id), Config).ConfigureAwait(false);
 
                 return;
             }
 
-            if (((IGuildUser)ctx.User).GetRoles().Max(x => x.Position) <= role.Position)
+            if (((SocketGuildMember)ctx.User).GetRoles().Max(x => x.Position) <= role.Position)
             {
                 await ctx.Channel.SendErrorAsync(Strings.BotCannotManageRole(ctx.Guild.Id), Config)
                     .ConfigureAwait(false);
                 return;
             }
 
-            foreach (var i in users.Select(x => x as IGuildUser))
+            foreach (var i in users.Select(x => x as SocketGuildMember))
             {
                 await i.AddRoleAsync(role).ConfigureAwait(false);
             }
@@ -446,19 +444,19 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
-        public async Task RemoveRoles(IGuildUser user, params IRole[] roles)
+        public async Task RemoveRoles(SocketGuildMember user, params SocketRole[] roles)
         {
             foreach (var i in roles)
             {
                 if (ctx.User.Id != ctx.Guild.OwnerId &&
-                    ((IGuildUser)ctx.User).GetRoles().Max(x => x.Position) <= i.Position)
+                    ((SocketGuildMember)ctx.User).GetRoles().Max(x => x.Position) <= i.Position)
                 {
                     await ctx.Channel.SendErrorAsync(Strings.CannotManageUser(ctx.Guild.Id, i.Mention), Config)
                         .ConfigureAwait(false);
                     return;
                 }
 
-                if (((IGuildUser)ctx.User).GetRoles().Max(x => x.Position) > i.Position) continue;
+                if (((SocketGuildMember)ctx.User).GetRoles().Max(x => x.Position) > i.Position) continue;
                 await ctx.Channel.SendErrorAsync(Strings.CannotManageRoleMention(ctx.Guild.Id, i.Mention), Config)
                     .ConfigureAwait(false);
                 return;
@@ -515,7 +513,7 @@ public partial class ServerManagement
                 }
             }
 
-            await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+            await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -530,10 +528,10 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
-        public async Task AddToAll(IRole role)
+        public async Task AddToAll(SocketRole role)
         {
             await Task.Delay(500).ConfigureAwait(false);
-            var runnerUser = (IGuildUser)ctx.User;
+            var runnerUser = (SocketGuildMember)ctx.User;
             var currentUser = await ctx.Guild.GetUserAsync(ctx.Client.CurrentUser.Id).ConfigureAwait(false);
             if (ctx.User.Id != runnerUser.Guild.OwnerId &&
                 runnerUser.GetRoles().Max(x => x.Position) <= role.Position)
@@ -573,7 +571,7 @@ public partial class ServerManagement
                 jobId = 1;
             else
                 jobId = Service.Jobslist.Count + 1;
-            await Service.AddToList(ctx.Guild, ctx.User as IGuildUser, jobId, count, "Adding to Users and Bots",
+            await Service.AddToList(ctx.Guild, ctx.User as SocketGuildMember, jobId, count, "Adding to Users and Bots",
                 role).ConfigureAwait(false);
             var count2 = 0;
             await ctx.Channel.SendConfirmAsync(
@@ -600,7 +598,7 @@ public partial class ServerManagement
                         await Service.UpdateCount(ctx.Guild, jobId, count2).ConfigureAwait(false);
                         count2++;
                     }
-                    catch (HttpException)
+                    catch (FluxerApiException)
                     {
                         //ignored
                     }
@@ -624,9 +622,9 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
-        public async Task AddToAllBots(IRole role)
+        public async Task AddToAllBots(SocketRole role)
         {
-            var runnerUser = (IGuildUser)ctx.User;
+            var runnerUser = (SocketGuildMember)ctx.User;
             var currentUser = await ctx.Guild.GetUserAsync(ctx.Client.CurrentUser.Id).ConfigureAwait(false);
             if (ctx.User.Id != runnerUser.Guild.OwnerId &&
                 runnerUser.GetRoles().Max(x => x.Position) <= role.Position)
@@ -666,7 +664,7 @@ public partial class ServerManagement
                 jobId = 1;
             else
                 jobId = Service.Jobslist.FirstOrDefault().JobId + 1;
-            await Service.AddToList(ctx.Guild, ctx.User as IGuildUser, jobId, count, "Adding to Bots Only", role)
+            await Service.AddToList(ctx.Guild, ctx.User as SocketGuildMember, jobId, count, "Adding to Bots Only", role)
                 .ConfigureAwait(false);
             var count2 = 0;
             await ctx.Channel.SendConfirmAsync(
@@ -694,7 +692,7 @@ public partial class ServerManagement
                         await Service.UpdateCount(ctx.Guild, jobId, count2).ConfigureAwait(false);
                         count2++;
                     }
-                    catch (HttpException)
+                    catch (FluxerApiException)
                     {
                         //ignored
                     }
@@ -718,9 +716,9 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
-        public async Task AddToAllUsers(IRole role)
+        public async Task AddToAllUsers(SocketRole role)
         {
-            var runnerUser = (IGuildUser)ctx.User;
+            var runnerUser = (SocketGuildMember)ctx.User;
             var currentUser = await ctx.Guild.GetUserAsync(ctx.Client.CurrentUser.Id).ConfigureAwait(false);
             if (ctx.User.Id != runnerUser.Guild.OwnerId &&
                 runnerUser.GetRoles().Max(x => x.Position) <= role.Position)
@@ -760,7 +758,7 @@ public partial class ServerManagement
                 return;
             }
 
-            await Service.AddToList(ctx.Guild, ctx.User as IGuildUser, jobId, count, "Adding to Users Only", role)
+            await Service.AddToList(ctx.Guild, ctx.User as SocketGuildMember, jobId, count, "Adding to Users Only", role)
                 .ConfigureAwait(false);
             var count2 = 0;
             await ctx.Channel.SendConfirmAsync(
@@ -788,7 +786,7 @@ public partial class ServerManagement
                         await Service.UpdateCount(ctx.Guild, jobId, count2).ConfigureAwait(false);
                         count2++;
                     }
-                    catch (HttpException)
+                    catch (FluxerApiException)
                     {
                         //ignored
                     }
@@ -866,7 +864,7 @@ public partial class ServerManagement
             var roles = ctx.Guild.Roles.ToList();
             var file = await client.GetStringAsync(ctx.Message.Attachments.First().Url);
             var lines = file.ToLines();
-            var toProcess = new List<KeyValuePair<IRole, IGuildUser>>();
+            var toProcess = new List<KeyValuePair<SocketRole, SocketGuildMember>>();
             var addedRoles = new List<ulong>();
             if (!newRoles)
                 toProcess = (from i in lines
@@ -875,14 +873,14 @@ public partial class ServerManagement
                     let role = roles.FirstOrDefault(x => x.Id == Convert.ToUInt64(split[0]))
                     where role is not null
                     let user = guildUsers.FirstOrDefault(x => x.Id == Convert.ToUInt64(split[1]))
-                    select new KeyValuePair<IRole, IGuildUser>(role, user)).ToList();
+                    select new KeyValuePair<SocketRole, SocketGuildMember>(role, user)).ToList();
             else
             {
                 foreach (var i in lines)
                 {
                     var split = i.Split(",");
                     var roleId = Convert.ToUInt64(split[0]);
-                    IRole role;
+                    SocketRole role;
                     if (!addedRoles.Contains(roleId))
                         role = await ctx.Guild.CreateRoleAsync(split[2], null, null, false, null).ConfigureAwait(false);
                     else
@@ -890,7 +888,7 @@ public partial class ServerManagement
                     addedRoles.Add(Convert.ToUInt64(split[0]));
                     var user = guildUsers.FirstOrDefault(x => x.Id == Convert.ToUInt64(split[1]));
                     if (user is not null)
-                        toProcess.Add(new KeyValuePair<IRole, IGuildUser>(role, user));
+                        toProcess.Add(new KeyValuePair<SocketRole, SocketGuildMember>(role, user));
                 }
             }
 
@@ -934,7 +932,7 @@ public partial class ServerManagement
                 jobId = Service.Jobslist.FirstOrDefault().JobId + 1;
             var count = toProcess.Count;
             var addedCount = 0;
-            await Service.AddToList(ctx.Guild, ctx.User as IGuildUser, jobId, count, "Importing User Roles", null)
+            await Service.AddToList(ctx.Guild, ctx.User as SocketGuildMember, jobId, count, "Importing User Roles", null)
                 .ConfigureAwait(false);
             await ctx.Channel
                 .SendConfirmAsync(
@@ -960,7 +958,7 @@ public partial class ServerManagement
                     await Service.UpdateCount(ctx.Guild, jobId, count).ConfigureAwait(false);
                     addedCount++;
                 }
-                catch (HttpException)
+                catch (FluxerApiException)
                 {
                     //ignored
                 }
@@ -985,7 +983,7 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
-        public async Task AddRoleToList(IRole role)
+        public async Task AddRoleToList(SocketRole role)
         {
             if (!ctx.Message.Attachments.Any())
             {
@@ -997,7 +995,7 @@ public partial class ServerManagement
 
             var client = new HttpClient();
             var guildUsers = (await ctx.Guild.GetUsersAsync()).ToList();
-            var actualUsers = new List<IGuildUser>();
+            var actualUsers = new List<SocketGuildMember>();
             var file = await client.GetStringAsync(ctx.Message.Attachments.First().Url);
             var fileUsers = file.ToLines();
             var ulongIds = new List<ulong>();
@@ -1029,7 +1027,7 @@ public partial class ServerManagement
                 actualUsers.Add(user);
             }
 
-            var runnerUser = (IGuildUser)ctx.User;
+            var runnerUser = (SocketGuildMember)ctx.User;
             var currentUser = await ctx.Guild.GetUserAsync(ctx.Client.CurrentUser.Id).ConfigureAwait(false);
             if (ctx.User.Id != runnerUser.Guild.OwnerId &&
                 runnerUser.GetRoles().Max(x => x.Position) <= role.Position)
@@ -1068,7 +1066,7 @@ public partial class ServerManagement
                 return;
             }
 
-            await Service.AddToList(ctx.Guild, ctx.User as IGuildUser, jobId, count, "Adding to Users in List", role)
+            await Service.AddToList(ctx.Guild, ctx.User as SocketGuildMember, jobId, count, "Adding to Users in List", role)
                 .ConfigureAwait(false);
             var count2 = 0;
             await ctx.Channel.SendConfirmAsync(
@@ -1096,7 +1094,7 @@ public partial class ServerManagement
                         await Service.UpdateCount(ctx.Guild, jobId, count2).ConfigureAwait(false);
                         count2++;
                     }
-                    catch (HttpException)
+                    catch (FluxerApiException)
                     {
                         //ignored
                     }
@@ -1122,9 +1120,9 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
-        public async Task AddToUsersOver(StoopidTime time, IRole role)
+        public async Task AddToUsersOver(StoopidTime time, SocketRole role)
         {
-            var runnerUser = (IGuildUser)ctx.User;
+            var runnerUser = (SocketGuildMember)ctx.User;
             var currentUser = await ctx.Guild.GetUserAsync(ctx.Client.CurrentUser.Id).ConfigureAwait(false);
             if (ctx.User.Id != runnerUser.Guild.OwnerId &&
                 runnerUser.GetRoles().Max(x => x.Position) <= role.Position)
@@ -1167,7 +1165,7 @@ public partial class ServerManagement
                 jobId = 1;
             else
                 jobId = Service.Jobslist.FirstOrDefault().JobId + 1;
-            await Service.AddToList(ctx.Guild, ctx.User as IGuildUser, jobId, count,
+            await Service.AddToList(ctx.Guild, ctx.User as SocketGuildMember, jobId, count,
                     $"Adding a role to server members that have been here for {time.Time.Humanize()}", role)
                 .ConfigureAwait(false);
             var count2 = 0;
@@ -1196,7 +1194,7 @@ public partial class ServerManagement
                         await Service.UpdateCount(ctx.Guild, jobId, count2).ConfigureAwait(false);
                         count2++;
                     }
-                    catch (HttpException)
+                    catch (FluxerApiException)
                     {
                         //ignored
                     }
@@ -1222,9 +1220,9 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
-        public async Task AddToUsersUnder(StoopidTime time, IRole role)
+        public async Task AddToUsersUnder(StoopidTime time, SocketRole role)
         {
-            var runnerUser = (IGuildUser)ctx.User;
+            var runnerUser = (SocketGuildMember)ctx.User;
             var currentUser = await ctx.Guild.GetUserAsync(ctx.Client.CurrentUser.Id).ConfigureAwait(false);
             if (ctx.User.Id != runnerUser.Guild.OwnerId &&
                 runnerUser.GetRoles().Max(x => x.Position) <= role.Position)
@@ -1267,7 +1265,7 @@ public partial class ServerManagement
                 jobId = 1;
             else
                 jobId = Service.Jobslist.FirstOrDefault().JobId + 1;
-            await Service.AddToList(ctx.Guild, ctx.User as IGuildUser, jobId, count,
+            await Service.AddToList(ctx.Guild, ctx.User as SocketGuildMember, jobId, count,
                     $"Adding a role to server members that have been here for {time.Time.Humanize()} or less", role)
                 .ConfigureAwait(false);
             var count2 = 0;
@@ -1296,7 +1294,7 @@ public partial class ServerManagement
                         await Service.UpdateCount(ctx.Guild, jobId, count2).ConfigureAwait(false);
                         count2++;
                     }
-                    catch (HttpException)
+                    catch (FluxerApiException)
                     {
                         //ignored
                     }
@@ -1319,9 +1317,9 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
-        public async Task RemoveFromAll(IRole role)
+        public async Task RemoveFromAll(SocketRole role)
         {
-            var runnerUser = (IGuildUser)ctx.User;
+            var runnerUser = (SocketGuildMember)ctx.User;
             var currentUser = await ctx.Guild.GetUserAsync(ctx.Client.CurrentUser.Id).ConfigureAwait(false);
             if (ctx.User.Id != runnerUser.Guild.OwnerId &&
                 runnerUser.GetRoles().Max(x => x.Position) <= role.Position)
@@ -1361,7 +1359,7 @@ public partial class ServerManagement
                 jobId = 1;
             else
                 jobId = Service.Jobslist.FirstOrDefault().JobId + 1;
-            await Service.AddToList(ctx.Guild, ctx.User as IGuildUser, jobId, count,
+            await Service.AddToList(ctx.Guild, ctx.User as SocketGuildMember, jobId, count,
                 "Removing a role from all server members", role).ConfigureAwait(false);
             var count2 = 0;
             await ctx.Channel.SendConfirmAsync(
@@ -1389,7 +1387,7 @@ public partial class ServerManagement
                         await Service.UpdateCount(ctx.Guild, jobId, count2).ConfigureAwait(false);
                         count2++;
                     }
-                    catch (HttpException)
+                    catch (FluxerApiException)
                     {
                         //ignored
                     }
@@ -1415,9 +1413,9 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
-        public async Task RemoveFromAllUsers(IRole role)
+        public async Task RemoveFromAllUsers(SocketRole role)
         {
-            var runnerUser = (IGuildUser)ctx.User;
+            var runnerUser = (SocketGuildMember)ctx.User;
             var currentUser = await ctx.Guild.GetUserAsync(ctx.Client.CurrentUser.Id).ConfigureAwait(false);
             if (ctx.User.Id != runnerUser.Guild.OwnerId &&
                 runnerUser.GetRoles().Max(x => x.Position) <= role.Position)
@@ -1457,7 +1455,7 @@ public partial class ServerManagement
                 jobId = 1;
             else
                 jobId = Service.Jobslist.FirstOrDefault().JobId + 1;
-            await Service.AddToList(ctx.Guild, ctx.User as IGuildUser, jobId, count,
+            await Service.AddToList(ctx.Guild, ctx.User as SocketGuildMember, jobId, count,
                 "Removing a role from only users", role).ConfigureAwait(false);
             var count2 = 0;
             await ctx.Channel.SendConfirmAsync(
@@ -1485,7 +1483,7 @@ public partial class ServerManagement
                         await Service.UpdateCount(ctx.Guild, jobId, count2).ConfigureAwait(false);
                         count2++;
                     }
-                    catch (HttpException)
+                    catch (FluxerApiException)
                     {
                         //ignored
                     }
@@ -1511,9 +1509,9 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
-        public async Task RemoveFromAllBots(IRole role)
+        public async Task RemoveFromAllBots(SocketRole role)
         {
-            var runnerUser = (IGuildUser)ctx.User;
+            var runnerUser = (SocketGuildMember)ctx.User;
             var currentUser = await ctx.Guild.GetUserAsync(ctx.Client.CurrentUser.Id).ConfigureAwait(false);
             if (ctx.User.Id != runnerUser.Guild.OwnerId &&
                 runnerUser.GetRoles().Max(x => x.Position) <= role.Position)
@@ -1553,7 +1551,7 @@ public partial class ServerManagement
                 jobId = 1;
             else
                 jobId = Service.Jobslist.FirstOrDefault().JobId + 1;
-            await Service.AddToList(ctx.Guild, ctx.User as IGuildUser, jobId, count,
+            await Service.AddToList(ctx.Guild, ctx.User as SocketGuildMember, jobId, count,
                 "Removing a role from all bots", role).ConfigureAwait(false);
             var count2 = 0;
             await ctx.Channel.SendConfirmAsync(
@@ -1581,7 +1579,7 @@ public partial class ServerManagement
                         await Service.UpdateCount(ctx.Guild, jobId, count2).ConfigureAwait(false);
                         count2++;
                     }
-                    catch (HttpException)
+                    catch (FluxerApiException)
                     {
                         //ignored
                     }
@@ -1607,9 +1605,9 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
-        public async Task AddRoleToRole(IRole role, IRole role2)
+        public async Task AddRoleToRole(SocketRole role, SocketRole role2)
         {
-            var runnerUser = (IGuildUser)ctx.User;
+            var runnerUser = (SocketGuildMember)ctx.User;
             var client = await ctx.Guild.GetUserAsync(ctx.Client.CurrentUser.Id).ConfigureAwait(false);
             if (ctx.User.Id != runnerUser.Guild.OwnerId &&
                 runnerUser.GetRoles().Max(x => x.Position) <= role2.Position ||
@@ -1652,7 +1650,7 @@ public partial class ServerManagement
                 jobId = 1;
             else
                 jobId = Service.Jobslist.FirstOrDefault().JobId + 1;
-            await Service.AddToList(ctx.Guild, ctx.User as IGuildUser, jobId, inrole.Count(),
+            await Service.AddToList(ctx.Guild, ctx.User as SocketGuildMember, jobId, inrole.Count(),
                 "Adding a role to users within a role", role, role2).ConfigureAwait(false);
             await ctx.Channel.SendConfirmAsync(
                     Strings.MassroleAddingToRole(ctx.Guild.Id, role2.Mention, role.Mention, TimeSpan.FromSeconds(inrole.Count()).Humanize()))
@@ -1680,7 +1678,7 @@ public partial class ServerManagement
                         await Service.UpdateCount(ctx.Guild, jobId, count2).ConfigureAwait(false);
                         count2++;
                     }
-                    catch (HttpException)
+                    catch (FluxerApiException)
                     {
                         //ignored
                     }
@@ -1707,9 +1705,9 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
-        public async Task RemoveFromRole(IRole role, IRole role2)
+        public async Task RemoveFromRole(SocketRole role, SocketRole role2)
         {
-            var runnerUser = (IGuildUser)ctx.User;
+            var runnerUser = (SocketGuildMember)ctx.User;
             var client = await ctx.Guild.GetUserAsync(ctx.Client.CurrentUser.Id).ConfigureAwait(false);
             if (ctx.User.Id != runnerUser.Guild.OwnerId &&
                 runnerUser.GetRoles().Max(x => x.Position) <= role2.Position ||
@@ -1743,9 +1741,9 @@ public partial class ServerManagement
                 jobId = 1;
             else
                 jobId = Service.Jobslist.FirstOrDefault().JobId + 1;
-            await Service.AddToList(ctx.Guild, ctx.User as IGuildUser, jobId, inrole.Count(),
+            await Service.AddToList(ctx.Guild, ctx.User as SocketGuildMember, jobId, inrole.Count(),
                 "Removing a role from users within a role", role, role2).ConfigureAwait(false);
-            var guildUsers = inrole as IGuildUser[] ?? inrole.ToArray();
+            var guildUsers = inrole as SocketGuildMember[] ?? inrole.ToArray();
             await ctx.Channel.SendConfirmAsync(
                     Strings.RemovingRoleFromUsersInRole(ctx.Guild.Id, role2.Mention, role.Mention, guildUsers.Length))
                 .ConfigureAwait(false);
@@ -1772,7 +1770,7 @@ public partial class ServerManagement
                         await Service.UpdateCount(ctx.Guild, jobId, count2).ConfigureAwait(false);
                         count2++;
                     }
-                    catch (HttpException)
+                    catch (FluxerApiException)
                     {
                         //ignored
                     }
@@ -1799,11 +1797,11 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
-        public async Task AddThenRemove(IRole role, IRole role2)
+        public async Task AddThenRemove(SocketRole role, SocketRole role2)
         {
             await Task.Delay(500).ConfigureAwait(false);
             var client = await ctx.Guild.GetUserAsync(ctx.Client.CurrentUser.Id).ConfigureAwait(false);
-            var runnerUser = (IGuildUser)ctx.User;
+            var runnerUser = (SocketGuildMember)ctx.User;
             if (ctx.User.Id != runnerUser.Guild.OwnerId &&
                 runnerUser.GetRoles().Max(x => x.Position) <= role2.Position ||
                 runnerUser.GetRoles().Max(x => x.Position) <= role.Position)
@@ -1834,7 +1832,7 @@ public partial class ServerManagement
                 jobId = 1;
             else
                 jobId = Service.Jobslist.FirstOrDefault().JobId + 1;
-            await Service.AddToList(ctx.Guild, ctx.User as IGuildUser, jobId, inrole.Count(),
+            await Service.AddToList(ctx.Guild, ctx.User as SocketGuildMember, jobId, inrole.Count(),
                 "Adding then Removing a Role", role, role2).ConfigureAwait(false);
             await ctx.Channel.SendConfirmAsync(
                     Strings.MassroleAddThenRemove(ctx.Guild.Id, role.Mention, role2.Mention, TimeSpan.FromSeconds(inrole.Count() * 2).Humanize()))
@@ -1863,7 +1861,7 @@ public partial class ServerManagement
                         await Service.UpdateCount(ctx.Guild, jobId, count2).ConfigureAwait(false);
                         count2++;
                     }
-                    catch (HttpException)
+                    catch (FluxerApiException)
                     {
                         //ignored
                     }

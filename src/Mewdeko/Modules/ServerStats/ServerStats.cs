@@ -1,6 +1,5 @@
 using System.IO;
 using System.Text;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.ServerStats.Common;
 using Mewdeko.Modules.ServerStats.Services;
@@ -28,7 +27,7 @@ public class ServerStats(InteractiveService interactivity, ServerStatsSettingsSe
         var topGame = statsSettings.GetCachedSettings(ctx.Guild.Id).TrackActivities
             ? (await Service.GetTopActivitiesAsync(ctx.Guild.Id, lookback, 1)).FirstOrDefault()
             : null;
-        await ctx.Channel.SendMessageAsync(embed: ServerStatsEmbeds.Overview(Strings, ctx.Guild, overview, topGame)
+        await ctx.Channel.SendAsync(embed: ServerStatsEmbeds.Overview(Strings, ctx.Guild, overview, topGame)
             .Build());
     }
 
@@ -40,15 +39,15 @@ public class ServerStats(InteractiveService interactivity, ServerStatsSettingsSe
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task UserActivity(IGuildUser? user = null, int? days = null)
+    public async Task UserActivity(SocketGuildMember? user = null, int? days = null)
     {
-        user ??= (IGuildUser)ctx.User;
+        user ??= (SocketGuildMember)ctx.User;
         var lookback = Service.ResolveLookback(ctx.Guild.Id, days);
         var activity = await Service.GetUserActivityAsync(ctx.Guild, user.Id, lookback);
         var games = statsSettings.GetCachedSettings(ctx.Guild.Id).TrackActivities
             ? await Service.GetTopActivitiesAsync(ctx.Guild.Id, lookback, 5, user.Id)
             : null;
-        await ctx.Channel.SendMessageAsync(embed: ServerStatsEmbeds.User(Strings, ctx.Guild, user, activity, games)
+        await ctx.Channel.SendAsync(embed: ServerStatsEmbeds.User(Strings, ctx.Guild, user, activity, games)
             .Build());
     }
 
@@ -69,7 +68,7 @@ public class ServerStats(InteractiveService interactivity, ServerStatsSettingsSe
 
         var lookback = Service.ResolveLookback(ctx.Guild.Id, days);
         var rows = await Service.GetTopActivitiesAsync(ctx.Guild.Id, lookback, 15);
-        await ctx.Channel.SendMessageAsync(embed: ServerStatsEmbeds.Activities(Strings, ctx.Guild, lookback, rows)
+        await ctx.Channel.SendAsync(embed: ServerStatsEmbeds.Activities(Strings, ctx.Guild, lookback, rows)
             .Build());
     }
 
@@ -111,7 +110,7 @@ public class ServerStats(InteractiveService interactivity, ServerStatsSettingsSe
                 totals.OrderByDescending(x => x.Value).Take(10)
                     .Select((x, i) => $"`{i + 1}.` <@{x.Key}>: **{ServerStatsService.FormatDuration(x.Value)}**")));
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -190,7 +189,7 @@ public class ServerStats(InteractiveService interactivity, ServerStatsSettingsSe
             .WithOkColor()
             .WithTitle(Strings.StatsActivityFiltersTitle(ctx.Guild.Id, mode.ToString()))
             .WithDescription(names.Count == 0 ? "-" : string.Join("\n", names.Take(50)));
-        await ctx.Channel.SendMessageAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -201,12 +200,12 @@ public class ServerStats(InteractiveService interactivity, ServerStatsSettingsSe
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task ChannelActivity(IGuildChannel? channel = null, int? days = null)
+    public async Task ChannelActivity(Channel? channel = null, int? days = null)
     {
-        channel ??= (IGuildChannel)ctx.Channel;
+        channel ??= (Channel)ctx.Channel;
         var lookback = Service.ResolveLookback(ctx.Guild.Id, days);
         var activity = await Service.GetChannelActivityAsync(ctx.Guild, channel.Id, lookback);
-        await ctx.Channel.SendMessageAsync(embed: ServerStatsEmbeds.Channel(Strings, ctx.Guild, channel, activity)
+        await ctx.Channel.SendAsync(embed: ServerStatsEmbeds.Channel(Strings, ctx.Guild, channel, activity)
             .Build());
     }
 
@@ -219,7 +218,7 @@ public class ServerStats(InteractiveService interactivity, ServerStatsSettingsSe
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task ActivityTop(StatKind kind = StatKind.Messages, int? days = null, IRole? role = null)
+    public async Task ActivityTop(StatKind kind = StatKind.Messages, int? days = null, SocketRole? role = null)
     {
         var lookback = Service.ResolveLookback(ctx.Guild.Id, days);
         var entries = await Service.GetTopUsersAsync(ctx.Guild.Id, kind, lookback, 500);
@@ -342,7 +341,7 @@ public class ServerStats(InteractiveService interactivity, ServerStatsSettingsSe
     public async Task StatsSettings()
     {
         var settings = await statsSettings.GetSettingsAsync(ctx.Guild.Id);
-        await ctx.Channel.SendMessageAsync(embed: ServerStatsEmbeds.Settings(Strings, ctx.Guild.Id, settings,
+        await ctx.Channel.SendAsync(embed: ServerStatsEmbeds.Settings(Strings, ctx.Guild.Id, settings,
             statsSettings.GetActivityFilters(ctx.Guild.Id)).Build());
     }
 
@@ -463,7 +462,7 @@ public class ServerStats(InteractiveService interactivity, ServerStatsSettingsSe
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task StatsIgnore(IGuildChannel channel)
+    public async Task StatsIgnore(Channel channel)
     {
         await ToggleExclusionAsync(channel.Id, StatsExclusionKind.Channel, $"<#{channel.Id}>");
     }
@@ -476,7 +475,7 @@ public class ServerStats(InteractiveService interactivity, ServerStatsSettingsSe
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task StatsIgnore(IRole role)
+    public async Task StatsIgnore(SocketRole role)
     {
         await ToggleExclusionAsync(role.Id, StatsExclusionKind.Role, role.Mention);
     }
@@ -489,7 +488,7 @@ public class ServerStats(InteractiveService interactivity, ServerStatsSettingsSe
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task StatsIgnore(IGuildUser user)
+    public async Task StatsIgnore(SocketGuildMember user)
     {
         await ToggleExclusionAsync(user.Id, StatsExclusionKind.User, user.Mention);
     }
@@ -529,7 +528,7 @@ public class ServerStats(InteractiveService interactivity, ServerStatsSettingsSe
             .AddField(Strings.StatsIgnoredUsers(ctx.Guild.Id),
                 users.Count == 0 ? "-" : string.Join(", ", users.Select(x => $"<@{x}>")));
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>

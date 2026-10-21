@@ -8,7 +8,6 @@ using Mewdeko.Modules.ServerStats.Common;
 using Mewdeko.Modules.Utility.Common;
 using Mewdeko.Modules.Utility.Services;
 using Mewdeko.Services.Strings;
-using Embed = Discord.Embed;
 
 namespace Mewdeko.Modules.ServerStats.Services;
 
@@ -20,7 +19,7 @@ public class ServerReportService : INService, IReadyExecutor, IDisposable
 {
     private static readonly TimeSpan TickInterval = TimeSpan.FromMinutes(15);
 
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly InviteCountService invites;
     private readonly ILogger<ServerReportService> logger;
@@ -38,7 +37,7 @@ public class ServerReportService : INService, IReadyExecutor, IDisposable
     /// <param name="invites">The invite tracking service.</param>
     /// <param name="strings">Localized strings.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
-    public ServerReportService(DiscordShardedClient client, IDataConnectionFactory dbFactory,
+    public ServerReportService(FluxerClient client, IDataConnectionFactory dbFactory,
         ServerStatsService stats, InviteCountService invites, GeneratedBotStrings strings,
         ILogger<ServerReportService> logger)
     {
@@ -208,7 +207,7 @@ public class ServerReportService : INService, IReadyExecutor, IDisposable
     /// <param name="guild">The guild.</param>
     /// <param name="frequency">The period length.</param>
     /// <returns>The embed and growth chart to attach as graph.png.</returns>
-    public async Task<(Embed Embed, MemoryStream Image)> BuildAsync(SocketGuild guild, ReportFrequency frequency)
+    public async Task<(EmbedRequest Embed, MemoryStream Image)> BuildAsync(SocketGuild guild, ReportFrequency frequency)
     {
         var days = PeriodDays(frequency);
         var range = frequency switch

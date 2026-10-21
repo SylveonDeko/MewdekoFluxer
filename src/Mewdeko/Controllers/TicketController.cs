@@ -15,7 +15,7 @@ namespace Mewdeko.Controllers;
 [Authorize("ApiKeyPolicy")]
 public class TicketController : Controller
 {
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly ILogger<TicketController> logger;
     private readonly TicketService ticketService;
     private readonly IDashboardAuditContext auditContext;
@@ -28,7 +28,7 @@ public class TicketController : Controller
     /// <param name="client">Discord client instance</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     /// <param name="auditContext">Records before/after state for the dashboard audit log.</param>
-    public TicketController(TicketService ticketService, DiscordShardedClient client,
+    public TicketController(TicketService ticketService, FluxerClient client,
         ILogger<TicketController> logger, IDashboardAuditContext auditContext)
     {
         this.ticketService = ticketService;
@@ -50,7 +50,7 @@ public class TicketController : Controller
         try
         {
             var panels = await ticketService.GetPanelsAsync(guildId);
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
 
             if (guild == null)
                 return NotFound("Guild not found");
@@ -93,7 +93,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -141,7 +141,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -190,7 +190,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -220,7 +220,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -251,7 +251,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -326,7 +326,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -502,7 +502,7 @@ public class TicketController : Controller
             if (button == null || button.Panel.GuildId != guildId)
                 return NotFound("Button not found");
 
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             var category = button.CategoryId.HasValue
                 ? await guild.GetCategoryChannelAsync(button.CategoryId.Value)
                 : null;
@@ -564,7 +564,7 @@ public class TicketController : Controller
             if (request == null)
                 return BadRequest("Request body is null or could not be deserialized");
 
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -634,7 +634,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -669,7 +669,7 @@ public class TicketController : Controller
 
             auditContext.RecordBefore(button);
 
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             var success = await ticketService.DeleteButtonAsync(guild, buttonId);
 
             if (success)
@@ -840,7 +840,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -872,7 +872,7 @@ public class TicketController : Controller
             if (option == null || option.SelectMenu.Panel.GuildId != guildId)
                 return NotFound("Select menu option not found");
 
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             var category = option.CategoryId.HasValue
                 ? await guild.GetCategoryChannelAsync(option.CategoryId.Value)
                 : null;
@@ -933,7 +933,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -1002,7 +1002,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -1038,7 +1038,7 @@ public class TicketController : Controller
             if (ticket == null || ticket.GuildId != guildId)
                 return NotFound("Ticket not found");
 
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             var channel = await guild.GetTextChannelAsync(ticket.ChannelId);
             var creator = await guild.GetUserAsync(ticket.CreatorId);
             var claimedBy = ticket.ClaimedBy.HasValue ? await guild.GetUserAsync(ticket.ClaimedBy.Value) : null;
@@ -1089,7 +1089,7 @@ public class TicketController : Controller
             if (ticket == null || ticket.GuildId != guildId)
                 return NotFound("Ticket not found");
 
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             var channel = await guild.GetTextChannelAsync(ticket.ChannelId);
             var creator = await guild.GetUserAsync(ticket.CreatorId);
             var claimedBy = ticket.ClaimedBy.HasValue ? await guild.GetUserAsync(ticket.ClaimedBy.Value) : null;
@@ -1141,7 +1141,7 @@ public class TicketController : Controller
         {
             var tickets =
                 await ticketService.GetGuildTicketsAsync(guildId, includeArchived, includeClosed, includeDeleted);
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -1200,7 +1200,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -1238,7 +1238,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -1272,7 +1272,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -1332,7 +1332,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -1367,7 +1367,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -1402,7 +1402,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -1436,7 +1436,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -1470,7 +1470,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -1503,7 +1503,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -1540,7 +1540,7 @@ public class TicketController : Controller
         try
         {
             var cases = await ticketService.GetGuildCasesAsync(guildId, includeDeleted);
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
 
             var result = await Task.WhenAll(cases.Select(async ticketCase =>
             {
@@ -1583,7 +1583,7 @@ public class TicketController : Controller
             if (ticketCase == null || ticketCase.GuildId != guildId)
                 return NotFound("Case not found");
 
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             var creator = await guild.GetUserAsync(ticketCase.CreatedBy);
 
             var linkedTickets = await Task.WhenAll((ticketCase.Tickets ?? new List<Ticket>()).Select(async ticket =>
@@ -1638,7 +1638,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -1846,7 +1846,7 @@ public class TicketController : Controller
             var cases = await ticketService.GetGuildCasesAsync(guildId);
             var activitySummary = await ticketService.GetTicketActivitySummary(guildId, activityDays);
             var staffMetrics = await ticketService.GetStaffResponseMetrics(guildId);
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
 
             // Only fetch Discord data for staff members (much smaller set than all tickets/panels)
             var staffResponseStats = await Task.WhenAll(staffMetrics.Select(async kvp =>
@@ -1969,7 +1969,7 @@ public class TicketController : Controller
         try
         {
             var metrics = await ticketService.GetStaffResponseMetrics(guildId);
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
 
             var result = await Task.WhenAll(metrics.Select(async kvp =>
             {
@@ -2159,7 +2159,7 @@ public class TicketController : Controller
         try
         {
             var blacklist = await ticketService.GetBlacklistedUsers(guildId);
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
 
             var result = await Task.WhenAll(blacklist.Select(async kvp =>
             {
@@ -2191,7 +2191,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -2219,7 +2219,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -2251,7 +2251,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -2280,7 +2280,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -2310,7 +2310,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 
@@ -2343,7 +2343,7 @@ public class TicketController : Controller
     {
         try
         {
-            IGuild guild = client.GetGuild(guildId);
+            SocketGuild guild = client.GetGuild(guildId);
             if (guild == null)
                 return NotFound("Guild not found");
 

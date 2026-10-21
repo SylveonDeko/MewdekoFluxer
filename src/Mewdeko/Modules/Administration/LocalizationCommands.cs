@@ -1,5 +1,4 @@
 ﻿using System.Globalization;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 
 namespace Mewdeko.Modules.Administration;

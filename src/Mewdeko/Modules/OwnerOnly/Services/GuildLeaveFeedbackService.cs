@@ -1,7 +1,5 @@
 using System.Text.RegularExpressions;
 using DataModel;
-using Discord.Net;
-using Discord.Rest;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.ModuleBehaviors;
@@ -41,7 +39,7 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
     ];
 
     private readonly BotConfigService bss;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly BotCredentials creds;
     private readonly IDataConnectionFactory dbFactory;
     private readonly EventHandler handler;
@@ -58,7 +56,7 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
     /// <param name="bss">The bot config service.</param>
     /// <param name="creds">The bot credentials.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
-    public GuildLeaveFeedbackService(EventHandler handler, DiscordShardedClient client,
+    public GuildLeaveFeedbackService(EventHandler handler, FluxerClient client,
         IDataConnectionFactory dbFactory, GeneratedBotStrings strings, BotConfigService bss, BotCredentials creds,
         ILogger<GuildLeaveFeedbackService> logger)
     {
@@ -183,9 +181,9 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
 
         try
         {
-            await owner.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+            await owner.SendAsync(embed: eb.Build()).ConfigureAwait(false);
         }
-        catch (HttpException)
+        catch (FluxerApiException)
         {
             await db.GuildLeaveFeedbacks.Where(x => x.Id == record.Id).DeleteAsync().ConfigureAwait(false);
         }
@@ -240,7 +238,7 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
 
         try
         {
-            if (await client.Rest.GetChannelAsync(channelId).ConfigureAwait(false) is not RestTextChannel channel)
+            if (await client.Rest.GetChannelAsync(channelId).ConfigureAwait(false) is not Channel channel)
                 return (null, 0, null, false);
 
             return (channel.Name, channel.GuildId, client.GetGuild(channel.GuildId)?.Name, true);
@@ -345,7 +343,7 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
 
     private Task OnMessageReceived(SocketMessage message)
     {
-        if (message.Author.IsBot || message.Channel is not IDMChannel || string.IsNullOrWhiteSpace(message.Content))
+        if (message.Author.IsBot || message.Channel is not Channel || string.IsNullOrWhiteSpace(message.Content))
             return Task.CompletedTask;
 
         _ = Task.Run(async () =>
@@ -382,7 +380,7 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
         if (content.Equals("skip", StringComparison.OrdinalIgnoreCase))
         {
             await Dismiss(record.Id).ConfigureAwait(false);
-            await message.Channel.SendMessageAsync(embed: new EmbedBuilder()
+            await message.Channel.SendAsync(embed: new EmbedBuilder()
                 .WithOkColor()
                 .WithDescription(strings.LeaveFeedbackDismissed(record.GuildId))
                 .Build()).ConfigureAwait(false);
@@ -401,7 +399,7 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
         if (!string.IsNullOrWhiteSpace(comment))
             await SetComment(record.Id, comment.TrimTo(2000)).ConfigureAwait(false);
 
-        await message.Channel.SendMessageAsync(embed: new EmbedBuilder()
+        await message.Channel.SendAsync(embed: new EmbedBuilder()
             .WithOkColor()
             .WithDescription(strings.LeaveFeedbackSubmitted(record.GuildId))
             .Build()).ConfigureAwait(false);
@@ -469,7 +467,7 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
 
         try
         {
-            if (await client.Rest.GetChannelAsync(channelId).ConfigureAwait(false) is not RestTextChannel channel)
+            if (await client.Rest.GetChannelAsync(channelId).ConfigureAwait(false) is not Channel channel)
                 return;
 
             var eb = new EmbedBuilder()
@@ -494,7 +492,7 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
                 return;
             }
 
-            var msg = await channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+            var msg = await channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
             await db.GuildLeaveFeedbacks.Where(x => x.Id == id)
                 .Set(x => x.ReportMessageId, msg.Id)
                 .UpdateAsync().ConfigureAwait(false);

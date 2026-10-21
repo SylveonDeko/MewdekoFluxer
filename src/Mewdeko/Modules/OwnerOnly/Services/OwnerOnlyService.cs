@@ -15,7 +15,6 @@ using Octokit;
 using StackExchange.Redis;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
-using Image = Discord.Image;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Mewdeko.Modules.OwnerOnly.Services;
@@ -29,7 +28,7 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
     private readonly BotConfigService bss;
 
     private readonly IDataCache cache;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly CommandHandler cmdHandler;
     private readonly IBotCredentials creds;
     private readonly string dataDirectory;
@@ -45,8 +44,8 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
 
     private int currentStatusNum;
 
-    private ImmutableDictionary<ulong, IDMChannel> ownerChannels =
-        new Dictionary<ulong, IDMChannel>().ToImmutableDictionary();
+    private ImmutableDictionary<ulong, Channel> ownerChannels =
+        new Dictionary<ulong, Channel>().ToImmutableDictionary();
 
     private string sourceDirectory;
     private int totalCommands;
@@ -72,7 +71,7 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
     ///     and checking for updates. It also listens for commands to leave guilds or reload images via Redis subscriptions.
     /// </remarks>
     /// <param name="logger">The logger instance for structured logging.</param>
-    public OwnerOnlyService(DiscordShardedClient client, CommandHandler cmdHandler, IDataConnectionFactory dbFactory,
+    public OwnerOnlyService(FluxerClient client, CommandHandler cmdHandler, IDataConnectionFactory dbFactory,
         GeneratedBotStrings strings, IBotCredentials creds, IDataCache cache, IHttpClientFactory factory,
         BotConfigService bss, IEnumerable<IPlaceholderProvider> phProviders, Mewdeko bot,
         GuildSettingsService guildSettings, EventHandler handler, ILogger<OwnerOnlyService> logger)
@@ -147,10 +146,10 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
     ///     The method checks if the message was sent in a DM channel and forwards it to all owners if the setting is enabled.
     ///     Attachments are also forwarded. Errors in sending messages to any owner are logged but not thrown.
     /// </remarks>
-    public async Task LateExecute(DiscordShardedClient discordShardedClient, IGuild guild, IUserMessage msg)
+    public async Task LateExecute(FluxerClient discordShardedClient, SocketGuild guild, Message msg)
     {
         var bs = bss.Data;
-        if (msg.Channel is IDMChannel && bss.Data.ForwardMessages && ownerChannels.Count > 0)
+        if (msg.Channel is Channel && bss.Data.ForwardMessages && ownerChannels.Count > 0)
         {
             var title = $"{strings.DmFrom(guild.Id)} [{msg.Author}]({msg.Author.Id})";
 
@@ -239,7 +238,7 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
         var channels = await Task.WhenAll(creds.OwnerIds.Select(id =>
         {
             var user = client.GetUser(id);
-            return user == null ? Task.FromResult<IDMChannel?>(null) : user.CreateDMChannelAsync();
+            return user == null ? Task.FromResult<Channel?>(null) : user.CreateDMChannelAsync();
         })).ConfigureAwait(false);
 
         ownerChannels = channels.Where(x => x is not null)
@@ -258,7 +257,7 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
         }
     }
 
-    private async Task QuarantineCheck(Cacheable<SocketGuildUser, ulong> args, SocketGuildUser arsg2)
+    private async Task QuarantineCheck(Cacheable<SocketGuildMember> args, SocketGuildMember arsg2)
     {
         if (!args.HasValue)
             return;
@@ -290,7 +289,7 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
                         var user = await client.Rest.GetUserAsync(i);
                         if (user is null) continue;
                         var channel = await user.CreateDMChannelAsync();
-                        await channel.SendMessageAsync(strings.QuarantineNotification(args.Value.Guild.Id,
+                        await channel.SendAsync(strings.QuarantineNotification(args.Value.Guild.Id,
                             arsg2.Guild.Name, value.Guild.Id));
                     }
                 }
@@ -300,7 +299,7 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
                     if (user is not null)
                     {
                         var channel = await user.CreateDMChannelAsync();
-                        await channel.SendMessageAsync(strings.QuarantineNotification(args.Value.Guild.Id,
+                        await channel.SendAsync(strings.QuarantineNotification(args.Value.Guild.Id,
                             arsg2.Guild.Name, value.Guild.Id));
                     }
                 }
@@ -352,7 +351,7 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
                                     var user = await client.Rest.GetUserAsync(i);
                                     if (user is null) continue;
                                     var channel = await user.CreateDMChannelAsync();
-                                    await channel.SendMessageAsync(embed: eb.Build());
+                                    await channel.SendAsync(embed: eb.Build());
                                 }
                             }
                             else
@@ -361,7 +360,7 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
                                 if (user is not null)
                                 {
                                     var channel = await user.CreateDMChannelAsync();
-                                    await channel.SendMessageAsync(embed: eb.Build());
+                                    await channel.SendAsync(embed: eb.Build());
                                 }
                             }
                         }
@@ -399,7 +398,7 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
                                     var user = await client.Rest.GetUserAsync(i);
                                     if (user is null) continue;
                                     var channel = await user.CreateDMChannelAsync();
-                                    await channel.SendMessageAsync(
+                                    await channel.SendAsync(
                                         strings.NewCommitFound(1, latestCommit.Sha, latestCommit.HtmlUrl));
                                 }
                             }
@@ -409,7 +408,7 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
                                 if (user is not null)
                                 {
                                     var channel = await user.CreateDMChannelAsync();
-                                    await channel.SendMessageAsync(
+                                    await channel.SendAsync(
                                         strings.NewCommitFound(1, latestCommit.Sha, latestCommit.HtmlUrl));
                                 }
                             }
@@ -1707,8 +1706,8 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
     {
         // Check for common parameter combinations
         var hasUserParam = paramList.Any(p => p.Contains("IUser"));
-        var hasChannelParam = paramList.Any(p => p.Contains("IChannel"));
-        var hasRoleParam = paramList.Any(p => p.Contains("IRole"));
+        var hasChannelParam = paramList.Any(p => p.Contains("Channel"));
+        var hasRoleParam = paramList.Any(p => p.Contains("SocketRole"));
         var hasNumberParam = paramList.Any(p =>
             Regex.IsMatch(p, @"\bint\b|\bdouble\b|\bfloat\b|\bdecimal\b|\blong\b") ||
             p.ToLower().Contains("amount") ||

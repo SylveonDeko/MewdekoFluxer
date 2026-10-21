@@ -26,7 +26,7 @@ public class XpVoiceTracker : INService, IDisposable
 
     // Small cache for channel eligibility only
     private readonly MemoryCache channelEligibilityCache;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly IDataConnectionFactory dbFactory;
     private readonly Timer diagnosticsTimer;
@@ -57,7 +57,7 @@ public class XpVoiceTracker : INService, IDisposable
     /// <param name="logger">The logger instance for structured logging.</param>
     /// <param name="collector">The analytics collector.</param>
     public XpVoiceTracker(
-        DiscordShardedClient client,
+        FluxerClient client,
         IDataConnectionFactory dbFactory,
         XpCacheManager cacheManager,
         XpBackgroundProcessor backgroundProcessor, ILogger<XpVoiceTracker> logger, IAnalyticsCollector collector)
@@ -106,7 +106,7 @@ public class XpVoiceTracker : INService, IDisposable
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task HandleVoiceStateUpdate(SocketUser user, SocketVoiceState before, SocketVoiceState after)
     {
-        if (user is not SocketGuildUser guildUser || guildUser.IsBot)
+        if (user is not SocketGuildMember guildUser || guildUser.IsBot)
             return;
 
         try
@@ -227,7 +227,7 @@ public class XpVoiceTracker : INService, IDisposable
     /// <param name="voiceChannel">The voice channel.</param>
     /// <param name="timestamp">The current timestamp.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    private async Task StartVoiceSession(SocketGuildUser user, SocketVoiceChannel voiceChannel, DateTime timestamp)
+    private async Task StartVoiceSession(SocketGuildMember user, Channel voiceChannel, DateTime timestamp)
     {
         var guildId = user.Guild.Id;
         var userId = user.Id;
@@ -309,7 +309,7 @@ public class XpVoiceTracker : INService, IDisposable
     /// <param name="voiceChannel">The voice channel.</param>
     /// <param name="timestamp">The current timestamp.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    private async Task UpdateSessionEligibility(SocketGuildUser user, SocketVoiceChannel voiceChannel,
+    private async Task UpdateSessionEligibility(SocketGuildMember user, Channel voiceChannel,
         DateTime timestamp)
     {
         var guildId = user.Guild.Id;
@@ -360,7 +360,7 @@ public class XpVoiceTracker : INService, IDisposable
     /// <param name="voiceChannel">The voice channel.</param>
     /// <param name="session">The voice session.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    private async Task CalculateAndAwardXp(SocketGuildUser user, SocketVoiceChannel voiceChannel, VoiceSession session)
+    private async Task CalculateAndAwardXp(SocketGuildMember user, Channel voiceChannel, VoiceSession session)
     {
         var guildId = user.Guild.Id;
         var userId = user.Id;
@@ -720,7 +720,7 @@ public class XpVoiceTracker : INService, IDisposable
     /// <param name="voiceChannel">The voice channel, if available.</param>
     /// <returns>A task representing the asynchronous operation with a boolean result.</returns>
     private Task<bool> IsChannelEligibleAsync(ulong guildId, ulong channelId,
-        SocketVoiceChannel? voiceChannel = null)
+        Channel? voiceChannel = null)
     {
         // Check local cache for recent results
         var cacheKey = $"{guildId}:{channelId}";

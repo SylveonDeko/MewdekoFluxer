@@ -1,5 +1,4 @@
 using System.IO;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Administration.Services;
 using OtpNet;
@@ -59,7 +58,7 @@ public partial class Administration
                 return;
             }
 
-            IDMChannel dm;
+            Channel dm;
             try
             {
                 dm = await ctx.User.CreateDMChannelAsync();
@@ -77,7 +76,7 @@ public partial class Administration
                 await SetupAsync(dm);
         }
 
-        private async Task SetupAsync(IDMChannel dm)
+        private async Task SetupAsync(Channel dm)
         {
             var secretKey = KeyGeneration.GenerateRandomKey();
             var base32Secret = Base32Encoding.ToString(secretKey);
@@ -116,7 +115,7 @@ public partial class Administration
             await dm.SendConfirmAsync(Strings.Recoversetupcomplete(ctx.Guild.Id));
         }
 
-        private async Task RecoverAsync(IDMChannel dm, DataModel.ServerRecoveryStore store)
+        private async Task RecoverAsync(Channel dm, DataModel.ServerRecoveryStore store)
         {
             await dm.SendConfirmAsync(Strings.ServerRecoverKeyPrompt(ctx.Guild.Id));
             var recoveryKey = await NextMessageAsync(dm.Id, ctx.User.Id);
@@ -140,7 +139,7 @@ public partial class Administration
             var newRole = await ctx.Guild.CreateRoleAsync("Recovered Server Owner Role",
                 new GuildPermissions(administrator: true), null, false, null);
             await newRole.ModifyAsync(x => x.Position = highestRole - 1);
-            await ((IGuildUser)ctx.User).AddRoleAsync(newRole);
+            await ((SocketGuildMember)ctx.User).AddRoleAsync(newRole);
             await dm.SendConfirmAsync(Strings.Highestpossiblerole(ctx.Guild.Id));
         }
     }

@@ -1,5 +1,4 @@
 using DataModel;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Database.Enums;
 using Mewdeko.Modules.Currency.Models;
@@ -87,7 +86,7 @@ public partial class Currency
     [RequireContext(ContextType.Guild)]
     public async Task Buy([Remainder] string name)
     {
-        var guildUser = (IGuildUser)ctx.User;
+        var guildUser = (SocketGuildMember)ctx.User;
         var result = await ShopService.PurchaseAsync(ctx.Guild.Id, ctx.User.Id, name, guildUser.RoleIds.ToList());
         var emote = await Service.GetCurrencyEmote(ctx.Guild.Id);
 
@@ -138,7 +137,7 @@ public partial class Currency
         {
             try
             {
-                await guildUser.SendMessageAsync(Strings.ShopTextDelivery(ctx.Guild.Id, item.Name, item.TextContent));
+                await guildUser.SendAsync(Strings.ShopTextDelivery(ctx.Guild.Id, item.Name, item.TextContent));
             }
             catch (Exception)
             {
@@ -184,7 +183,7 @@ public partial class Currency
                     : entry.Item.Description ?? Strings.InventoryNoDescription(ctx.Guild.Id), true);
         }
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -218,7 +217,7 @@ public partial class Currency
         {
             try
             {
-                await ctx.User.SendMessageAsync(Strings.ShopTextDelivery(ctx.Guild.Id, item.Name, item.TextContent));
+                await ctx.User.SendAsync(Strings.ShopTextDelivery(ctx.Guild.Id, item.Name, item.TextContent));
             }
             catch (Exception)
             {
@@ -241,7 +240,7 @@ public partial class Currency
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
     [BotPerm(GuildPermission.ManageRoles)]
-    public async Task ShopAddRole(long price, IRole role, [Remainder] string name)
+    public async Task ShopAddRole(long price, SocketRole role, [Remainder] string name)
     {
         if (price < 0)
         {

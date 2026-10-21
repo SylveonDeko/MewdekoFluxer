@@ -3,7 +3,6 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using DataModel;
-using Embed = Discord.Embed;
 
 namespace Mewdeko.Modules.Forms.Services;
 
@@ -23,7 +22,7 @@ public partial class FormsService
     /// <param name="form">The form that was submitted.</param>
     /// <param name="content">The plain text sent above the embed, if any.</param>
     /// <param name="embed">The embed the submit channel receives.</param>
-    private Task PostSubmissionToWebhookAsync(Form form, string? content, Embed embed)
+    private Task PostSubmissionToWebhookAsync(Form form, string? content, EmbedRequest embed)
     {
         return PostToWebhookAsync(form, content, embed);
     }
@@ -69,7 +68,7 @@ public partial class FormsService
     /// <param name="form">The form whose webhook receives the message.</param>
     /// <param name="content">The plain text sent above the embed, if any.</param>
     /// <param name="embed">The embed to send.</param>
-    private async Task PostToWebhookAsync(Form form, string? content, Embed embed)
+    private async Task PostToWebhookAsync(Form form, string? content, EmbedRequest embed)
     {
         var url = form.NotificationWebhookUrl?.Trim();
 
@@ -148,7 +147,7 @@ public partial class FormsService
         [JsonPropertyName("fields")]
         public WebhookEmbedField[] Fields { get; init; } = [];
 
-        public static WebhookEmbed From(Embed embed)
+        public static WebhookEmbed From(EmbedRequest embed)
         {
             return new WebhookEmbed
             {

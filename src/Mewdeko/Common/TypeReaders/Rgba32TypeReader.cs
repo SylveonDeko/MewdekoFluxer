@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using SkiaSharp;
 
 namespace Mewdeko.Common.TypeReaders;
@@ -11,9 +11,9 @@ public class SkColorTypeReader : MewdekoTypeReader<SKColor>
     /// <summary>
     ///     Initializes a new instance of the <see cref="SkColorTypeReader" /> class.
     /// </summary>
-    /// <param name="client">The DiscordShardedClient instance.</param>
+    /// <param name="client">The FluxerClient instance.</param>
     /// <param name="cmds">The CommandService instance.</param>
-    public SkColorTypeReader(DiscordShardedClient client, CommandService cmds) : base(client, cmds)
+    public SkColorTypeReader(FluxerClient client, CommandService cmds) : base(client, cmds)
     {
     }
 

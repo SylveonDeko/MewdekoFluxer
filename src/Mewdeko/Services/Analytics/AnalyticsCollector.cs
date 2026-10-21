@@ -73,7 +73,7 @@ public sealed class AnalyticsCollector : IAnalyticsCollector, INService
         "GuildEmojiUpdated"
     };
 
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
 
     private readonly BotConfigService config;
     private readonly object swapLock = new();
@@ -102,7 +102,7 @@ public sealed class AnalyticsCollector : IAnalyticsCollector, INService
     /// </summary>
     /// <param name="config">The bot config, read for the enabled flag.</param>
     /// <param name="client">The Discord client, used for the instance identifier.</param>
-    public AnalyticsCollector(BotConfigService config, DiscordShardedClient client)
+    public AnalyticsCollector(BotConfigService config, FluxerClient client)
     {
         this.config = config;
         this.client = client;

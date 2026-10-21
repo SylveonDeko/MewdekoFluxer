@@ -37,7 +37,7 @@ public class RoleStatesService : INService
     {
         await using var db = await dbFactory.CreateConnectionAsync();
 
-        if (args is not SocketGuildUser usr) return;
+        if (args is not SocketGuildMember usr) return;
         var roleStateSettings = await db.RoleStateSettings
             .FirstOrDefaultAsync(x => x.GuildId == arsg2.Id);
 
@@ -53,7 +53,7 @@ public class RoleStatesService : INService
             .DeleteAsync();
     }
 
-    private async Task OnUserJoined(IGuildUser usr)
+    private async Task OnUserJoined(SocketGuildMember usr)
     {
         await using var db = await dbFactory.CreateConnectionAsync();
 
@@ -95,7 +95,7 @@ public class RoleStatesService : INService
     }
 
 
-    private async Task OnUserLeft(IGuild args, IUser args2)
+    private async Task OnUserLeft(SocketGuild args, IUser args2)
     {
         await using var db = await dbFactory.CreateConnectionAsync();
 
@@ -116,7 +116,7 @@ public class RoleStatesService : INService
 
         if (deniedUsers.Contains(args2.Id)) return;
 
-        if (args2 is not SocketGuildUser usr) return;
+        if (args2 is not SocketGuildMember usr) return;
 
         var rolesToSave = usr.Roles.Where(x => !x.IsManaged && !x.IsEveryone).Select(x => x.Id);
         if (deniedRoles.Any())
@@ -474,13 +474,13 @@ public class RoleStatesService : INService
     ///     Applies the saved role state from one user to another.
     /// </summary>
     /// <param name="sourceUserId">The source user's unique identifier.</param>
-    /// <param name="targetUser">The target <see cref="IGuildUser" />.</param>
+    /// <param name="targetUser">The target <see cref="SocketGuildMember" />.</param>
     /// <param name="guildId">The unique identifier of the guild.</param>
     /// <returns>
     ///     A task that represents the asynchronous operation, containing a boolean indicating if the operation was
     ///     successful.
     /// </returns>
-    public async Task<bool> ApplyUserRoleStateToAnotherUser(ulong sourceUserId, IGuildUser targetUser, ulong guildId)
+    public async Task<bool> ApplyUserRoleStateToAnotherUser(ulong sourceUserId, SocketGuildMember targetUser, ulong guildId)
     {
         await using var db = await dbFactory.CreateConnectionAsync();
 
@@ -544,8 +544,8 @@ public class RoleStatesService : INService
     ///     and any error message.
     /// </returns>
     public async Task<(int TransferCount, string ErrorMessage)> TransferRoleStates(
-        IGuild sourceGuild,
-        IGuild targetGuild)
+        SocketGuild sourceGuild,
+        SocketGuild targetGuild)
     {
         if (sourceGuild.Id == targetGuild.Id)
             return (0, "Source and target guilds cannot be the same.");
@@ -694,7 +694,7 @@ public class RoleStatesService : INService
     ///     A task that represents the asynchronous operation, containing a tuple with the count of saved role states
     ///     and any error message.
     /// </returns>
-    public async Task<(int SavedCount, string ErrorMessage)> SaveAllUserRoleStates(IGuild guild)
+    public async Task<(int SavedCount, string ErrorMessage)> SaveAllUserRoleStates(SocketGuild guild)
     {
         await using var db = await dbFactory.CreateConnectionAsync();
 

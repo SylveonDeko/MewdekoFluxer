@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Mewdeko.Common.Attributes.TextCommands;
 using NekosBestApiNet;
 using NekosBestApiNet.Models.Images;
@@ -490,7 +490,7 @@ public partial class Searches
                 ImageUrl = result.Results.FirstOrDefault().Url,
                 Color = Mewdeko.OkColor
             };
-            await ctx.Channel.SendMessageAsync(embed: em.Build()).ConfigureAwait(false);
+            await ctx.Channel.SendAsync(embed: em.Build()).ConfigureAwait(false);
         }
     }
 }

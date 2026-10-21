@@ -1,22 +1,14 @@
 ﻿using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using DataModel;
-using Discord.Commands;
-using Discord.Net;
-using Discord.Rest;
 using Figgle.Fonts;
-using Lavalink4NET;
 using Mewdeko.Common.ModuleBehaviors;
 using Mewdeko.Common.TypeReaders;
 using Mewdeko.Services.Impl;
 using Mewdeko.Services.Settings;
 using Microsoft.Extensions.DependencyInjection;
-using Serilog;
-using Serilog.Events;
 using StackExchange.Redis;
-using TypeReader = Discord.Commands.TypeReader;
 
 namespace Mewdeko;
 
@@ -31,12 +23,6 @@ public class Mewdeko : IDisposable
     {
         PropertyNameCaseInsensitive = true
     };
-
-    /// <summary>
-    ///     Matches the channel or guild id in a raw Discord.Net log line, so route only messages can be attributed.
-    /// </summary>
-    private static readonly Regex LogRouteRegex = new(@"(?<kind>channels|guilds)/(?<id>\d{15,25})",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100));
 
     private readonly BotConfigService bss;
 
@@ -54,7 +40,7 @@ public class Mewdeko : IDisposable
         this.logger = logger;
         Credentials = Services.GetRequiredService<BotCredentials>();
         Services.GetRequiredService<IDataCache>();
-        Client = Services.GetRequiredService<DiscordShardedClient>();
+        Client = Services.GetRequiredService<FluxerClient>();
         CommandService = Services.GetRequiredService<CommandService>();
         GuildSettingsService = Services.GetRequiredService<GuildSettingsService>();
         bss = Services.GetRequiredService<BotConfigService>();
@@ -65,12 +51,10 @@ public class Mewdeko : IDisposable
     /// </summary>
     public BotCredentials Credentials { get; }
 
-    private int ReadyCount { get; set; }
-
     /// <summary>
     ///     Gets the Discord client used by the bot.
     /// </summary>
-    public DiscordShardedClient Client { get; }
+    public FluxerClient Client { get; }
 
     private GuildSettingsService GuildSettingsService { get; }
 
@@ -140,50 +124,27 @@ public class Mewdeko : IDisposable
                 CommandService.AddTypeReader(typeArgs[0], x);
         }
 
-        CommandService.AddTypeReaders<IEmote>(
-            new TryParseTypeReader<Emote>(Emote.TryParse),
+        CommandService.AddTypeReaders<Emoji>(
+            new TryParseTypeReader<Emoji>(Emoji.TryParse),
             new TryParseTypeReader<Emoji>(Emoji.TryParse));
 
         sw.Stop();
         logger.LogInformation("TypeReaders loaded in {ElapsedTotalSeconds}s", sw.Elapsed.TotalSeconds);
     }
 
-    private async Task LoginAsync(string token)
+    private async Task LoginAsync()
     {
         var eventHandler = Services.GetRequiredService<EventHandler>();
-        eventHandler.Subscribe("Log", "Mewdeko", Client_Log);
-        var clientReady = new TaskCompletionSource<bool>();
+        var clientReady = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        eventHandler.Ready.Subscribe("Mewdeko", SetClientReady);
 
         logger.LogInformation("Logging in...");
         try
         {
-            // Login but don't start shards yet
-            await Client.LoginAsync(TokenType.Bot, token.Trim()).ConfigureAwait(false);
-            var gw = await Client.GetBotGatewayAsync();
-
-            var maxConcurrency = gw.SessionStartLimit.MaxConcurrency;
-
-            // Start shards in rate-limited batches according to max concurrency
-            var totalShards = Client.Shards.Count;
-            logger.LogInformation("Starting {TotalShards} shards with max concurrency of {MaxConcurrency}", totalShards,
-                maxConcurrency);
-
-            // Group shards by their rate limit bucket using the formula from Discord docs
-            var shardGroups = Client.Shards
-                .GroupBy(shard => shard.ShardId % maxConcurrency)
-                .OrderBy(group => group.Key)
-                .ToList();
-
-            // Start each batch of shards
-            foreach (var group in shardGroups)
-            {
-                var tasks = group.Select(shard => shard.StartAsync()).ToList();
-                logger.LogInformation("Starting shard bucket {BucketKey} with {ShardCount} shards", group.Key,
-                    tasks.Count);
-                await Task.WhenAll(tasks);
-            }
+            await Client.LoginAsync().ConfigureAwait(false);
+            await Client.StartAsync().ConfigureAwait(false);
         }
-        catch (HttpException ex)
+        catch (FluxerApiException ex)
         {
             LoginErrorHandler.Handle(ex);
             Helpers.ReadErrorAndExit(3);
@@ -194,24 +155,17 @@ public class Mewdeko : IDisposable
             Helpers.ReadErrorAndExit(4);
         }
 
-        eventHandler.Subscribe("ShardReady", "Mewdeko", SetClientReady);
         await clientReady.Task.ConfigureAwait(false);
-        eventHandler.Unsubscribe("ShardReady", "Mewdeko", SetClientReady);
-        eventHandler.Subscribe("JoinedGuild", "Mewdeko", Client_JoinedGuild);
-        eventHandler.Subscribe("LeftGuild", "Mewdeko", Client_LeftGuild);
-        logger.LogInformation("Logged in.");
+        eventHandler.Ready.Unsubscribe("Mewdeko", SetClientReady);
+        eventHandler.JoinedGuild.Subscribe("Mewdeko", Client_JoinedGuild);
+        eventHandler.LeftGuild.Subscribe("Mewdeko", Client_LeftGuild);
         logger.LogInformation("Logged in as:");
         Console.WriteLine(FiggleFonts.Digital.Render(Client.CurrentUser.Username));
         return;
 
-        Task SetClientReady(DiscordSocketClient unused)
+        Task SetClientReady(FluxerClient _)
         {
-            ReadyCount++;
-            logger.LogInformation("Shard {ShardId} is ready", unused.ShardId);
-            logger.LogInformation("{ReadyCount}/{TotalShards} shards connected", ReadyCount, Client.Shards.Count);
-            if (ReadyCount != Client.Shards.Count)
-                return Task.CompletedTask;
-            _ = Task.Run(() => clientReady.TrySetResult(true));
+            clientReady.TrySetResult(true);
             return Task.CompletedTask;
         }
     }
@@ -223,7 +177,7 @@ public class Mewdeko : IDisposable
             try
             {
                 var chan = await Client.Rest.GetChannelAsync(Credentials.GuildJoinsChannelId).ConfigureAwait(false);
-                await ((RestTextChannel)chan).SendErrorAsync($"Left server: {arg.Name} [{arg.Id}]", bss.Data,
+                await ((Channel)chan).SendErrorAsync($"Left server: {arg.Name} [{arg.Id}]", bss.Data,
                 [
                     new EmbedFieldBuilder().WithName("Total Guilds")
                         .WithValue(Client.Guilds.Count)
@@ -250,18 +204,17 @@ public class Mewdeko : IDisposable
             await JoinedGuild.Invoke(gc).ConfigureAwait(false);
             var chan =
                 await Client.Rest.GetChannelAsync(Credentials.GuildJoinsChannelId).ConfigureAwait(false) as
-                    RestTextChannel;
+                    Channel;
             var eb = new EmbedBuilder();
             eb.WithTitle($"Joined {Format.Bold(arg.Name)} {arg.Id}");
-            eb.AddField("Members", arg.MemberCount);
-            eb.AddField("Boosts", arg.PremiumSubscriptionCount);
-            eb.AddField("Owner", $"Name: {arg.Owner}\nID: {arg.OwnerId}");
+            eb.AddField("Members", arg.TotalMembers);
+            eb.AddField("Owner", $"Name: {arg.GetUser(arg.OwnerId)}\nID: {arg.OwnerId}");
             eb.AddField("Text Channels", arg.TextChannels.Count);
             eb.AddField("Voice Channels", arg.VoiceChannels.Count);
             eb.AddField("Total Guilds", Client.Guilds.Count);
             eb.WithThumbnailUrl(arg.IconUrl);
             eb.WithColor(OkColor);
-            await chan.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+            await chan.SendAsync(embed: eb.Build()).ConfigureAwait(false);
         });
         return Task.CompletedTask;
     }
@@ -274,27 +227,17 @@ public class Mewdeko : IDisposable
     {
         var sw = Stopwatch.StartNew();
 
-        var audioService = Services.GetRequiredService<IAudioService>();
-
-        await LoginAsync(Credentials.Token).ConfigureAwait(false);
+        await LoginAsync().ConfigureAwait(false);
 
         logger.LogInformation("Loading Services...");
         try
         {
             LoadTypeReaders(typeof(Mewdeko).Assembly);
-            try
-            {
-                await audioService.StartAsync();
-            }
-            catch (Exception e)
-            {
-                logger.LogError(e, "Unable to start audio service: {Message}", e.Message);
-            }
 
             var dbProvider = Services.GetRequiredService<IDataConnectionFactory>();
             await using var dbContext = await dbProvider.CreateConnectionAsync();
             await dbContext.EnsureUserCreated(Client.CurrentUser.Id, Client.CurrentUser.Username,
-                Client.CurrentUser.AvatarId);
+                Client.CurrentUser.AvatarHash);
         }
         catch (Exception ex)
         {
@@ -305,8 +248,7 @@ public class Mewdeko : IDisposable
 
         sw.Stop();
         logger.LogInformation("Connected in {Elapsed:F2}s", sw.Elapsed.TotalSeconds);
-        var commandService = Services.GetService<CommandService>();
-        commandService.Log += LogCommandsService;
+        var commandService = Services.GetRequiredService<CommandService>();
         try
         {
             await commandService.AddModulesAsync(Assembly.GetExecutingAssembly(), Services);
@@ -323,12 +265,6 @@ public class Mewdeko : IDisposable
         performanceMonitor.Initialize(typeof(Mewdeko).Assembly, "Mewdeko");
         Ready.TrySetResult(true);
         logger.LogInformation("Ready.");
-    }
-
-    private Task LogCommandsService(LogMessage arg)
-    {
-        logger.LogInformation(arg.ToString());
-        return Task.CompletedTask;
     }
 
     private async Task ExecuteReadySubscriptions()
@@ -350,58 +286,6 @@ public class Mewdeko : IDisposable
         await Task.WhenAll(tasks);
     }
 
-    private async Task Client_Log(LogMessage arg)
-    {
-        var severity = arg.Severity switch
-        {
-            LogSeverity.Critical => LogEventLevel.Fatal,
-            LogSeverity.Error => LogEventLevel.Error,
-            LogSeverity.Warning => LogEventLevel.Warning,
-            LogSeverity.Info => LogEventLevel.Information,
-            LogSeverity.Verbose => LogEventLevel.Verbose,
-            LogSeverity.Debug => LogEventLevel.Debug,
-            _ => LogEventLevel.Information
-        };
-
-        var origin = DescribeLogOrigin(arg.Message);
-        if (origin is not null)
-            Log.Write(severity, arg.Exception, "[{Source}] {Message} ({Origin})", arg.Source, arg.Message, origin);
-        else
-            Log.Write(severity, arg.Exception, "[{Source}] {Message}", arg.Source, arg.Message);
-
-        await Task.CompletedTask;
-    }
-
-    /// <summary>
-    ///     Resolves the guild behind a raw Discord.Net log line so route only messages, such as rate limit warnings,
-    ///     can be attributed to a server.
-    /// </summary>
-    /// <param name="message">The raw log message.</param>
-    /// <returns>A description of the originating guild, or null if it cannot be determined.</returns>
-    private string? DescribeLogOrigin(string? message)
-    {
-        if (string.IsNullOrEmpty(message))
-            return null;
-
-        var match = LogRouteRegex.Match(message);
-        if (!match.Success)
-            return null;
-
-        if (!ulong.TryParse(match.Groups["id"].Value, out var id))
-            return null;
-
-        if (match.Groups["kind"].Value == "guilds")
-        {
-            var directGuild = Client.GetGuild(id);
-            return directGuild is null ? $"Guild {id}" : $"Guild {directGuild.Name} | {id}";
-        }
-
-        if (Client.GetChannel(id) is not IGuildChannel guildChannel)
-            return null;
-
-        return $"Guild {guildChannel.Guild.Name} | {guildChannel.Guild.Id}, Channel #{guildChannel.Name}";
-    }
-
     private void HandleStatusChanges()
     {
         var sub = Services.GetService<IDataCache>().Redis.GetSubscriber();
@@ -411,8 +295,7 @@ public class Mewdeko : IDisposable
             try
             {
                 var status = JsonSerializer.Deserialize<GameStatus>((string)game, CachedJsonOptions);
-                await Client.SetGameAsync(status?.Name, type: status?.Activity ?? ActivityType.Playing)
-                    .ConfigureAwait(false);
+                await Client.SetCustomStatusAsync(status?.Name).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -425,8 +308,7 @@ public class Mewdeko : IDisposable
             try
             {
                 var stream = JsonSerializer.Deserialize<StreamStatus>((string)streamData, CachedJsonOptions);
-                await Client.SetGameAsync(stream?.Name, stream?.Url, ActivityType.Streaming)
-                    .ConfigureAwait(false);
+                await Client.SetCustomStatusAsync(stream?.Name).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -463,25 +345,9 @@ public class Mewdeko : IDisposable
 
         if (disposing)
         {
-            // Unsubscribe from events to prevent memory leaks
-            if (Client != null)
-            {
-                Client.Log -= Client_Log;
-                Client.JoinedGuild -= Client_JoinedGuild;
-                Client.LeftGuild -= Client_LeftGuild;
-            }
-
-            try
-            {
-                var commandService = Services.GetService<CommandService>();
-                if (commandService != null)
-                {
-                    commandService.Log -= LogCommandsService;
-                }
-            }
-            catch (ObjectDisposedException)
-            {
-            }
+            var eventHandler = Services.GetService<EventHandler>();
+            eventHandler?.JoinedGuild.Unsubscribe("Mewdeko", Client_JoinedGuild);
+            eventHandler?.LeftGuild.Unsubscribe("Mewdeko", Client_LeftGuild);
         }
 
         disposed = true;

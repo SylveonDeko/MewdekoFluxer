@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders;
 using Mewdeko.Modules.Utility.Common;
@@ -25,7 +25,7 @@ public partial class Utility
         [BotPerm(GuildPermission.ManageRoles)]
         [UserPerm(GuildPermission.ManageRoles)]
         [RequireContext(ContextType.Guild)]
-        public async Task StreamRole(IRole fromRole, IRole addRole)
+        public async Task StreamRole(SocketRole fromRole, SocketRole addRole)
         {
             await Service.SetStreamRole(fromRole, addRole).ConfigureAwait(false);
 
@@ -80,7 +80,7 @@ public partial class Utility
         [BotPerm(GuildPermission.ManageRoles)]
         [UserPerm(GuildPermission.ManageRoles)]
         [RequireContext(ContextType.Guild)]
-        public async Task StreamRoleBlacklist(AddRemove action, [Remainder] IGuildUser user)
+        public async Task StreamRoleBlacklist(AddRemove action, [Remainder] SocketGuildMember user)
         {
             var success = await Service
                 .ApplyListAction(StreamRoleListType.Blacklist, ctx.Guild, action, user.Id, user.ToString())
@@ -122,7 +122,7 @@ public partial class Utility
         [BotPerm(GuildPermission.ManageRoles)]
         [UserPerm(GuildPermission.ManageRoles)]
         [RequireContext(ContextType.Guild)]
-        public async Task StreamRoleWhitelist(AddRemove action, [Remainder] IGuildUser user)
+        public async Task StreamRoleWhitelist(AddRemove action, [Remainder] SocketGuildMember user)
         {
             var success = await Service
                 .ApplyListAction(StreamRoleListType.Whitelist, ctx.Guild, action, user.Id, user.ToString())

@@ -1,5 +1,4 @@
 using DataModel;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.RoleMenus.Common;
 using Mewdeko.Modules.RoleMenus.Services;
@@ -30,7 +29,7 @@ public class RoleMenus : MewdekoModuleBase<RoleMenuService>
         }
 
         var embed = Service.BuildListEmbed((SocketGuild)ctx.Guild, list);
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -49,7 +48,7 @@ public class RoleMenus : MewdekoModuleBase<RoleMenuService>
             return;
 
         var embed = Service.BuildInfoEmbed((SocketGuild)ctx.Guild, menu);
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -62,7 +61,7 @@ public class RoleMenus : MewdekoModuleBase<RoleMenuService>
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageRoles)]
     [BotPerm(GuildPermission.ManageRoles)]
-    public async Task RoleMenuCreate(ITextChannel channel, params IRole[] roles)
+    public async Task RoleMenuCreate(Channel channel, params SocketRole[] roles)
     {
         if (roles.Length == 0)
         {
@@ -84,7 +83,7 @@ public class RoleMenus : MewdekoModuleBase<RoleMenuService>
                 .ToList()
         };
 
-        var result = await Service.CreateAsync(ctx.Guild.Id, (IGuildUser)ctx.User, draft);
+        var result = await Service.CreateAsync(ctx.Guild.Id, (SocketGuildMember)ctx.User, draft);
         if (!result.Success || result.Menu is null)
         {
             await ErrorAsync(Service.DescribeError(ctx.Guild.Id, result, null, channel.Id));
@@ -106,7 +105,7 @@ public class RoleMenus : MewdekoModuleBase<RoleMenuService>
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageRoles)]
     [BotPerm(GuildPermission.ManageRoles)]
-    public async Task RoleMenuAdd(int menuId, IRole role, [Remainder] string? emojiAndLabel = null)
+    public async Task RoleMenuAdd(int menuId, SocketRole role, [Remainder] string? emojiAndLabel = null)
     {
         var menu = await FindMenuAsync(menuId);
         if (menu is null)
@@ -158,7 +157,7 @@ public class RoleMenus : MewdekoModuleBase<RoleMenuService>
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageRoles)]
     [BotPerm(GuildPermission.ManageRoles)]
-    public async Task RoleMenuRemove(int menuId, IRole role)
+    public async Task RoleMenuRemove(int menuId, SocketRole role)
     {
         var menu = await FindMenuAsync(menuId);
         if (menu is null)
@@ -330,7 +329,7 @@ public class RoleMenus : MewdekoModuleBase<RoleMenuService>
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageRoles)]
     [BotPerm(GuildPermission.ManageRoles)]
-    public async Task RoleMenuRequire(int menuId, IRole? role = null)
+    public async Task RoleMenuRequire(int menuId, SocketRole? role = null)
     {
         var menu = await FindMenuAsync(menuId);
         if (menu is null)
@@ -411,7 +410,7 @@ public class RoleMenus : MewdekoModuleBase<RoleMenuService>
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageRoles)]
     [BotPerm(GuildPermission.ManageRoles)]
-    public async Task RoleMenuRepost(int menuId, ITextChannel? channel = null)
+    public async Task RoleMenuRepost(int menuId, Channel? channel = null)
     {
         var menu = await FindMenuAsync(menuId);
         if (menu is null)
@@ -477,7 +476,7 @@ public class RoleMenus : MewdekoModuleBase<RoleMenuService>
             return;
         }
 
-        var result = await Service.ImportAsync(ctx.Guild.Id, (IGuildUser)ctx.User, new RoleMenuImportDraft
+        var result = await Service.ImportAsync(ctx.Guild.Id, (SocketGuildMember)ctx.User, new RoleMenuImportDraft
         {
             SourceId = source.Id,
             CopyMessage = true,
@@ -514,7 +513,7 @@ public class RoleMenus : MewdekoModuleBase<RoleMenuService>
     /// <returns>The saved menu, or null after replying.</returns>
     private async Task<RoleMenu?> SaveAsync(RoleMenu menu, RoleMenuDraft draft)
     {
-        var result = await Service.UpdateAsync(ctx.Guild.Id, menu.Id, (IGuildUser)ctx.User, draft);
+        var result = await Service.UpdateAsync(ctx.Guild.Id, menu.Id, (SocketGuildMember)ctx.User, draft);
         if (result.Success && result.Menu is not null)
             return result.Menu;
 

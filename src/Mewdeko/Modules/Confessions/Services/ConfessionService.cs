@@ -19,7 +19,7 @@ namespace Mewdeko.Modules.Confessions.Services;
 /// <param name="collector">The analytics collector.</param>
 public class ConfessionService(
     IDataConnectionFactory dbFactory,
-    DiscordShardedClient client,
+    FluxerClient client,
     GuildSettingsService guildSettings,
     BotConfig config,
     GeneratedBotStrings strings,
@@ -40,7 +40,7 @@ public class ConfessionService(
         ulong serverId,
         IUser user,
         string confession,
-        IMessageChannel currentChannel, string? imageUrl = null)
+        Channel currentChannel, string? imageUrl = null)
     {
         try
         {
@@ -79,7 +79,7 @@ public class ConfessionService(
                     return;
                 }
 
-                var msg = await confessionChannel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+                var msg = await confessionChannel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
                 await currentChannel.SendConfirmAsync(strings.ConfessionSent(serverId)).ConfigureAwait(false);
 
                 var toadd = new Confession
@@ -104,7 +104,7 @@ public class ConfessionService(
                         .AddField(strings.ConfessionLogMessageLink(serverId), msg.GetJumpUrl()).AddField(
                             strings.ConfessionLogWarning(serverId),
                             strings.ConfessionLogWarningText(serverId));
-                    await logChannel.SendMessageAsync(embed: eb2.Build()).ConfigureAwait(false);
+                    await logChannel.SendAsync(embed: eb2.Build()).ConfigureAwait(false);
                 }
             }
             else
@@ -138,7 +138,7 @@ public class ConfessionService(
                     return;
                 }
 
-                var msg = await confessionChannel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+                var msg = await confessionChannel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
                 await currentChannel.SendConfirmAsync(strings.ConfessionSent(serverId)).ConfigureAwait(false);
 
                 var toadd = new Confession
@@ -163,7 +163,7 @@ public class ConfessionService(
                         .AddField(strings.ConfessionLogMessageLink(serverId), msg.GetJumpUrl()).AddField(
                             strings.ConfessionLogWarning(serverId),
                             strings.ConfessionLogWarningText(serverId));
-                    await logChannel.SendMessageAsync(embed: eb2.Build()).ConfigureAwait(false);
+                    await logChannel.SendAsync(embed: eb2.Build()).ConfigureAwait(false);
                 }
             }
         }
@@ -180,7 +180,7 @@ public class ConfessionService(
     /// <param name="guild">The guild to set the confession channel for.</param>
     /// <param name="channelId">The ID of the confession channel.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task SetConfessionChannel(IGuild guild, ulong channelId)
+    public async Task SetConfessionChannel(SocketGuild guild, ulong channelId)
     {
         var guildConfig = await guildSettings.GetGuildConfig(guild.Id);
         guildConfig.ConfessionChannel = channelId;
@@ -220,7 +220,7 @@ public class ConfessionService(
     /// <param name="guild">The guild to set the confession log channel for.</param>
     /// <param name="channelId">The ID of the confession log channel.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task SetConfessionLogChannel(IGuild guild, ulong channelId)
+    public async Task SetConfessionLogChannel(SocketGuild guild, ulong channelId)
     {
         var guildConfig = await guildSettings.GetGuildConfig(guild.Id);
         guildConfig.ConfessionLogChannel = channelId;

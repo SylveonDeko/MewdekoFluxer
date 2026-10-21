@@ -4,10 +4,8 @@ using DataModel;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.ModuleBehaviors;
-using Discord.Net;
 using Mewdeko.Modules.Games.Common;
 using Mewdeko.Services.Strings;
-using Embed = Discord.Embed;
 using Poll = DataModel.Poll;
 
 namespace Mewdeko.Modules.Games.Services;
@@ -27,7 +25,7 @@ public class PollMessageService : INService, IReadyExecutor, IUnloadableService
     private const int BarWidth = 10;
     private static readonly TimeSpan RefreshDelay = TimeSpan.FromSeconds(2);
 
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly EventHandler eventHandler;
     private readonly ILogger<PollMessageService> logger;
@@ -45,7 +43,7 @@ public class PollMessageService : INService, IReadyExecutor, IUnloadableService
     /// <param name="logger">The logger instance.</param>
     /// <param name="pollService">The poll data service.</param>
     /// <param name="strings">The localized strings service.</param>
-    public PollMessageService(DiscordShardedClient client, IDataConnectionFactory dbFactory,
+    public PollMessageService(FluxerClient client, IDataConnectionFactory dbFactory,
         EventHandler eventHandler, ILogger<PollMessageService> logger, PollService pollService,
         GeneratedBotStrings strings)
     {
@@ -102,7 +100,7 @@ public class PollMessageService : INService, IReadyExecutor, IUnloadableService
     /// <param name="settings">The poll settings.</param>
     /// <param name="options">The poll options.</param>
     /// <returns>The localized reason, or null when the poll can be posted.</returns>
-    public async Task<string?> GetPostProblemAsync(ITextChannel channel, PollSettings settings,
+    public async Task<string?> GetPostProblemAsync(Channel channel, PollSettings settings,
         IReadOnlyList<PollOptionData> options)
     {
         var guildId = channel.GuildId;
@@ -119,10 +117,10 @@ public class PollMessageService : INService, IReadyExecutor, IUnloadableService
         var seen = new HashSet<string>();
         foreach (var option in options.Where(o => !string.IsNullOrWhiteSpace(o.Emote)))
         {
-            if (!option.Emote!.TryToIEmote(out var emote) || emote is null)
-                return strings.PollInvalidEmote(guildId, option.Emote!);
+            if (!option.Emoji!.TryToIEmote(out var emote) || emote is null)
+                return strings.PollInvalidEmote(guildId, option.Emoji!);
             if (!seen.Add(EmoteKey(emote)))
-                return strings.PollDuplicateEmote(guildId, option.Emote!);
+                return strings.PollDuplicateEmote(guildId, option.Emoji!);
         }
 
         return null;
@@ -138,16 +136,16 @@ public class PollMessageService : INService, IReadyExecutor, IUnloadableService
     /// <param name="type">The poll type.</param>
     /// <param name="settings">The poll settings.</param>
     /// <returns>The created poll.</returns>
-    public async Task<Poll> PostPollAsync(ITextChannel channel, ulong creatorId, string question,
+    public async Task<Poll> PostPollAsync(Channel channel, ulong creatorId, string question,
         List<PollOptionData> options, PollType type, PollSettings settings)
     {
         var taken = options.Where(o => !string.IsNullOrWhiteSpace(o.Emote))
-            .Select(o => o.Emote!.TryToIEmote(out var emote) ? EmoteKey(emote!) : "")
+            .Select(o => o.Emoji!.TryToIEmote(out var emote) ? EmoteKey(emote!) : "")
             .ToHashSet();
         foreach (var option in options.Where(o => string.IsNullOrWhiteSpace(o.Emote)))
         {
-            option.Emote = NumberEmojis.All.First(e => !taken.Contains(e));
-            taken.Add(option.Emote);
+            option.Emoji = NumberEmojis.All.First(e => !taken.Contains(e));
+            taken.Add(option.Emoji);
         }
 
         var poll = await pollService.CreatePollAsync(channel.GuildId, channel.Id, 0, creatorId, question, options,
@@ -155,7 +153,7 @@ public class PollMessageService : INService, IReadyExecutor, IUnloadableService
         try
         {
             var loaded = await pollService.GetPollAsync(poll.Id) ?? poll;
-            var message = await channel.SendMessageAsync(embed: BuildPollEmbed(loaded, null));
+            var message = await channel.SendAsync(embed: BuildPollEmbed(loaded, null));
             await pollService.UpdatePollMessageIdAsync(poll.Id, message.Id);
             poll.MessageId = message.Id;
             pollsByMessage[message.Id] = poll.Id;
@@ -231,7 +229,7 @@ public class PollMessageService : INService, IReadyExecutor, IUnloadableService
                 pollsByMessage.TryRemove(poll.MessageId, out _);
 
             if (client.GetGuild(poll.GuildId)?.GetTextChannel(poll.ChannelId) is not { } channel ||
-                await channel.GetMessageAsync(poll.MessageId) is not IUserMessage message)
+                await channel.GetMessageAsync(poll.MessageId) is not Message message)
                 return;
 
             var stats = await pollService.GetPollStatsAsync(pollId);
@@ -251,7 +249,7 @@ public class PollMessageService : INService, IReadyExecutor, IUnloadableService
     /// <param name="stats">The vote counts, or null for a poll nobody voted on yet.</param>
     /// <param name="expired">True when the poll is closed because its time ran out.</param>
     /// <returns>The embed.</returns>
-    public Embed BuildPollEmbed(Poll poll, PollStats? stats, bool expired = false)
+    public EmbedRequest BuildPollEmbed(Poll poll, PollStats? stats, bool expired = false)
     {
         var guildId = poll.GuildId;
         var settings = ParseSettings(poll);
@@ -360,24 +358,24 @@ public class PollMessageService : INService, IReadyExecutor, IUnloadableService
         }
     }
 
-    private static string EmoteKey(IEmote emote)
+    private static string EmoteKey(Emoji emote)
     {
-        return emote is Emote custom ? custom.Id.ToString(CultureInfo.InvariantCulture) : emote.Name;
+        return emote is Emoji custom ? custom.Id.ToString(CultureInfo.InvariantCulture) : emote.Name;
     }
 
-    private Task OnReactionAddedAsync(Cacheable<IUserMessage, ulong> message,
-        Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
+    private Task OnReactionAddedAsync(Cacheable<Message> message,
+        Cacheable<Channel> channel, SocketReaction reaction)
     {
         return HandleReactionAsync(message, reaction, true);
     }
 
-    private Task OnReactionRemovedAsync(Cacheable<IUserMessage, ulong> message,
-        Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
+    private Task OnReactionRemovedAsync(Cacheable<Message> message,
+        Cacheable<Channel> channel, SocketReaction reaction)
     {
         return HandleReactionAsync(message, reaction, false);
     }
 
-    private async Task HandleReactionAsync(Cacheable<IUserMessage, ulong> cached, SocketReaction reaction, bool added)
+    private async Task HandleReactionAsync(Cacheable<Message> cached, SocketReaction reaction, bool added)
     {
         try
         {
@@ -395,7 +393,7 @@ public class PollMessageService : INService, IReadyExecutor, IUnloadableService
             var settings = ParseSettings(poll);
             var option = poll.PollOptions.FirstOrDefault(o =>
                 o.Emote is not null && o.Emote.TryToIEmote(out var emote) && emote is not null &&
-                EmoteKey(emote) == EmoteKey(reaction.Emote));
+                EmoteKey(emote) == EmoteKey(reaction.Emoji));
 
             if (!added)
             {
@@ -409,7 +407,7 @@ public class PollMessageService : INService, IReadyExecutor, IUnloadableService
 
             if (option is null)
             {
-                await RemoveReactionAsync(cached, reaction.Emote, user);
+                await RemoveReactionAsync(cached, reaction.Emoji, user);
                 return;
             }
 
@@ -417,7 +415,7 @@ public class PollMessageService : INService, IReadyExecutor, IUnloadableService
             var rejected = result is VoteResult.NotAllowed or VoteResult.AlreadyVoted or VoteResult.PollClosed
                 or VoteResult.InvalidOption;
             if (rejected || settings.IsAnonymous)
-                await RemoveReactionAsync(cached, reaction.Emote, user);
+                await RemoveReactionAsync(cached, reaction.Emoji, user);
 
             foreach (var index in dropped)
             {
@@ -436,14 +434,14 @@ public class PollMessageService : INService, IReadyExecutor, IUnloadableService
         }
     }
 
-    private async Task RemoveReactionAsync(Cacheable<IUserMessage, ulong> cached, IEmote emote, IUser user)
+    private async Task RemoveReactionAsync(Cacheable<Message> cached, Emoji emote, IUser user)
     {
         try
         {
             var message = await cached.GetOrDownloadAsync();
             await message.RemoveReactionAsync(emote, user);
         }
-        catch (HttpException ex)
+        catch (FluxerApiException ex)
         {
             logger.LogDebug(ex, "Could not remove a reaction from poll message {MessageId}", cached.Id);
         }

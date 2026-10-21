@@ -1,4 +1,3 @@
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Currency.Models;
 using Mewdeko.Modules.Currency.Services;
@@ -193,7 +192,7 @@ public partial class Currency
         if (config.BankCapacity > 0)
             eb.WithFooter(Strings.BankCapacityFooter(ctx.Guild.Id, config.BankCapacity, emote));
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>

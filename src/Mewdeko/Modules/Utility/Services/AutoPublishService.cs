@@ -10,7 +10,7 @@ namespace Mewdeko.Modules.Utility.Services;
 /// </summary>
 public class AutoPublishService : INService
 {
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly ILogger<AutoPublishService> logger;
 
@@ -21,7 +21,7 @@ public class AutoPublishService : INService
     /// <param name="handler">The event handler for subscribing to message received events.</param>
     /// <param name="client">The Discord client for interacting with the Discord API.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
-    public AutoPublishService(IDataConnectionFactory dbFactory, EventHandler handler, DiscordShardedClient client,
+    public AutoPublishService(IDataConnectionFactory dbFactory, EventHandler handler, FluxerClient client,
         ILogger<AutoPublishService> logger)
     {
         this.dbFactory = dbFactory;
@@ -37,7 +37,7 @@ public class AutoPublishService : INService
     /// <param name="args">The message event arguments.</param>
     private async Task AutoPublish(SocketMessage args)
     {
-        if (args.Channel is not INewsChannel channel || args is not IUserMessage msg)
+        if (args.Channel is not Channel channel || args is not Message msg)
             return;
 
         var currentUser = await channel.GetUserAsync(client.CurrentUser.Id);
@@ -145,7 +145,7 @@ public class AutoPublishService : INService
     /// </summary>
     /// <param name="channel">The news channel to check permissions for.</param>
     /// <returns>True if the bot has the necessary permissions, false otherwise.</returns>
-    public async Task<bool> PermCheck(INewsChannel channel)
+    public async Task<bool> PermCheck(Channel channel)
     {
         var currentUser = await channel.GetUserAsync(client.CurrentUser.Id);
         var permissions = currentUser.GetPermissions(channel);

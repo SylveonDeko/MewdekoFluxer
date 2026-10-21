@@ -22,7 +22,7 @@ public class RedisBotStringsProvider : IBotStringsProvider
     /// <param name="discordClient">The Discord socket client.</param>
     /// <param name="source">The strings source.</param>
     /// <param name="creds">The bot credentials.</param>
-    public RedisBotStringsProvider(ConnectionMultiplexer redis, DiscordShardedClient discordClient,
+    public RedisBotStringsProvider(ConnectionMultiplexer redis, FluxerClient discordClient,
         IStringsSource source, IBotCredentials creds)
     {
         this.redis = redis;

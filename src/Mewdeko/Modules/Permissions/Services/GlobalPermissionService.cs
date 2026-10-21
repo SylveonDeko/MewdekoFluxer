@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Mewdeko.Common.ModuleBehaviors;
 using Mewdeko.Services.Settings;
 
@@ -55,7 +55,7 @@ public class GlobalPermissionService : ILateBlocker, INService
     /// <param name="moduleName">The name of the module containing the command.</param>
     /// <param name="command">The command being executed.</param>
     /// <returns>A task that resolves to true if the command should be blocked; otherwise, false.</returns>
-    public Task<bool> TryBlockLate(DiscordShardedClient client, ICommandContext ctx, string moduleName,
+    public Task<bool> TryBlockLate(FluxerClient client, ICommandContext ctx, string moduleName,
         CommandInfo command)
     {
         var settings = bss.Data;

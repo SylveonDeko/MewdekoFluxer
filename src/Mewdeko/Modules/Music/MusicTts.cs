@@ -1,7 +1,6 @@
 using System.Net.Http;
 using System.Text.Json;
 using DataModel;
-using Discord.Commands;
 using Lavalink4NET;
 using Lavalink4NET.DiscordNet;
 using Lavalink4NET.Players;
@@ -84,7 +83,7 @@ public partial class Music
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
-        public async Task TtsLink(ITextChannel channel = null)
+        public async Task TtsLink(Channel channel = null)
         {
             var (player, result) = await GetPlayerAsync(false);
             if (result is not null)
@@ -160,7 +159,7 @@ public partial class Music
         [UserPerm(GuildPermission.ManageGuild)]
         public async Task TtsAutoJoin()
         {
-            var vc = (ctx.User as IGuildUser)?.VoiceChannel;
+            var vc = (ctx.User as SocketGuildMember)?.VoiceChannel;
             if (vc is null)
             {
                 await ReplyErrorAsync(Strings.MusicNotInChannel(ctx.Guild.Id));
@@ -428,7 +427,7 @@ public partial class Music
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
-        public async Task TtsBlock(IGuildUser user)
+        public async Task TtsBlock(SocketGuildMember user)
         {
             var (player, result) = await GetPlayerAsync(false);
             if (result is not null)
@@ -499,7 +498,7 @@ public partial class Music
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
-        public async Task TtsRole(IRole role = null)
+        public async Task TtsRole(SocketRole role = null)
         {
             var (player, result) = await GetPlayerAsync(false);
             if (result is not null)
@@ -666,7 +665,7 @@ public partial class Music
                         settings.TtsAttachmentNarration ? yes : no, settings.TtsConsecutiveGrouping ? yes : no,
                         settings.TtsMaxQueueSize));
 
-            await ctx.Channel.SendMessageAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None);
+            await ctx.Channel.SendAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None);
         }
 
         /// <summary>
@@ -696,7 +695,7 @@ public partial class Music
                 .WithTitle(Strings.MusicPlayerError(ctx.Guild.Id))
                 .WithDescription(message);
 
-            await ctx.Channel.SendMessageAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None);
+            await ctx.Channel.SendAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None);
         }
 
         private async ValueTask<(MewdekoPlayer, string?)> GetPlayerAsync(bool connectToVoiceChannel = true)
@@ -711,7 +710,7 @@ public partial class Music
 
                 var options = new MewdekoPlayerOptions
                 {
-                    Channel = ctx.Channel as ITextChannel
+                    Channel = ctx.Channel as Channel
                 };
 
                 var result = await service.Players

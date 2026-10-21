@@ -1,6 +1,5 @@
 using System.IO;
 using System.Net.Http;
-using Discord.Commands;
 using IF.Lastfm.Core.Api.Enums;
 using Mewdeko.Common.Attributes.TextCommands;
 using SkiaSharp;
@@ -58,9 +57,9 @@ public partial class Music
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task Fm(IGuildUser? user = null)
+    public async Task Fm(SocketGuildMember? user = null)
     {
-        user ??= (IGuildUser)ctx.User;
+        user ??= (SocketGuildMember)ctx.User;
 
         var lastFmUser = await lastFmStats.GetLinkedUserAsync(user.Id);
         if (lastFmUser is not null)
@@ -91,7 +90,7 @@ public partial class Music
                 if (!string.IsNullOrEmpty(imageUrl))
                     eb.WithThumbnailUrl(imageUrl);
 
-                await ctx.Channel.SendMessageAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None)
+                await ctx.Channel.SendAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None)
                     .ConfigureAwait(false);
                 return;
             }
@@ -111,7 +110,7 @@ public partial class Music
             if (!string.IsNullOrEmpty(spotify.AlbumArtUrl))
                 spotifyEmbed.WithThumbnailUrl(spotify.AlbumArtUrl);
 
-            await ctx.Channel.SendMessageAsync(embed: spotifyEmbed.Build(), allowedMentions: AllowedMentions.None)
+            await ctx.Channel.SendAsync(embed: spotifyEmbed.Build(), allowedMentions: AllowedMentions.None)
                 .ConfigureAwait(false);
             return;
         }
@@ -126,9 +125,9 @@ public partial class Music
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task FmRecent(IGuildUser? user = null)
+    public async Task FmRecent(SocketGuildMember? user = null)
     {
-        user ??= (IGuildUser)ctx.User;
+        user ??= (SocketGuildMember)ctx.User;
         var username = await GetLinkedUsernameOrErrorAsync(user);
         if (username is null)
             return;
@@ -180,9 +179,9 @@ public partial class Music
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task FmTopArtists(string? period = null, IGuildUser? user = null)
+    public async Task FmTopArtists(string? period = null, SocketGuildMember? user = null)
     {
-        user ??= (IGuildUser)ctx.User;
+        user ??= (SocketGuildMember)ctx.User;
         var username = await GetLinkedUsernameOrErrorAsync(user);
         if (username is null)
             return;
@@ -212,9 +211,9 @@ public partial class Music
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task FmTopAlbums(string? period = null, IGuildUser? user = null)
+    public async Task FmTopAlbums(string? period = null, SocketGuildMember? user = null)
     {
-        user ??= (IGuildUser)ctx.User;
+        user ??= (SocketGuildMember)ctx.User;
         var username = await GetLinkedUsernameOrErrorAsync(user);
         if (username is null)
             return;
@@ -244,9 +243,9 @@ public partial class Music
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task FmTopTracks(string? period = null, IGuildUser? user = null)
+    public async Task FmTopTracks(string? period = null, SocketGuildMember? user = null)
     {
-        user ??= (IGuildUser)ctx.User;
+        user ??= (SocketGuildMember)ctx.User;
         var username = await GetLinkedUsernameOrErrorAsync(user);
         if (username is null)
             return;
@@ -326,7 +325,7 @@ public partial class Music
             .WithDescription(Strings.LastfmArtistInfo(ctx.Guild.Id, (info.Content.Stats?.Plays ?? 0).ToString("N0"),
                 (info.Content.Stats?.Listeners ?? 0).ToString("N0"), username, userPlaycount.ToString("N0")));
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None)
+        await ctx.Channel.SendAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None)
             .ConfigureAwait(false);
     }
 
@@ -386,7 +385,7 @@ public partial class Music
                 (info.Content.PlayCount ?? 0).ToString("N0"), username,
                 (info.Content.UserPlayCount ?? 0).ToString("N0")));
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None)
+        await ctx.Channel.SendAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None)
             .ConfigureAwait(false);
     }
 
@@ -430,7 +429,7 @@ public partial class Music
             .WithTitle(Strings.LastfmWhoknowsArtistTitle(ctx.Guild.Id, artist))
             .WithDescription(string.Join('\n', lines));
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None)
+        await ctx.Channel.SendAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None)
             .ConfigureAwait(false);
     }
 
@@ -476,7 +475,7 @@ public partial class Music
             .WithTitle(Strings.LastfmWhoknowsAlbumTitle(ctx.Guild.Id, album, artist))
             .WithDescription(string.Join('\n', lines));
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None)
+        await ctx.Channel.SendAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None)
             .ConfigureAwait(false);
     }
 
@@ -522,7 +521,7 @@ public partial class Music
             .WithTitle(Strings.LastfmWhoknowsTrackTitle(ctx.Guild.Id, track, artist))
             .WithDescription(string.Join('\n', lines));
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None)
+        await ctx.Channel.SendAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None)
             .ConfigureAwait(false);
     }
 
@@ -571,7 +570,7 @@ public partial class Music
             .WithTitle(Strings.LastfmCrownTitle(ctx.Guild.Id, artist))
             .WithDescription(body);
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None)
+        await ctx.Channel.SendAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None)
             .ConfigureAwait(false);
     }
 
@@ -582,7 +581,7 @@ public partial class Music
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task FmTaste(IGuildUser user)
+    public async Task FmTaste(SocketGuildMember user)
     {
         var usernameA = await GetLinkedUsernameOrErrorAsync(ctx.User);
         if (usernameA is null)
@@ -614,12 +613,12 @@ public partial class Music
 
         var eb = new EmbedBuilder()
             .WithOkColor()
-            .WithTitle(Strings.LastfmTasteTitle(ctx.Guild.Id, ((IGuildUser)ctx.User).DisplayName, user.DisplayName))
+            .WithTitle(Strings.LastfmTasteTitle(ctx.Guild.Id, ((SocketGuildMember)ctx.User).DisplayName, user.DisplayName))
             .WithDescription(
                 $"{Strings.LastfmTasteResult(ctx.Guild.Id, shared.Count, shared.Count == 1 ? "" : "s", user.DisplayName, sampleSize, overlap.ToString("P0"))}\n\n" +
                 Strings.LastfmTasteArtists(ctx.Guild.Id, string.Join(", ", shared.Take(15))));
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None)
+        await ctx.Channel.SendAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None)
             .ConfigureAwait(false);
     }
 
@@ -634,7 +633,7 @@ public partial class Music
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task FmChart(int size = 3, string? period = null, IGuildUser? user = null)
+    public async Task FmChart(int size = 3, string? period = null, SocketGuildMember? user = null)
     {
         if (size is < 2 or > 5)
         {
@@ -642,7 +641,7 @@ public partial class Music
             return;
         }
 
-        user ??= (IGuildUser)ctx.User;
+        user ??= (SocketGuildMember)ctx.User;
         var username = await GetLinkedUsernameOrErrorAsync(user);
         if (username is null)
             return;

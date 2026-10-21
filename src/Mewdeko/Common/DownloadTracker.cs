@@ -19,7 +19,7 @@ public class DownloadTracker : INService
     /// </summary>
     /// <param name="guild">The guild to check and potentially download users from.</param>
     /// <returns>A task representing the download state.</returns>
-    public async Task EnsureUsersDownloadedAsync(IGuild guild)
+    public async Task EnsureUsersDownloadedAsync(SocketGuild guild)
     {
         await downloadUsersSemaphore.WaitAsync().ConfigureAwait(false);
         try

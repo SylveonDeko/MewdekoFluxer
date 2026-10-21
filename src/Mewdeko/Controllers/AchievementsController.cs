@@ -19,7 +19,7 @@ namespace Mewdeko.Controllers;
 public class AchievementsController : Controller
 {
     private readonly IDashboardAuditContext auditContext;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly AchievementIconService icons;
     private readonly ILogger<AchievementsController> logger;
     private readonly GuildPaletteService paletteService;
@@ -35,7 +35,7 @@ public class AchievementsController : Controller
     /// <param name="logger">Logger instance.</param>
     /// <param name="auditContext">Records before and after state for the dashboard audit log.</param>
     public AchievementsController(AchievementService service, AchievementIconService icons,
-        GuildPaletteService paletteService, DiscordShardedClient client, ILogger<AchievementsController> logger,
+        GuildPaletteService paletteService, FluxerClient client, ILogger<AchievementsController> logger,
         IDashboardAuditContext auditContext)
     {
         this.service = service;
@@ -204,9 +204,9 @@ public class AchievementsController : Controller
 
         var bot = guild.CurrentUser;
         var channels = guild.Channels
-            .Where(c => c is SocketTextChannel and not SocketThreadChannel || c is SocketVoiceChannel)
+            .Where(c => c is Channel and not Channel || c is Channel)
             .OrderBy(c => (c as INestedChannel)?.CategoryId is { } categoryId ? guild.GetCategoryChannel(categoryId)?.Position ?? -1 : -1)
-            .ThenBy(c => c is SocketVoiceChannel ? 1 : 0)
+            .ThenBy(c => c is Channel ? 1 : 0)
             .ThenBy(c => c.Position)
             .Select(c =>
             {
@@ -218,8 +218,8 @@ public class AchievementsController : Controller
                     CategoryName = (c as INestedChannel)?.CategoryId is { } categoryId
                         ? guild.GetCategoryChannel(categoryId)?.Name
                         : null,
-                    Type = c is SocketVoiceChannel ? 2 : 0,
-                    CanSend = c is SocketTextChannel && perms.ViewChannel && perms.SendMessages && perms.EmbedLinks
+                    Type = c is Channel ? 2 : 0,
+                    CanSend = c is Channel && perms.ViewChannel && perms.SendMessages && perms.EmbedLinks
                 };
             })
             .ToList();

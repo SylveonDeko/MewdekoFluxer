@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using LinqToDB.Async;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Highlights.Services;
@@ -214,7 +214,7 @@ public class Highlights(InteractiveService interactivity, IServiceProvider svcs,
             case HighlightActions.ToggleIgnore:
                 if (string.IsNullOrWhiteSpace(words))
                     return;
-                var reader1 = new ChannelTypeReader<ITextChannel>();
+                var reader1 = new ChannelTypeReader<Channel>();
                 var result = await reader1.ReadAsync(ctx, words, svcs).ConfigureAwait(false);
                 if (!result.IsSuccess)
                 {
@@ -243,7 +243,7 @@ public class Highlights(InteractiveService interactivity, IServiceProvider svcs,
                     return;
                 }
 
-                var channel = (ITextChannel)result.BestMatch;
+                var channel = (Channel)result.BestMatch;
 
                 if (await Service.ToggleIgnoredChannel(ctx.Guild.Id, ctx.User.Id, channel.Id.ToString())
                         .ConfigureAwait(false))

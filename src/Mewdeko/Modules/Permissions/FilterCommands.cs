@@ -1,5 +1,4 @@
 ﻿using DataModel;
-using Discord.Commands;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.Attributes.TextCommands;
@@ -209,7 +208,7 @@ public partial class Permissions
         [RequireContext(ContextType.Guild)]
         public async Task SrvrFilterInv()
         {
-            var channel = (ITextChannel)ctx.Channel;
+            var channel = (Channel)ctx.Channel;
 
             var config = await gss.GetGuildConfig(channel.Guild.Id);
             config.FilterInvites = !config.FilterInvites;
@@ -241,7 +240,7 @@ public partial class Permissions
         [RequireContext(ContextType.Guild)]
         public async Task ChnlFilterInv()
         {
-            var channel = (ITextChannel)ctx.Channel;
+            var channel = (Channel)ctx.Channel;
             var guildId = channel.Guild.Id;
             var channelId = channel.Id;
 
@@ -288,7 +287,7 @@ public partial class Permissions
         [RequireContext(ContextType.Guild)]
         public async Task SrvrFilterLin()
         {
-            var channel = (ITextChannel)ctx.Channel;
+            var channel = (Channel)ctx.Channel;
 
             var config = await gss.GetGuildConfig(channel.Guild.Id);
             config.FilterLinks = !config.FilterLinks;
@@ -320,7 +319,7 @@ public partial class Permissions
         [RequireContext(ContextType.Guild)]
         public async Task ChnlFilterLin()
         {
-            var channel = (ITextChannel)ctx.Channel;
+            var channel = (Channel)ctx.Channel;
             var guildId = channel.Guild.Id;
             var channelId = channel.Id;
 
@@ -367,7 +366,7 @@ public partial class Permissions
         [RequireContext(ContextType.Guild)]
         public async Task SrvrFilterWords()
         {
-            var channel = (ITextChannel)ctx.Channel;
+            var channel = (Channel)ctx.Channel;
 
             var config = await gss.GetGuildConfig(channel.Guild.Id);
             config.FilterWords = !config.FilterWords;
@@ -399,7 +398,7 @@ public partial class Permissions
         [RequireContext(ContextType.Guild)]
         public async Task ChnlFilterWords()
         {
-            var channel = (ITextChannel)ctx.Channel;
+            var channel = (Channel)ctx.Channel;
             var guildId = channel.Guild.Id;
             var channelId = channel.Id;
 
@@ -448,7 +447,7 @@ public partial class Permissions
         [RequireContext(ContextType.Guild)]
         public async Task FilterWord([Remainder] string? word)
         {
-            var channel = (ITextChannel)ctx.Channel;
+            var channel = (Channel)ctx.Channel;
             var guildId = channel.Guild.Id;
 
             word = word?.Trim().ToLowerInvariant();
@@ -501,7 +500,7 @@ public partial class Permissions
         [RequireContext(ContextType.Guild)]
         public async Task LstFilterWords()
         {
-            var channel = (ITextChannel)ctx.Channel;
+            var channel = (Channel)ctx.Channel;
             var guildId = channel.Guild.Id;
 
             await using var db = await dbFactory.CreateConnectionAsync();

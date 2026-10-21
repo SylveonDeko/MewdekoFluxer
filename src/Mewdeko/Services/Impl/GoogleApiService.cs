@@ -6,6 +6,7 @@ using Google.Apis.Services;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
 using Google.Cloud.Vision.V1;
+using SearchResult = Google.Apis.YouTube.v3.Data.SearchResult;
 using Grpc.Auth;
 using Grpc.Core;
 using Newtonsoft.Json.Linq;

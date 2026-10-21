@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Mewdeko.Services.Strings;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,7 +13,7 @@ public class RequireServerOwnerAttribute : PreconditionAttribute
     public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command,
         IServiceProvider services)
     {
-        if (context.User is IGuildUser guildUser)
+        if (context.User is SocketGuildMember guildUser)
             return Task.FromResult(guildUser.Guild.OwnerId == context.User.Id
                 ? PreconditionResult.FromSuccess()
                 : PreconditionResult.FromError(services.GetRequiredService<GeneratedBotStrings>()

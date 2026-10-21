@@ -11,7 +11,7 @@ namespace Mewdeko.Modules.Votes.Services;
 /// </summary>
 public class VoteService : INService
 {
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly MuteService muteService;
     private readonly GeneratedBotStrings Strings;
@@ -24,7 +24,7 @@ public class VoteService : INService
     /// <param name="client">The Discord client for interacting with the Discord API.</param>
     /// <param name="muteService">The service for managing mutes within the bot.</param>
     /// <param name="strings">The localized strings service.</param>
-    public VoteService(IDataConnectionFactory dbFactory, DiscordShardedClient client,
+    public VoteService(IDataConnectionFactory dbFactory, FluxerClient client,
         MuteService muteService, GeneratedBotStrings strings)
     {
         this.dbFactory = dbFactory;
@@ -66,7 +66,7 @@ public class VoteService : INService
             if (potentialVoteConfig.VotesChannel is 0)
                 return;
 
-            if (guild.GetTextChannel(potentialVoteConfig.VotesChannel) is not ITextChannel channel)
+            if (guild.GetTextChannel(potentialVoteConfig.VotesChannel) is not Channel channel)
                 return;
 
             // Count votes using LinqToDB
@@ -79,7 +79,7 @@ public class VoteService : INService
                 .WithThumbnailUrl(user.RealAvatarUrl().AbsoluteUri)
                 .WithOkColor();
 
-            await channel.SendMessageAsync(user.Mention, embed: eb.Build());
+            await channel.SendAsync(user.Mention, embed: eb.Build());
 
             // Check for vote roles using LinqToDB
             if (!await db.VoteRoles.AnyAsync(x => x.GuildId == guild.Id))
@@ -112,7 +112,7 @@ public class VoteService : INService
         }
         else
         {
-            if (guild.GetTextChannel(potentialVoteConfig.VotesChannel) is not ITextChannel channel)
+            if (guild.GetTextChannel(potentialVoteConfig.VotesChannel) is not Channel channel)
                 return;
 
             if (potentialVoteConfig.VotesChannel is 0)
@@ -135,11 +135,11 @@ public class VoteService : INService
             if (SmartEmbed.TryParse(rep.Replace(potentialVoteConfig.VoteEmbed), guild.Id, out var embeds,
                     out var plainText))
             {
-                await channel.SendMessageAsync(plainText, embeds: embeds);
+                await channel.SendAsync(plainText, embeds: embeds);
             }
             else
             {
-                await channel.SendMessageAsync(rep.Replace(potentialVoteConfig.VoteEmbed).SanitizeMentions());
+                await channel.SendAsync(rep.Replace(potentialVoteConfig.VoteEmbed).SanitizeMentions());
             }
 
             // Check for vote roles using LinqToDB
@@ -455,7 +455,7 @@ public class VoteService : INService
     /// <param name="user">The user for whom vote stats are generated.</param>
     /// <param name="guild">The guild in which the votes were cast.</param>
     /// <returns>An embed builder populated with vote statistics.</returns>
-    public async Task<EmbedBuilder> GetTotalVotes(IUser user, IGuild guild)
+    public async Task<EmbedBuilder> GetTotalVotes(IUser user, SocketGuild guild)
     {
         await using var db = await dbFactory.CreateConnectionAsync();
 

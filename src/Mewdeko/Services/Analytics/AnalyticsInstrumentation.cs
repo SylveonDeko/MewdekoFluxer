@@ -1,11 +1,5 @@
-using System.Diagnostics;
-using System.Linq.Expressions;
-using System.Reflection;
+﻿using System.Diagnostics;
 using System.Threading;
-using Discord.Rest;
-using Lavalink4NET;
-using Lavalink4NET.Events;
-using Lavalink4NET.Events.Players;
 using LinqToDB.Data;
 using Mewdeko.Common.ModuleBehaviors;
 using Mewdeko.Database.Impl;
@@ -14,41 +8,38 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Mewdeko.Services.Analytics;
 
 /// <summary>
-///     Wires the collector into the Discord client, the REST client, linq2db, the Lavalink node and the process,
-///     emitting the shard, fleet, REST, database, process and music metrics from the catalog.
+///     Wires the collector into the Fluxer client, linq2db and the process, emitting the shard, fleet, database and
+///     process metrics from the catalog.
 /// </summary>
 public sealed class AnalyticsInstrumentation : INService, IReadyExecutor, IDisposable
 {
-    private const string NodeLabel = "default";
     private const int UserCountEveryTicks = 5;
     private static readonly TimeSpan ProcessInterval = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan FleetInterval = TimeSpan.FromSeconds(60);
 
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly IDataConnectionFactory dbFactory;
     private readonly ILogger<AnalyticsInstrumentation> logger;
     private readonly Process process = Process.GetCurrentProcess();
     private readonly IServiceProvider services;
 
-    private IAudioService? audioService;
     private bool disposed;
     private int fleetTicks;
     private Timer? fleetTimer;
     private TimeSpan lastCpuTime;
     private long lastCpuTimestamp;
-    private int nodeState;
     private Timer? processTimer;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="AnalyticsInstrumentation" /> class.
     /// </summary>
     /// <param name="collector">The collector to emit into.</param>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="dbFactory">The database connection factory, traced for query timings.</param>
-    /// <param name="services">The service provider, used to find the optional audio service.</param>
+    /// <param name="services">The service provider, used to find the event handler.</param>
     /// <param name="logger">Records hook failures.</param>
-    public AnalyticsInstrumentation(IAnalyticsCollector collector, DiscordShardedClient client,
+    public AnalyticsInstrumentation(IAnalyticsCollector collector, FluxerClient client,
         IDataConnectionFactory dbFactory, IServiceProvider services,
         ILogger<AnalyticsInstrumentation> logger)
     {
@@ -77,23 +68,17 @@ public sealed class AnalyticsInstrumentation : INService, IReadyExecutor, IDispo
             return Task.CompletedTask;
 
         var eventHandler = services.GetRequiredService<EventHandler>();
-        eventHandler.Subscribe("ShardConnected", "AnalyticsInstrumentation", OnShardConnected);
-        eventHandler.Subscribe("ShardDisconnected", "AnalyticsInstrumentation", OnShardDisconnected);
-        eventHandler.Subscribe("ShardReady", "AnalyticsInstrumentation", OnShardReady);
-        eventHandler.Subscribe("ShardLatencyUpdated", "AnalyticsInstrumentation", OnShardLatencyUpdated);
-        eventHandler.Subscribe("JoinedGuild", "AnalyticsInstrumentation", OnJoinedGuild);
-        eventHandler.Subscribe("LeftGuild", "AnalyticsInstrumentation", OnLeftGuild);
+        eventHandler.Connected.Subscribe("AnalyticsInstrumentation", OnShardConnected);
+        eventHandler.Disconnected.Subscribe("AnalyticsInstrumentation", OnShardDisconnected);
+        eventHandler.Ready.Subscribe("AnalyticsInstrumentation", OnShardReady);
+        eventHandler.JoinedGuild.Subscribe("AnalyticsInstrumentation", OnJoinedGuild);
+        eventHandler.LeftGuild.Subscribe("AnalyticsInstrumentation", OnLeftGuild);
 
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
-        AttachRestHooks();
         AttachDatabaseTracing();
-        AttachMusicHooks();
-
-        foreach (var shard in client.Shards)
-            collector.Gauge("shard.state", shard.ConnectionState == ConnectionState.Connected ? 1 : 0,
-                ("shard", shard.ShardId.ToString()));
+        collector.Gauge("shard.state", 1, ("shard", "0"));
 
         lastCpuTime = process.TotalProcessorTime;
         lastCpuTimestamp = Stopwatch.GetTimestamp();
@@ -186,43 +171,34 @@ public sealed class AnalyticsInstrumentation : INService, IReadyExecutor, IDispo
         };
     }
 
-    private Task OnShardConnected(DiscordSocketClient shard)
+    private Task OnShardConnected(FluxerClient shard)
     {
-        collector.Gauge("shard.state", 1, ("shard", shard.ShardId.ToString()));
+        collector.Gauge("shard.state", 1, ("shard", "0"));
         return Task.CompletedTask;
     }
 
-    private Task OnShardDisconnected(Exception exception, DiscordSocketClient shard)
+    private Task OnShardDisconnected(FluxerClient shard)
     {
-        var label = shard.ShardId.ToString();
-        collector.Gauge("shard.state", 0, ("shard", label));
-        collector.Counter("shard.reconnects", 1, ("shard", label));
+        collector.Gauge("shard.state", 0, ("shard", "0"));
+        collector.Counter("shard.reconnects", 1, ("shard", "0"));
         return Task.CompletedTask;
     }
 
-    private Task OnShardReady(DiscordSocketClient shard)
+    private Task OnShardReady(FluxerClient shard)
     {
-        collector.Gauge("shard.state", 1, ("shard", shard.ShardId.ToString()));
-        return Task.CompletedTask;
-    }
-
-    private Task OnShardLatencyUpdated(int oldLatency, int newLatency, DiscordSocketClient shard)
-    {
-        collector.Gauge("shard.latency", newLatency, ("shard", shard.ShardId.ToString()));
+        collector.Gauge("shard.state", 1, ("shard", "0"));
         return Task.CompletedTask;
     }
 
     private Task OnJoinedGuild(SocketGuild guild)
     {
-        collector.Counter("guild.join", 1, ("shard", client.GetShardIdFor(guild).ToString()),
-            ("size", SizeBucket(guild.MemberCount)));
+        collector.Counter("guild.join", 1, ("shard", "0"), ("size", SizeBucket(guild.TotalMembers)));
         return Task.CompletedTask;
     }
 
     private Task OnLeftGuild(SocketGuild guild)
     {
-        collector.Counter("guild.leave", 1, ("shard", client.GetShardIdFor(guild).ToString()),
-            ("size", SizeBucket(guild.MemberCount)));
+        collector.Counter("guild.leave", 1, ("shard", "0"), ("size", SizeBucket(guild.TotalMembers)));
         return Task.CompletedTask;
     }
 
@@ -272,99 +248,15 @@ public sealed class AnalyticsInstrumentation : INService, IReadyExecutor, IDispo
         try
         {
             var emitUsers = Interlocked.Increment(ref fleetTicks) % UserCountEveryTicks == 1;
-            long users = 0;
-            foreach (var shard in client.Shards)
-            {
-                collector.Gauge("guild.count", shard.Guilds.Count, ("shard", shard.ShardId.ToString()));
-                if (!emitUsers)
-                    continue;
-                foreach (var guild in shard.Guilds)
-                    users += guild.MemberCount;
-            }
-
+            var guilds = client.Guilds.ToList();
+            collector.Gauge("guild.count", guilds.Count, ("shard", "0"));
             if (emitUsers)
-                collector.Gauge("user.count", users);
-
-            if (audioService is null)
-                return;
-
-            collector.Gauge("music.players", audioService.Players.Players.Count(), ("node", NodeLabel));
-            collector.Gauge("music.node_state", nodeState, ("node", NodeLabel));
+                collector.Gauge("user.count", guilds.Sum(guild => (long)guild.TotalMembers));
         }
         catch (Exception ex)
         {
             logger.LogDebug(ex, "Fleet metrics failed");
         }
-    }
-
-    private void AttachRestHooks()
-    {
-        try
-        {
-            var apiClientProperty = typeof(BaseDiscordClient).GetProperty("ApiClient",
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            if (apiClientProperty is null)
-            {
-                logger.LogWarning("REST analytics not attached: ApiClient property not found");
-                return;
-            }
-
-            var seen = new HashSet<object>(ReferenceEqualityComparer.Instance);
-            var clients = new List<BaseDiscordClient>
-            {
-                client, client.Rest
-            };
-            clients.AddRange(client.Shards);
-
-            foreach (var target in clients)
-            {
-                if (apiClientProperty.GetValue(target) is not { } apiClient || !seen.Add(apiClient))
-                    continue;
-
-                var sentRequest = apiClient.GetType().GetEvent("SentRequest",
-                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                sentRequest?.AddEventHandler(apiClient, new Func<string, string, double, Task>(OnSentRequest));
-
-                var queue = apiClient.GetType().GetProperty("RequestQueue",
-                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)?.GetValue(apiClient);
-                if (queue is null || !seen.Add(queue))
-                    continue;
-
-                var rateLimit = queue.GetType().GetEvent("RateLimitTriggered",
-                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                if (rateLimit?.EventHandlerType is not { } handlerType)
-                    continue;
-
-                var parameters = handlerType.GetMethod("Invoke")!.GetParameters()
-                    .Select(p => Expression.Parameter(p.ParameterType, p.Name)).ToArray();
-                var method = typeof(AnalyticsInstrumentation).GetMethod(nameof(OnRateLimitTriggered),
-                    BindingFlags.Instance | BindingFlags.NonPublic)!;
-                var body = Expression.Call(Expression.Constant(this), method,
-                    Expression.Convert(parameters[1], typeof(object)), parameters[2]);
-                rateLimit.AddEventHandler(queue, Expression.Lambda(handlerType, body, parameters).Compile());
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "REST analytics not attached");
-        }
-    }
-
-    private Task OnSentRequest(string method, string endpoint, double milliseconds)
-    {
-        var route = TemplateRoute(endpoint);
-        collector.Counter("rest.count", 1, ("method", method), ("route", route), ("status", "2xx"));
-        collector.Duration("rest.duration", milliseconds, ("route", route));
-        return Task.CompletedTask;
-    }
-
-    private Task OnRateLimitTriggered(object? info, string endpoint)
-    {
-        var space = endpoint.IndexOf(' ');
-        var route = TemplateRoute(space >= 0 ? endpoint[(space + 1)..] : endpoint);
-        var global = info is IRateLimitInfo { IsGlobal: true } ? "1" : "0";
-        collector.Counter("ratelimit.hit", 1, ("route", route), ("global", global));
-        return Task.CompletedTask;
     }
 
     private void AttachDatabaseTracing()
@@ -389,57 +281,4 @@ public sealed class AnalyticsInstrumentation : INService, IReadyExecutor, IDispo
         }
     }
 
-    private void AttachMusicHooks()
-    {
-        audioService = services.GetService<IAudioService>();
-        if (audioService is null)
-            return;
-
-        audioService.TrackStarted += OnTrackStarted;
-        audioService.TrackEnded += OnTrackEnded;
-        audioService.TrackException += OnTrackException;
-        audioService.TrackStuck += OnTrackStuck;
-        audioService.ConnectionReady += OnConnectionReady;
-        audioService.ConnectionClosed += OnConnectionClosed;
-    }
-
-    private Task OnTrackStarted(object sender, TrackStartedEventArgs args)
-    {
-        collector.Counter("music.track_start", 1, ("node", NodeLabel),
-            ("source", args.Track.SourceName ?? "unknown"));
-        return Task.CompletedTask;
-    }
-
-    private Task OnTrackEnded(object sender, TrackEndedEventArgs args)
-    {
-        collector.Counter("music.track_end", 1, ("node", NodeLabel),
-            ("reason", args.Reason.ToString().ToLowerInvariant()));
-        return Task.CompletedTask;
-    }
-
-    private Task OnTrackException(object sender, TrackExceptionEventArgs args)
-    {
-        collector.Counter("music.errors", 1, ("node", NodeLabel), ("kind", "exception"));
-        return Task.CompletedTask;
-    }
-
-    private Task OnTrackStuck(object sender, TrackStuckEventArgs args)
-    {
-        collector.Counter("music.errors", 1, ("node", NodeLabel), ("kind", "stuck"));
-        return Task.CompletedTask;
-    }
-
-    private Task OnConnectionReady(object sender, ConnectionReadyEventArgs args)
-    {
-        nodeState = 1;
-        collector.Gauge("music.node_state", 1, ("node", NodeLabel));
-        return Task.CompletedTask;
-    }
-
-    private Task OnConnectionClosed(object sender, ConnectionClosedEventArgs args)
-    {
-        nodeState = 0;
-        collector.Gauge("music.node_state", 0, ("node", NodeLabel));
-        return Task.CompletedTask;
-    }
 }

@@ -45,7 +45,7 @@ public class XpCardGenerator : INService
     /// </summary>
     /// <param name="user">The guild user.</param>
     /// <returns>A stream containing the generated image.</returns>
-    public async Task<Stream> GenerateXpImageAsync(IGuildUser user)
+    public async Task<Stream> GenerateXpImageAsync(SocketGuildMember user)
     {
         var stats = await GetFullUserStatsAsync(user);
         var template = await GetTemplateAsync(user.Guild.Id);
@@ -57,7 +57,7 @@ public class XpCardGenerator : INService
     /// </summary>
     /// <param name="user">The guild user.</param>
     /// <returns>The full user statistics.</returns>
-    private async Task<FullUserStats> GetFullUserStatsAsync(IGuildUser user)
+    private async Task<FullUserStats> GetFullUserStatsAsync(SocketGuildMember user)
     {
         var xpStats = await xpService.GetUserXpStatsAsync(user.GuildId, user.Id);
         var timeOnLevel = await xpService.GetTimeOnCurrentLevelAsync(user.GuildId, user.Id);
@@ -512,7 +512,7 @@ public class XpCardGenerator : INService
     private static string ResolveElementText(string text, FullUserStats stats)
     {
         var percent = stats.Guild.RequiredXp == 0 ? 100 : stats.Guild.LevelXp * 100.0 / stats.Guild.RequiredXp;
-        var guildUser = stats.User as IGuildUser;
+        var guildUser = stats.User as SocketGuildMember;
         return text
             .Replace("%xp.user%", stats.User.Username, StringComparison.OrdinalIgnoreCase)
             .Replace("%xp.user.name%", stats.User.Username, StringComparison.OrdinalIgnoreCase)

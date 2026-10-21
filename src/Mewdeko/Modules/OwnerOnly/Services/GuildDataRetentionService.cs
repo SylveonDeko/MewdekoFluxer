@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Threading;
 using DataModel;
-using Discord.Rest;
 using LinqToDB;
 using LinqToDB.Async;
 using LinqToDB.Data;
@@ -74,7 +73,7 @@ public class GuildDataRetentionService : INService, IReadyExecutor
     private static readonly string[] ExcludedPrefixes = ["Analytics"];
 
     private readonly BotConfigService bss;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly BotCredentials creds;
     private readonly IDataConnectionFactory dbFactory;
     private readonly EventHandler handler;
@@ -94,7 +93,7 @@ public class GuildDataRetentionService : INService, IReadyExecutor
     /// <param name="creds">The bot credentials.</param>
     /// <param name="strings">The localization strings provider.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
-    public GuildDataRetentionService(EventHandler handler, DiscordShardedClient client,
+    public GuildDataRetentionService(EventHandler handler, FluxerClient client,
         IDataConnectionFactory dbFactory, BotConfigService bss, BotCredentials creds, GeneratedBotStrings strings,
         ILogger<GuildDataRetentionService> logger)
     {
@@ -525,7 +524,7 @@ public class GuildDataRetentionService : INService, IReadyExecutor
         try
         {
             if (await client.Rest.GetChannelAsync(creds.GuildJoinsChannelId).ConfigureAwait(false) is not
-                RestTextChannel channel)
+                Channel channel)
                 return;
 
             var eb = new EmbedBuilder()
@@ -543,7 +542,7 @@ public class GuildDataRetentionService : INService, IReadyExecutor
                 description += $"\n... and {batch.Count - 15} more";
             eb.WithDescription(description);
 
-            await channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+            await channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

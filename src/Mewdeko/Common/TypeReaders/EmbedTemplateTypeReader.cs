@@ -1,5 +1,4 @@
 using System.Text.RegularExpressions;
-using Discord.Commands;
 using Mewdeko.Common.TypeReaders.Models;
 using Mewdeko.Modules.Utility.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,9 +15,9 @@ public partial class EmbedTemplateTypeReader : MewdekoTypeReader<EmbedTemplateRe
     /// <summary>
     ///     Initializes a new instance of the <see cref="EmbedTemplateTypeReader" /> class.
     /// </summary>
-    /// <param name="client">The DiscordShardedClient instance.</param>
+    /// <param name="client">The FluxerClient instance.</param>
     /// <param name="cmds">The CommandService instance.</param>
-    public EmbedTemplateTypeReader(DiscordShardedClient client, CommandService cmds) : base(client, cmds)
+    public EmbedTemplateTypeReader(FluxerClient client, CommandService cmds) : base(client, cmds)
     {
     }
 
@@ -53,7 +52,7 @@ public partial class EmbedTemplateTypeReader : MewdekoTypeReader<EmbedTemplateRe
 
                 // Apply replacements to the template JSON
                 var replacer = new ReplacementBuilder()
-                    .WithDefault(context)
+                    .WithDefault((CommandContext)context)
                     .Build();
 
                 var processedJson = replacer.Replace(embed.JsonCode);

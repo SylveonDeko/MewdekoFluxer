@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.Json;
 using DataModel;
 using LinqToDB;
@@ -350,7 +350,7 @@ public sealed partial class AnalyticsQueryService
         await using var db = await dbFactory.CreateConnectionAsync().ConfigureAwait(false);
 
         var guild = client.GetGuild(guildId);
-        var joinedAt = guild?.CurrentUser?.JoinedAt?.UtcDateTime;
+        var joinedAt = guild?.CurrentUser?.JoinedAt.UtcDateTime;
         joinedAt ??= Utc(await db.GuildConfigs.Where(x => x.GuildId == guildId)
             .Select(x => x.DateAdded).FirstOrDefaultAsync().ConfigureAwait(false));
 
@@ -570,7 +570,7 @@ public sealed partial class AnalyticsQueryService
         var retained = new Dictionary<DateTime, long>();
         foreach (var guild in client.Guilds)
         {
-            var joinedAt = guild.CurrentUser?.JoinedAt?.UtcDateTime.Date;
+            var joinedAt = guild.CurrentUser?.JoinedAt.UtcDateTime.Date;
             if (joinedAt is null || joinedAt < range.From) continue;
             retained[joinedAt.Value] = retained.GetValueOrDefault(joinedAt.Value) + 1;
         }

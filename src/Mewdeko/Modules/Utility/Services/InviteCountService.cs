@@ -1,7 +1,6 @@
 using System.Text;
 using System.Threading;
 using DataModel;
-using Discord.Net;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.ModuleBehaviors;
@@ -27,10 +26,10 @@ public class InviteCountService : INService, IReadyExecutor
     /// </summary>
     private static readonly TimeSpan JoinResultLifetime = TimeSpan.FromMinutes(5);
 
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly IDataConnectionFactory dbFactory;
-    private readonly ConcurrentDictionary<ulong, ConcurrentDictionary<string, IInviteMetadata>> guildInvites = new();
+    private readonly ConcurrentDictionary<ulong, ConcurrentDictionary<string, Invite>> guildInvites = new();
     private readonly ConcurrentDictionary<ulong, SemaphoreSlim> guildJoinLocks = new();
     private readonly ConcurrentDictionary<ulong, InviteCountSetting> inviteCountSettings = new();
 
@@ -54,7 +53,7 @@ public class InviteCountService : INService, IReadyExecutor
     /// <param name="logger">The logger instance for structured logging.</param>
     /// <param name="collector">The analytics collector.</param>
     /// <param name="strings">Localized strings for log channel embeds.</param>
-    public InviteCountService(EventHandler handler, IDataConnectionFactory dbFactory, DiscordShardedClient client,
+    public InviteCountService(EventHandler handler, IDataConnectionFactory dbFactory, FluxerClient client,
         ILogger<InviteCountService> logger, IAnalyticsCollector collector, GeneratedBotStrings strings)
     {
         this.dbFactory = dbFactory;
@@ -519,7 +518,7 @@ public class InviteCountService : INService, IReadyExecutor
 
     #region Join and leave handling
 
-    private async Task OnUserJoined(IGuildUser user)
+    private async Task OnUserJoined(SocketGuildMember user)
     {
         var guild = user.Guild;
         var settings = await GetInviteCountSettingsAsync(guild.Id);
@@ -550,7 +549,7 @@ public class InviteCountService : INService, IReadyExecutor
         }
     }
 
-    private async Task<InviteJoinResult> AttributeJoinAsync(IGuildUser user, InviteCountSetting settings)
+    private async Task<InviteJoinResult> AttributeJoinAsync(SocketGuildMember user, InviteCountSetting settings)
     {
         var guild = user.Guild;
         var now = DateTime.UtcNow;
@@ -558,7 +557,7 @@ public class InviteCountService : INService, IReadyExecutor
         if (!guildInvites.ContainsKey(guild.Id))
             await UpdateGuildInvites(guild);
 
-        IInviteMetadata? usedInvite = null;
+        Invite? usedInvite = null;
         var joinType = InviteJoinType.Unknown;
         string? code = null;
 
@@ -606,7 +605,7 @@ public class InviteCountService : INService, IReadyExecutor
                 fakeReason = InviteFakeReason.NewAccount;
             else if (!settings.CountRejoins && previousJoins > 0)
                 fakeReason = InviteFakeReason.Rejoin;
-            else if (settings.FakeOnNoAvatar && user.AvatarId == null)
+            else if (settings.FakeOnNoAvatar && user.AvatarHash == null)
                 fakeReason = InviteFakeReason.NoAvatar;
         }
 
@@ -651,7 +650,7 @@ public class InviteCountService : INService, IReadyExecutor
             previousJoins + 1);
     }
 
-    private async Task<bool> IsInviterExcludedAsync(MewdekoDb db, IGuild guild, ulong inviterId)
+    private async Task<bool> IsInviterExcludedAsync(MewdekoDb db, SocketGuild guild, ulong inviterId)
     {
         var exclusions = await db.InviteTrackingExclusions
             .Where(x => x.GuildId == guild.Id &&
@@ -676,7 +675,7 @@ public class InviteCountService : INService, IReadyExecutor
         return inviter != null && inviter.RoleIds.Any(blacklistedRoles.Contains);
     }
 
-    private async Task OnUserLeft(IGuild guild, IUser user)
+    private async Task OnUserLeft(SocketGuild guild, IUser user)
     {
         var settings = await GetInviteCountSettingsAsync(guild.Id);
         if (!settings.IsEnabled)
@@ -762,7 +761,7 @@ public class InviteCountService : INService, IReadyExecutor
     /// <param name="user">The member who joined.</param>
     /// <param name="builder">The builder to populate.</param>
     /// <returns>The builder, for chaining.</returns>
-    public async Task<ReplacementBuilder> ApplyGreetPlaceholdersAsync(IGuildUser user, ReplacementBuilder builder)
+    public async Task<ReplacementBuilder> ApplyGreetPlaceholdersAsync(SocketGuildMember user, ReplacementBuilder builder)
     {
         builder.WithJoinTimestamps(user).WithMemberOrdinal(user.Guild);
 
@@ -787,7 +786,7 @@ public class InviteCountService : INService, IReadyExecutor
     /// <param name="user">The member who left.</param>
     /// <param name="builder">The builder to populate.</param>
     /// <returns>The builder, for chaining.</returns>
-    public async Task<ReplacementBuilder> ApplyLeavePlaceholdersAsync(IGuild guild, IUser user,
+    public async Task<ReplacementBuilder> ApplyLeavePlaceholdersAsync(SocketGuild guild, IUser user,
         ReplacementBuilder builder)
     {
         builder.WithMemberOrdinal(guild);
@@ -811,7 +810,7 @@ public class InviteCountService : INService, IReadyExecutor
         return builder.WithInviteInfo(result, counts, joins, leaves);
     }
 
-    private async Task PostJoinLogAsync(IGuild guild, IGuildUser user, InviteCountSetting settings,
+    private async Task PostJoinLogAsync(SocketGuild guild, SocketGuildMember user, InviteCountSetting settings,
         InviteJoinResult result)
     {
         if (settings.LogChannelId is not { } channelId)
@@ -825,7 +824,7 @@ public class InviteCountService : INService, IReadyExecutor
             .WithAuthor(user.ToString(), user.RealAvatarUrl().ToString())
             .WithDescription(description)
             .AddField(strings.InviteLogAccountCreated(guild.Id),
-                TimestampTag.FromDateTimeOffset(user.CreatedAt, TimestampTagStyles.Relative).ToString(), true)
+                TimestampTag.FromDateTimeOffset(user.CreatedAt, TimestampTagStyle.Relative).ToString(), true)
             .AddField(strings.InviteLogJoinType(guild.Id), result.JoinType.ToString(), true)
             .WithCurrentTimestamp();
 
@@ -836,7 +835,7 @@ public class InviteCountService : INService, IReadyExecutor
 
         try
         {
-            await channel.SendMessageAsync(embed: eb.Build());
+            await channel.SendAsync(embed: eb.Build());
         }
         catch (Exception ex)
         {
@@ -844,7 +843,7 @@ public class InviteCountService : INService, IReadyExecutor
         }
     }
 
-    private string BuildJoinLine(ulong guildId, IGuildUser user, InviteJoinResult result)
+    private string BuildJoinLine(ulong guildId, SocketGuildMember user, InviteJoinResult result)
     {
         return result.JoinType switch
         {
@@ -857,7 +856,7 @@ public class InviteCountService : INService, IReadyExecutor
         };
     }
 
-    private async Task PostLeaveLogAsync(IGuild guild, IUser user, InviteCountSetting settings, InvitedBy record)
+    private async Task PostLeaveLogAsync(SocketGuild guild, IUser user, InviteCountSetting settings, InvitedBy record)
     {
         if (settings.LogChannelId is not { } channelId)
             return;
@@ -880,7 +879,7 @@ public class InviteCountService : INService, IReadyExecutor
 
         try
         {
-            await channel.SendMessageAsync(embed: eb.Build());
+            await channel.SendAsync(embed: eb.Build());
         }
         catch (Exception ex)
         {
@@ -897,13 +896,13 @@ public class InviteCountService : INService, IReadyExecutor
         if (invite.Guild == null)
             return Task.CompletedTask;
 
-        var invites = guildInvites.GetOrAdd(invite.Guild.Id, _ => new ConcurrentDictionary<string, IInviteMetadata>());
-        if (invite is IInviteMetadata metadata)
+        var invites = guildInvites.GetOrAdd(invite.Guild.Id, _ => new ConcurrentDictionary<string, Invite>());
+        if (invite is Invite metadata)
             invites[invite.Code] = metadata;
         return Task.CompletedTask;
     }
 
-    private Task OnInviteDeleted(IGuildChannel channel, string code)
+    private Task OnInviteDeleted(Channel channel, string code)
     {
         if (guildInvites.TryGetValue(channel.Guild.Id, out var invites))
             invites.TryRemove(code, out _);
@@ -912,7 +911,7 @@ public class InviteCountService : INService, IReadyExecutor
         return Task.CompletedTask;
     }
 
-    private async Task UpdateGuildInvites(IGuild guild)
+    private async Task UpdateGuildInvites(SocketGuild guild)
     {
         try
         {
@@ -927,7 +926,7 @@ public class InviteCountService : INService, IReadyExecutor
                     if (vanity != null)
                         vanityUses[guild.Id] = vanity.Uses ?? 0;
                 }
-                catch (Exception ex) when (ex is HttpException or InvalidOperationException
+                catch (Exception ex) when (ex is FluxerApiException or InvalidOperationException
                                                or NullReferenceException)
                 {
                     logger.LogDebug(ex, "Vanity invite unavailable for guild {GuildId}", guild.Id);
@@ -936,7 +935,7 @@ public class InviteCountService : INService, IReadyExecutor
 
             logger.LogDebug("Updated {Count} invites for guild {GuildId}", invites.Count, guild.Id);
         }
-        catch (HttpException ex) when (ex.DiscordCode == DiscordErrorCode.MissingPermissions)
+        catch (FluxerApiException ex) when (ex.DiscordCode == DiscordErrorCode.MissingPermissions)
         {
             logger.LogWarning("Missing permissions to fetch invites for guild {GuildId}", guild.Id);
         }
@@ -946,24 +945,24 @@ public class InviteCountService : INService, IReadyExecutor
         }
     }
 
-    private void RefreshInviteCache(ulong guildId, IEnumerable<IInviteMetadata> invites)
+    private void RefreshInviteCache(ulong guildId, IEnumerable<Invite> invites)
     {
         guildInvites[guildId] =
-            new ConcurrentDictionary<string, IInviteMetadata>(invites.ToDictionary(x => x.Code, x => x));
+            new ConcurrentDictionary<string, Invite>(invites.ToDictionary(x => x.Code, x => x));
     }
 
     /// <summary>
     ///     Picks the invite whose use count rose since the last snapshot. When several joins land between snapshots the
     ///     surplus is remembered as pending credit for later join events that see no delta of their own.
     /// </summary>
-    private IInviteMetadata? FindUsedInvite(ulong guildId, List<IInviteMetadata> newInvites)
+    private Invite? FindUsedInvite(ulong guildId, List<Invite> newInvites)
     {
         if (!guildInvites.TryGetValue(guildId, out var oldInvites))
             return null;
 
         var pending = pendingUses.GetOrAdd(guildId, _ => new ConcurrentDictionary<string, int>());
 
-        IInviteMetadata? best = null;
+        Invite? best = null;
         var bestDelta = 0;
         foreach (var newInvite in newInvites)
         {
@@ -1010,7 +1009,7 @@ public class InviteCountService : INService, IReadyExecutor
         return null;
     }
 
-    private async Task<bool> DetectVanityJoinAsync(IGuild guild)
+    private async Task<bool> DetectVanityJoinAsync(SocketGuild guild)
     {
         if (guild.VanityURLCode == null)
             return false;
@@ -1032,7 +1031,7 @@ public class InviteCountService : INService, IReadyExecutor
         }
     }
 
-    private async Task ProcessGuildWithRateLimiting(IGuild guild, SemaphoreSlim semaphore)
+    private async Task ProcessGuildWithRateLimiting(SocketGuild guild, SemaphoreSlim semaphore)
     {
         await semaphore.WaitAsync();
         try
@@ -1169,7 +1168,7 @@ public class InviteCountService : INService, IReadyExecutor
     /// <param name="guild">The guild.</param>
     /// <param name="scope">What to reset.</param>
     /// <returns>How many inviters were reset.</returns>
-    public async Task<int> ResetInvitesAsync(IGuild guild, InviteResetScope scope)
+    public async Task<int> ResetInvitesAsync(SocketGuild guild, InviteResetScope scope)
     {
         await using var db = await dbFactory.CreateConnectionAsync();
 
@@ -1202,7 +1201,7 @@ public class InviteCountService : INService, IReadyExecutor
     /// <param name="guild">The guild.</param>
     /// <param name="userId">Restrict the import to one inviter, or null for everyone.</param>
     /// <returns>How many inviters were raised.</returns>
-    public async Task<int> SyncInvitesAsync(IGuild guild, ulong? userId = null)
+    public async Task<int> SyncInvitesAsync(SocketGuild guild, ulong? userId = null)
     {
         var invites = (await guild.GetInvitesAsync()).ToList();
         var labels = await GetLabelsAsync(guild.Id);
@@ -1245,7 +1244,7 @@ public class InviteCountService : INService, IReadyExecutor
     /// <param name="userId">The user ID.</param>
     /// <param name="guild">The guild.</param>
     /// <returns>The inviter, or null.</returns>
-    public async Task<IUser?> GetInviter(ulong userId, IGuild guild)
+    public async Task<IUser?> GetInviter(ulong userId, SocketGuild guild)
     {
         var record = await GetJoinRecordAsync(guild.Id, userId);
         if (record == null || record.InviterId == 0)
@@ -1292,7 +1291,7 @@ public class InviteCountService : INService, IReadyExecutor
     /// <param name="inviterId">The inviter.</param>
     /// <param name="guild">The guild.</param>
     /// <returns>The invited members still present.</returns>
-    public async Task<List<IUser>> GetInvitedUsers(ulong inviterId, IGuild guild)
+    public async Task<List<IUser>> GetInvitedUsers(ulong inviterId, SocketGuild guild)
     {
         var records = await GetInvitedRecordsAsync(guild.Id, inviterId, includeLeft: false);
         var users = new List<IUser>();
@@ -1356,7 +1355,7 @@ public class InviteCountService : INService, IReadyExecutor
     /// <param name="roleId">Only include inviters holding this role, or null.</param>
     /// <param name="limit">Maximum entries.</param>
     /// <returns>The leaderboard, best first.</returns>
-    public async Task<List<InviteLeaderboardEntry>> GetInviteLeaderboardAsync(IGuild guild,
+    public async Task<List<InviteLeaderboardEntry>> GetInviteLeaderboardAsync(SocketGuild guild,
         StatsRange range = StatsRange.AllTime, ulong? roleId = null, int limit = 100)
     {
         await using var uow = await dbFactory.CreateConnectionAsync();
@@ -1428,7 +1427,7 @@ public class InviteCountService : INService, IReadyExecutor
     /// <param name="guild">The guild.</param>
     /// <param name="range">The window.</param>
     /// <returns>The analytics.</returns>
-    public async Task<InviteAnalytics> GetAnalyticsAsync(IGuild guild, StatsRange range)
+    public async Task<InviteAnalytics> GetAnalyticsAsync(SocketGuild guild, StatsRange range)
     {
         await using var uow = await dbFactory.CreateConnectionAsync();
         var since = range.Since() ?? DateTime.MinValue;
@@ -1501,7 +1500,7 @@ public class InviteCountService : INService, IReadyExecutor
     /// <param name="guild">The guild.</param>
     /// <param name="userId">The user ID.</param>
     /// <returns>The invites.</returns>
-    public async Task<List<IInviteMetadata>> GetUserInviteCodesAsync(IGuild guild, ulong userId)
+    public async Task<List<Invite>> GetUserInviteCodesAsync(SocketGuild guild, ulong userId)
     {
         var invites = (await guild.GetInvitesAsync()).ToList();
         var owned = (await GetLabelsAsync(guild.Id))
@@ -1518,7 +1517,7 @@ public class InviteCountService : INService, IReadyExecutor
     /// <param name="guild">The guild.</param>
     /// <param name="user">The member.</param>
     /// <returns>The invite, or null when no channel allows the bot to create one.</returns>
-    public async Task<IInviteMetadata?> GetOrCreateUserLinkAsync(IGuild guild, IGuildUser user)
+    public async Task<Invite?> GetOrCreateUserLinkAsync(SocketGuild guild, SocketGuildMember user)
     {
         var existing = (await GetUserInviteCodesAsync(guild, user.Id))
             .Where(x => !x.IsTemporary && x.MaxAge is null or 0 && x.MaxUses is null or 0)
@@ -1528,7 +1527,7 @@ public class InviteCountService : INService, IReadyExecutor
             return existing;
 
         var settings = await GetInviteCountSettingsAsync(guild.Id);
-        ITextChannel? channel = null;
+        Channel? channel = null;
         if (settings.LinkChannelId is { } linkChannelId)
             channel = await guild.GetTextChannelAsync(linkChannelId);
         channel ??= await guild.GetSystemChannelAsync();
@@ -1539,7 +1538,7 @@ public class InviteCountService : INService, IReadyExecutor
         var invite = await channel.CreateInviteAsync(null, null, false, true);
         await SetLabelAsync(guild.Id, invite.Code, $"{user.Username}'s link", ownerUserId: user.Id);
 
-        var cache = guildInvites.GetOrAdd(guild.Id, _ => new ConcurrentDictionary<string, IInviteMetadata>());
+        var cache = guildInvites.GetOrAdd(guild.Id, _ => new ConcurrentDictionary<string, Invite>());
         cache[invite.Code] = invite;
         return invite;
     }
@@ -1550,7 +1549,7 @@ public class InviteCountService : INService, IReadyExecutor
     /// <param name="guild">The guild.</param>
     /// <param name="code">The code or URL.</param>
     /// <returns>True when the invite existed and was deleted.</returns>
-    public async Task<bool> DeleteInviteAsync(IGuild guild, string code)
+    public async Task<bool> DeleteInviteAsync(SocketGuild guild, string code)
     {
         code = NormalizeCode(code);
         var invite = (await guild.GetInvitesAsync()).FirstOrDefault(x => x.Code == code);
@@ -1574,7 +1573,7 @@ public class InviteCountService : INService, IReadyExecutor
     /// <param name="excludeChannels">Never delete codes pointing at these channels.</param>
     /// <param name="limit">Stop after this many deletions.</param>
     /// <returns>How many codes were deleted.</returns>
-    public async Task<int> PurgeInviteCodesAsync(IGuild guild, int? maxUses, IReadOnlyCollection<ulong> includeUsers,
+    public async Task<int> PurgeInviteCodesAsync(SocketGuild guild, int? maxUses, IReadOnlyCollection<ulong> includeUsers,
         IReadOnlyCollection<ulong> excludeUsers, IReadOnlyCollection<ulong> includeChannels,
         IReadOnlyCollection<ulong> excludeChannels, int limit = 200)
     {
@@ -1627,7 +1626,7 @@ public class InviteCountService : INService, IReadyExecutor
     /// <param name="pruneDays">Days of messages to delete.</param>
     /// <param name="includeInviter">Whether to ban the inviter as well.</param>
     /// <returns>How many bans succeeded and failed.</returns>
-    public async Task<(int Banned, int Failed)> MassBanAsync(IGuild guild, ulong? inviterId, string? code,
+    public async Task<(int Banned, int Failed)> MassBanAsync(SocketGuild guild, ulong? inviterId, string? code,
         string reason, int pruneDays = 0, bool includeInviter = false)
     {
         var records = await GetInvitedRecordsAsync(guild.Id, inviterId, code);
@@ -1664,7 +1663,7 @@ public class InviteCountService : INService, IReadyExecutor
     /// <param name="guild">The guild.</param>
     /// <param name="range">The window.</param>
     /// <returns>CSV text.</returns>
-    public async Task<string> ExportLeaderboardCsvAsync(IGuild guild, StatsRange range)
+    public async Task<string> ExportLeaderboardCsvAsync(SocketGuild guild, StatsRange range)
     {
         var rows = await GetInviteLeaderboardAsync(guild, range, limit: int.MaxValue);
         var sb = new StringBuilder();
@@ -1696,7 +1695,7 @@ public class InviteCountService : INService, IReadyExecutor
     /// <param name="code">Only joins through this code, or null.</param>
     /// <param name="label">Only joins through codes carrying this label, or null.</param>
     /// <returns>CSV text.</returns>
-    public async Task<string> ExportInvitedListCsvAsync(IGuild guild, ulong? inviterId, string? code, string? label)
+    public async Task<string> ExportInvitedListCsvAsync(SocketGuild guild, ulong? inviterId, string? code, string? label)
     {
         var rows = await GetInvitedRecordsAsync(guild.Id, inviterId, code, label);
         var sb = new StringBuilder();

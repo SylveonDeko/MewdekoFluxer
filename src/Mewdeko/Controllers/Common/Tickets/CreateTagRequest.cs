@@ -1,4 +1,3 @@
-using Color = Discord.Color;
 
 namespace Mewdeko.Controllers.Common.Tickets;
 

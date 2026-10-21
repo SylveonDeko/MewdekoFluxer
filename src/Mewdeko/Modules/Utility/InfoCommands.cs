@@ -1,4 +1,3 @@
-using Discord.Commands;
 using Humanizer;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Moderation.Services;
@@ -16,9 +15,9 @@ public partial class Utility
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task Banner([Remainder] IGuildUser? usr = null)
+    public async Task Banner([Remainder] SocketGuildMember? usr = null)
     {
-        usr ??= (IGuildUser)ctx.User;
+        usr ??= (SocketGuildMember)ctx.User;
         var guildUser = await client.Rest.GetGuildUserAsync(ctx.Guild.Id, usr.Id);
         var user = await client.Rest.GetUserAsync(usr.Id);
         if (user.GetBannerUrl(size: 2048) == null && guildUser.GetBannerUrl() == null)
@@ -29,7 +28,7 @@ public partial class Utility
 
         var avatarUrl = guildUser.GetBannerUrl() ?? user.GetBannerUrl(size: 2048);
 
-        await ctx.Channel.SendMessageAsync(embed: new EmbedBuilder()
+        await ctx.Channel.SendAsync(embed: new EmbedBuilder()
                 .WithOkColor()
                 .AddField(efb => efb.WithName("Username").WithValue(usr.ToString()).WithIsInline(true))
                 .AddField(efb =>
@@ -45,7 +44,7 @@ public partial class Utility
     /// <param name="client">The Discord client used for fetching information.</param>
     /// <param name="muteService">The mute service for fetching mute information.</param>
     [Group]
-    public class InfoCommands(DiscordShardedClient client, MuteService muteService) : MewdekoSubmodule<UtilityService>
+    public class InfoCommands(FluxerClient client, MuteService muteService) : MewdekoSubmodule<UtilityService>
     {
         /// <summary>
         ///     Displays information about a specified role within the guild.
@@ -55,7 +54,7 @@ public partial class Utility
         [Cmd]
         [Aliases]
         [RequireContext(ContextType.Guild)]
-        public async Task RInfo(IRole role)
+        public async Task RInfo(SocketRole role)
         {
             var eb = new EmbedBuilder().WithTitle(role.Name)
                 .AddField("Users in role",
@@ -69,7 +68,7 @@ public partial class Utility
                 .AddField("ID", role.Id)
                 .WithThumbnailUrl(role.GetIconUrl())
                 .WithColor(role.Colors.PrimaryColor);
-            await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+            await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -80,9 +79,9 @@ public partial class Utility
         [Cmd]
         [Aliases]
         [RequireContext(ContextType.Guild)]
-        public async Task VInfo([Remainder] IVoiceChannel? channel = null)
+        public async Task VInfo([Remainder] Channel? channel = null)
         {
-            var voiceChannel = ((IGuildUser)ctx.User).VoiceChannel;
+            var voiceChannel = ((SocketGuildMember)ctx.User).VoiceChannel;
             var eb = new EmbedBuilder();
             switch (voiceChannel)
             {
@@ -101,7 +100,7 @@ public partial class Utility
                     eb.AddField("User Limit", channel.UserLimit == null ? "Infinite" : channel.UserLimit);
                     eb.AddField("Channel ID", channel.Id);
                     eb.WithOkColor();
-                    await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+                    await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
                     break;
             }
 
@@ -114,7 +113,7 @@ public partial class Utility
                 eb.AddField("User Limit", channel.UserLimit == null ? "Infinite" : channel.UserLimit);
                 eb.AddField("Channel ID", channel.Id);
                 eb.WithOkColor();
-                await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+                await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
             }
 
             if (voiceChannel is not null && channel is null)
@@ -126,7 +125,7 @@ public partial class Utility
                 eb.AddField("User Limit", voiceChannel.UserLimit == null ? "Infinite" : voiceChannel.UserLimit);
                 eb.AddField("Channel ID", voiceChannel.Id);
                 eb.WithOkColor();
-                await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+                await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
             }
         }
 
@@ -169,7 +168,7 @@ public partial class Utility
         [RequireContext(ContextType.Guild)]
         public async Task ServerInfo(string? guildName = null)
         {
-            var channel = (ITextChannel)ctx.Channel;
+            var channel = (Channel)ctx.Channel;
             guildName = guildName?.ToUpperInvariant();
             SocketGuild guild;
             if (string.IsNullOrWhiteSpace(guildName))
@@ -209,7 +208,7 @@ public partial class Utility
                             .TrimTo(1024)));
             }
 
-            await ctx.Channel.SendMessageAsync(embed: embed.Build())
+            await ctx.Channel.SendAsync(embed: embed.Build())
                 .ConfigureAwait(false);
         }
 
@@ -221,9 +220,9 @@ public partial class Utility
         [Cmd]
         [Aliases]
         [RequireContext(ContextType.Guild)]
-        public async Task ChannelInfo(ITextChannel? channel = null)
+        public async Task ChannelInfo(Channel? channel = null)
         {
-            var ch = channel ?? (ITextChannel)ctx.Channel;
+            var ch = channel ?? (Channel)ctx.Channel;
             var embed = new EmbedBuilder()
                 .WithTitle(ch.Name)
                 .AddField(Strings.Id(ctx.Guild.Id), ch.Id.ToString())
@@ -247,9 +246,9 @@ public partial class Utility
         [Cmd]
         [Aliases]
         [RequireContext(ContextType.Guild)]
-        public async Task UserInfo(IGuildUser? usr = null)
+        public async Task UserInfo(SocketGuildMember? usr = null)
         {
-            var user = usr ?? ctx.User as IGuildUser;
+            var user = usr ?? ctx.User as SocketGuildMember;
             var userbanner = (await client.Rest.GetUserAsync(user.Id).ConfigureAwait(false)).GetBannerUrl(size: 2048);
             var serverUserType = user.GuildPermissions.Administrator ? "Administrator" : "Regular User";
             var restUser = await client.Rest.GetUserAsync(user.Id);
@@ -286,9 +285,9 @@ public partial class Utility
                 }
             }
 
-            var moreInfo = new Emoji("ℹ️");
+            var moreInfo = Emoji.FromUnicode("ℹ️");
             embed.WithFooter($"{moreInfo} {Strings.MoreInfo(ctx.Guild.Id)}");
-            var msg = await ctx.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+            var msg = await ctx.Channel.SendAsync(embed: embed.Build()).ConfigureAwait(false);
             var input = await Interactive.WaitForReactionAsync(msg, ctx.User.Id, [moreInfo]).ConfigureAwait(false);
             if (input == 0)
             {
@@ -323,9 +322,9 @@ public partial class Utility
         [Cmd]
         [Aliases]
         [RequireContext(ContextType.Guild)]
-        public async Task Avatar([Remainder] IGuildUser? usr = null)
+        public async Task Avatar([Remainder] SocketGuildMember? usr = null)
         {
-            usr ??= (IGuildUser)ctx.User;
+            usr ??= (SocketGuildMember)ctx.User;
             var avatarUrl = usr.GetAvatarUrl(ImageFormat.Auto, 2048);
 
             if (avatarUrl == null)
@@ -340,7 +339,7 @@ public partial class Utility
                     ? $"{DiscordConfig.CDNUrl}guilds/{ctx.Guild.Id}/users/{usr.Id}/avatars/{av.GuildAvatarId}.gif?size=2048"
                     : $"{DiscordConfig.CDNUrl}guilds/{ctx.Guild.Id}/users/{usr.Id}/avatars/{av.GuildAvatarId}.png?size=2048";
 
-            await ctx.Channel.SendMessageAsync(embed: new EmbedBuilder()
+            await ctx.Channel.SendAsync(embed: new EmbedBuilder()
                     .WithOkColor()
                     .AddField(efb => efb.WithName("Username").WithValue(usr.ToString()).WithIsInline(true))
                     .AddField(efb =>

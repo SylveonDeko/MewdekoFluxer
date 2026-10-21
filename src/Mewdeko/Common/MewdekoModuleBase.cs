@@ -1,5 +1,4 @@
-using System.Globalization;
-using Discord.Commands;
+﻿using System.Globalization;
 using Mewdeko.Common.Configs;
 using Mewdeko.Services.Strings;
 
@@ -26,7 +25,7 @@ public abstract class MewdekoModule : ModuleBase
     /// <summary>
     ///     Gets the command context for the current module.
     /// </summary>
-    protected ICommandContext ctx
+    protected CommandContext ctx
     {
         get
         {
@@ -55,7 +54,7 @@ public abstract class MewdekoModule : ModuleBase
     /// </summary>
     /// <param name="text">The key identifying the text string.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public Task<IUserMessage> ErrorAsync(string? text)
+    public Task<Message> ErrorAsync(string? text)
     {
         return ctx.Channel.SendErrorAsync($"{Config.ErrorEmote} {text}", Config);
     }
@@ -65,7 +64,7 @@ public abstract class MewdekoModule : ModuleBase
     /// </summary>
     /// <param name="text">The key identifying the text string.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public Task<IUserMessage> ReplyErrorAsync(string? text)
+    public Task<Message> ReplyErrorAsync(string? text)
     {
         return ctx.Channel.SendErrorAsync($"{Format.Bold(ctx.User.ToString())} {text}", Config);
     }
@@ -75,7 +74,7 @@ public abstract class MewdekoModule : ModuleBase
     /// </summary>
     /// <param name="text">The key identifying the text string.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public Task<IUserMessage> ConfirmAsync(string? text)
+    public Task<Message> ConfirmAsync(string? text)
     {
         return ctx.Channel.SendConfirmAsync(text);
     }
@@ -85,7 +84,7 @@ public abstract class MewdekoModule : ModuleBase
     /// </summary>
     /// <param name="text">The key identifying the text string.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public Task<IUserMessage> SuccessAsync(string? text)
+    public Task<Message> SuccessAsync(string? text)
     {
         return ctx.Channel.SendConfirmAsync($"{Config.SuccessEmote} {text}");
     }
@@ -95,7 +94,7 @@ public abstract class MewdekoModule : ModuleBase
     /// </summary>
     /// <param name="text">The key identifying the text string.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public Task<IUserMessage> LoadingLocalizedAsync(string? text)
+    public Task<Message> LoadingLocalizedAsync(string? text)
     {
         return ctx.Channel.SendConfirmAsync($"{Config.LoadingEmote} {text}");
     }
@@ -105,7 +104,7 @@ public abstract class MewdekoModule : ModuleBase
     /// </summary>
     /// <param name="text">The key identifying the text string.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public Task<IUserMessage> ReplyConfirmAsync(string? text)
+    public Task<Message> ReplyConfirmAsync(string? text)
     {
         return ctx.Channel.SendConfirmAsync($"{Format.Bold(ctx.User.ToString())} {text}");
     }
@@ -130,7 +129,7 @@ public abstract class MewdekoModule : ModuleBase
     public async Task<bool> PromptUserConfirmAsync(EmbedBuilder embed, ulong userid)
     {
         embed.WithOkColor();
-        var msg = await ctx.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+        var msg = await ctx.Channel.SendAsync(embed: embed.Build()).ConfigureAwait(false);
         try
         {
             return await WaitForConfirmAsync(msg, userid).ConfigureAwait(false);
@@ -150,13 +149,13 @@ public abstract class MewdekoModule : ModuleBase
     ///     A task representing the asynchronous operation, containing a boolean indicating the result of the hierarchy
     ///     check.
     /// </returns>
-    public async Task<bool> CheckRoleHierarchy(IGuildUser? target, bool displayError = true)
+    public async Task<bool> CheckRoleHierarchy(SocketGuildMember? target, bool displayError = true)
     {
         var curUser = await ctx.Guild.GetCurrentUserAsync().ConfigureAwait(false);
         var ownerId = Context.Guild.OwnerId;
         var botMaxRole = curUser.GetRoles().Max(r => r.Position);
         var targetMaxRole = target.GetRoles().Max(r => r.Position);
-        var modMaxRole = ((IGuildUser)ctx.User).GetRoles().Max(r => r.Position);
+        var modMaxRole = ctx.Member!.GetRoles().Max(r => r.Position);
 
         var hierarchyCheck = ctx.User.Id == ownerId
             ? botMaxRole > targetMaxRole
@@ -175,7 +174,7 @@ public abstract class MewdekoModule : ModuleBase
     /// <param name="embed">The embed to be displayed to the user.</param>
     /// <param name="userid">The ID of the user to prompt.</param>
     /// <returns>A task representing the asynchronous operation, containing a boolean indicating the user's response.</returns>
-    public async Task<bool> PromptUserConfirmAsync(IUserMessage message, EmbedBuilder embed, ulong userid)
+    public async Task<bool> PromptUserConfirmAsync(Message message, EmbedBuilder embed, ulong userid)
     {
         embed.WithOkColor();
         await message.ModifyAsync(x => x.Embed = embed.Build()).ConfigureAwait(false);
@@ -189,21 +188,21 @@ public abstract class MewdekoModule : ModuleBase
     /// <param name="userId">The user whose reaction counts.</param>
     /// <param name="choices">The options to offer.</param>
     /// <returns>The prompt message and the picked value, or a null value when the user did not answer in time.</returns>
-    public async Task<(IUserMessage Message, string? Value)> PromptReactionChoiceAsync(EmbedBuilder embed,
+    public async Task<(Message Message, string? Value)> PromptReactionChoiceAsync(EmbedBuilder embed,
         ulong userId, params ReactionChoice[] choices)
     {
-        var legend = string.Join("  ", choices.Select(c => $"{c.Emote} {c.Label}"));
+        var legend = string.Join("  ", choices.Select(c => $"{c.Emoji} {c.Label}"));
         embed.WithDescription(string.IsNullOrWhiteSpace(embed.Description)
             ? legend
             : $"{embed.Description}\n\n{legend}");
 
-        var msg = await ctx.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
-        var index = await Interactive.WaitForReactionAsync(msg, userId, choices.Select(c => c.Emote).ToList())
+        var msg = await ctx.Channel.SendAsync(embed: embed.Build()).ConfigureAwait(false);
+        var index = await Interactive.WaitForReactionAsync(msg, userId, choices.Select(c => c.Emoji).ToList())
             .ConfigureAwait(false);
         return (msg, index is { } picked ? choices[picked].Value : null);
     }
 
-    private async Task<bool> WaitForConfirmAsync(IUserMessage message, ulong userId)
+    private async Task<bool> WaitForConfirmAsync(Message message, ulong userId)
     {
         var choice = await Interactive.WaitForReactionAsync(message, userId,
             [InteractiveService.Yes, InteractiveService.No]).ConfigureAwait(false);
@@ -222,7 +221,7 @@ public abstract class MewdekoModule : ModuleBase
         var handler = EventHandler;
         try
         {
-            handler.Subscribe("MessageReceived", "MewdekoModuleBase", Interaction);
+            handler.MessageReceived.Subscribe("MewdekoModuleBase", Interaction);
             if (await Task.WhenAny(userInputTask.Task, Task.Delay(60000)).ConfigureAwait(false) !=
                 userInputTask.Task)
             {
@@ -233,7 +232,7 @@ public abstract class MewdekoModule : ModuleBase
         }
         finally
         {
-            handler.Unsubscribe("MessageReceived", "MewdekoModuleBase", Interaction);
+            handler.MessageReceived.Unsubscribe("MewdekoModuleBase", Interaction);
         }
 
         async Task Interaction(SocketMessage arg)
@@ -263,7 +262,7 @@ public abstract class MewdekoModule : ModuleBase
         var handler = EventHandler;
         try
         {
-            handler.Subscribe("MessageReceived", "MewdekoModuleBase", Interaction);
+            handler.MessageReceived.Subscribe("MewdekoModuleBase", Interaction);
             if (await Task.WhenAny(userInputTask.Task, Task.Delay(60000)).ConfigureAwait(false) !=
                 userInputTask.Task)
             {
@@ -274,7 +273,7 @@ public abstract class MewdekoModule : ModuleBase
         }
         finally
         {
-            handler.Unsubscribe("MessageReceived", "MewdekoModuleBase", Interaction);
+            handler.MessageReceived.Unsubscribe("MewdekoModuleBase", Interaction);
         }
 
         async Task Interaction(SocketMessage arg)

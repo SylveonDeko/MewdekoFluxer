@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Moderation.Services;
 
@@ -11,7 +11,7 @@ public partial class Moderation
     /// </summary>
     /// <param name="client"></param>
     [Group]
-    public class PurgeCommands(DiscordShardedClient client) : MewdekoSubmodule<PurgeService>
+    public class PurgeCommands(FluxerClient client) : MewdekoSubmodule<PurgeService>
     {
         private static readonly TimeSpan TwoWeeks = TimeSpan.FromDays(14);
 
@@ -30,12 +30,12 @@ public partial class Moderation
             if (parameter is "-s" or "--safe")
             {
                 await Service
-                    .PurgeWhere((ITextChannel)ctx.Channel, 100, x => x.Author.Id == user.Id && !x.IsPinned)
+                    .PurgeWhere((Channel)ctx.Channel, 100, x => x.Author.Id == user.Id && !x.IsPinned)
                     .ConfigureAwait(false);
             }
             else
             {
-                await Service.PurgeWhere((ITextChannel)ctx.Channel, 100, x => x.Author.Id == user.Id)
+                await Service.PurgeWhere((Channel)ctx.Channel, 100, x => x.Author.Id == user.Id)
                     .ConfigureAwait(false);
             }
 
@@ -75,11 +75,11 @@ public partial class Moderation
 
             if (parameters is null)
             {
-                await Service.PurgeWhere(ctx.Channel as ITextChannel, count + 1, x => x.Channel.Id == ctx.Channel.Id);
+                await Service.PurgeWhere(ctx.Channel as Channel, count + 1, x => x.Channel.Id == ctx.Channel.Id);
                 return;
             }
 
-            var options = new List<Func<IMessage, bool>>();
+            var options = new List<Func<Message, bool>>();
 
             var parts = parameters.Split([
                 ' ', ','
@@ -135,10 +135,10 @@ public partial class Moderation
                 }
             }
 
-            await Service.PurgeWhere((ITextChannel)ctx.Channel, count, CombinedPredicate).ConfigureAwait(false);
+            await Service.PurgeWhere((Channel)ctx.Channel, count, CombinedPredicate).ConfigureAwait(false);
             return;
 
-            bool CombinedPredicate(IMessage m)
+            bool CombinedPredicate(Message m)
             {
                 return options.All(p => p(m));
             }
@@ -158,7 +158,7 @@ public partial class Moderation
         [UserPerm(ChannelPermission.ManageMessages)]
         [BotPerm(ChannelPermission.ManageMessages)]
         [Priority(0)]
-        public Task Purge(IGuildUser user, ulong count = 100, string? parameter = null)
+        public Task Purge(SocketGuildMember user, ulong count = 100, string? parameter = null)
         {
             return Purge(user.Id, count, parameter);
         }
@@ -193,11 +193,11 @@ public partial class Moderation
 
             if (parameter is "-s" or "--safe")
             {
-                return Service.PurgeWhere((ITextChannel)ctx.Channel, count,
+                return Service.PurgeWhere((Channel)ctx.Channel, count,
                     m => m.Author.Id == userId && DateTime.UtcNow - m.CreatedAt < TwoWeeks && !m.IsPinned);
             }
 
-            return Service.PurgeWhere((ITextChannel)ctx.Channel, count,
+            return Service.PurgeWhere((Channel)ctx.Channel, count,
                 m => m.Author.Id == userId && DateTime.UtcNow - m.CreatedAt < TwoWeeks);
         }
 

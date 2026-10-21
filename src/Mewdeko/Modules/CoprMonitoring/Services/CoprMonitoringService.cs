@@ -24,7 +24,7 @@ namespace Mewdeko.Modules.CoprMonitoring.Services;
 /// </summary>
 public class CoprMonitoringService : INService, IReadyExecutor, IDisposable
 {
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly BotConfigService config;
     private readonly IDataConnectionFactory dbFactory;
     private readonly ILogger<CoprMonitoringService> logger;
@@ -49,7 +49,7 @@ public class CoprMonitoringService : INService, IReadyExecutor, IDisposable
     /// <param name="strings">The localization strings provider.</param>
     public CoprMonitoringService(
         IDataConnectionFactory dbFactory,
-        DiscordShardedClient client,
+        FluxerClient client,
         ILogger<CoprMonitoringService> logger,
         BotConfigService config,
         GeneratedBotStrings strings)
@@ -853,7 +853,7 @@ public class CoprMonitoringService : INService, IReadyExecutor, IDisposable
     /// <param name="channel">The channel to send to.</param>
     /// <param name="buildData">The build data.</param>
     /// <param name="status">The build status.</param>
-    private async Task SendDefaultNotification(ITextChannel channel, CoprBuildMessage buildData, CoprBuildStatus status)
+    private async Task SendDefaultNotification(Channel channel, CoprBuildMessage buildData, CoprBuildStatus status)
     {
         var emote = GetEmoteForStatus(status);
         var statusText = status.ToDisplayString();
@@ -870,7 +870,7 @@ public class CoprMonitoringService : INService, IReadyExecutor, IDisposable
             .Build();
 
 
-        await channel.SendMessageAsync(embed: embed);
+        await channel.SendAsync(embed: embed);
     }
 
     /// <summary>
@@ -881,8 +881,8 @@ public class CoprMonitoringService : INService, IReadyExecutor, IDisposable
     /// <param name="status">The build status.</param>
     /// <param name="guild">The guild.</param>
     /// <param name="customMessage">The custom message template.</param>
-    private async Task SendCustomNotification(ITextChannel channel, CoprBuildMessage buildData, CoprBuildStatus status,
-        IGuild guild, string customMessage)
+    private async Task SendCustomNotification(Channel channel, CoprBuildMessage buildData, CoprBuildStatus status,
+        SocketGuild guild, string customMessage)
     {
         var buildUrl =
             $"https://copr.fedorainfracloud.org/coprs/{buildData.Owner}/{buildData.Project}/build/{buildData.Build}/";
@@ -905,11 +905,11 @@ public class CoprMonitoringService : INService, IReadyExecutor, IDisposable
 
         if (SmartEmbed.TryParse(content, guild.Id, out var embeds, out var plainText))
         {
-            await channel.SendMessageAsync(plainText, embeds: embeds);
+            await channel.SendAsync(plainText, embeds: embeds);
         }
         else
         {
-            await channel.SendMessageAsync(content.SanitizeMentions(true));
+            await channel.SendAsync(content.SanitizeMentions(true));
         }
     }
 

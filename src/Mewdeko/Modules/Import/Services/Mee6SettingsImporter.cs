@@ -24,7 +24,7 @@ namespace Mewdeko.Modules.Import.Services;
 /// </summary>
 public class Mee6SettingsImporter(
     IDataConnectionFactory dbFactory,
-    DiscordShardedClient client,
+    FluxerClient client,
     GuildSettingsService guildSettings,
     AutoAssignRoleService autoAssignRoles,
     XpService xpService,

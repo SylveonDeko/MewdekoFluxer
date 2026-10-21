@@ -18,7 +18,7 @@ namespace Mewdeko.Controllers;
 [Authorize("ApiKeyPolicy")]
 public class XpController(
     XpService xp,
-    DiscordShardedClient client,
+    FluxerClient client,
     IDataConnectionFactory dbFactory,
     ILogger<XpController> logger,
     IServiceProvider serviceProvider,

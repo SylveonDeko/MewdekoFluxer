@@ -20,7 +20,7 @@ public class GuildSnapshotService : INService, IReadyExecutor, IDisposable
     private static readonly TimeSpan SnapshotInterval = TimeSpan.FromHours(1);
     private static readonly TimeSpan SweepInterval = TimeSpan.FromHours(6);
 
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly ILogger<GuildSnapshotService> logger;
     private readonly ServerStatsSettingsService settings;
@@ -35,7 +35,7 @@ public class GuildSnapshotService : INService, IReadyExecutor, IDisposable
     /// <param name="dbFactory">The database connection factory.</param>
     /// <param name="settings">The stats settings service.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
-    public GuildSnapshotService(DiscordShardedClient client, IDataConnectionFactory dbFactory,
+    public GuildSnapshotService(FluxerClient client, IDataConnectionFactory dbFactory,
         ServerStatsSettingsService settings, ILogger<GuildSnapshotService> logger)
     {
         this.client = client;

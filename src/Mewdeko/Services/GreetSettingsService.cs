@@ -1,4 +1,6 @@
-﻿using DataModel;
+﻿using System.Threading.Channels;
+using Channel = Fluxer.Net.Channel;
+using DataModel;
 using LinqToDB.Async;
 using Mewdeko.Modules.Utility.Services;
 using Mewdeko.Services.Analytics;
@@ -10,12 +12,12 @@ namespace Mewdeko.Services;
 /// </summary>
 public class GreetSettingsService : INService
 {
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly IDataConnectionFactory dbFactory;
 
-    private readonly Channel<(GreetSettings, IGuildUser, TaskCompletionSource<bool>)> greetDmQueue =
-        Channel.CreateBounded<(GreetSettings, IGuildUser, TaskCompletionSource<bool>)>(new BoundedChannelOptions(60)
+    private readonly Channel<(GreetSettings, SocketGuildMember, TaskCompletionSource<bool>)> greetDmQueue =
+        System.Threading.Channels.Channel.CreateBounded<(GreetSettings, SocketGuildMember, TaskCompletionSource<bool>)>(new BoundedChannelOptions(60)
         {
             FullMode = BoundedChannelFullMode.DropNewest
         });
@@ -39,7 +41,7 @@ public class GreetSettingsService : INService
     /// <param name="logger">The logger instance for structured logging.</param>
     /// <param name="collector">The analytics collector.</param>
     /// <param name="inviteCountService">Supplies inviter placeholders for greet and leave messages.</param>
-    public GreetSettingsService(DiscordShardedClient client, GuildSettingsService gss, IDataConnectionFactory dbFactory,
+    public GreetSettingsService(FluxerClient client, GuildSettingsService gss, IDataConnectionFactory dbFactory,
         EventHandler eventHandler, ILogger<GreetSettingsService> logger, IAnalyticsCollector collector,
         InviteCountService inviteCountService)
     {
@@ -50,9 +52,8 @@ public class GreetSettingsService : INService
         this.gss = gss;
         this.inviteCountService = inviteCountService;
 
-        eventHandler.Subscribe("UserJoined", "GreetSettingsService", UserJoined);
-        eventHandler.Subscribe("UserLeft", "GreetSettingsService", UserLeft);
-        eventHandler.Subscribe("GuildMemberUpdated", "GreetSettingsService", ClientOnGuildMemberUpdated);
+        eventHandler.UserJoined.Subscribe("GreetSettingsService", UserJoined);
+        eventHandler.UserLeft.Subscribe("GreetSettingsService", UserLeft);
         _ = RunGreetLoop();
     }
 
@@ -73,7 +74,7 @@ public class GreetSettingsService : INService
         }
     }
 
-    private async Task<bool> GreetDmUser(GreetSettings conf, IGuildUser user)
+    private async Task<bool> GreetDmUser(GreetSettings conf, SocketGuildMember user)
     {
         var completionSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         await greetDmQueue.Writer.WriteAsync((conf, user, completionSource));
@@ -86,7 +87,7 @@ public class GreetSettingsService : INService
         return GreetSettings.Create(guildConfig);
     }
 
-    private async Task TriggerBoostMessage(GreetSettings conf, SocketGuildUser user)
+    private async Task TriggerBoostMessage(GreetSettings conf, SocketGuildMember user)
     {
         var chan = user.Guild.GetTextChannel(conf.BoostMessageChannelId);
 
@@ -102,7 +103,7 @@ public class GreetSettingsService : INService
         {
             try
             {
-                var toDelete = await chan.SendMessageAsync(plainText, embeds: embed)
+                var toDelete = await chan.SendAsync(plainText, embeds: embed)
                     .ConfigureAwait(false);
                 if (conf.BoostMessageDeleteAfter > 0) toDelete.DeleteAfter(conf.BoostMessageDeleteAfter);
             }
@@ -116,7 +117,7 @@ public class GreetSettingsService : INService
             var msg = rep.Replace(conf.BoostMessage);
             try
             {
-                var toDelete = await chan.SendMessageAsync(msg).ConfigureAwait(false);
+                var toDelete = await chan.SendAsync(msg).ConfigureAwait(false);
 
                 if (conf.BoostMessageDeleteAfter > 0) toDelete.DeleteAfter(conf.BoostMessageDeleteAfter);
             }
@@ -127,33 +128,10 @@ public class GreetSettingsService : INService
         }
     }
 
-    private Task ClientOnGuildMemberUpdated(Cacheable<SocketGuildUser, ulong> optOldUser, SocketGuildUser newUser)
-    {
-        _ = Task.Run(async () =>
-        {
-            // if user is a new booster
-            // or boosted again the same server
-            if ((optOldUser.Value is not { PremiumSince: null } || newUser is not { PremiumSince: not null })
-                && (optOldUser.Value?.PremiumSince is not { } oldDate || newUser.PremiumSince is not { } newDate ||
-                    newDate <= oldDate))
-            {
-                return;
-            }
-
-            var conf = await GetGreetSettings(newUser.Guild.Id);
-            if (!conf.SendBoostMessage)
-                return;
-
-            await TriggerBoostMessage(conf, newUser).ConfigureAwait(false);
-        });
-        return Task.CompletedTask;
-    }
-
-    private async Task UserLeft(IGuild guild, IUser usr)
+    private async Task UserLeft(SocketGuild guild, User user)
     {
         try
         {
-            var user = usr as SocketGuildUser;
             var conf = await GetGreetSettings(guild.Id);
 
             if (!conf.SendChannelByeMessage) return;
@@ -253,7 +231,7 @@ public class GreetSettingsService : INService
     /// <remarks>
     ///     This setting allows the guild to customize the destination of leave messages.
     /// </remarks>
-    public async Task SetWebLeaveUrl(IGuild guild, string url)
+    public async Task SetWebLeaveUrl(SocketGuild guild, string url)
     {
         var gc = await gss.GetGuildConfig(guild.Id);
         gc.LeaveHook = url;
@@ -270,14 +248,14 @@ public class GreetSettingsService : INService
         return (await gss.GetGuildConfig(gid.Value)).LeaveHook;
     }
 
-    private Task ByeUsers(GreetSettings conf, ITextChannel channel, IUser user)
+    private Task ByeUsers(GreetSettings conf, Channel channel, IUser user)
     {
         return ByeUsers(conf, channel, [
             user
         ]);
     }
 
-    private async Task ByeUsers(GreetSettings conf, ITextChannel channel, IEnumerable<IUser> users)
+    private async Task ByeUsers(GreetSettings conf, Channel channel, IEnumerable<IUser> users)
     {
         if (!users.Any())
             return;
@@ -301,19 +279,19 @@ public class GreetSettingsService : INService
                 if (string.IsNullOrEmpty(lh) || lh == 0.ToString())
                 {
                     var toDelete = await channel
-                        .SendMessageAsync(plainText, embeds: embed)
+                        .SendAsync(plainText, embeds: embed)
                         .ConfigureAwait(false);
                     if (conf.AutoDeleteByeMessagesTimer > 0) toDelete.DeleteAfter(conf.AutoDeleteByeMessagesTimer);
                 }
                 else
                 {
-                    var webhook = new DiscordWebhookClient(await GetLeaveHook(channel.GuildId));
+                    var webhook = new FluxerWebhookClient(await GetLeaveHook(channel.GuildId));
                     var toDelete = await webhook
-                        .SendMessageAsync(plainText, embeds: embed)
+                        .SendAsync(plainText, embeds: embed)
                         .ConfigureAwait(false);
                     if (conf.AutoDeleteByeMessagesTimer > 0)
                     {
-                        var msg = await channel.GetMessageAsync(toDelete).ConfigureAwait(false) as IUserMessage;
+                        var msg = await channel.GetMessageAsync(toDelete).ConfigureAwait(false) as Message;
                         msg.DeleteAfter(conf.AutoDeleteByeMessagesTimer);
                     }
                 }
@@ -335,16 +313,16 @@ public class GreetSettingsService : INService
             {
                 if (string.IsNullOrEmpty(lh) || lh == 0.ToString())
                 {
-                    var toDelete = await channel.SendMessageAsync(msg.SanitizeMentions()).ConfigureAwait(false);
+                    var toDelete = await channel.SendAsync(msg.SanitizeMentions()).ConfigureAwait(false);
                     if (conf.AutoDeleteByeMessagesTimer > 0) toDelete.DeleteAfter(conf.AutoDeleteByeMessagesTimer);
                 }
                 else
                 {
-                    var webhook = new DiscordWebhookClient(await GetLeaveHook(channel.GuildId));
-                    var toDel = await webhook.SendMessageAsync(msg.SanitizeMentions()).ConfigureAwait(false);
+                    var webhook = new FluxerWebhookClient(await GetLeaveHook(channel.GuildId));
+                    var toDel = await webhook.SendAsync(msg.SanitizeMentions()).ConfigureAwait(false);
                     if (conf.AutoDeleteByeMessagesTimer > 0)
                     {
-                        var msg2 = await channel.GetMessageAsync(toDel).ConfigureAwait(false) as IUserMessage;
+                        var msg2 = await channel.GetMessageAsync(toDel).ConfigureAwait(false) as Message;
                         msg2.DeleteAfter(conf.AutoDeleteByeMessagesTimer);
                     }
                 }
@@ -370,7 +348,7 @@ public class GreetSettingsService : INService
         return gc.DmGreetMessageText;
     }
 
-    private async Task<bool> GreetDmUserInternal(GreetSettings conf, IGuildUser user)
+    private async Task<bool> GreetDmUserInternal(GreetSettings conf, SocketGuildMember user)
     {
         if (!conf.SendDmGreetMessage)
             return false;
@@ -392,7 +370,7 @@ public class GreetSettingsService : INService
         {
             try
             {
-                await channel.SendMessageAsync(plainText, embeds: embed)
+                await channel.SendAsync(plainText, embeds: embed)
                     .ConfigureAwait(false);
             }
             catch
@@ -420,7 +398,7 @@ public class GreetSettingsService : INService
         return true;
     }
 
-    private Task UserJoined(IGuildUser user)
+    private Task UserJoined(SocketGuildMember user)
     {
         _ = Task.Run(async () =>
         {
@@ -600,10 +578,10 @@ public class GreetSettingsService : INService
     /// </summary>
     /// <param name="channel">The text channel where the message should be sent.</param>
     /// <param name="user">The user for whom the farewell message is targeted.</param>
-    public async Task ByeTest(ITextChannel channel, IGuildUser user)
+    public async Task ByeTest(Channel channel, SocketGuildMember user)
     {
         var conf = await GetGreetSettings(user.GuildId);
-        await ByeUsers(conf, channel, user);
+        await ByeUsers(conf, channel, user.User);
     }
 
     /// <summary>
@@ -611,11 +589,11 @@ public class GreetSettingsService : INService
     /// </summary>
     /// <param name="channel">The text channel where the message should be sent.</param>
     /// <param name="user">The user for whom the boost message is targeted.</param>
-    public async Task BoostTest(ITextChannel channel, IGuildUser user)
+    public async Task BoostTest(Channel channel, SocketGuildMember user)
     {
         var conf = await GetGreetSettings(user.GuildId);
         conf.BoostMessageChannelId = channel.Id;
-        await TriggerBoostMessage(conf, user as SocketGuildUser).ConfigureAwait(false);
+        await TriggerBoostMessage(conf, user as SocketGuildMember).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -624,7 +602,7 @@ public class GreetSettingsService : INService
     /// <param name="channel">The direct message channel to use for sending the message.</param>
     /// <param name="user">The user to receive the greeting message.</param>
     /// <returns>A boolean indicating if the direct message was successfully sent.</returns>
-    public async Task<bool> GreetDmTest(IDMChannel channel, IGuildUser user)
+    public async Task<bool> GreetDmTest(Channel channel, SocketGuildMember user)
     {
         var conf = await GetGreetSettings(user.GuildId);
         return await GreetDmUser(conf, user);

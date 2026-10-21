@@ -145,10 +145,10 @@ public partial class MusicLinkService : INService, IDisposable
 
     private async Task OnMessageReceived(SocketMessage message)
     {
-        if (message is not IUserMessage userMessage || message.Author.IsBot)
+        if (message is not Message userMessage || message.Author.IsBot)
             return;
 
-        if (userMessage.Channel is not ITextChannel channel)
+        if (userMessage.Channel is not Channel channel)
             return;
 
         var url = ExtractMusicLink(userMessage.Content);
@@ -172,7 +172,7 @@ public partial class MusicLinkService : INService, IDisposable
             if (embed is null)
                 return;
 
-            await channel.SendMessageAsync(embed: embed,
+            await channel.SendAsync(embed: embed,
                     messageReference: new MessageReference(userMessage.Id), allowedMentions: AllowedMentions.None)
                 .ConfigureAwait(false);
         }
@@ -228,7 +228,7 @@ public partial class MusicLinkService : INService, IDisposable
         return await JsonSerializer.DeserializeAsync<OdesliResponse>(stream, JsonOptions).ConfigureAwait(false);
     }
 
-    private async Task<Discord.Embed?> BuildEmbedAsync(OdesliResponse response, ulong guildId)
+    private async Task<EmbedRequest?> BuildEmbedAsync(OdesliResponse response, ulong guildId)
     {
         if (response.EntitiesByUniqueId is null || response.EntitiesByUniqueId.Count == 0)
             return null;

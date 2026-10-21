@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using LinqToDB.Async;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Controllers.Common.Bot;
@@ -40,7 +40,7 @@ public class InstanceManagement(IDataConnectionFactory dbFactory) : MewdekoModul
                     .WithDescription(GetInstanceDescription(status))
                     .WithOkColor();
 
-                await ctx.Channel.SendMessageAsync(embed: eb.Build());
+                await ctx.Channel.SendAsync(embed: eb.Build());
             }
             else
             {
@@ -85,7 +85,7 @@ public class InstanceManagement(IDataConnectionFactory dbFactory) : MewdekoModul
                     : Strings.InstanceOffline(ctx.Guild.Id));
         }
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -152,7 +152,7 @@ public class InstanceManagement(IDataConnectionFactory dbFactory) : MewdekoModul
                     .WithDescription(GetInstanceDescription(status))
                     .WithOkColor();
 
-                await ctx.Channel.SendMessageAsync(embed: eb.Build());
+                await ctx.Channel.SendAsync(embed: eb.Build());
             }
             else
             {
@@ -200,7 +200,7 @@ public class InstanceManagement(IDataConnectionFactory dbFactory) : MewdekoModul
                 eb.AddField($"{emoji} Port {port}", message);
             }
 
-            await ctx.Channel.SendMessageAsync(embed: eb.Build());
+            await ctx.Channel.SendAsync(embed: eb.Build());
         }
         catch (Exception ex)
         {
@@ -276,7 +276,7 @@ public class InstanceManagement(IDataConnectionFactory dbFactory) : MewdekoModul
                 eb.AddField($"{emoji} Port {port}", message);
             }
 
-            await ctx.Channel.SendMessageAsync(embed: eb.Build());
+            await ctx.Channel.SendAsync(embed: eb.Build());
         }
         catch (Exception ex)
         {

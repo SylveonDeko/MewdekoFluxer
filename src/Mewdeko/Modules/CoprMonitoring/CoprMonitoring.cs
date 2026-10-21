@@ -1,5 +1,4 @@
 using System.Text;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.CoprMonitoring.Common;
 using Mewdeko.Modules.CoprMonitoring.Services;
@@ -31,7 +30,7 @@ public partial class CoprMonitoring(InteractiveService interactiveService) : Mew
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CoprMonitorAdd(string ownerProject, ITextChannel? channel = null,
+    public async Task CoprMonitorAdd(string ownerProject, Channel? channel = null,
         [Remainder] string? packages = null)
     {
         var parts = ownerProject.Split('/');
@@ -41,7 +40,7 @@ public partial class CoprMonitoring(InteractiveService interactiveService) : Mew
             return;
         }
 
-        var targetChannel = channel ?? (ITextChannel)ctx.Channel;
+        var targetChannel = channel ?? (Channel)ctx.Channel;
         var monitor = await Service.AddMonitor(ctx.Guild.Id, targetChannel.Id, parts[0], parts[1], packages);
 
         if (monitor == null)
@@ -70,7 +69,7 @@ public partial class CoprMonitoring(InteractiveService interactiveService) : Mew
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CoprMonitorRemove(string ownerProject, ITextChannel? channel = null)
+    public async Task CoprMonitorRemove(string ownerProject, Channel? channel = null)
     {
         var parts = ownerProject.Split('/');
         if (parts.Length != 2)

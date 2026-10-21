@@ -26,9 +26,9 @@ public static class ReplacementBuilderExtensions
     /// <returns>The ReplacementBuilder instance with XP placeholders added.</returns>
     public static ReplacementBuilder WithXpPlaceholders(
         this ReplacementBuilder builder,
-        IGuildUser user,
-        IGuild guild,
-        ITextChannel? channel,
+        SocketGuildMember user,
+        SocketGuild guild,
+        Channel? channel,
         int oldLevel,
         int newLevel,
         int totalXp,
@@ -124,7 +124,7 @@ public static class ReplacementBuilderExtensions
         builder.WithOverride("%xp.date%", () => DateTime.UtcNow.ToString("dd/MM/yyyy"));
         builder.WithOverride("%xp.timestamp%", () => TimestampTag.FromDateTime(DateTime.UtcNow).ToString());
         builder.WithOverride("%xp.timestamp.relative%",
-            () => TimestampTag.FromDateTime(DateTime.UtcNow, TimestampTagStyles.Relative).ToString());
+            () => TimestampTag.FromDateTime(DateTime.UtcNow, TimestampTagStyle.Relative).ToString());
 
         return builder;
     }
@@ -137,7 +137,7 @@ public static class ReplacementBuilderExtensions
     /// <param name="user">The user to replace mentions for.</param>
     /// <param name="pingsDisabled">Whether pings are disabled for the user.</param>
     /// <returns>The sanitized message.</returns>
-    public static string SanitizeMentionsForUser(string message, IGuildUser user, bool pingsDisabled)
+    public static string SanitizeMentionsForUser(string message, SocketGuildMember user, bool pingsDisabled)
     {
         if (!pingsDisabled)
             return message;
@@ -180,7 +180,7 @@ public static class ReplacementBuilderExtensions
     /// <param name="user">The user who leveled up.</param>
     /// <param name="pingsDisabled">Whether the user has pings disabled.</param>
     /// <returns>The processed message with appropriate mention filtering.</returns>
-    public static string ProcessLevelUpMessage(string message, Replacer replacer, IGuildUser user, bool pingsDisabled)
+    public static string ProcessLevelUpMessage(string message, Replacer replacer, SocketGuildMember user, bool pingsDisabled)
     {
         // First, apply all placeholder replacements
         var processedMessage = replacer.Replace(message);

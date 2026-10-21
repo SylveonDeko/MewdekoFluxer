@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Mewdeko.Common.TypeReaders.Models;
 
 namespace Mewdeko.Common.TypeReaders;
@@ -12,9 +12,9 @@ public class PermissionActionTypeReader : MewdekoTypeReader<PermissionAction>
     /// <summary>
     ///     Initializes a new instance of the <see cref="PermissionActionTypeReader" /> class.
     /// </summary>
-    /// <param name="client">The DiscordShardedClient instance.</param>
+    /// <param name="client">The FluxerClient instance.</param>
     /// <param name="cmds">The CommandService instance.</param>
-    public PermissionActionTypeReader(DiscordShardedClient client, CommandService cmds) : base(client, cmds)
+    public PermissionActionTypeReader(FluxerClient client, CommandService cmds) : base(client, cmds)
     {
     }
 

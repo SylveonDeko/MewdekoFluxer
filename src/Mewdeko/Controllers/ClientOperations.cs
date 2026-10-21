@@ -14,7 +14,7 @@ namespace Mewdeko.Controllers;
 [ApiController]
 [Route("botapi/[controller]")]
 [Authorize("ApiKeyPolicy")]
-public class ClientOperations(DiscordShardedClient client, DashboardAccessService dashboardAccessService) : Controller
+public class ClientOperations(FluxerClient client, DashboardAccessService dashboardAccessService) : Controller
 {
     private static readonly JsonSerializerOptions Options = new()
     {
@@ -79,31 +79,31 @@ public class ClientOperations(DiscordShardedClient client, DashboardAccessServic
         var channels = channelType switch
         {
             ChannelType.Text => guild.Channels
-                .Where(x => x is ITextChannel)
+                .Where(x => x is Channel)
                 .Select(c => new NeededRoleInfo
                 {
                     Id = c.Id, Name = c.Name
                 }),
             ChannelType.Voice => guild.Channels
-                .Where(x => x is IVoiceChannel)
+                .Where(x => x is Channel)
                 .Select(c => new NeededRoleInfo
                 {
                     Id = c.Id, Name = c.Name
                 }),
             ChannelType.Forum => guild.Channels
-                .Where(x => x is IForumChannel)
+                .Where(x => x is Channel)
                 .Select(c => new NeededRoleInfo
                 {
                     Id = c.Id, Name = c.Name
                 }),
             ChannelType.Category => guild.Channels
-                .Where(x => x is ICategoryChannel)
+                .Where(x => x is Channel)
                 .Select(c => new NeededRoleInfo
                 {
                     Id = c.Id, Name = c.Name
                 }),
             ChannelType.Announcement => guild.Channels
-                .Where(x => x is INewsChannel)
+                .Where(x => x is Channel)
                 .Select(c => new NeededRoleInfo
                 {
                     Id = c.Id, Name = c.Name
@@ -197,10 +197,10 @@ public class ClientOperations(DiscordShardedClient client, DashboardAccessServic
             return NotFound();
 
         var channels = guild.Channels
-            .Where(x => x is not SocketThreadChannel)
+            .Where(x => x is not Channel)
             .Select(x => x switch
             {
-                SocketCategoryChannel category => new GuildChannelLiteInfo
+                Channel category => new GuildChannelLiteInfo
                 {
                     Id = category.Id, Name = category.Name, Type = "category", Position = category.Position
                 },
@@ -213,7 +213,7 @@ public class ClientOperations(DiscordShardedClient client, DashboardAccessServic
                     CategoryName = stage.Category?.Name,
                     Position = stage.Position
                 },
-                SocketVoiceChannel voice => new GuildChannelLiteInfo
+                Channel voice => new GuildChannelLiteInfo
                 {
                     Id = voice.Id,
                     Name = voice.Name,
@@ -222,7 +222,7 @@ public class ClientOperations(DiscordShardedClient client, DashboardAccessServic
                     CategoryName = voice.Category?.Name,
                     Position = voice.Position
                 },
-                SocketNewsChannel news => new GuildChannelLiteInfo
+                Channel news => new GuildChannelLiteInfo
                 {
                     Id = news.Id,
                     Name = news.Name,
@@ -231,7 +231,7 @@ public class ClientOperations(DiscordShardedClient client, DashboardAccessServic
                     CategoryName = news.Category?.Name,
                     Position = news.Position
                 },
-                SocketForumChannel forum => new GuildChannelLiteInfo
+                Channel forum => new GuildChannelLiteInfo
                 {
                     Id = forum.Id,
                     Name = forum.Name,
@@ -240,7 +240,7 @@ public class ClientOperations(DiscordShardedClient client, DashboardAccessServic
                     CategoryName = forum.Category?.Name,
                     Position = forum.Position
                 },
-                SocketTextChannel text => new GuildChannelLiteInfo
+                Channel text => new GuildChannelLiteInfo
                 {
                     Id = text.Id,
                     Name = text.Name,
@@ -381,7 +381,7 @@ public class ClientOperations(DiscordShardedClient client, DashboardAccessServic
 
         var forumChannels = new List<ForumChannelInfo>();
 
-        foreach (var forum in guild.Channels.OfType<IForumChannel>())
+        foreach (var forum in guild.Channels.OfType<Channel>())
         {
             try
             {
@@ -447,7 +447,7 @@ public class ClientOperations(DiscordShardedClient client, DashboardAccessServic
         if (guild == null)
             return NotFound("Guild not found");
 
-        var forum = guild.GetChannel(forumId) as IForumChannel;
+        var forum = guild.GetChannel(forumId) as Channel;
         if (forum == null)
             return NotFound("Forum channel not found");
 
@@ -515,7 +515,7 @@ public class ClientOperations(DiscordShardedClient client, DashboardAccessServic
         if (guild == null)
             return NotFound("Guild not found");
 
-        var forum = guild.GetChannel(forumId) as IForumChannel;
+        var forum = guild.GetChannel(forumId) as Channel;
         if (forum == null)
             return NotFound("Forum channel not found");
 

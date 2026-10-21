@@ -1,7 +1,5 @@
 using System.Text.Json;
 using DataModel;
-using Discord.Commands;
-using Discord.Net;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.Attributes.TextCommands;
@@ -47,7 +45,7 @@ public class AdministrationController(
     UserPunishService userPunishService,
     BanPruneService banPruneService,
     IDashboardAuditContext auditContext,
-    DiscordShardedClient client) : Controller
+    FluxerClient client) : Controller
 {
     /// <summary>
     ///     Gets auto-assign role settings for normal users
@@ -882,7 +880,7 @@ public class AdministrationController(
     [HttpGet("voice-channel-roles")]
     public async Task<IActionResult> GetVoiceChannelRoles(ulong guildId)
     {
-        if (client.GetGuild(guildId) is not IGuild guild)
+        if (client.GetGuild(guildId) is not SocketGuild guild)
             return NotFound("Guild not found");
 
         if (!vcRoleService.VcRoles.TryGetValue(guildId, out var vcRoles))
@@ -1018,7 +1016,7 @@ public class AdministrationController(
         if (message == null)
             return NotFound("Message not found");
 
-        if (message is not IUserMessage userMessage)
+        if (message is not Message userMessage)
             return BadRequest("Message must be a user message");
 
         // Parse and validate emotes, then add reactions
@@ -1031,7 +1029,7 @@ public class AdministrationController(
                 return NotFound($"Role {roleData.RoleId} not found");
 
             // Parse emote
-            IEmote emote;
+            Emoji emote;
             try
             {
                 emote = roleData.EmoteName.ToIEmote();
@@ -1050,7 +1048,7 @@ public class AdministrationController(
                 });
                 await Task.Delay(500); // Rate limit protection
             }
-            catch (HttpException ex)
+            catch (FluxerApiException ex)
             {
                 return BadRequest($"Failed to add reaction {roleData.EmoteName}: {ex.Message}");
             }

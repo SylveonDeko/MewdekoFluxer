@@ -56,7 +56,7 @@ public partial class FormsService
     /// <param name="form">The form the response belongs to.</param>
     /// <param name="message">The submission message reviewers react to.</param>
     /// <returns>True when the reactions were added.</returns>
-    public async Task<bool> AddReviewReactionsAsync(Form form, IUserMessage message)
+    public async Task<bool> AddReviewReactionsAsync(Form form, Message message)
     {
         if (!ReviewsResponses(form))
             return false;
@@ -68,8 +68,8 @@ public partial class FormsService
         return true;
     }
 
-    private async Task OnReviewReactionAddedAsync(Cacheable<IUserMessage, ulong> cachedMessage,
-        Cacheable<IMessageChannel, ulong> cachedChannel, SocketReaction reaction)
+    private async Task OnReviewReactionAddedAsync(Cacheable<Message> cachedMessage,
+        Cacheable<Channel> cachedChannel, SocketReaction reaction)
     {
         if (!reviewMessages.ContainsKey(cachedMessage.Id) || reaction.UserId == client.CurrentUser.Id ||
             reaction.User.IsSpecified && reaction.User.Value.IsBot)
@@ -89,8 +89,8 @@ public partial class FormsService
                 return;
 
             var (approve, reject) = await GetReviewEmotesAsync(form);
-            var approving = Equals(reaction.Emote, approve);
-            if (!approving && !Equals(reaction.Emote, reject))
+            var approving = Equals(reaction.Emoji, approve);
+            if (!approving && !Equals(reaction.Emoji, reject))
                 return;
 
             var message = await cachedMessage.GetOrDownloadAsync();
@@ -100,7 +100,7 @@ public partial class FormsService
 
             if (!CanReview(form, reviewer))
             {
-                await message.RemoveReactionAsync(reaction.Emote, reaction.UserId);
+                await message.RemoveReactionAsync(reaction.Emoji, reaction.UserId);
                 await NotifyReviewerAsync(message.Channel, reviewer,
                     strings.FormsReviewNeedRole(form.GuildId, form.ReviewerRoleId is { } roleId and > 0
                         ? $"<@&{roleId}>"
@@ -110,7 +110,7 @@ public partial class FormsService
 
             if ((ResponseStatus)workflow.Status is ResponseStatus.Approved or ResponseStatus.Rejected)
             {
-                await message.RemoveReactionAsync(reaction.Emote, reaction.UserId);
+                await message.RemoveReactionAsync(reaction.Emoji, reaction.UserId);
                 await NotifyReviewerAsync(message.Channel, reviewer,
                     strings.FormsReviewDecided(form.GuildId, response!.Id,
                         ((ResponseStatus)workflow.Status).ToString().ToLowerInvariant()));
@@ -120,7 +120,7 @@ public partial class FormsService
             if (approving)
                 await ApproveFromReactionAsync(form, response!.Id, message, reviewer);
             else
-                await RejectFromReactionAsync(form, response!.Id, message, reviewer, reaction.Emote);
+                await RejectFromReactionAsync(form, response!.Id, message, reviewer, reaction.Emoji);
         }
         catch (Exception ex)
         {
@@ -129,8 +129,8 @@ public partial class FormsService
         }
     }
 
-    private async Task ApproveFromReactionAsync(Form form, int responseId, IUserMessage message,
-        IGuildUser reviewer)
+    private async Task ApproveFromReactionAsync(Form form, int responseId, Message message,
+        SocketGuildMember reviewer)
     {
         var (success, inviteCode) = await ApproveResponseAsync(responseId, reviewer.Id, null);
         if (!success)
@@ -146,10 +146,10 @@ public partial class FormsService
             : strings.FormsReviewApprovedInvite(form.GuildId, responseId, inviteCode));
     }
 
-    private async Task RejectFromReactionAsync(Form form, int responseId, IUserMessage message,
-        IGuildUser reviewer, IEmote emote)
+    private async Task RejectFromReactionAsync(Form form, int responseId, Message message,
+        SocketGuildMember reviewer, Emoji emote)
     {
-        var prompt = await message.Channel.SendMessageAsync(
+        var prompt = await message.Channel.SendAsync(
             strings.FormsReviewReasonPrompt(form.GuildId, reviewer.Mention, responseId),
             allowedMentions: new AllowedMentions { UserIds = [reviewer.Id] });
 
@@ -174,10 +174,10 @@ public partial class FormsService
         await NotifyReviewerAsync(message.Channel, reviewer, strings.FormsReviewRejected(form.GuildId, responseId));
     }
 
-    private static async Task NotifyReviewerAsync(IMessageChannel channel, IGuildUser reviewer, string text)
+    private static async Task NotifyReviewerAsync(Channel channel, SocketGuildMember reviewer, string text)
     {
         var line = $"{reviewer.Mention} {text}";
-        var notice = await channel.SendMessageAsync(line,
+        var notice = await channel.SendAsync(line,
             allowedMentions: new AllowedMentions { UserIds = [reviewer.Id] });
         _ = Task.Delay(TimeSpan.FromSeconds(15)).ContinueWith(_ => notice.DeleteAsync());
     }
@@ -214,7 +214,7 @@ public partial class FormsService
     /// </remarks>
     /// <param name="form">The form whose reactions are being added.</param>
     /// <returns>The approve and reject emotes.</returns>
-    public async Task<(IEmote Approve, IEmote Reject)> GetReviewEmotesAsync(Form form)
+    public async Task<(Emoji Approve, Emoji Reject)> GetReviewEmotesAsync(Form form)
     {
         var config = await guildSettings.GetGuildConfig(form.GuildId);
 
@@ -222,7 +222,7 @@ public partial class FormsService
             Resolve(form.ApproveEmote, config?.FormApproveEmote, DefaultApproveEmote),
             Resolve(form.RejectEmote, config?.FormRejectEmote, DefaultRejectEmote));
 
-        IEmote Resolve(string? formChoice, string? guildChoice, string fallback)
+        Emoji Resolve(string? formChoice, string? guildChoice, string fallback)
         {
             foreach (var candidate in new[]
                      {
@@ -236,7 +236,7 @@ public partial class FormsService
                     return parsed;
             }
 
-            return new Emoji(fallback);
+            return Emoji.FromUnicode(fallback);
         }
     }
 
@@ -256,8 +256,8 @@ public partial class FormsService
     ///     Sets a guild's default review reaction emotes.
     /// </summary>
     /// <param name="guildId">The guild.</param>
-    /// <param name="approve">Emote for the approve reaction, or null or empty to clear it.</param>
-    /// <param name="reject">Emote for the reject reaction, or null or empty to clear it.</param>
+    /// <param name="approve">Emoji for the approve reaction, or null or empty to clear it.</param>
+    /// <param name="reject">Emoji for the reject reaction, or null or empty to clear it.</param>
     /// <returns>An error message when an emote cannot be used, otherwise null.</returns>
     public async Task<string?> SetGuildReviewEmotesAsync(ulong guildId, string? approve, string? reject)
     {
@@ -315,7 +315,7 @@ public partial class FormsService
     /// <param name="form">The form the response belongs to.</param>
     /// <param name="user">The person who reacted.</param>
     /// <returns>True when they may decide it.</returns>
-    public static bool CanReview(Form form, IGuildUser user)
+    public static bool CanReview(Form form, SocketGuildMember user)
     {
         if (user.GuildPermissions.Administrator || user.GuildPermissions.ManageGuild)
             return true;
@@ -397,7 +397,7 @@ public partial class FormsService
                 }
                 : AllowedMentions.None;
 
-            await channel.SendMessageAsync(content, embed: embed.Build(), allowedMentions: mentions);
+            await channel.SendAsync(content, embed: embed.Build(), allowedMentions: mentions);
 
             logger.LogInformation("Announced form {FormId} in channel {ChannelId}", formId, channelId);
 
@@ -460,7 +460,7 @@ public partial class FormsService
             if (guild?.GetTextChannel(form.SubmitChannelId.Value) is not { } channel)
                 return;
 
-            if (await channel.GetMessageAsync(messageId) is not IUserMessage message)
+            if (await channel.GetMessageAsync(messageId) is not Message message)
                 return;
 
             var outcome = approved ? "Approved" : "Rejected";

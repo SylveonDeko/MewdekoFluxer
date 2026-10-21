@@ -25,7 +25,7 @@ public static class LeaderboardRenderer
     /// <param name="strings">The localized strings provider.</param>
     /// <param name="page">The one-based page to open on.</param>
     /// <returns><see langword="false" /> if the guild has no ranked users.</returns>
-    public static async Task<bool> SendXpAsync(IGuild guild, IUser user, IMessageChannel channel,
+    public static async Task<bool> SendXpAsync(SocketGuild guild, IUser user, Channel channel,
         InteractiveService interactive, XpService xpService, GeneratedBotStrings strings, int page = 1)
     {
         if (page < 1)
@@ -85,7 +85,7 @@ public static class LeaderboardRenderer
     /// <param name="currencyService">The currency service supplying balances.</param>
     /// <param name="strings">The localized strings provider.</param>
     /// <returns><see langword="false" /> if nobody in the guild holds any currency.</returns>
-    public static async Task<bool> SendCurrencyAsync(IGuild guild, IUser user, IMessageChannel channel,
+    public static async Task<bool> SendCurrencyAsync(SocketGuild guild, IUser user, Channel channel,
         InteractiveService interactive, ICurrencyService currencyService, GeneratedBotStrings strings)
     {
         var holders = (await currencyService.GetAllUserBalancesAsync(guild.Id))

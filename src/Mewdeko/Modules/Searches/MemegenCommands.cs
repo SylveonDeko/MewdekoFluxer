@@ -2,7 +2,6 @@ using System.Collections.Immutable;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 
 namespace Mewdeko.Modules.Searches;
@@ -110,7 +109,7 @@ public partial class Searches
             }
 
             memeUrl += ".png";
-            await ctx.Channel.SendMessageAsync(memeUrl)
+            await ctx.Channel.SendAsync(memeUrl)
                 .ConfigureAwait(false);
         }
 

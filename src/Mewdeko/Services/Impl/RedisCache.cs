@@ -1,7 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using DataModel;
-using Mewdeko.Modules.Music.Common;
 using Mewdeko.Modules.Searches.Services;
 using Mewdeko.Modules.Utility.Common;
 using Serilog;
@@ -216,18 +215,6 @@ public class RedisCache : IDataCache
     }
 
     /// <summary>
-    ///     Sets the music queue for a guild.
-    /// </summary>
-    /// <param name="id">The server ID.</param>
-    /// <param name="tracks">The list of tracks.</param>
-    /// <returns></returns>
-    public async Task SetMusicQueue(ulong id, List<MewdekoTrack> tracks)
-    {
-        var db = Redis.GetDatabase();
-        await db.StringSetAsync($"{redisKey}_musicqueue_{id}", JsonSerializer.Serialize(tracks, options));
-    }
-
-    /// <summary>
     ///     Saves a playlist for a guild.
     /// </summary>
     /// <param name="userId">The userid identifier.</param>
@@ -246,44 +233,6 @@ public class RedisCache : IDataCache
         await db.SetAddAsync(
             $"{redisKey}_playlists_{userId}",
             playlist.Name.ToLower());
-    }
-
-    /// <summary>
-    ///     Sets the player state for a specific guild.
-    /// </summary>
-    /// <param name="guildId">The ID of the guild.</param>
-    /// <param name="state">The player state to save.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    public Task SetPlayerState(ulong guildId, MusicPlayerState state)
-    {
-        return Redis.GetDatabase().StringSetAsync(
-            $"{redisKey}:music:player_state:{guildId}",
-            JsonSerializer.Serialize(state),
-            TimeSpan.FromHours(1));
-    }
-
-    /// <summary>
-    ///     Retrieves the player state for a specific guild.
-    /// </summary>
-    /// <param name="guildId">The ID of the guild.</param>
-    /// <returns>The player state if found; otherwise, null.</returns>
-    public async Task<MusicPlayerState?> GetPlayerState(ulong guildId)
-    {
-        var result = await Redis.GetDatabase().StringGetAsync($"{redisKey}:music:player_state:{guildId}");
-        if (result.IsNull)
-            return null;
-
-        return JsonSerializer.Deserialize<MusicPlayerState>((string)result);
-    }
-
-    /// <summary>
-    ///     Removes the player state for a specific guild.
-    /// </summary>
-    /// <param name="guildId">The ID of the guild.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    public Task RemovePlayerState(ulong guildId)
-    {
-        return Redis.GetDatabase().KeyDeleteAsync($"{redisKey}:music:player_state:{guildId}");
     }
 
     /// <summary>
@@ -329,45 +278,6 @@ public class RedisCache : IDataCache
         // Remove from the guild's playlist set
         await db.SetRemoveAsync($"{redisKey}_playlists_{userId}", name.ToLower());
         return true;
-    }
-
-    /// <summary>
-    ///     Gets the music queue for a guild.
-    /// </summary>
-    /// <param name="id">The server ID.</param>
-    /// <returns>A list of tracks.</returns>
-    public async Task<List<MewdekoTrack>> GetMusicQueue(ulong id)
-    {
-        var db = Redis.GetDatabase();
-        var result = await db.StringGetAsync($"{redisKey}_musicqueue_{id}");
-        return result.HasValue ? JsonSerializer.Deserialize<List<MewdekoTrack>>((string)result, options) : [];
-    }
-
-    /// <summary>
-    ///     Sets the current track for a guild.
-    /// </summary>
-    /// <param name="id">The server ID.</param>
-    /// <param name="track">The track to set.</param>
-    /// <return>A task representing the operation.</return>
-    public async Task SetCurrentTrack(ulong id, MewdekoTrack? track)
-    {
-        var db = Redis.GetDatabase();
-        if (track is null)
-            await db.KeyDeleteAsync($"{redisKey}_currenttrack_{id}");
-        else
-            await db.StringSetAsync($"{redisKey}_currenttrack_{id}", JsonSerializer.Serialize(track, options));
-    }
-
-    /// <summary>
-    ///     Gets the current track for a guild.
-    /// </summary>
-    /// <param name="id">The server ID.</param>
-    /// <returns>The current track.</returns>
-    public async Task<MewdekoTrack?> GetCurrentTrack(ulong id)
-    {
-        var db = Redis.GetDatabase();
-        var result = await db.StringGetAsync($"{redisKey}_currenttrack_{id}");
-        return result.HasValue ? JsonSerializer.Deserialize<MewdekoTrack>((string)result, options) : null;
     }
 
     /// <summary>

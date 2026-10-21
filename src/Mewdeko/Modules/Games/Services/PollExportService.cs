@@ -61,7 +61,7 @@ public class PollExportService : INService
 
             // Poll options and results
             csv.AppendLine("Poll Options and Results");
-            csv.AppendLine("Option Index,Option Text,Vote Count,Vote Percentage,Emote,Color");
+            csv.AppendLine("Option Index,Option Text,Vote Count,Vote Percentage,Emoji,Color");
 
             foreach (var option in poll.PollOptions.OrderBy(o => o.Index))
             {

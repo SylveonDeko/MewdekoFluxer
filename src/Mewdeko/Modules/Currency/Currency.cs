@@ -1,5 +1,4 @@
 ﻿using System.IO;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;
 using Mewdeko.Database.Enums;
@@ -468,7 +467,7 @@ public partial class Currency(
             .AddField(Strings.SlotWinnings(ctx.Guild.Id), $"{winnings} {emote}", true)
             .AddField(Strings.SlotNetProfit(ctx.Guild.Id), $"{winnings - bet} {emote}", true);
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     private static long CalculateWinnings(string[] result, long bet)
@@ -558,7 +557,7 @@ public partial class Currency(
                 won ? Strings.RouletteWon(ctx.Guild.Id) : Strings.RouletteLost(ctx.Guild.Id), true)
             .AddField(Strings.RouletteProfit(ctx.Guild.Id), $"{returned - betAmount} {emote}", true);
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     // /// <summary>
@@ -606,7 +605,7 @@ public partial class Currency(
     //         .AddField(Strings.RollOutcome(ctx.Guild.Id), won ? Strings.RollWon(ctx.Guild.Id) : Strings.RollLost(ctx.Guild.Id), true)
     //         .AddField(Strings.RollProfit(ctx.Guild.Id), $"{profit} {await Service.GetCurrencyEmote(ctx.Guild.Id)}", true);
     //
-    //     await ctx.Channel.SendMessageAsync(embed: eb.Build());
+    //     await ctx.Channel.SendAsync(embed: eb.Build());
     // }
 
     /// <summary>
@@ -712,7 +711,7 @@ public partial class Currency(
                 $"{returned - betAmount} {await Service.GetCurrencyEmote(ctx.Guild.Id)}", true);
         }
 
-        await ctx.Channel.SendMessageAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     private (string result, string description) DetermineWinner(string playerChoice, string botChoice)

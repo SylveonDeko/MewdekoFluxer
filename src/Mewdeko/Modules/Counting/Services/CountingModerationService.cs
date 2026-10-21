@@ -21,7 +21,7 @@ public class CountingModerationService : INService
     private const string LastHintMessageCacheKey = "counting_last_hint_{0}";
 
     private readonly IMemoryCache cache;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly ILogger<CountingModerationService> logger;
     private readonly GeneratedBotStrings strings;
@@ -34,7 +34,7 @@ public class CountingModerationService : INService
         IDataConnectionFactory dbFactory,
         IMemoryCache cache,
         ILogger<CountingModerationService> logger,
-        DiscordShardedClient client,
+        FluxerClient client,
         UserPunishService userPunishService, GeneratedBotStrings strings)
     {
         this.dbFactory = dbFactory;
@@ -277,7 +277,7 @@ public class CountingModerationService : INService
     {
         try
         {
-            var channel = client.GetChannel(channelId) as ITextChannel;
+            var channel = client.GetChannel(channelId) as Channel;
             var guild = channel?.Guild;
 
             if (guild != null)
@@ -313,7 +313,7 @@ public class CountingModerationService : INService
 
                 try
                 {
-                    await user.SendMessageAsync(message);
+                    await user.SendAsync(message);
                 }
                 catch
                 {
@@ -409,7 +409,7 @@ public class CountingModerationService : INService
             .FirstOrDefaultAsync(x => x.ChannelId == channelId);
 
         // Get guild defaults
-        var channel = client.GetChannel(channelId) as IGuildChannel;
+        var channel = client.GetChannel(channelId) as Channel;
         if (channel == null) return null;
 
         var guildDefaults = await GetGuildDefaultsAsync(channel.GuildId);
@@ -506,7 +506,7 @@ public class CountingModerationService : INService
     /// <summary>
     /// Checks if a user should be ignored based on their roles.
     /// </summary>
-    public async Task<bool> ShouldIgnoreUserAsync(ulong channelId, IGuildUser user)
+    public async Task<bool> ShouldIgnoreUserAsync(ulong channelId, SocketGuildMember user)
     {
         var config = await GetModerationConfigAsync(channelId);
         if (config == null) return false;
@@ -531,7 +531,7 @@ public class CountingModerationService : INService
     /// <summary>
     /// Checks if ignored messages should be deleted.
     /// </summary>
-    public async Task<bool> ShouldDeleteIgnoredMessagesAsync(ulong channelId, IGuildUser user)
+    public async Task<bool> ShouldDeleteIgnoredMessagesAsync(ulong channelId, SocketGuildMember user)
     {
         var config = await GetModerationConfigAsync(channelId);
         if (config == null) return false;
@@ -666,7 +666,7 @@ public class CountingModerationService : INService
         {
             await using var db = await dbFactory.CreateConnectionAsync();
 
-            var channel = client.GetChannel(channelId) as IGuildChannel;
+            var channel = client.GetChannel(channelId) as Channel;
             if (channel == null) return;
 
             // Get punishments for this channel and guild defaults
@@ -886,7 +886,7 @@ public class CountingModerationService : INService
     /// <summary>
     /// Handles non-number messages in counting channels.
     /// </summary>
-    public async Task HandleNonNumberMessageAsync(ulong channelId, ulong userId, IUserMessage message)
+    public async Task HandleNonNumberMessageAsync(ulong channelId, ulong userId, Message message)
     {
         try
         {
@@ -926,8 +926,8 @@ public class CountingModerationService : INService
     /// <summary>
     /// Handles message edits in counting channels.
     /// </summary>
-    public async Task HandleMessageEditAsync(ulong channelId, ulong userId, IUserMessage? originalMessage,
-        IUserMessage editedMessage)
+    public async Task HandleMessageEditAsync(ulong channelId, ulong userId, Message? originalMessage,
+        Message editedMessage)
     {
         try
         {
@@ -940,7 +940,7 @@ public class CountingModerationService : INService
             {
                 try
                 {
-                    var channel = editedMessage.Channel as ITextChannel;
+                    var channel = editedMessage.Channel as Channel;
                     var countingChannel = await GetCountingChannelAsync(channelId);
                     if (countingChannel != null)
                     {
@@ -950,7 +950,7 @@ public class CountingModerationService : INService
                             .WithDescription(strings.CountingLastNumberWas(channel.GuildId,
                                 countingChannel.CurrentNumber, nextNumber))
                             .Build();
-                        await channel.SendMessageAsync(embed: embed);
+                        await channel.SendAsync(embed: embed);
 
                         // Cache to prevent duplicates for 5 seconds
                         cache.Set(hintCacheKey, true, TimeSpan.FromSeconds(5));

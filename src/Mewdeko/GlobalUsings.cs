@@ -2,12 +2,12 @@
 global using System.Collections;
 global using System.Collections.Generic;
 global using System.Linq;
-global using System.Threading.Channels;
 global using System.Threading.Tasks;
-global using Discord;
-global using Discord.Webhook;
-global using Discord.WebSocket;
+global using Fluxer.Net;
+global using Fluxer.Net.Commands;
+global using Fluxer.Net.Rest;
 global using Mewdeko.Common;
+global using Mewdeko.Common.FluxerAdapter;
 global using Mewdeko.Common.Interactive;
 global using Mewdeko.Common.Replacements;
 global using Mewdeko.Database;

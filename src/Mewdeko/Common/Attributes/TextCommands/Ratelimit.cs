@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using Discord.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Swan;
 using ZiggyCreatures.Caching.Fusion;

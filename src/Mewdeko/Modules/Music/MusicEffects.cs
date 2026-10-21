@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Lavalink4NET;
 using Lavalink4NET.DiscordNet;
 using Lavalink4NET.Filters;
@@ -41,7 +41,7 @@ public partial class Music
                     .WithTitle(Strings.MusicPlayerError(ctx.Guild.Id))
                     .WithDescription(result);
 
-                await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+                await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
                 return;
             }
 
@@ -89,7 +89,7 @@ public partial class Music
                     .WithTitle(Strings.MusicPlayerError(ctx.Guild.Id))
                     .WithDescription(result);
 
-                await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+                await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
                 return;
             }
 
@@ -131,7 +131,7 @@ public partial class Music
                     .WithTitle(Strings.MusicPlayerError(ctx.Guild.Id))
                     .WithDescription(result);
 
-                await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+                await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
                 return;
             }
 
@@ -176,7 +176,7 @@ public partial class Music
                     .WithTitle(Strings.MusicPlayerError(ctx.Guild.Id))
                     .WithDescription(result);
 
-                await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+                await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
                 return;
             }
 
@@ -219,7 +219,7 @@ public partial class Music
                     .WithTitle(Strings.MusicPlayerError(ctx.Guild.Id))
                     .WithDescription(result);
 
-                await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+                await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
                 return;
             }
 
@@ -262,7 +262,7 @@ public partial class Music
                     .WithTitle(Strings.MusicPlayerError(ctx.Guild.Id))
                     .WithDescription(result);
 
-                await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+                await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
                 return;
             }
 
@@ -304,7 +304,7 @@ public partial class Music
                     .WithTitle(Strings.MusicPlayerError(ctx.Guild.Id))
                     .WithDescription(result);
 
-                await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+                await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
                 return;
             }
 
@@ -346,7 +346,7 @@ public partial class Music
                     .WithTitle(Strings.MusicPlayerError(ctx.Guild.Id))
                     .WithDescription(result);
 
-                await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+                await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
                 return;
             }
 
@@ -395,7 +395,7 @@ public partial class Music
                     .WithTitle(Strings.MusicPlayerError(ctx.Guild.Id))
                     .WithDescription(result);
 
-                await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+                await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
                 return;
             }
 
@@ -438,7 +438,7 @@ public partial class Music
                     .WithTitle(Strings.MusicPlayerError(ctx.Guild.Id))
                     .WithDescription(result);
 
-                await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+                await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
                 return;
             }
 
@@ -482,7 +482,7 @@ public partial class Music
                     .WithTitle(Strings.MusicPlayerError(ctx.Guild.Id))
                     .WithDescription(result);
 
-                await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+                await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
                 return;
             }
 
@@ -526,7 +526,7 @@ public partial class Music
                     .WithTitle(Strings.MusicPlayerError(ctx.Guild.Id))
                     .WithDescription(result);
 
-                await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+                await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
                 return;
             }
 
@@ -569,7 +569,7 @@ public partial class Music
                     .WithTitle(Strings.MusicPlayerError(ctx.Guild.Id))
                     .WithDescription(result);
 
-                await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+                await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
                 return;
             }
 
@@ -607,7 +607,7 @@ public partial class Music
                     .WithTitle(Strings.MusicPlayerError(ctx.Guild.Id))
                     .WithDescription(result);
 
-                await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+                await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
                 return;
             }
 
@@ -661,7 +661,7 @@ public partial class Music
 
                 var options = new MewdekoPlayerOptions
                 {
-                    Channel = ctx.Channel as ITextChannel
+                    Channel = ctx.Channel as Channel
                 };
 
                 var result = await service.Players

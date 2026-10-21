@@ -15,7 +15,7 @@ namespace Mewdeko.Modules.Games.Services;
 /// </summary>
 public class PollService : INService, IReadyExecutor
 {
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly IDataConnectionFactory dbFactory;
     private readonly ILogger<PollService> logger;
@@ -30,7 +30,7 @@ public class PollService : INService, IReadyExecutor
     /// <param name="client">The Discord client.</param>
     /// <param name="collector">The analytics collector.</param>
     public PollService(IDataConnectionFactory dbFactory, ILogger<PollService> logger,
-        GeneratedBotStrings strings, DiscordShardedClient client, IAnalyticsCollector collector)
+        GeneratedBotStrings strings, FluxerClient client, IAnalyticsCollector collector)
     {
         this.collector = collector;
         this.dbFactory = dbFactory;

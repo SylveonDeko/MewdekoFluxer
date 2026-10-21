@@ -21,7 +21,7 @@ public sealed class GuildPaletteService(IHttpClientFactory httpClientFactory, IL
     /// </summary>
     /// <param name="guild">The guild.</param>
     /// <returns>The palette.</returns>
-    public Task<DashboardPalette> GetAsync(IGuild guild)
+    public Task<DashboardPalette> GetAsync(SocketGuild guild)
     {
         return GetAsync(guild.IconUrl);
     }

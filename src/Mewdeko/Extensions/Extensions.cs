@@ -4,15 +4,12 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.Configs;
 using Mewdeko.Common.TypeReaders;
 using Mewdeko.Services.strings;
 using Microsoft.Extensions.DependencyInjection;
 using SkiaSharp;
-using ModuleInfo = Discord.Commands.ModuleInfo;
-using TypeReader = Discord.Commands.TypeReader;
 
 namespace Mewdeko.Extensions;
 
@@ -63,7 +60,7 @@ public static partial class Extensions
     /// <param name="guild"></param>
     /// <param name="categoryId"></param>
     /// <returns></returns>
-    public static async Task<ICategoryChannel?> GetCategoryChannelAsync(this IGuild guild, ulong categoryId)
+    public static async Task<Channel?> GetCategoryChannelAsync(this SocketGuild guild, ulong categoryId)
     {
         var cats = await guild.GetCategoriesAsync();
         return cats.FirstOrDefault(x => x.Id == categoryId);
@@ -103,7 +100,7 @@ public static partial class Extensions
     /// </summary>
     /// <param name="client">Discord socket client.</param>
     /// <returns>List of guild IDs.</returns>
-    public static List<ulong> GetGuildIds(this DiscordShardedClient client)
+    public static List<ulong> GetGuildIds(this FluxerClient client)
     {
         return client.Guilds.Select(x => x.Id).ToList();
     }
@@ -204,26 +201,26 @@ public static partial class Extensions
     }
 
     /// <summary>
-    ///     Converts a string representation of an emoji to an IEmote.
+    ///     Converts a string representation of an emoji to an Emoji.
     /// </summary>
     /// <param name="emojiStr">String representation of the emoji.</param>
-    /// <returns>The corresponding IEmote instance.</returns>
-    public static IEmote? ToIEmote(this string emojiStr)
+    /// <returns>The corresponding Emoji instance.</returns>
+    public static Emoji? ToIEmote(this string emojiStr)
     {
-        return Emote.TryParse(emojiStr, out var maybeEmote)
+        return Emoji.TryParse(emojiStr, out var maybeEmote)
             ? maybeEmote
-            : new Emoji(emojiStr);
+            : Emoji.FromUnicode(emojiStr);
     }
 
     /// <summary>
-    ///     Tries to convert a string representation of an emoji to an IEmote.
+    ///     Tries to convert a string representation of an emoji to an Emoji.
     /// </summary>
     /// <param name="emojiStr">String representation of the emoji.</param>
-    /// <param name="value">Resulting IEmote instance.</param>
+    /// <param name="value">Resulting Emoji instance.</param>
     /// <returns>True if conversion is successful, otherwise false.</returns>
-    public static bool TryToIEmote(this string emojiStr, out IEmote? value)
+    public static bool TryToIEmote(this string emojiStr, out Emoji? value)
     {
-        value = Emote.TryParse(emojiStr, out var emoteValue)
+        value = Emoji.TryParse(emojiStr, out var emoteValue)
             ? emoteValue
             : Emoji.TryParse(emojiStr, out var emojiValue)
                 ? emojiValue
@@ -286,7 +283,7 @@ public static partial class Extensions
     /// <param name="msg">Message to check.</param>
     /// <param name="client">Discord client.</param>
     /// <returns>True if the author is the bot, otherwise false.</returns>
-    public static bool IsAuthor(this IMessage msg, IDiscordClient client)
+    public static bool IsAuthor(this Message msg, FluxerClient client)
     {
         return msg.Author?.Id == client.CurrentUser.Id;
     }
@@ -425,30 +422,7 @@ public static partial class Extensions
     /// </summary>
     /// <param name="msg">Message to delete.</param>
     /// <param name="seconds">Number of seconds to wait before deleting.</param>
-    public static void DeleteAfter(this IUserMessage? msg, int seconds)
-    {
-        if (msg is null) return;
-
-        Task.Run(async () =>
-        {
-            await Task.Delay(seconds * 1000).ConfigureAwait(false);
-            try
-            {
-                await msg.DeleteAsync().ConfigureAwait(false);
-            }
-            catch
-            {
-                // ignored
-            }
-        });
-    }
-
-    /// <summary>
-    ///     Deletes a message after a specified number of seconds.
-    /// </summary>
-    /// <param name="msg">Message to delete.</param>
-    /// <param name="seconds">Number of seconds to wait before deleting.</param>
-    public static void DeleteAfter(this IMessage? msg, int seconds)
+    public static void DeleteAfter(this Message? msg, int seconds)
     {
         if (msg is null) return;
 
@@ -482,9 +456,9 @@ public static partial class Extensions
     /// </summary>
     /// <param name="role">Role to get the members for.</param>
     /// <returns>Task representing the asynchronous operation.</returns>
-    public static async Task<IEnumerable<IGuildUser>> GetMembersAsync(this IRole role)
+    public static async Task<IEnumerable<SocketGuildMember>> GetMembersAsync(this SocketRole role)
     {
-        return (await role.Guild.GetUsersAsync(CacheMode.CacheOnly).ConfigureAwait(false)).Where(u =>
+        return (await role.Guild.GetUsersAsync().ConfigureAwait(false)).Where(u =>
             u.RoleIds.Contains(role.Id));
     }
 
@@ -527,7 +501,7 @@ public static partial class Extensions
     /// </summary>
     /// <param name="user">User to get the roles for.</param>
     /// <returns>Enumerable collection of roles associated with the user.</returns>
-    public static IEnumerable<IRole> GetRoles(this IGuildUser? user)
+    public static IEnumerable<SocketRole> GetRoles(this SocketGuildMember? user)
     {
         return user?.RoleIds.Select(r => user.Guild.GetRole(r)).Where(r => r != null)!;
     }

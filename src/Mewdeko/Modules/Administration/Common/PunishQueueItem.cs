@@ -28,5 +28,5 @@ public class PunishQueueItem
     /// <summary>
     ///     Gets or sets the user to be punished.
     /// </summary>
-    public IGuildUser User { get; set; }
+    public SocketGuildMember User { get; set; }
 }

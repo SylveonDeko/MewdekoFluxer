@@ -39,7 +39,7 @@ public class XpCacheManager : INService
         PropertyNameCaseInsensitive = true
     };
 
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataCache dataCache;
     private readonly IDataConnectionFactory dbFactory;
 
@@ -63,7 +63,7 @@ public class XpCacheManager : INService
     public XpCacheManager(
         IDataCache dataCache,
         IDataConnectionFactory dbFactory,
-        DiscordShardedClient client, ILogger<XpCacheManager> logger)
+        FluxerClient client, ILogger<XpCacheManager> logger)
     {
         this.dataCache = dataCache;
         this.dbFactory = dbFactory;
@@ -483,7 +483,7 @@ public class XpCacheManager : INService
     /// <param name="user">The guild user.</param>
     /// <param name="channelId">The channel ID.</param>
     /// <returns>True if the user can gain XP, false otherwise.</returns>
-    public async Task<bool> CanUserGainXpAsync(IGuildUser user, ulong channelId)
+    public async Task<bool> CanUserGainXpAsync(SocketGuildMember user, ulong channelId)
     {
         var exclusions = await GetGuildExclusionsAsync(user.GuildId).ConfigureAwait(false);
 

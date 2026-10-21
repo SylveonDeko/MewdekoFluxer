@@ -16,7 +16,7 @@ namespace Mewdeko.Modules.Birthday.Services;
 public class BirthdayService : INService, IDisposable
 {
     private readonly SemaphoreSlim cacheLock = new(1, 1);
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly BotConfig config;
 
@@ -40,7 +40,7 @@ public class BirthdayService : INService, IDisposable
     /// <param name="logger">Logger instance.</param>
     /// <param name="collector">The analytics collector.</param>
     public BirthdayService(
-        DiscordShardedClient client,
+        FluxerClient client,
         IDataConnectionFactory dbFactory,
         GuildSettingsService guildSettings,
         BotConfig config,
@@ -394,7 +394,7 @@ public class BirthdayService : INService, IDisposable
     /// </summary>
     /// <param name="guild">The guild to process.</param>
     /// <param name="date">The date to check for birthdays.</param>
-    private async Task ProcessGuildBirthdaysAsync(IGuild guild, DateTime date)
+    private async Task ProcessGuildBirthdaysAsync(SocketGuild guild, DateTime date)
     {
         var birthdayConfig = await GetBirthdayConfigAsync(guild.Id);
 
@@ -485,7 +485,7 @@ public class BirthdayService : INService, IDisposable
     /// <param name="channel">The channel to announce in.</param>
     /// <param name="user">The user whose birthday is being announced.</param>
     /// <param name="config">The birthday configuration.</param>
-    private async Task AnnounceBirthdayAsync(IGuild guild, ITextChannel channel,
+    private async Task AnnounceBirthdayAsync(SocketGuild guild, Channel channel,
         DiscordUser user, BirthdayConfig config)
     {
         var guildUser = await guild.GetUserAsync(user.UserId);
@@ -521,11 +521,11 @@ public class BirthdayService : INService, IDisposable
 
         if (SmartEmbed.TryParse(finalMessage, guild.Id, out var embed, out var plainText))
         {
-            await channel.SendMessageAsync(plainText, embeds: embed);
+            await channel.SendAsync(plainText, embeds: embed);
         }
         else
         {
-            await channel.SendMessageAsync(finalMessage.SanitizeMentions(true));
+            await channel.SendAsync(finalMessage.SanitizeMentions(true));
         }
     }
 
@@ -535,7 +535,7 @@ public class BirthdayService : INService, IDisposable
     /// <param name="guild">The guild where the role is assigned.</param>
     /// <param name="userId">The user to assign the role to.</param>
     /// <param name="roleId">The role ID to assign.</param>
-    private async Task AssignBirthdayRoleAsync(IGuild guild, ulong userId, ulong roleId)
+    private async Task AssignBirthdayRoleAsync(SocketGuild guild, ulong userId, ulong roleId)
     {
         try
         {

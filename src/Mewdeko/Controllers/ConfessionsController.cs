@@ -15,7 +15,7 @@ namespace Mewdeko.Controllers;
 public class ConfessionsController(
     ConfessionService service,
     GuildSettingsService guildSettings,
-    DiscordShardedClient client,
+    FluxerClient client,
     IDataConnectionFactory dbFactory,
     IDashboardAuditContext auditContext)
     : Controller

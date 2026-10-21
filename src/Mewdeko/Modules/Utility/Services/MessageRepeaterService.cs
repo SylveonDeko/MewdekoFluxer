@@ -16,7 +16,7 @@ namespace Mewdeko.Modules.Utility.Services;
 public class MessageRepeaterService : INService, IReadyExecutor, IDisposable
 {
     private readonly Mewdeko bot;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector? collector;
     private readonly StickyConditionService? conditionService;
     private readonly IDataConnectionFactory dbFactory;
@@ -39,7 +39,7 @@ public class MessageRepeaterService : INService, IReadyExecutor, IDisposable
     /// <param name="guildTimezoneService">Service for timezone handling.</param>
     /// <param name="collector">The analytics collector.</param>
     public MessageRepeaterService(
-        DiscordShardedClient client,
+        FluxerClient client,
         IDataConnectionFactory dbFactory,
         Mewdeko bot, EventHandler handler, ILogger<MessageRepeaterService> logger,
         StickyConditionService? conditionService = null, MessageCountService? messageCountService = null,
@@ -174,7 +174,7 @@ public class MessageRepeaterService : INService, IReadyExecutor, IDisposable
         }
     }
 
-    private async Task InitializeGuildRepeaters(IGuild guild)
+    private async Task InitializeGuildRepeaters(SocketGuild guild)
     {
         try
         {
@@ -250,7 +250,7 @@ public class MessageRepeaterService : INService, IReadyExecutor, IDisposable
         return OnGuildUnavailable(guild);
     }
 
-    private async Task OnThreadCreated(SocketThreadChannel thread)
+    private async Task OnThreadCreated(Channel thread)
     {
         try
         {
@@ -269,7 +269,7 @@ public class MessageRepeaterService : INService, IReadyExecutor, IDisposable
                 return;
 
             // For forum channels, check tag conditions
-            if (thread.ParentChannel is IForumChannel forumChannel)
+            if (thread.ParentChannel is Channel forumChannel)
             {
                 var threadTags = thread.AppliedTags?.ToArray() ?? [];
 
@@ -308,7 +308,7 @@ public class MessageRepeaterService : INService, IReadyExecutor, IDisposable
         }
     }
 
-    private async Task CreateThreadStickyMessage(SocketThreadChannel thread, GuildRepeater repeater)
+    private async Task CreateThreadStickyMessage(Channel thread, GuildRepeater repeater)
     {
         try
         {
@@ -318,16 +318,16 @@ public class MessageRepeaterService : INService, IReadyExecutor, IDisposable
                 .Build();
 
             var message = rep.Replace(repeater.Message ?? "");
-            IMessage? sentMessage = null;
+            Message? sentMessage = null;
 
             if (SmartEmbed.TryParse(message, thread.Guild.Id, out var embed, out var plainText))
             {
                 sentMessage =
-                    await thread.SendMessageAsync(plainText ?? "", embeds: embed);
+                    await thread.SendAsync(plainText ?? "", embeds: embed);
             }
             else
             {
-                sentMessage = await thread.SendMessageAsync(message);
+                sentMessage = await thread.SendAsync(message);
             }
 
             // Track this thread sticky message for repositioning
@@ -1056,7 +1056,7 @@ public class MessageRepeaterService : INService, IReadyExecutor, IDisposable
         try
         {
             // Only process messages in guild channels, ignore bot messages
-            if (message.Channel is not IGuildChannel guildChannel || message.Author.IsBot)
+            if (message.Channel is not Channel guildChannel || message.Author.IsBot)
                 return;
 
             // Skip if this is our own sticky message being posted
@@ -1076,7 +1076,7 @@ public class MessageRepeaterService : INService, IReadyExecutor, IDisposable
                 .ToList();
 
             // Check for thread stickies if this is a thread message
-            if (message.Channel is SocketThreadChannel threadChannel)
+            if (message.Channel is Channel threadChannel)
             {
                 var threadRepeaters = guildRepeaters.Values
                     .Where(r => r.Repeater.IsEnabled &&
@@ -1128,7 +1128,7 @@ public class MessageRepeaterService : INService, IReadyExecutor, IDisposable
         }
     }
 
-    private async Task<IMessage?> GetLastChannelMessage(ITextChannel channel)
+    private async Task<Message?> GetLastChannelMessage(Channel channel)
     {
         try
         {
@@ -1141,10 +1141,10 @@ public class MessageRepeaterService : INService, IReadyExecutor, IDisposable
         }
     }
 
-    private bool ShouldManageThreadSticky(GuildRepeater repeater, SocketThreadChannel thread)
+    private bool ShouldManageThreadSticky(GuildRepeater repeater, Channel thread)
     {
         // Check if this thread belongs to the repeater's target channel
-        if (thread.ParentChannel is IForumChannel forumChannel)
+        if (thread.ParentChannel is Channel forumChannel)
         {
             // For forum threads, check if parent forum matches and tags are valid
             if (repeater.ChannelId != forumChannel.Id)
@@ -1158,7 +1158,7 @@ public class MessageRepeaterService : INService, IReadyExecutor, IDisposable
         return repeater.ChannelId == thread.ParentChannel.Id;
     }
 
-    private async Task CheckAndRepositionThreadSticky(RepeatRunner repeater, SocketThreadChannel thread)
+    private async Task CheckAndRepositionThreadSticky(RepeatRunner repeater, Channel thread)
     {
         try
         {
@@ -1185,7 +1185,7 @@ public class MessageRepeaterService : INService, IReadyExecutor, IDisposable
         }
     }
 
-    private async Task RepositionThreadSticky(GuildRepeater repeater, SocketThreadChannel thread, ulong oldMessageId)
+    private async Task RepositionThreadSticky(GuildRepeater repeater, Channel thread, ulong oldMessageId)
     {
         try
         {
@@ -1208,16 +1208,16 @@ public class MessageRepeaterService : INService, IReadyExecutor, IDisposable
                 .Build();
 
             var message = rep.Replace(repeater.Message ?? "");
-            IMessage? newMessage = null;
+            Message? newMessage = null;
 
             if (SmartEmbed.TryParse(message, thread.Guild.Id, out var embed, out var plainText))
             {
                 newMessage =
-                    await thread.SendMessageAsync(plainText ?? "", embeds: embed);
+                    await thread.SendAsync(plainText ?? "", embeds: embed);
             }
             else
             {
-                newMessage = await thread.SendMessageAsync(message);
+                newMessage = await thread.SendAsync(message);
             }
 
             // Update tracking
@@ -1235,7 +1235,7 @@ public class MessageRepeaterService : INService, IReadyExecutor, IDisposable
         }
     }
 
-    private async Task<IMessage?> GetLastThreadMessage(SocketThreadChannel thread)
+    private async Task<Message?> GetLastThreadMessage(Channel thread)
     {
         try
         {

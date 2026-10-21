@@ -71,7 +71,7 @@ public static class ColorUtils
     };
 
     /// <summary>
-    ///     Tries to parse a color from various formats into a Discord.Color.
+    ///     Tries to parse a color from various formats into a Fluxer color.
     ///     Supports:
     ///     - Named colors (red, blue, etc.)
     ///     - Hex codes (#FF0000 or FF0000)
@@ -80,11 +80,11 @@ public static class ColorUtils
     /// </summary>
     /// <param name="input">The input string.</param>
     /// <param name="color">The color parameter.</param>
-    public static bool TryParseColor(string input, out Discord.Color color)
+    public static bool TryParseColor(string input, out Fluxer.Net.Color color)
     {
         if (string.IsNullOrWhiteSpace(input))
         {
-            color = Discord.Color.Default;
+            color = Fluxer.Net.Color.Default;
             return false;
         }
 
@@ -93,7 +93,7 @@ public static class ColorUtils
         // Try named colors first
         if (NamedColors.TryGetValue(input, out var namedColor))
         {
-            color = new Discord.Color(namedColor.R, namedColor.G, namedColor.B);
+            color = new Fluxer.Net.Color(namedColor.R, namedColor.G, namedColor.B);
             return true;
         }
 
@@ -109,12 +109,12 @@ public static class ColorUtils
                 var r = (value >> 16) & 0xFF;
                 var g = (value >> 8) & 0xFF;
                 var b = value & 0xFF;
-                color = new Discord.Color(r, g, b);
+                color = new Fluxer.Net.Color(r, g, b);
                 return true;
             }
             catch
             {
-                color = Discord.Color.Default;
+                color = Fluxer.Net.Color.Default;
                 return false;
             }
         }
@@ -135,11 +135,11 @@ public static class ColorUtils
                 return true;
         }
 
-        color = Discord.Color.Default;
+        color = Fluxer.Net.Color.Default;
         return false;
     }
 
-    private static bool TryParseRgb(string r, string g, string b, out Discord.Color color)
+    private static bool TryParseRgb(string r, string g, string b, out Fluxer.Net.Color color)
     {
         try
         {
@@ -147,47 +147,47 @@ public static class ColorUtils
             var green = Math.Clamp(int.Parse(g.Trim()), 0, 255);
             var blue = Math.Clamp(int.Parse(b.Trim()), 0, 255);
 
-            color = new Discord.Color(red, green, blue);
+            color = new Fluxer.Net.Color(red, green, blue);
             return true;
         }
         catch
         {
-            color = Discord.Color.Default;
+            color = Fluxer.Net.Color.Default;
             return false;
         }
     }
 
     /// <summary>
-    ///     Converts a Discord.Color to its hex string representation.
+    ///     Converts a Fluxer.Net.Color to its hex string representation.
     /// </summary>
     /// <param name="color">The color parameter.</param>
-    public static string ToHex(this Discord.Color color)
+    public static string ToHex(this Fluxer.Net.Color color)
     {
         return $"#{color.R:X2}{color.G:X2}{color.B:X2}";
     }
 
     /// <summary>
-    ///     Converts a Discord.Color to an RGB string representation.
+    ///     Converts a Fluxer.Net.Color to an RGB string representation.
     /// </summary>
     /// <param name="color">The color parameter.</param>
-    public static string ToRgb(this Discord.Color color)
+    public static string ToRgb(this Fluxer.Net.Color color)
     {
         return $"rgb({color.R}, {color.G}, {color.B})";
     }
 
     /// <summary>
-    ///     Gets a random Discord.Color.
+    ///     Gets a random Fluxer.Net.Color.
     /// </summary>
-    public static Discord.Color Random()
+    public static Fluxer.Net.Color Random()
     {
         var random = new Random();
-        return new Discord.Color(random.Next(256), random.Next(256), random.Next(256));
+        return new Fluxer.Net.Color(random.Next(256), random.Next(256), random.Next(256));
     }
 
     /// <summary>
     ///     Gets a lighter version of the color.
     /// </summary>
-    public static Discord.Color Lighten(this Discord.Color color, float amount = 0.2f)
+    public static Fluxer.Net.Color Lighten(this Fluxer.Net.Color color, float amount = 0.2f)
     {
         amount = Math.Clamp(amount, 0, 1);
 
@@ -195,13 +195,13 @@ public static class ColorUtils
         var g = (int)Math.Min(255, color.G + (255 - color.G) * amount);
         var b = (int)Math.Min(255, color.B + (255 - color.B) * amount);
 
-        return new Discord.Color(r, g, b);
+        return new Fluxer.Net.Color(r, g, b);
     }
 
     /// <summary>
     ///     Gets a darker version of the color.
     /// </summary>
-    public static Discord.Color Darken(this Discord.Color color, float amount = 0.2f)
+    public static Fluxer.Net.Color Darken(this Fluxer.Net.Color color, float amount = 0.2f)
     {
         amount = Math.Clamp(amount, 0, 1);
 
@@ -209,6 +209,6 @@ public static class ColorUtils
         var g = (int)(color.G * (1 - amount));
         var b = (int)(color.B * (1 - amount));
 
-        return new Discord.Color(r, g, b);
+        return new Fluxer.Net.Color(r, g, b);
     }
 }

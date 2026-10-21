@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Searches.Services;
 
@@ -68,7 +68,7 @@ public partial class Searches
         [UserPerm(GuildPermission.Administrator)]
         public async Task AutoTranslate(AutoDeleteAutoTranslate autoDelete = AutoDeleteAutoTranslate.Nodel)
         {
-            var channel = (ITextChannel)ctx.Channel;
+            var channel = (Channel)ctx.Channel;
 
             if (autoDelete == AutoDeleteAutoTranslate.Del)
             {

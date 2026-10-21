@@ -23,7 +23,7 @@ namespace Mewdeko.Controllers;
 public class CurrencyController : Controller
 {
     private readonly CurrencyAnalyticsService analyticsService;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly CurrencyConfigService configService;
     private readonly ICurrencyService currencyService;
     private readonly IDataConnectionFactory dbFactory;
@@ -46,7 +46,7 @@ public class CurrencyController : Controller
         CurrencyAnalyticsService analyticsService,
         ShopService shopService,
         IDataConnectionFactory dbFactory,
-        DiscordShardedClient client,
+        FluxerClient client,
         ILogger<CurrencyController> logger)
     {
         this.currencyService = currencyService;

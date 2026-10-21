@@ -15,7 +15,7 @@ namespace Mewdeko.Controllers;
 [ApiController]
 [Route("botapi/[controller]")]
 [Authorize("ApiKeyPolicy")]
-public class BotHellController(BotHellService service, DiscordShardedClient client, BotCredentials creds)
+public class BotHellController(BotHellService service, FluxerClient client, BotCredentials creds)
     : Controller
 {
     /// <summary>

@@ -4,7 +4,6 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
-using Discord.Commands;
 using Humanizer;
 using LinqToDB.Async;
 using Mewdeko.Common.Attributes.TextCommands;
@@ -36,7 +35,7 @@ namespace Mewdeko.Modules.Utility;
 /// <param name="logger">The logger instance for structured logging.</param>
 /// <param name="mediaConversionService">The media conversion service.</param>
 public partial class Utility(
-    DiscordShardedClient client,
+    FluxerClient client,
     IStatsService stats,
     IBotCredentials creds,
     DownloadTracker tracker,
@@ -91,15 +90,15 @@ public partial class Utility(
                 .WithDescription(Strings.PlaintextLength(ctx.Guild.Id, plainText.Length) +
                                  $"`Embed Count:` ***{embeds?.Length}***")
                 .WithFooter(Strings.ExecutionTime(ctx.Guild.Id, watch.Elapsed));
-            await ctx.Channel.SendMessageAsync(plainText, embeds: embeds);
-            await ctx.Channel.SendMessageAsync(embed: eb.Build());
+            await ctx.Channel.SendAsync(plainText, embeds: embeds);
+            await ctx.Channel.SendAsync(embed: eb.Build());
         }
         catch (Exception e)
         {
             var eb = new EmbedBuilder()
                 .WithTitle(Strings.ErrorParsingEmbed(ctx.Guild.Id))
                 .WithDescription(e.ToString());
-            await ctx.Channel.SendMessageAsync(embed: eb.Build());
+            await ctx.Channel.SendAsync(embed: eb.Build());
         }
     }
 
@@ -113,8 +112,8 @@ public partial class Utility(
     [RequireContext(ContextType.Guild)]
     public async Task RolePermList(PermissionType searchType = PermissionType.And, params GuildPermission[] perms)
     {
-        List<IRole> rolesWithPerms;
-        var rolesWithMatchedPerms = new Dictionary<IRole, List<GuildPermission>>();
+        List<SocketRole> rolesWithPerms;
+        var rolesWithMatchedPerms = new Dictionary<SocketRole, List<GuildPermission>>();
 
         if (searchType == PermissionType.And)
         {
@@ -202,9 +201,9 @@ public partial class Utility(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageMessages)]
-    public async Task GetJson(ulong id, ITextChannel channel = null)
+    public async Task GetJson(ulong id, Channel channel = null)
     {
-        channel ??= ctx.Channel as ITextChannel;
+        channel ??= ctx.Channel as Channel;
 
         var options = new JsonSerializerOptions
         {
@@ -236,7 +235,7 @@ public partial class Utility(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageMessages)]
-    public Task GetJson(ITextChannel channel, ulong messageId)
+    public Task GetJson(Channel channel, ulong messageId)
     {
         return GetJson(messageId, channel);
     }
@@ -251,7 +250,7 @@ public partial class Utility(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageMessages)]
-    public async Task SaveChat(StoopidTime time, ITextChannel? channel = null)
+    public async Task SaveChat(StoopidTime time, Channel? channel = null)
     {
         var curTime = DateTime.UtcNow.Subtract(time.Time);
         if (!Directory.Exists(creds.ChatSavePath))
@@ -375,7 +374,7 @@ public partial class Utility(
             .AddField(Strings.InviteFieldWebsite(ctx.Guild?.Id ?? 0), "https://mewdeko.tech")
             .AddField(Strings.InviteFieldSupport(ctx.Guild?.Id ?? 0), config.Data.SupportServer)
             .WithOkColor();
-        await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -438,7 +437,7 @@ public partial class Utility(
 
         if (msg.ReferenceMessage is not null)
             em.AddField("Replied To", msg.ReferenceMessage);
-        await ctx.Channel.SendMessageAsync(embed: em.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: em.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -572,7 +571,7 @@ public partial class Utility(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task SnipeList(ITextChannel channel, int amount = 5)
+    public async Task SnipeList(Channel channel, int amount = 5)
     {
         if (!await Service.GetSnipeSet(ctx.Guild.Id))
         {
@@ -635,7 +634,7 @@ public partial class Utility(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task SnipeList(ITextChannel channel, IUser user, int amount = 5)
+    public async Task SnipeList(Channel channel, IUser user, int amount = 5)
     {
         if (!await Service.GetSnipeSet(ctx.Guild.Id))
         {
@@ -820,7 +819,7 @@ public partial class Utility(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task EditSnipeList(ITextChannel channel, int amount = 5)
+    public async Task EditSnipeList(Channel channel, int amount = 5)
     {
         if (!await Service.GetSnipeSet(ctx.Guild.Id))
         {
@@ -883,7 +882,7 @@ public partial class Utility(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task EditSnipeList(ITextChannel channel, IUser user, int amount = 5)
+    public async Task EditSnipeList(Channel channel, IUser user, int amount = 5)
     {
         if (!await Service.GetSnipeSet(ctx.Guild.Id))
         {
@@ -985,7 +984,7 @@ public partial class Utility(
         if (msg.ReferenceMessage is not null)
             em.AddField("Replied To", msg.ReferenceMessage);
 
-        await ctx.Channel.SendMessageAsync(embed: em.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: em.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1010,7 +1009,7 @@ public partial class Utility(
             eb.WithDescription(result.Permalink);
             eb.AddField("Virus Positives", result.Positives, true);
             eb.AddField("Number of scans", result.Total, true);
-            await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+            await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
         }
     }
 
@@ -1022,7 +1021,7 @@ public partial class Utility(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [Priority(2)]
-    public async Task Snipe(ITextChannel chan)
+    public async Task Snipe(Channel chan)
     {
         if (!await Service.GetSnipeSet(ctx.Guild.Id))
         {
@@ -1062,7 +1061,7 @@ public partial class Utility(
         if (msg.ReferenceMessage is not null)
             em.AddField("Replied To", msg.ReferenceMessage);
 
-        await ctx.Channel.SendMessageAsync(embed: em.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: em.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1074,7 +1073,7 @@ public partial class Utility(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [Priority(2)]
-    public async Task Snipe(ITextChannel chan, IUser user1)
+    public async Task Snipe(Channel chan, IUser user1)
     {
         if (!await Service.GetSnipeSet(ctx.Guild.Id))
         {
@@ -1115,7 +1114,7 @@ public partial class Utility(
             if (msg.ReferenceMessage is not null)
                 em.AddField("Replied To", msg.ReferenceMessage);
 
-            await ctx.Channel.SendMessageAsync(embed: em.Build()).ConfigureAwait(false);
+            await ctx.Channel.SendAsync(embed: em.Build()).ConfigureAwait(false);
         }
     }
 
@@ -1167,7 +1166,7 @@ public partial class Utility(
         if (msg.ReferenceMessage is not null)
             em.AddField("Replied To", msg.ReferenceMessage);
 
-        await ctx.Channel.SendMessageAsync(embed: em.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: em.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1220,7 +1219,7 @@ public partial class Utility(
             if (msg.ReferenceMessage is not null)
                 em.AddField("Replied To", msg.ReferenceMessage);
 
-            await ctx.Channel.SendMessageAsync(embed: em.Build()).ConfigureAwait(false);
+            await ctx.Channel.SendAsync(embed: em.Build()).ConfigureAwait(false);
         }
     }
 
@@ -1232,7 +1231,7 @@ public partial class Utility(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [Priority(1)]
-    public async Task EditSnipe(ITextChannel chan)
+    public async Task EditSnipe(Channel chan)
     {
         if (!await Service.GetSnipeSet(ctx.Guild.Id))
         {
@@ -1275,7 +1274,7 @@ public partial class Utility(
                 em.AddField("Replied To", msg.ReferenceMessage);
 
 
-            await ctx.Channel.SendMessageAsync(embed: em.Build()).ConfigureAwait(false);
+            await ctx.Channel.SendAsync(embed: em.Build()).ConfigureAwait(false);
         }
     }
 
@@ -1288,7 +1287,7 @@ public partial class Utility(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [Priority(1)]
-    public async Task EditSnipe(ITextChannel chan, IUser user1)
+    public async Task EditSnipe(Channel chan, IUser user1)
     {
         if (!await Service.GetSnipeSet(ctx.Guild.Id))
         {
@@ -1331,7 +1330,7 @@ public partial class Utility(
                 em.AddField("Replied To", msg.ReferenceMessage);
 
 
-            await ctx.Channel.SendMessageAsync(embed: em.Build()).ConfigureAwait(false);
+            await ctx.Channel.SendAsync(embed: em.Build()).ConfigureAwait(false);
         }
     }
 
@@ -1412,7 +1411,7 @@ public partial class Utility(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task InRole([Remainder] IRole role)
+    public async Task InRole([Remainder] SocketRole role)
     {
         await Context.Channel.TriggerTypingAsync().ConfigureAwait(false);
         await tracker.EnsureUsersDownloadedAsync(ctx.Guild).ConfigureAwait(false);
@@ -1454,7 +1453,7 @@ public partial class Utility(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task InRoles(IRole role, IRole role2)
+    public async Task InRoles(SocketRole role, SocketRole role2)
     {
         await Context.Channel.TriggerTypingAsync().ConfigureAwait(false);
         await tracker.EnsureUsersDownloadedAsync(ctx.Guild).ConfigureAwait(false);
@@ -1493,7 +1492,7 @@ public partial class Utility(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task UserId([Remainder] IGuildUser? target = null)
+    public async Task UserId([Remainder] SocketGuildMember? target = null)
     {
         var usr = target ?? ctx.User;
         await ReplyConfirmAsync(Strings.Userid(ctx.Guild.Id, "🆔", Format.Bold(usr.ToString()),
@@ -1507,7 +1506,7 @@ public partial class Utility(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task RoleId([Remainder] IRole role)
+    public async Task RoleId([Remainder] SocketRole role)
     {
         await ReplyConfirmAsync(Strings.Roleid(ctx.Guild.Id, "🆔", Format.Bold(role.ToString()),
             Format.Code(role.Id.ToString()))).ConfigureAwait(false);
@@ -1543,9 +1542,9 @@ public partial class Utility(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task Roles(IGuildUser? target = null)
+    public async Task Roles(SocketGuildMember? target = null)
     {
-        var channel = (ITextChannel)ctx.Channel;
+        var channel = (Channel)ctx.Channel;
         var guild = channel.Guild;
 
         if (target != null)
@@ -1618,9 +1617,9 @@ public partial class Utility(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task ChannelTopic([Remainder] ITextChannel? channel = null)
+    public async Task ChannelTopic([Remainder] Channel? channel = null)
     {
-        channel ??= (ITextChannel)ctx.Channel;
+        channel ??= (Channel)ctx.Channel;
 
         var topic = channel.Topic;
         if (string.IsNullOrWhiteSpace(topic))
@@ -1639,19 +1638,19 @@ public partial class Utility(
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageMessages)]
     [Priority(1)]
-    public async Task Say(ITextChannel channel, [Remainder] string? message)
+    public async Task Say(Channel channel, [Remainder] string? message)
     {
         var isTextInAttachments = ctx.Message.Attachments.Any(x => x.Filename.EndsWith("txt"));
 
         if (string.IsNullOrWhiteSpace(message) && !isTextInAttachments)
             return;
 
-        var canMention = ((IGuildUser)ctx.User).GuildPermissions.MentionEveryone;
+        var canMention = ((SocketGuildMember)ctx.User).GuildPermissions.MentionEveryone;
 
         var (attachments, processedMessage, streams) = await HandleAttachmentsAsync(isTextInAttachments, message);
 
         var rep = new ReplacementBuilder()
-            .WithDefault(ctx.User, channel, (SocketGuild)ctx.Guild, (DiscordShardedClient)ctx.Client)
+            .WithDefault(ctx.User, channel, (SocketGuild)ctx.Guild, (FluxerClient)ctx.Client)
             .Build();
 
         var msg = rep.Replace(processedMessage);
@@ -1679,7 +1678,7 @@ public partial class Utility(
             else
                 try
                 {
-                    await channel.SendMessageAsync(plainText, embeds: embedData,
+                    await channel.SendAsync(plainText, embeds: embedData,
                             allowedMentions: !canMention
                                 ? new AllowedMentions(AllowedMentionTypes.Users)
                                 : AllowedMentions.All)
@@ -1713,7 +1712,7 @@ public partial class Utility(
             else
                 try
                 {
-                    await channel.SendMessageAsync(msg, allowedMentions: !canMention
+                    await channel.SendAsync(msg, allowedMentions: !canMention
                         ? new AllowedMentions(AllowedMentionTypes.Users)
                         : AllowedMentions.All);
                 }
@@ -1725,10 +1724,10 @@ public partial class Utility(
         }
     }
 
-    private async Task<(List<FileAttachment> attachments, string? message, List<MemoryStream> streams)>
+    private async Task<(List<AttachmentRequest> attachments, string? message, List<MemoryStream> streams)>
         HandleAttachmentsAsync(bool isTextInAttachments, string? message)
     {
-        var attachments = new List<FileAttachment>();
+        var attachments = new List<AttachmentRequest>();
         var streams = new List<MemoryStream>();
         if (!ctx.Message.Attachments.Any()) return (attachments, message, streams);
 
@@ -1748,7 +1747,7 @@ public partial class Utility(
                 .ConfigureAwait(false);
             var imgData = await sr.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
             var imgStream = new MemoryStream(imgData);
-            attachments.Add(new FileAttachment(imgStream, i.Filename));
+            attachments.Add(new AttachmentRequest(imgStream, i.Filename));
             streams.Add(imgStream);
         }
 
@@ -1768,7 +1767,7 @@ public partial class Utility(
     [Priority(0)]
     public Task Say([Remainder] string? message = null)
     {
-        return Say((ITextChannel)ctx.Channel, message);
+        return Say((Channel)ctx.Channel, message);
     }
 
     /// <summary>
@@ -1820,14 +1819,14 @@ public partial class Utility(
     [Aliases]
     public async Task Showemojis([Remainder] string _)
     {
-        var tags = ctx.Message.Tags.Where(t => t.Type == TagType.Emoji).Select(t => (Emote)t.Value);
+        var tags = ctx.Message.Tags.Where(t => t.Type == TagType.Emoji).Select(t => (Emoji)t.Value);
 
         var result = string.Join("\n", tags.Select(m => Strings.Showemojis(ctx.Guild.Id, m, m.Url)));
 
         if (string.IsNullOrWhiteSpace(result))
             await ReplyErrorAsync(Strings.ShowemojisNone(ctx.Guild.Id)).ConfigureAwait(false);
         else
-            await ctx.Channel.SendMessageAsync(result.TrimTo(2000)).ConfigureAwait(false);
+            await ctx.Channel.SendAsync(result.TrimTo(2000)).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1838,7 +1837,7 @@ public partial class Utility(
     /// <param name="format">The style the timestamp is shown in.</param>
     [Cmd]
     [Aliases]
-    public async Task Timestamp(string tz, DateTime time, TimestampTagStyles format = TimestampTagStyles.ShortDateTime)
+    public async Task Timestamp(string tz, DateTime time, TimestampTagStyle format = TimestampTagStyle.ShortDateTime)
     {
         if (!TimeZoneInfo.TryFindSystemTimeZoneById(tz, out var timezone))
         {
@@ -1865,14 +1864,14 @@ public partial class Utility(
             var redisPing = await cache.Redis.GetDatabase().PingAsync();
 
             var sw = Stopwatch.StartNew();
-            var msg = await ctx.Channel.SendMessageAsync(Strings.PingResponse(ctx.Guild.Id)).ConfigureAwait(false);
+            var msg = await ctx.Channel.SendAsync(Strings.PingResponse(ctx.Guild.Id)).ConfigureAwait(false);
             sw.Stop();
             msg.DeleteAfter(0);
 
             await ctx.Channel
                 .SendConfirmAsync(
                     Strings.PingResult(ctx.Guild.Id, (int)sw.Elapsed.TotalMilliseconds,
-                        ((DiscordShardedClient)ctx.Client).Latency, redisPing.Nanoseconds))
+                        ((FluxerClient)ctx.Client).Latency, redisPing.Nanoseconds))
                 .ConfigureAwait(false);
         }
         finally
@@ -1935,7 +1934,7 @@ public partial class Utility(
     [Aliases]
     public async Task OwoIfy([Remainder] string input)
     {
-        await ctx.Channel.SendMessageAsync(OwoServices.OwoIfy(input).SanitizeMentions(true)).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(OwoServices.OwoIfy(input).SanitizeMentions(true)).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -2037,7 +2036,7 @@ public partial class Utility(
             .WithDescription(queueMessage)
             .Build();
 
-        await ctx.Channel.SendMessageAsync(embed: queueEmbed).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: queueEmbed).ConfigureAwait(false);
 
         // Wait for the conversion to complete
         using var typing = ctx.Channel.EnterTypingState();

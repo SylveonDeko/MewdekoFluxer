@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Mewdeko.Modules.Administration.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -49,7 +49,7 @@ public class UserPermAttribute : PreconditionAttribute
         if (command.Module.Name.Equals("chattriggers", StringComparison.CurrentCultureIgnoreCase))
         {
             var creds = services.GetService<IBotCredentials>();
-            if (context.Channel is IDMChannel)
+            if (context.Channel is Channel)
             {
                 return !creds.IsOwner(context.User)
                     ? PreconditionResult.FromError("You must be a bot owner to add global Chat Triggers!")
@@ -58,13 +58,13 @@ public class UserPermAttribute : PreconditionAttribute
 
             // ReSharper disable once InvertIf (stupid)
             if (permResult)
-                if (!((IGuildUser)context.User).GuildPermissions.Has(perm))
+                if (!((SocketGuildMember)context.User).GuildPermissions.Has(perm))
                     return PreconditionResult.FromError($"You need the `{perm}` permission to use this command.");
             return await UserPermissionAttribute.CheckPermissionsAsync(context, command, services);
         }
 
         if (!permResult) return await UserPermissionAttribute.CheckPermissionsAsync(context, command, services);
-        return !((IGuildUser)context.User).GuildPermissions.Has(perm)
+        return !((SocketGuildMember)context.User).GuildPermissions.Has(perm)
             ? PreconditionResult.FromError($"You need the `{perm}` permission to use this command.")
             : PreconditionResult.FromSuccess();
     }

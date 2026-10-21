@@ -18,7 +18,7 @@ namespace Mewdeko.Modules.Searches.Services;
 /// </summary>
 public class StreamNotificationService : IReadyExecutor, INService
 {
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly GuildSettingsService guildSettings;
     private readonly object hashSetLock = new();
@@ -48,7 +48,7 @@ public class StreamNotificationService : IReadyExecutor, INService
     /// <param name="guildSettings">The guild settings service.</param>
     public StreamNotificationService(
         IDataConnectionFactory dbFactory,
-        DiscordShardedClient client,
+        FluxerClient client,
         GeneratedBotStrings strings,
         IBotCredentials creds,
         IHttpClientFactory httpFactory,
@@ -639,7 +639,7 @@ public class StreamNotificationService : IReadyExecutor, INService
     /// <param name="followedStream">The followed stream configuration.</param>
     /// <param name="guildTemplate">The guild-wide custom template (optional).</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    private async Task SendStreamNotificationAsync(ITextChannel textChannel, StreamData stream,
+    private async Task SendStreamNotificationAsync(Channel textChannel, StreamData stream,
         FollowedStream followedStream, string? guildTemplate = null)
     {
         try
@@ -656,7 +656,7 @@ public class StreamNotificationService : IReadyExecutor, INService
                         out var plainText))
                 {
                     // Valid JSON - use SmartEmbed
-                    await textChannel.SendMessageAsync(plainText, embeds: embed);
+                    await textChannel.SendAsync(plainText, embeds: embed);
                     return;
                 }
                 else
@@ -675,13 +675,13 @@ public class StreamNotificationService : IReadyExecutor, INService
                 if (SmartEmbed.TryParse(processedTemplate ?? string.Empty, followedStream.GuildId, out var embed,
                         out var plainText))
                 {
-                    await textChannel.SendMessageAsync(plainText, embeds: embed);
+                    await textChannel.SendAsync(plainText, embeds: embed);
                     return;
                 }
                 else
                 {
                     // Fall back to simple message
-                    await textChannel.SendMessageAsync(processedTemplate);
+                    await textChannel.SendAsync(processedTemplate);
                     return;
                 }
             }

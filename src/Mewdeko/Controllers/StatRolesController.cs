@@ -15,7 +15,7 @@ namespace Mewdeko.Controllers;
 public class StatRolesController : Controller
 {
     private readonly IDashboardAuditContext auditContext;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly StatRoleService service;
 
     /// <summary>
@@ -24,7 +24,7 @@ public class StatRolesController : Controller
     /// <param name="service">The stat role service.</param>
     /// <param name="client">The Discord client.</param>
     /// <param name="auditContext">Records before/after state for the dashboard audit log.</param>
-    public StatRolesController(StatRoleService service, DiscordShardedClient client,
+    public StatRolesController(StatRoleService service, FluxerClient client,
         IDashboardAuditContext auditContext)
     {
         this.service = service;

@@ -16,7 +16,7 @@ namespace Mewdeko.Controllers;
 [Authorize("ApiKeyPolicy")]
 [SkipDashboardAccess]
 public sealed class DashboardAccessController(
-    DiscordShardedClient client,
+    FluxerClient client,
     DashboardAccessService dashboardAccessService) : ControllerBase
 {
     /// <summary>
@@ -169,7 +169,7 @@ public sealed class DashboardAccessController(
         return await dashboardAccessService.RemoveGrantAsync(guildId, id) ? NoContent() : NotFound();
     }
 
-    private async Task<(SocketGuild Guild, SocketGuildUser User, ulong UserId)?> GetActorAsync(ulong guildId)
+    private async Task<(SocketGuild Guild, SocketGuildMember User, ulong UserId)?> GetActorAsync(ulong guildId)
     {
         var authResult = await HttpContext.AuthenticateAsync(DashJwtConstants.SchemeName);
         if (!authResult.Succeeded || !ulong.TryParse(
@@ -182,7 +182,7 @@ public sealed class DashboardAccessController(
     }
 
     private async Task<bool> CanManageAccessAsync(ulong guildId,
-        (SocketGuild Guild, SocketGuildUser User, ulong UserId) actor)
+        (SocketGuild Guild, SocketGuildMember User, ulong UserId) actor)
     {
         if (actor.Guild.OwnerId == actor.UserId)
             return true;

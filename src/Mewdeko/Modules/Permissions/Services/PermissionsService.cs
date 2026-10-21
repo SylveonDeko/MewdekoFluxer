@@ -1,13 +1,11 @@
 ﻿using System.Diagnostics;
 using DataModel;
-using Discord.Commands;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.Configs;
 using Mewdeko.Common.ModuleBehaviors;
 using Mewdeko.Modules.Permissions.Common;
 using Mewdeko.Services.Strings;
-using CommandInfo = Discord.Commands.CommandInfo;
 
 namespace Mewdeko.Modules.Permissions.Services;
 
@@ -21,7 +19,7 @@ public class PermissionService : ILateBlocker, INService, IReadyExecutor
     /// </summary>
     public readonly GeneratedBotStrings Strings;
 
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly BotConfig config;
     private readonly IDataConnectionFactory dbFactory;
 
@@ -37,7 +35,7 @@ public class PermissionService : ILateBlocker, INService, IReadyExecutor
     /// <param name="configService">The service for bot-wide configurations.</param>
     public PermissionService(IDataConnectionFactory dbFactory,
         GeneratedBotStrings strings,
-        GuildSettingsService guildSettings, DiscordShardedClient client, BotConfig configService)
+        GuildSettingsService guildSettings, FluxerClient client, BotConfig configService)
     {
         config = configService;
         this.dbFactory = dbFactory;
@@ -65,7 +63,7 @@ public class PermissionService : ILateBlocker, INService, IReadyExecutor
     /// <param name="command">The command information.</param>
     /// <returns>True if the command execution should be blocked, otherwise false.</returns>
     public async Task<bool> TryBlockLate(
-        DiscordShardedClient client,
+        FluxerClient client,
         ICommandContext ctx,
         string moduleName,
         CommandInfo command)
@@ -105,7 +103,7 @@ public class PermissionService : ILateBlocker, INService, IReadyExecutor
 
         if (moduleName == nameof(Permissions))
         {
-            if (user is not IGuildUser guildUser)
+            if (user is not SocketGuildMember guildUser)
                 return true;
 
             if (guildUser.GuildPermissions.Administrator)
@@ -115,7 +113,7 @@ public class PermissionService : ILateBlocker, INService, IReadyExecutor
             if (!ulong.TryParse(permRole, out var rid))
                 rid = 0;
             string? returnMsg;
-            IRole role;
+            SocketRole role;
             if (string.IsNullOrWhiteSpace(permRole) || (role = guild.GetRole(rid)) == null)
             {
                 returnMsg = "You need Admin permissions in order to use permission commands.";

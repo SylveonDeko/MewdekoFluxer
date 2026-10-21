@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Mewdeko.Common.TypeReaders.Models;
 
 namespace Mewdeko.Common.TypeReaders;
@@ -11,9 +11,9 @@ public class StoopidTimeTypeReader : MewdekoTypeReader<StoopidTime>
     /// <summary>
     ///     Initializes a new instance of the <see cref="StoopidTimeTypeReader" /> class.
     /// </summary>
-    /// <param name="client">The DiscordShardedClient instance.</param>
+    /// <param name="client">The FluxerClient instance.</param>
     /// <param name="cmds">The CommandService instance.</param>
-    public StoopidTimeTypeReader(DiscordShardedClient client, CommandService cmds) : base(client, cmds)
+    public StoopidTimeTypeReader(FluxerClient client, CommandService cmds) : base(client, cmds)
     {
     }
 

@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Suggestions.Services;
 
@@ -149,7 +149,7 @@ public partial class Suggestions
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task AcceptChannel(ITextChannel? channel = null)
+        public async Task AcceptChannel(Channel? channel = null)
         {
             await Service.SetAcceptChannel(ctx.Guild, channel?.Id ?? 0).ConfigureAwait(false);
             if (channel is null)
@@ -171,7 +171,7 @@ public partial class Suggestions
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task DenyChannel(ITextChannel? channel = null)
+        public async Task DenyChannel(Channel? channel = null)
         {
             await Service.SetDenyChannel(ctx.Guild, channel?.Id ?? 0).ConfigureAwait(false);
             if (channel is null)
@@ -194,7 +194,7 @@ public partial class Suggestions
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task ConsiderChannel(ITextChannel? channel = null)
+        public async Task ConsiderChannel(Channel? channel = null)
         {
             await Service.SetConsiderChannel(ctx.Guild, channel?.Id ?? 0).ConfigureAwait(false);
             if (channel is null)
@@ -217,7 +217,7 @@ public partial class Suggestions
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task ImplementChannel(ITextChannel? channel = null)
+        public async Task ImplementChannel(Channel? channel = null)
         {
             await Service.SetImplementChannel(ctx.Guild, channel?.Id ?? 0).ConfigureAwait(false);
             if (channel is null)
@@ -431,7 +431,7 @@ public partial class Suggestions
             }
 
             if (_ != null && !_.Contains("disable") &&
-                ctx.Message.Tags.Where(t => t.Type == TagType.Emoji).Select(x => (Emote)x.Value).Count() > 5)
+                ctx.Message.Tags.Where(t => t.Type == TagType.Emoji).Select(x => (Emoji)x.Value).Count() > 5)
             {
                 await ctx.Channel.SendErrorAsync(Strings.MaxEmotesLimit(ctx.Guild.Id), Config)
                     .ConfigureAwait(false);
@@ -446,7 +446,7 @@ public partial class Suggestions
                 return;
             }
 
-            var emotes = ctx.Message.Tags.Where(t => t.Type == TagType.Emoji).Select(x => (IEmote)x.Value);
+            var emotes = ctx.Message.Tags.Where(t => t.Type == TagType.Emoji).Select(x => (Emoji)x.Value);
             foreach (var emoji in emotes)
             {
                 try

@@ -20,7 +20,7 @@ public class PurgeService : INService
     /// <param name="predicate">The predicate to filter messages</param>
     /// <param name="messageId">The message id to start purging from</param>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
-    public async Task PurgeWhere(ITextChannel channel, ulong amount, Func<IMessage, bool> predicate,
+    public async Task PurgeWhere(Channel channel, ulong amount, Func<Message, bool> predicate,
         ulong messageId = 0)
     {
         channel.ThrowIfNull(nameof(channel));
@@ -33,7 +33,7 @@ public class PurgeService : INService
             return;
         try
         {
-            IMessage[] msgs;
+            Message[] msgs;
             if (messageId is 0)
                 msgs = (await channel.GetMessagesAsync().FlattenAsync().ConfigureAwait(false)).Where(predicate)
                     .Take((int)amount).ToArray();
@@ -50,8 +50,8 @@ public class PurgeService : INService
             {
                 var lastMessage = msgs[^1];
 
-                var bulkDeletable = new List<IMessage>();
-                var singleDeletable = new List<IMessage>();
+                var bulkDeletable = new List<Message>();
+                var singleDeletable = new List<Message>();
                 foreach (var x in msgs)
                 {
                     if (DateTime.UtcNow - x.CreatedAt < twoWeeks)

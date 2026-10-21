@@ -31,7 +31,7 @@ public class StatRoleService : INService, IReadyExecutor, IDisposable
     private static readonly TimeSpan TickInterval = TimeSpan.FromMinutes(1);
     private static readonly JsonSerializerOptions JsonOptions = new();
 
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly IDataConnectionFactory dbFactory;
     private readonly ConcurrentDictionary<ulong, SemaphoreSlim> guildLocks = new();
@@ -48,7 +48,7 @@ public class StatRoleService : INService, IReadyExecutor, IDisposable
     /// <param name="stats">The stats query service.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     /// <param name="collector">The analytics collector.</param>
-    public StatRoleService(DiscordShardedClient client, IDataConnectionFactory dbFactory, ServerStatsService stats,
+    public StatRoleService(FluxerClient client, IDataConnectionFactory dbFactory, ServerStatsService stats,
         ILogger<StatRoleService> logger, IAnalyticsCollector collector)
     {
         this.client = client;
@@ -74,7 +74,7 @@ public class StatRoleService : INService, IReadyExecutor, IDisposable
 
     #region Notifications
 
-    private async Task NotifyAsync(SocketGuild guild, StatRole role, SocketRole discordRole, SocketGuildUser user,
+    private async Task NotifyAsync(SocketGuild guild, StatRole role, SocketRole discordRole, SocketGuildMember user,
         StatRoleAction action, long value)
     {
         if (role.NotifyChannelId == null && !role.NotifyDm)
@@ -100,9 +100,9 @@ public class StatRoleService : INService, IReadyExecutor, IDisposable
             try
             {
                 if (SmartEmbed.TryParse(text, guild.Id, out var embeds, out var plain))
-                    await channel.SendMessageAsync(plain, embeds: embeds);
+                    await channel.SendAsync(plain, embeds: embeds);
                 else
-                    await channel.SendMessageAsync(text, allowedMentions: AllowedMentions.None);
+                    await channel.SendAsync(text, allowedMentions: AllowedMentions.None);
             }
             catch (Exception ex)
             {
@@ -115,7 +115,7 @@ public class StatRoleService : INService, IReadyExecutor, IDisposable
             try
             {
                 var dm = await user.CreateDMChannelAsync();
-                await dm.SendMessageAsync(text);
+                await dm.SendAsync(text);
             }
             catch
             {
@@ -434,7 +434,7 @@ public class StatRoleService : INService, IReadyExecutor, IDisposable
     #region Evaluation
 
     private async Task<Dictionary<ulong, StatRoleMember>> EvaluateAsync(SocketGuild guild, StatRole role,
-        List<SocketGuildUser> members)
+        List<SocketGuildMember> members)
     {
         var whitelist = ReadIds(role.RoleWhitelist);
         var blacklist = ReadIds(role.RoleBlacklist);
@@ -500,7 +500,7 @@ public class StatRoleService : INService, IReadyExecutor, IDisposable
     }
 
     private async Task<Dictionary<ulong, long>> MeasureAsync(SocketGuild guild, StatRole role,
-        List<SocketGuildUser> candidates, HashSet<ulong> channels)
+        List<SocketGuildMember> candidates, HashSet<ulong> channels)
     {
         var now = DateTime.UtcNow;
         var stat = (StatRoleStat)role.StatType;

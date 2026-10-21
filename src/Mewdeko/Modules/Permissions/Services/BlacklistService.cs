@@ -19,7 +19,7 @@ public sealed class BlacklistService : IEarlyBehavior, INService
     private readonly TypedKey<bool> blPrivKey = new("blacklist.reload.priv");
 
     private readonly TypedKey<IList<Blacklist>> blPubKey = new("blacklist.reload");
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly BotConfig config;
     private readonly IDataConnectionFactory dbFactory;
     private readonly ILogger<BlacklistService> logger;
@@ -48,7 +48,7 @@ public sealed class BlacklistService : IEarlyBehavior, INService
     /// <param name="strings">The localized strings service.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     public BlacklistService(IDataConnectionFactory dbFactory, IPubSub pubSub, EventHandler handler,
-        DiscordShardedClient client,
+        FluxerClient client,
         BotConfig config,
         GeneratedBotStrings strings, ILogger<BlacklistService> logger)
     {
@@ -98,7 +98,7 @@ public sealed class BlacklistService : IEarlyBehavior, INService
     ///     This method allows the service to act as a pre-message processing step, blocking messages from blacklisted
     ///     entities.
     /// </remarks>
-    public Task<bool> RunBehavior(DiscordShardedClient socketClient, IGuild guild, IUserMessage usrMsg)
+    public Task<bool> RunBehavior(FluxerClient socketClient, SocketGuild guild, Message usrMsg)
     {
         foreach (var bl in BlacklistEntries)
         {
@@ -176,10 +176,10 @@ public sealed class BlacklistService : IEarlyBehavior, INService
     ///     If the guild is found on the blacklist, the bot will automatically leave the guild and, if possible, notify the
     ///     guild of the blacklist status.
     /// </remarks>
-    private async Task CheckBlacklist(IGuild arg)
+    private async Task CheckBlacklist(SocketGuild arg)
     {
         var channels = await arg.GetTextChannelsAsync();
-        var channel = channels.FirstOrDefault(x => x is not IVoiceChannel);
+        var channel = channels.FirstOrDefault(x => x is not Channel);
         if (arg.Name.ToLower().Contains("nigger"))
         {
             await Blacklist(BlacklistType.Server, arg.Id, "Inappropriate Name");

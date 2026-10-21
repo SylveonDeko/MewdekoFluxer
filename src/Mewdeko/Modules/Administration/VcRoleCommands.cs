@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Administration.Services;
 
@@ -44,9 +44,9 @@ public partial class Administration
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
         [RequireContext(ContextType.Guild)]
-        public async Task VcRole(SocketGuildChannel vchan, [Remainder] IRole? role = null)
+        public async Task VcRole(Channel vchan, [Remainder] SocketRole? role = null)
         {
-            if (vchan is IVoiceChannel chan)
+            if (vchan is Channel chan)
             {
                 if (role == null)
                 {
@@ -79,9 +79,9 @@ public partial class Administration
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
         [RequireContext(ContextType.Guild)]
-        public async Task VcRole([Remainder] IRole? role = null)
+        public async Task VcRole([Remainder] SocketRole? role = null)
         {
-            var user = (IGuildUser)ctx.User;
+            var user = (SocketGuildMember)ctx.User;
 
             var vc = user.VoiceChannel;
 

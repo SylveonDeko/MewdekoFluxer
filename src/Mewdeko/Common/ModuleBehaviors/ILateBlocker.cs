@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 
 namespace Mewdeko.Common.ModuleBehaviors;
 
@@ -23,6 +23,6 @@ public interface ILateBlocker
     ///     A task that represents the asynchronous operation. The task result contains a boolean indicating whether the
     ///     module blocked the execution.
     /// </returns>
-    public Task<bool> TryBlockLate(DiscordShardedClient client, ICommandContext context,
+    public Task<bool> TryBlockLate(FluxerClient client, ICommandContext context,
         string moduleName, CommandInfo command);
 }

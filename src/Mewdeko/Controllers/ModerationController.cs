@@ -16,7 +16,7 @@ namespace Mewdeko.Controllers;
 [Authorize("ApiKeyPolicy")]
 public class ModerationController(
     UserPunishService userPunishService,
-    DiscordShardedClient client,
+    FluxerClient client,
     IDataConnectionFactory dbFactory,
     IDashboardAuditContext auditContext,
     ILogger<ModerationController> logger) : Controller
@@ -189,7 +189,7 @@ public class ModerationController(
             }
         }
 
-        IRole? role = null;
+        SocketRole? role = null;
         if (punishment == PunishmentAction.AddRole)
         {
             if (request.RoleId is null)

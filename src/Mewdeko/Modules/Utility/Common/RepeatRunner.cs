@@ -1,6 +1,5 @@
 ﻿using System.Threading;
 using DataModel;
-using Discord.Net;
 using Mewdeko.Modules.Administration.Services;
 using Mewdeko.Modules.Utility.Services;
 using Mewdeko.Services.Analytics;
@@ -13,7 +12,7 @@ namespace Mewdeko.Modules.Utility.Common;
 /// </summary>
 public class RepeatRunner : IDisposable
 {
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector? collector;
     private readonly StickyConditionService? conditionService;
     private readonly GuildTimezoneService? guildTimezoneService;
@@ -36,7 +35,7 @@ public class RepeatRunner : IDisposable
     /// <param name="messageCountService">Service for activity detection.</param>
     /// <param name="guildTimezoneService">Service for timezone handling.</param>
     /// <param name="collector">The analytics collector.</param>
-    public RepeatRunner(DiscordShardedClient client, IGuild guild, GuildRepeater repeater,
+    public RepeatRunner(FluxerClient client, SocketGuild guild, GuildRepeater repeater,
         MessageRepeaterService mrs, StickyConditionService? conditionService = null,
         MessageCountService? messageCountService = null, GuildTimezoneService? guildTimezoneService = null,
         IAnalyticsCollector? collector = null)
@@ -62,12 +61,12 @@ public class RepeatRunner : IDisposable
     /// <summary>
     ///     Gets the guild where the repeater operates.
     /// </summary>
-    public IGuild Guild { get; }
+    public SocketGuild Guild { get; }
 
     /// <summary>
     ///     Gets the channel where messages are sent.
     /// </summary>
-    public ITextChannel? Channel { get; private set; }
+    public Channel? Channel { get; private set; }
 
     /// <summary>
     ///     Gets or sets the initial interval for the repeater.
@@ -336,7 +335,7 @@ public class RepeatRunner : IDisposable
 
             ScheduleNextCheck();
         }
-        catch (HttpException ex)
+        catch (FluxerApiException ex)
         {
             collector?.Feature("repeater", Guild.Id, false, ex.GetType().Name);
             Log.Warning(ex, "HTTP error in repeater for channel {ChannelId}", Repeater.ChannelId);
@@ -478,7 +477,7 @@ public class RepeatRunner : IDisposable
         NextDateTime = DateTime.UtcNow + TimeSpan.FromSeconds(30);
     }
 
-    private async Task<IMessage?> GetLastMessageAsync()
+    private async Task<Message?> GetLastMessageAsync()
     {
         if (Channel == null) return null;
         var messages = await Channel.GetMessagesAsync(2).FlattenAsync().ConfigureAwait(false);
@@ -501,7 +500,7 @@ public class RepeatRunner : IDisposable
         }
     }
 
-    private async Task<IMessage?> SendNewMessageAsync()
+    private async Task<Message?> SendNewMessageAsync()
     {
         if (Channel == null) return null;
 
@@ -517,11 +516,11 @@ public class RepeatRunner : IDisposable
         if (SmartEmbed.TryParse(message, Channel.GuildId, out var embed, out var plainText))
         {
             return await Channel
-                .SendMessageAsync(plainText ?? "", embeds: embed, flags: flags)
+                .SendAsync(plainText ?? "", embeds: embed, flags: flags)
                 .ConfigureAwait(false);
         }
 
-        return await Channel.SendMessageAsync(message, flags: flags).ConfigureAwait(false);
+        return await Channel.SendAsync(message, flags: flags).ConfigureAwait(false);
     }
 
     private async Task RemoveRepeater()

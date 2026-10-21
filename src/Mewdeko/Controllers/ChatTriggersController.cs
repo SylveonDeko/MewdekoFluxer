@@ -15,7 +15,7 @@ namespace Mewdeko.Controllers;
 public class ChatTriggersController(
     ChatTriggersService service,
     TriggerCounterService counters,
-    DiscordShardedClient client,
+    FluxerClient client,
     IDashboardAuditContext auditContext) : Controller
 {
     /// <summary>

@@ -159,7 +159,7 @@ public class ServerStatsService : INService
     /// <param name="kind">Messages or voice.</param>
     /// <param name="lookbackDays">The window in days, or 0 for all time.</param>
     /// <returns>CSV text.</returns>
-    public async Task<string> ExportCsvAsync(IGuild guild, StatKind kind, int lookbackDays)
+    public async Task<string> ExportCsvAsync(SocketGuild guild, StatKind kind, int lookbackDays)
     {
         var totals = await GetPerUserTotalsAsync(guild.Id, kind, lookbackDays);
         var sb = new StringBuilder();
@@ -226,7 +226,7 @@ public class ServerStatsService : INService
     /// <param name="guild">The guild.</param>
     /// <param name="lookbackDays">The window in days, or 0 for all time.</param>
     /// <returns>The overview.</returns>
-    public async Task<ServerOverview> GetOverviewAsync(IGuild guild, int lookbackDays)
+    public async Task<ServerOverview> GetOverviewAsync(SocketGuild guild, int lookbackDays)
     {
         await using var db = await dbFactory.CreateConnectionAsync();
 
@@ -314,7 +314,7 @@ public class ServerStatsService : INService
     /// <param name="userId">The member.</param>
     /// <param name="lookbackDays">The window in days, or 0 for all time.</param>
     /// <returns>The summary.</returns>
-    public async Task<UserActivity> GetUserActivityAsync(IGuild guild, ulong userId, int lookbackDays)
+    public async Task<UserActivity> GetUserActivityAsync(SocketGuild guild, ulong userId, int lookbackDays)
     {
         await using var db = await dbFactory.CreateConnectionAsync();
 
@@ -380,7 +380,7 @@ public class ServerStatsService : INService
     /// <param name="channelId">The channel.</param>
     /// <param name="lookbackDays">The window in days, or 0 for all time.</param>
     /// <returns>The summary.</returns>
-    public async Task<ChannelActivity> GetChannelActivityAsync(IGuild guild, ulong channelId, int lookbackDays)
+    public async Task<ChannelActivity> GetChannelActivityAsync(SocketGuild guild, ulong channelId, int lookbackDays)
     {
         await using var db = await dbFactory.CreateConnectionAsync();
 

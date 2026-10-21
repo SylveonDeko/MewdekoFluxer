@@ -1,4 +1,3 @@
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Achievements.Common;
 using Mewdeko.Modules.Achievements.Services;
@@ -22,7 +21,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task AchOverview(IGuildUser? user = null)
+    public async Task AchOverview(SocketGuildMember? user = null)
     {
         var target = await ResolveTargetAsync(user, AchievementPrivacyArea.Achievements);
         if (target is null)
@@ -30,7 +29,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
 
         var prefix = await Service.GetPrefixAsync(ctx.Guild);
         var embed = await views.OverviewAsync((SocketGuild)ctx.Guild, target, prefix);
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -41,7 +40,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task AchCategory(string category, IGuildUser? user = null)
+    public async Task AchCategory(string category, SocketGuildMember? user = null)
     {
         var target = await ResolveTargetAsync(user, AchievementPrivacyArea.Achievements);
         if (target is null)
@@ -64,7 +63,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task AchList(IGuildUser? user = null)
+    public async Task AchList(SocketGuildMember? user = null)
     {
         var target = await ResolveTargetAsync(user, AchievementPrivacyArea.Achievements);
         if (target is null)
@@ -81,14 +80,14 @@ public class Achievements(AchievementViewService views, InteractiveService inter
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task AchLatest(IGuildUser? user = null)
+    public async Task AchLatest(SocketGuildMember? user = null)
     {
         var target = await ResolveTargetAsync(user, AchievementPrivacyArea.Achievements);
         if (target is null)
             return;
 
         var embed = await views.TopFiveAsync((SocketGuild)ctx.Guild, target, false);
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -98,14 +97,14 @@ public class Achievements(AchievementViewService views, InteractiveService inter
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task AchHighest(IGuildUser? user = null)
+    public async Task AchHighest(SocketGuildMember? user = null)
     {
         var target = await ResolveTargetAsync(user, AchievementPrivacyArea.Achievements);
         if (target is null)
             return;
 
         var embed = await views.TopFiveAsync((SocketGuild)ctx.Guild, target, true);
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -117,8 +116,8 @@ public class Achievements(AchievementViewService views, InteractiveService inter
     [RequireContext(ContextType.Guild)]
     public async Task AchSearch([Remainder] string query)
     {
-        var embed = await views.SearchAsync((SocketGuild)ctx.Guild, (SocketGuildUser)ctx.User, query);
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        var embed = await views.SearchAsync((SocketGuild)ctx.Guild, (SocketGuildMember)ctx.User, query);
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -139,7 +138,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
         }
 
         var embed = await views.GlobalAsync(ctx.Guild.Id, target);
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -187,7 +186,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task AchCard(IGuildUser? user = null)
+    public async Task AchCard(SocketGuildMember? user = null)
     {
         var target = await ResolveTargetAsync(user, AchievementPrivacyArea.Profile);
         if (target is null)
@@ -205,7 +204,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public Task AchStats(IGuildUser? user = null)
+    public Task AchStats(SocketGuildMember? user = null)
     {
         return StatsAsync(user);
     }
@@ -230,7 +229,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public Task AchView(IGuildUser user, [Remainder] string achievement)
+    public Task AchView(SocketGuildMember user, [Remainder] string achievement)
     {
         return ViewAsync(achievement, user);
     }
@@ -262,7 +261,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
             : Strings.AchievementIconSet(ctx.Guild.Id, result.Value!.Name));
     }
 
-    private async Task ViewAsync(string achievement, IGuildUser? user)
+    private async Task ViewAsync(string achievement, SocketGuildMember? user)
     {
         var target = await ResolveTargetAsync(user, AchievementPrivacyArea.Achievements);
         if (target is null)
@@ -275,7 +274,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
         var catalog = await Service.GetCatalogAsync(ctx.Guild.Id);
         var progress = (await Service.GetProgressAsync((SocketGuild)ctx.Guild, target.Id, d => d.Key == def.Key))
             .FirstOrDefault();
-        var staff = ((IGuildUser)ctx.User).GuildPermissions.ManageGuild;
+        var staff = ((SocketGuildMember)ctx.User).GuildPermissions.ManageGuild;
         if (progress is null || def.Hidden && !progress.Unlocked && !staff &&
             !Service.GetSettings(ctx.Guild.Id).Row.RevealHidden)
         {
@@ -293,14 +292,14 @@ public class Achievements(AchievementViewService views, InteractiveService inter
         await ctx.Channel.SendFileAsync(image, AchievementService.UnlockImageFileName);
     }
 
-    private async Task StatsAsync(IGuildUser? user)
+    private async Task StatsAsync(SocketGuildMember? user)
     {
         var target = await ResolveTargetAsync(user, AchievementPrivacyArea.Profile);
         if (target is null)
             return;
 
         var embed = await views.StatsAsync((SocketGuild)ctx.Guild, target);
-        await ctx.Channel.SendMessageAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -310,7 +309,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task Badges(IGuildUser? user = null)
+    public async Task Badges(SocketGuildMember? user = null)
     {
         var target = await ResolveTargetAsync(user, AchievementPrivacyArea.Badges);
         if (target is null)
@@ -376,7 +375,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
         }
 
         var owned = (await Service.GetOwnedBadgesAsync(ctx.Guild.Id, ctx.User.Id)).Any(b => b.Key == found.Key);
-        await ctx.Channel.SendMessageAsync(embed: views.BadgePreview(ctx.Guild.Id, found, owned).Build());
+        await ctx.Channel.SendAsync(embed: views.BadgePreview(ctx.Guild.Id, found, owned).Build());
     }
 
     /// <summary>
@@ -467,7 +466,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task AchLogChannel(ITextChannel? channel = null)
+    public async Task AchLogChannel(Channel? channel = null)
     {
         await Service.UpdateSettingsAsync(ctx.Guild.Id, row => row.LogChannelId = channel?.Id);
         await ConfirmAsync(channel is null
@@ -606,13 +605,13 @@ public class Achievements(AchievementViewService views, InteractiveService inter
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task AchGrant(IGuildUser user, [Remainder] string achievement)
+    public async Task AchGrant(SocketGuildMember user, [Remainder] string achievement)
     {
         var def = await FindAsync(achievement);
         if (def is null)
             return;
 
-        var result = await Service.GrantAsync((SocketGuildUser)user, def.Key, ctx.User.Id);
+        var result = await Service.GrantAsync((SocketGuildMember)user, def.Key, ctx.User.Id);
         if (!result.Success)
         {
             await ErrorAsync(views.DescribeError(ctx.Guild.Id, result.Error));
@@ -631,7 +630,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task AchRevoke(IGuildUser user, [Remainder] string achievement)
+    public async Task AchRevoke(SocketGuildMember user, [Remainder] string achievement)
     {
         var def = await FindAsync(achievement);
         if (def is null)
@@ -655,7 +654,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task AchReset(IGuildUser user)
+    public async Task AchReset(SocketGuildMember user)
     {
         if (!await PromptUserConfirmAsync(Strings.AchievementResetConfirm(ctx.Guild.Id, user.Mention), ctx.User.Id))
             return;
@@ -785,7 +784,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageGuild)]
     [BotPerm(GuildPermission.ManageRoles)]
-    public Task AchRewardRole(IRole role, [Remainder] string achievement)
+    public Task AchRewardRole(SocketRole role, [Remainder] string achievement)
     {
         return SetRewardAsync(achievement, role.Id, null, null);
     }
@@ -839,7 +838,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task AchExcludeRole(IRole role)
+    public async Task AchExcludeRole(SocketRole role)
     {
         var excluded = await Service.ToggleExclusionAsync(ctx.Guild.Id, role.Id, true);
         await ConfirmAsync(excluded
@@ -855,7 +854,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task AchExcludeChannel(IGuildChannel channel)
+    public async Task AchExcludeChannel(Channel channel)
     {
         var excluded = await Service.ToggleExclusionAsync(ctx.Guild.Id, channel.Id, false);
         var mention = MentionUtils.MentionChannel(channel.Id);
@@ -866,9 +865,9 @@ public class Achievements(AchievementViewService views, InteractiveService inter
 
     #endregion
 
-    private async Task<SocketGuildUser?> ResolveTargetAsync(IGuildUser? user, AchievementPrivacyArea area)
+    private async Task<SocketGuildMember?> ResolveTargetAsync(SocketGuildMember? user, AchievementPrivacyArea area)
     {
-        var target = (SocketGuildUser)(user ?? ctx.User);
+        var target = (SocketGuildMember)(user ?? ctx.User);
         if (!Service.IsEnabled(ctx.Guild.Id) && target.Id == ctx.User.Id && user is null)
         {
             var prefix = await Service.GetPrefixAsync(ctx.Guild);
@@ -947,7 +946,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
     {
         if (pages.Count == 1)
         {
-            await ctx.Channel.SendMessageAsync(embed: pages[0].BuildEmbed());
+            await ctx.Channel.SendAsync(embed: pages[0].BuildEmbed());
             return;
         }
 

@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Net.NetworkInformation;
 using Mewdeko.Common.Attributes.TextCommands;
-using Embed = Discord.Embed;
 
 namespace Mewdeko.Modules.Utility;
 
@@ -35,7 +34,7 @@ public partial class Utility
             var eb = new EmbedBuilder()
                 .WithOkColor()
                 .WithDescription(string.Join("\n", traceRt.Select(x => $"{x}")));
-            await ctx.Channel.SendMessageAsync(embed: eb.Build());
+            await ctx.Channel.SendAsync(embed: eb.Build());
         }
         else
             await ctx.Channel.SendErrorAsync(
@@ -104,7 +103,7 @@ public partial class Utility
         {
             var typing = ctx.Channel.EnterTypingState();
             var ping = new Ping();
-            var embeds = new List<Embed>();
+            var embeds = new List<EmbedRequest>();
             if (count > 10)
             {
                 await ctx.Channel.SendErrorAsync(Strings.MaximumPings(ctx.Guild.Id), Config);
@@ -193,7 +192,7 @@ public partial class Utility
             }
 
             if (embeds.Any())
-                await ctx.Channel.SendMessageAsync(embeds: embeds.ToArray());
+                await ctx.Channel.SendAsync(embeds: embeds.ToArray());
             typing.Dispose();
         }
     }

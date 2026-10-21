@@ -15,7 +15,7 @@ namespace Mewdeko.Modules.Starboard.Services;
 /// </summary>
 public class StarboardService : INService, IReadyExecutor, IUnloadableService
 {
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly IDataConnectionFactory dbFactory;
     private readonly EventHandler eventHandler;
@@ -35,7 +35,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     /// <param name="strings">The localized strings service.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     /// <param name="collector">The analytics collector.</param>
-    public StarboardService(DiscordShardedClient client, IDataConnectionFactory dbFactory,
+    public StarboardService(FluxerClient client, IDataConnectionFactory dbFactory,
         EventHandler eventHandler, GeneratedBotStrings strings, ILogger<StarboardService> logger,
         IAnalyticsCollector collector)
     {
@@ -84,7 +84,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     /// <param name="emote">The emote to use for this starboard.</param>
     /// <param name="threshold">The number of reactions required.</param>
     /// <returns>The ID of the created starboard configuration.</returns>
-    public async Task<int> CreateStarboard(IGuild guild, ulong channelId, string emote, int threshold)
+    public async Task<int> CreateStarboard(SocketGuild guild, ulong channelId, string emote, int threshold)
     {
         // Validate emotes don't collide with existing starboards
         var emotes = ParseEmotes(emote);
@@ -96,7 +96,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
             var collision = emotes.Intersect(existingEmotes).FirstOrDefault();
             if (collision != null)
                 throw new InvalidOperationException(
-                    $"Emote {collision} is already used by another starboard in this guild.");
+                    $"Emoji {collision} is already used by another starboard in this guild.");
         }
 
         await using var db = await dbFactory.CreateConnectionAsync();
@@ -126,7 +126,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     /// <param name="guild">The guild.</param>
     /// <param name="starboardId">The ID of the starboard configuration.</param>
     /// <returns>True if the starboard was deleted, false otherwise.</returns>
-    public async Task<bool> DeleteStarboard(IGuild guild, int starboardId)
+    public async Task<bool> DeleteStarboard(SocketGuild guild, int starboardId)
     {
         var config = starboardConfigs.FirstOrDefault(x => x.Id == starboardId && x.GuildId == guild.Id);
         if (config == null)
@@ -265,7 +265,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
                    ?? messageStats?.FirstOrDefault();
 
         var channelId = stat?.ChannelId ?? 0;
-        IMessage? repost = null;
+        Message? repost = null;
 
         if (channelId == 0)
         {
@@ -331,16 +331,16 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     ///     Fetches a message from a guild channel, using the cache first and REST second. Returns null when the
     ///     channel is gone, is not a message channel, or the message was deleted or is not readable.
     /// </summary>
-    private static async Task<IMessage?> TryGetMessageAsync(SocketGuild guild, ulong channelId, ulong messageId)
+    private static async Task<Message?> TryGetMessageAsync(SocketGuild guild, ulong channelId, ulong messageId)
     {
-        if (channelId == 0 || guild.GetChannel(channelId) is not IMessageChannel channel)
+        if (channelId == 0 || guild.GetChannel(channelId) is not Channel channel)
             return null;
 
         try
         {
             return await channel.GetMessageAsync(messageId);
         }
-        catch (Discord.Net.HttpException)
+        catch (Discord.Net.FluxerApiException)
         {
             return null;
         }
@@ -350,7 +350,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     ///     Finds the source channel id in a starboard repost by reading its jump link from the embed. Returns 0
     ///     when none is found.
     /// </summary>
-    private static ulong FindJumpChannelId(IMessage? repost, ulong messageId)
+    private static ulong FindJumpChannelId(Message? repost, ulong messageId)
     {
         if (repost == null)
             return 0;
@@ -378,7 +378,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     /// <summary>
     ///     Finds the first image on a message: an image attachment first, then an embed image or thumbnail.
     /// </summary>
-    private static string? FindImageUrl(IMessage message)
+    private static string? FindImageUrl(Message message)
     {
         var attachment = message.Attachments.FirstOrDefault(a =>
             a.ContentType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) == true
@@ -401,7 +401,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     ///     Reads content, author and image back out of a starboard repost embed.
     /// </summary>
     private static (string? Content, string AuthorName, string? AuthorAvatarUrl, string? ImageUrl)
-        ParseRepost(IMessage repost)
+        ParseRepost(Message repost)
     {
         var embed = repost.Embeds.FirstOrDefault();
         if (embed == null)
@@ -415,7 +415,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     /// <summary>
     ///     Sums the bolded reaction counts on a repost stars line, which is the message content.
     /// </summary>
-    private static int ParseRepostStarCount(IMessage repost)
+    private static int ParseRepostStarCount(Message repost)
     {
         var starsLine = repost.Content;
         if (string.IsNullOrWhiteSpace(starsLine))
@@ -437,7 +437,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     /// <param name="starboardId">The ID of the starboard configuration.</param>
     /// <param name="allowed">Whether bots are allowed.</param>
     /// <returns>True if the setting was updated, false if the starboard wasn't found.</returns>
-    public async Task<bool> SetAllowBots(IGuild guild, int starboardId, bool allowed)
+    public async Task<bool> SetAllowBots(SocketGuild guild, int starboardId, bool allowed)
     {
         var config = starboardConfigs.FirstOrDefault(x => x.Id == starboardId && x.GuildId == guild.Id);
         if (config == null)
@@ -457,7 +457,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     /// <param name="starboardId">The ID of the starboard configuration.</param>
     /// <param name="removeOnDelete">Whether to remove on delete.</param>
     /// <returns>True if the setting was updated, false if the starboard wasn't found.</returns>
-    public async Task<bool> SetRemoveOnDelete(IGuild guild, int starboardId, bool removeOnDelete)
+    public async Task<bool> SetRemoveOnDelete(SocketGuild guild, int starboardId, bool removeOnDelete)
     {
         var config = starboardConfigs.FirstOrDefault(x => x.Id == starboardId && x.GuildId == guild.Id);
         if (config == null)
@@ -477,7 +477,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     /// <param name="starboardId">The ID of the starboard configuration.</param>
     /// <param name="removeOnClear">Whether to remove on clear.</param>
     /// <returns>True if the setting was updated, false if the starboard wasn't found.</returns>
-    public async Task<bool> SetRemoveOnClear(IGuild guild, int starboardId, bool removeOnClear)
+    public async Task<bool> SetRemoveOnClear(SocketGuild guild, int starboardId, bool removeOnClear)
     {
         var config = starboardConfigs.FirstOrDefault(x => x.Id == starboardId && x.GuildId == guild.Id);
         if (config == null)
@@ -497,7 +497,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     /// <param name="starboardId">The ID of the starboard configuration.</param>
     /// <param name="removeBelowThreshold">Whether to remove below threshold.</param>
     /// <returns>True if the setting was updated, false if the starboard wasn't found.</returns>
-    public async Task<bool> SetRemoveBelowThreshold(IGuild guild, int starboardId, bool removeBelowThreshold)
+    public async Task<bool> SetRemoveBelowThreshold(SocketGuild guild, int starboardId, bool removeBelowThreshold)
     {
         var config = starboardConfigs.FirstOrDefault(x => x.Id == starboardId && x.GuildId == guild.Id);
         if (config == null)
@@ -517,7 +517,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     /// <param name="starboardId">The ID of the starboard configuration.</param>
     /// <param name="threshold">The threshold value.</param>
     /// <returns>True if the setting was updated, false if the starboard wasn't found.</returns>
-    public async Task<bool> SetRepostThreshold(IGuild guild, int starboardId, int threshold)
+    public async Task<bool> SetRepostThreshold(SocketGuild guild, int starboardId, int threshold)
     {
         var config = starboardConfigs.FirstOrDefault(x => x.Id == starboardId && x.GuildId == guild.Id);
         if (config == null)
@@ -537,7 +537,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     /// <param name="starboardId">The ID of the starboard configuration.</param>
     /// <param name="threshold">The threshold value.</param>
     /// <returns>True if the setting was updated, false if the starboard wasn't found.</returns>
-    public async Task<bool> SetStarThreshold(IGuild guild, int starboardId, int threshold)
+    public async Task<bool> SetStarThreshold(SocketGuild guild, int starboardId, int threshold)
     {
         var config = starboardConfigs.FirstOrDefault(x => x.Id == starboardId && x.GuildId == guild.Id);
         if (config == null)
@@ -557,7 +557,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     /// <param name="starboardId">The ID of the starboard configuration.</param>
     /// <param name="useBlacklist">Whether to use blacklist mode.</param>
     /// <returns>True if the setting was updated, false if the starboard wasn't found.</returns>
-    public async Task<bool> SetUseBlacklist(IGuild guild, int starboardId, bool useBlacklist)
+    public async Task<bool> SetUseBlacklist(SocketGuild guild, int starboardId, bool useBlacklist)
     {
         var config = starboardConfigs.FirstOrDefault(x => x.Id == starboardId && x.GuildId == guild.Id);
         if (config == null)
@@ -577,7 +577,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     /// <param name="starboardId">The ID of the starboard configuration.</param>
     /// <param name="channelId">The channel ID to toggle.</param>
     /// <returns>A tuple containing whether the channel was added and the starboard configuration.</returns>
-    public async Task<(bool WasAdded, DataModel.Starboard Config)> ToggleChannel(IGuild guild, int starboardId,
+    public async Task<(bool WasAdded, DataModel.Starboard Config)> ToggleChannel(SocketGuild guild, int starboardId,
         string channelId)
     {
         var config = starboardConfigs.FirstOrDefault(x => x.Id == starboardId && x.GuildId == guild.Id);
@@ -606,7 +606,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     /// <summary>
     ///     Adds a new emote to an existing starboard configuration.
     /// </summary>
-    public async Task<bool> AddEmoteToStarboard(IGuild guild, int starboardId, string newEmote)
+    public async Task<bool> AddEmoteToStarboard(SocketGuild guild, int starboardId, string newEmote)
     {
         var config = starboardConfigs.FirstOrDefault(x => x.Id == starboardId && x.GuildId == guild.Id);
         if (config == null)
@@ -619,7 +619,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
             var existingEmotes = ParseEmotes(existingStarboard.Emote);
             if (existingEmotes.Contains(newEmote))
                 throw new InvalidOperationException(
-                    $"Emote {newEmote} is already used by another starboard in this guild.");
+                    $"Emoji {newEmote} is already used by another starboard in this guild.");
         }
 
         var currentEmotes = ParseEmotes(config.Emote);
@@ -638,7 +638,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     /// <summary>
     ///     Removes an emote from a starboard configuration.
     /// </summary>
-    public async Task<bool> RemoveEmoteFromStarboard(IGuild guild, int starboardId, string emoteToRemove)
+    public async Task<bool> RemoveEmoteFromStarboard(SocketGuild guild, int starboardId, string emoteToRemove)
     {
         var config = starboardConfigs.FirstOrDefault(x => x.Id == starboardId && x.GuildId == guild.Id);
         if (config == null)
@@ -805,7 +805,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     ///     Builds a starboard post: the star counts as message text and an embed with the author, content, first
     ///     image, a markdown jump link and any other attachments as links.
     /// </summary>
-    private async Task<(string Stars, Discord.Embed Embed)> CreateStarboardPostAsync(IUserMessage message, string? content,
+    private async Task<(string Stars, EmbedRequest EmbedRequest)> CreateStarboardPostAsync(Message message, string? content,
         List<string> starboardEmotes, bool allowBots, ulong guildId)
     {
         var reactionCounts = new List<string>();
@@ -861,7 +861,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     /// <summary>
     ///     Tracks starboard statistics for a message.
     /// </summary>
-    private async Task TrackStarboardStats(IUserMessage message, int starboardId, string emote, int reactionCount,
+    private async Task TrackStarboardStats(Message message, int starboardId, string emote, int reactionCount,
         ulong channelId)
     {
         // Safety check to prevent foreign key constraint violations
@@ -997,7 +997,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     /// <param name="allowBots">Whether reactions from bots count.</param>
     /// <param name="listWhenAtLeast">Raw count at which the exact non-bot count is worth a fetch.</param>
     /// <returns>The number of counting reactions.</returns>
-    private static async Task<int> CountStarsAsync(IUserMessage message, IEmote emote, bool allowBots,
+    private static async Task<int> CountStarsAsync(Message message, Emoji emote, bool allowBots,
         int? listWhenAtLeast = null)
     {
         if (!message.Reactions.TryGetValue(emote, out var meta) || meta.ReactionCount <= 0)
@@ -1014,14 +1014,14 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
         return users.Count(u => !u.IsBot);
     }
 
-    private async Task OnReactionAddedAsync(Cacheable<IUserMessage, ulong> message,
-        Cacheable<IMessageChannel, ulong> channel,
+    private async Task OnReactionAddedAsync(Cacheable<Message> message,
+        Cacheable<Channel> channel,
         SocketReaction reaction)
     {
         if (!reaction.User.IsSpecified
             || reaction.User.Value.IsBot
             || !channel.HasValue
-            || channel.Value is not ITextChannel textChannel)
+            || channel.Value is not Channel textChannel)
             return;
 
         var guildStarboards = GetStarboards(textChannel.GuildId);
@@ -1034,14 +1034,14 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
         }
     }
 
-    private async Task OnReactionRemoveAsync(Cacheable<IUserMessage, ulong> message,
-        Cacheable<IMessageChannel, ulong> channel,
+    private async Task OnReactionRemoveAsync(Cacheable<Message> message,
+        Cacheable<Channel> channel,
         SocketReaction reaction)
     {
         if (!reaction.User.IsSpecified
             || reaction.User.Value.IsBot
             || !channel.HasValue
-            || channel.Value is not ITextChannel textChannel)
+            || channel.Value is not Channel textChannel)
             return;
 
         var guildStarboards = GetStarboards(textChannel.GuildId);
@@ -1054,20 +1054,20 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
         }
     }
 
-    private async Task HandleReactionChange(Cacheable<IUserMessage, ulong> message,
-        Cacheable<IMessageChannel, ulong> channel,
+    private async Task HandleReactionChange(Cacheable<Message> message,
+        Cacheable<Channel> channel,
         SocketReaction reaction,
         DataModel.Starboard starboard,
         bool isAdd)
     {
-        var textChannel = channel.Value as ITextChannel;
+        var textChannel = channel.Value as Channel;
 
         // Check if the reaction matches any of the starboard's emotes
         var starboardEmotes = ParseEmotes(starboard.Emote);
         var matchingEmote = starboardEmotes.FirstOrDefault(e =>
         {
             var emote = e.ToIEmote();
-            return emote.Name != null && Equals(reaction.Emote, emote);
+            return emote.Name != null && Equals(reaction.Emoji, emote);
         });
 
         if (matchingEmote == null)
@@ -1077,7 +1077,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
         if (starboardChannel == null)
             return;
 
-        IUserMessage newMessage;
+        Message newMessage;
         if (!message.HasValue)
             newMessage = await message.GetOrDownloadAsync();
         else
@@ -1180,13 +1180,13 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
             return;
         }
 
-        IUserMessage? existingPost = null;
+        Message? existingPost = null;
         if (maybePost != null)
         {
             if (starboard.RepostThreshold > 0)
             {
                 var recent = await starboardChannel.GetMessagesAsync(starboard.RepostThreshold).FlattenAsync();
-                existingPost = recent.FirstOrDefault(x => x.Id == maybePost.PostId) as IUserMessage;
+                existingPost = recent.FirstOrDefault(x => x.Id == maybePost.PostId) as Message;
 
                 if (existingPost == null)
                 {
@@ -1206,7 +1206,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
             }
             else
             {
-                existingPost = await starboardChannel.GetMessageAsync(maybePost.PostId) as IUserMessage;
+                existingPost = await starboardChannel.GetMessageAsync(maybePost.PostId) as Message;
             }
         }
 
@@ -1224,19 +1224,19 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
             return;
         }
 
-        var sent = await starboardChannel.SendMessageAsync(stars, embed: embed,
+        var sent = await starboardChannel.SendAsync(stars, embed: embed,
             allowedMentions: AllowedMentions.None);
         await AddStarboardPost(newMessage.Id, sent.Id, starboard.Id, totalStars);
     }
 
-    private async Task OnMessageDeletedAsync(Cacheable<IMessage, ulong> arg1, Cacheable<IMessageChannel, ulong> arg2)
+    private async Task OnMessageDeletedAsync(Cacheable<Message> arg1, Cacheable<Channel> arg2)
     {
         if (!arg1.HasValue || !arg2.HasValue)
             return;
 
         var msg = arg1.Value;
         var chan = arg2.Value;
-        if (chan is not ITextChannel channel)
+        if (chan is not Channel channel)
             return;
 
         var permissions = (await channel.Guild.GetUserAsync(client.CurrentUser.Id)).GetPermissions(channel);
@@ -1269,13 +1269,13 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
         }
     }
 
-    private async Task OnAllReactionsClearedAsync(Cacheable<IUserMessage, ulong> arg1,
-        Cacheable<IMessageChannel, ulong> arg2)
+    private async Task OnAllReactionsClearedAsync(Cacheable<Message> arg1,
+        Cacheable<Channel> arg2)
     {
-        if (!arg2.HasValue || arg2.Value is not ITextChannel channel)
+        if (!arg2.HasValue || arg2.Value is not Channel channel)
             return;
 
-        IUserMessage msg;
+        Message msg;
         if (!arg1.HasValue)
             msg = await arg1.GetOrDownloadAsync();
         else

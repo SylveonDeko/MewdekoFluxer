@@ -1,4 +1,6 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Threading.Channels;
+using Channel = Fluxer.Net.Channel;
+using System.Text.RegularExpressions;
 using System.Threading;
 using DataModel;
 using LinqToDB;
@@ -38,7 +40,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
 
     private readonly BotConfigService bss;
 
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly IDataConnectionFactory dbFactory;
     private readonly EventHandler eventHandler;
@@ -48,7 +50,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     private readonly UserPunishService punishService;
 
     private readonly Channel<PunishQueueItem> punishUserQueue =
-        Channel.CreateBounded<PunishQueueItem>(new BoundedChannelOptions(200)
+        System.Threading.Channels.Channel.CreateBounded<PunishQueueItem>(new BoundedChannelOptions(200)
         {
             SingleReader = true,
             SingleWriter = false,
@@ -74,7 +76,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     /// <param name="scamPresets">The known scam image hashes that ship with the bot.</param>
     /// <param name="bss">The bot configuration service.</param>
     /// <param name="collector">The analytics collector.</param>
-    public ProtectionService(DiscordShardedClient client,
+    public ProtectionService(FluxerClient client,
         MuteService mute, IDataConnectionFactory dbFactory, UserPunishService punishService, EventHandler eventHandler,
         ILogger<ProtectionService> logger, GeneratedBotStrings strings, ImageHashingService imageHashing,
         ScamImagePresetService scamPresets, BotConfigService bss, IAnalyticsCollector collector)
@@ -152,7 +154,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     /// <summary>
     ///     An event that is triggered when the anti-protection is triggered.
     /// </summary>
-    public event Func<PunishmentAction, ProtectionType, IGuildUser[], Task> OnAntiProtectionTriggered = delegate
+    public event Func<PunishmentAction, ProtectionType, SocketGuildMember[], Task> OnAntiProtectionTriggered = delegate
     {
         return Task.CompletedTask;
     };
@@ -182,7 +184,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
                     await punishService.ApplyPunishment(gu.Guild, gu, currentUser, (PunishmentAction)item.Action,
                         muteTime, item.RoleId, $"{item.Type} Protection").ConfigureAwait(false);
                 }
-                catch (Discord.Net.HttpException ex) when (ex.DiscordCode == DiscordErrorCode.MissingPermissions)
+                catch (Discord.Net.FluxerApiException ex) when (ex.DiscordCode == DiscordErrorCode.MissingPermissions)
                 {
                     await PausePunishmentsAsync(gu.Guild, (PunishmentAction)item.Action, item.Type,
                         "Discord rejected the action with Missing Permissions").ConfigureAwait(false);
@@ -372,7 +374,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     /// </summary>
     /// <param name="user">The user that has joined the guild.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    private async Task HandleUserJoined(IGuildUser user)
+    private async Task HandleUserJoined(SocketGuildMember user)
     {
         if (user.IsBot) return;
 
@@ -568,15 +570,15 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     /// </summary>
     /// <param name="arg">The message that was received.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    private Task HandleAntiSpam(IMessage arg)
+    private Task HandleAntiSpam(Message arg)
     {
-        if (arg is not SocketUserMessage msg || msg.Author.IsBot || msg.Author is IGuildUser
+        if (arg is not SocketMessage msg || msg.Author.IsBot || msg.Author is SocketGuildMember
             {
                 GuildPermissions.Administrator: true
             })
             return Task.CompletedTask;
 
-        if (msg.Channel is not ITextChannel channel)
+        if (msg.Channel is not Channel channel)
             return Task.CompletedTask;
 
         if (!antiSpamGuilds.TryGetValue(channel.Guild.Id, out var spamStats))
@@ -602,7 +604,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
                         removedStats.Dispose();
                         var settings = spamStats.AntiSpamSettings;
                         await PunishUsers(settings.Action, ProtectionType.Spamming, settings.MuteTime, settings.RoleId,
-                            (IGuildUser)msg.Author).ConfigureAwait(false);
+                            (SocketGuildMember)msg.Author).ConfigureAwait(false);
                     }
                 }
             }
@@ -623,7 +625,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     /// <param name="roleId">The ID of the role to be added, if applicable.</param>
     /// <param name="gus">The users to be punished.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    private async Task PunishUsers(int action, ProtectionType pt, int muteTime, ulong? roleId, params IGuildUser[]? gus)
+    private async Task PunishUsers(int action, ProtectionType pt, int muteTime, ulong? roleId, params SocketGuildMember[]? gus)
     {
         if (gus == null || gus.Length == 0) return;
 
@@ -647,7 +649,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
         var punishment = (PunishmentAction)action;
         var guild = gus[0].Guild;
         var bot = await guild.GetCurrentUserAsync().ConfigureAwait(false);
-        var queued = new List<IGuildUser>(gus.Length);
+        var queued = new List<SocketGuildMember>(gus.Length);
 
         if (pausedPunishments.TryGetValue(guild.Id, out var pause) && DateTime.UtcNow < pause.RetryAfter)
             return;
@@ -711,7 +713,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     /// <param name="action">The punishment.</param>
     /// <param name="roleId">The role involved for role based punishments.</param>
     /// <returns>A short reason, or null when the action should be attempted.</returns>
-    private static string? MissingPermissionFor(IGuildUser bot, IGuildUser target, PunishmentAction action,
+    private static string? MissingPermissionFor(SocketGuildMember bot, SocketGuildMember target, PunishmentAction action,
         ulong? roleId)
     {
         if (action is PunishmentAction.None or PunishmentAction.Warn or PunishmentAction.Delete)
@@ -757,7 +759,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     ///     Pauses automod punishments for a guild without touching its settings, logs once, and tells the owner.
     ///     The next trigger after the retry interval re-checks permissions and resumes automatically.
     /// </summary>
-    private async Task PausePunishmentsAsync(IGuild guild, PunishmentAction action, ProtectionType type,
+    private async Task PausePunishmentsAsync(SocketGuild guild, PunishmentAction action, ProtectionType type,
         string reason)
     {
         var alreadyPaused = pausedPunishments.ContainsKey(guild.Id);
@@ -780,7 +782,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
         await NotifyOwnerAsync(guild, action, reason).ConfigureAwait(false);
     }
 
-    private async Task NotifyOwnerAsync(IGuild guild, PunishmentAction action, string reason)
+    private async Task NotifyOwnerAsync(SocketGuild guild, PunishmentAction action, string reason)
     {
         if (ownerNotices.TryGetValue(guild.Id, out var last) && DateTime.UtcNow - last < OwnerNoticeInterval)
             return;
@@ -791,7 +793,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
             var owner = await guild.GetOwnerAsync().ConfigureAwait(false);
             if (owner is null) return;
             var dm = await owner.CreateDMChannelAsync().ConfigureAwait(false);
-            await dm.SendMessageAsync(strings.ProtectionPunishPausedDm(guild.Id, guild.Name, action.ToString(),
+            await dm.SendAsync(strings.ProtectionPunishPausedDm(guild.Id, guild.Name, action.ToString(),
                 reason)).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -856,12 +858,12 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     /// </summary>
     /// <param name="arg">The message that was received.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    private Task HandleAntiMassMention(IMessage arg)
+    private Task HandleAntiMassMention(Message arg)
     {
-        if (arg is not SocketUserMessage msg || msg.Author is IGuildUser { GuildPermissions.Administrator: true })
+        if (arg is not SocketMessage msg || msg.Author is SocketGuildMember { GuildPermissions.Administrator: true })
             return Task.CompletedTask;
 
-        if (msg.Channel is not ITextChannel channel)
+        if (msg.Channel is not Channel channel)
             return Task.CompletedTask;
 
         if (!antiMassMentionGuilds.TryGetValue(channel.Guild.Id, out var massMentionStats))
@@ -882,7 +884,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
                 if (mentionCount >= settings.MentionThreshold)
                 {
                     await PunishUsers(settings.Action, ProtectionType.MassMention, settings.MuteTime, settings.RoleId,
-                        (IGuildUser)msg.Author).ConfigureAwait(false);
+                        (SocketGuildMember)msg.Author).ConfigureAwait(false);
                     if (massMentionStats.UserStats.TryRemove(msg.Author.Id, out var removedStats))
                         removedStats.Dispose();
                     return;
@@ -894,7 +896,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
                 if (userStats.AddMentions(mentionCount, settings.MaxMentionsInTimeWindow))
                 {
                     await PunishUsers(settings.Action, ProtectionType.MassMention, settings.MuteTime, settings.RoleId,
-                        (IGuildUser)msg.Author).ConfigureAwait(false);
+                        (SocketGuildMember)msg.Author).ConfigureAwait(false);
                     if (massMentionStats.UserStats.TryRemove(msg.Author.Id, out var removedStats))
                         removedStats.Dispose();
                 }
@@ -1474,12 +1476,12 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     /// </summary>
     /// <param name="arg">The message that was received.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    private Task HandleAntiMassPost(IMessage arg)
+    private Task HandleAntiMassPost(Message arg)
     {
-        if (arg is not SocketUserMessage msg || msg.Author.IsBot || msg.Author is not IGuildUser guildUser)
+        if (arg is not SocketMessage msg || msg.Author.IsBot || msg.Author is not SocketGuildMember guildUser)
             return Task.CompletedTask;
 
-        if (msg.Channel is not ITextChannel channel)
+        if (msg.Channel is not Channel channel)
             return Task.CompletedTask;
 
         if (!antiMassPostGuilds.TryGetValue(channel.Guild.Id, out var massPostStats))
@@ -1590,7 +1592,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     /// <summary>
     ///     Punishes a user for mass posting and optionally deletes messages.
     /// </summary>
-    private async Task PunishMassPost(IGuildUser user, AntiMassPostStats stats, IUserMessage triggerMessage)
+    private async Task PunishMassPost(SocketGuildMember user, AntiMassPostStats stats, Message triggerMessage)
     {
         stats.Increment();
 
@@ -1611,7 +1613,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
             try
             {
                 var dmChannel = await user.CreateDMChannelAsync().ConfigureAwait(false);
-                await dmChannel.SendMessageAsync(strings.MassPostDetectedDm(user.Guild.Id, user.Guild.Name))
+                await dmChannel.SendAsync(strings.MassPostDetectedDm(user.Guild.Id, user.Guild.Name))
                     .ConfigureAwait(false);
             }
             catch
@@ -1629,10 +1631,10 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     /// </summary>
     /// <param name="arg">The message that was received.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    private Task HandleAntiPostChannel(IMessage arg)
+    private Task HandleAntiPostChannel(Message arg)
     {
-        if (arg is not SocketUserMessage msg || msg.Author.IsBot || msg.Author is not IGuildUser guildUser ||
-            msg.Channel is not ITextChannel channel ||
+        if (arg is not SocketMessage msg || msg.Author.IsBot || msg.Author is not SocketGuildMember guildUser ||
+            msg.Channel is not Channel channel ||
             !antiPostChannelGuilds.TryGetValue(channel.Guild.Id, out var postChannelStats))
             return Task.CompletedTask;
 
@@ -1693,7 +1695,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
                     {
                         var dmChannel = await guildUser.CreateDMChannelAsync().ConfigureAwait(false);
                         await dmChannel
-                            .SendMessageAsync(strings.PostChannelDetectedDm(guildUser.Guild.Id, guildUser.Guild.Name))
+                            .SendAsync(strings.PostChannelDetectedDm(guildUser.Guild.Id, guildUser.Guild.Name))
                             .ConfigureAwait(false);
                     }
                     catch
@@ -1831,11 +1833,11 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
             return;
 
         var guild = client.GetGuild(guildId);
-        if (guild?.GetChannel(channelId) is not ITextChannel textChannel)
+        if (guild?.GetChannel(channelId) is not Channel textChannel)
             return;
 
         var violations = stats.RecentViolations.ToArray();
-        var thumbnailUrl = Emote.TryParse("<:HaneAngry:1026529071825420408>", out var emote) ? emote.Url : null;
+        var thumbnailUrl = Emoji.TryParse("<:HaneAngry:1026529071825420408>", out var emote) ? emote.Url : null;
 
         var embed = new EmbedBuilder()
             .WithTitle(strings.AntiPostChannelStatusWarning(guildId,
@@ -1866,14 +1868,14 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
             if (settings.StatusMessageId is { } msgId)
             {
                 var msg = await textChannel.GetMessageAsync(msgId).ConfigureAwait(false);
-                if (msg is IUserMessage userMsg)
+                if (msg is Message userMsg)
                 {
                     await userMsg.ModifyAsync(m => m.Embed = embed.Build()).ConfigureAwait(false);
                     return;
                 }
             }
 
-            var newMsg = await textChannel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+            var newMsg = await textChannel.SendAsync(embed: embed.Build()).ConfigureAwait(false);
             settings.StatusMessageId = newMsg.Id;
             settings.StatusChannelId = channelId;
 
@@ -2128,10 +2130,10 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     /// </summary>
     /// <param name="arg">The message that was received.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    private Task HandleAntiImageHash(IMessage arg)
+    private Task HandleAntiImageHash(Message arg)
     {
-        if (arg is not SocketUserMessage msg || msg.Author is not IGuildUser guildUser ||
-            msg.Channel is not ITextChannel channel ||
+        if (arg is not SocketMessage msg || msg.Author is not SocketGuildMember guildUser ||
+            msg.Channel is not Channel channel ||
             !antiImageHashGuilds.TryGetValue(channel.Guild.Id, out var stats))
             return Task.CompletedTask;
 
@@ -2264,7 +2266,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     /// <summary>
     ///     Collects the image URLs carried by a message, from its attachments and optionally its embeds.
     /// </summary>
-    private static List<string> CollectImageUrls(IUserMessage msg, bool checkEmbeds)
+    private static List<string> CollectImageUrls(Message msg, bool checkEmbeds)
     {
         var urls = new List<string>();
 
@@ -2303,7 +2305,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     ///     Applies the punishment for a blocked image. The matched hash may override the guild default action, duration, and
     ///     role, so one image can simply be deleted while another gets the poster banned.
     /// </summary>
-    private async Task PunishImageHash(IGuildUser user, AntiImageHashStats stats, IUserMessage triggerMessage,
+    private async Task PunishImageHash(SocketGuildMember user, AntiImageHashStats stats, Message triggerMessage,
         BlockedImageHash match)
     {
         var settings = stats.AntiImageHashSettings;
@@ -2368,7 +2370,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     ///     Applies the punishment for a known scam image from the shipped list. These have no per-image overrides, so the
     ///     guild's default action is used.
     /// </summary>
-    private async Task PunishPresetScamImage(IGuildUser user, AntiImageHashStats stats, IUserMessage triggerMessage,
+    private async Task PunishPresetScamImage(SocketGuildMember user, AntiImageHashStats stats, Message triggerMessage,
         PresetScamImage preset)
     {
         var settings = stats.AntiImageHashSettings;
@@ -2397,8 +2399,8 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     ///     Deletes the message, DMs the poster, and applies the punishment, shared by the guild blocklist and the shipped
     ///     scam image list.
     /// </summary>
-    private async Task ApplyImageHashPunishment(IGuildUser user, AntiImageHashStats stats,
-        IUserMessage triggerMessage, PunishmentAction action, int duration, ulong? roleId)
+    private async Task ApplyImageHashPunishment(SocketGuildMember user, AntiImageHashStats stats,
+        Message triggerMessage, PunishmentAction action, int duration, ulong? roleId)
     {
         var settings = stats.AntiImageHashSettings;
 
@@ -2419,7 +2421,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
             try
             {
                 var dmChannel = await user.CreateDMChannelAsync().ConfigureAwait(false);
-                await dmChannel.SendMessageAsync(strings.ImageHashDetectedDm(user.Guild.Id, user.Guild.Name))
+                await dmChannel.SendAsync(strings.ImageHashDetectedDm(user.Guild.Id, user.Guild.Name))
                     .ConfigureAwait(false);
             }
             catch
@@ -2704,9 +2706,9 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     /// </summary>
     /// <param name="arg">The message that was received.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    private Task HandleAntiExternalApp(IMessage arg)
+    private Task HandleAntiExternalApp(Message arg)
     {
-        if (arg is not SocketUserMessage msg || msg.Channel is not SocketTextChannel channel ||
+        if (arg is not SocketMessage msg || msg.Channel is not Channel channel ||
             !antiExternalAppGuilds.TryGetValue(channel.Guild.Id, out var stats))
             return Task.CompletedTask;
 
@@ -2745,7 +2747,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     ///     member flooding harmless messages is still caught.
     /// </summary>
     /// <returns>A short name for the broken rule, or null when the message is fine.</returns>
-    private static string? FindExternalAppViolation(SocketUserMessage msg, ulong memberId, AntiExternalAppStats stats,
+    private static string? FindExternalAppViolation(SocketMessage msg, ulong memberId, AntiExternalAppStats stats,
         AntiExternalAppSetting settings)
     {
         var now = DateTime.UtcNow;
@@ -2785,7 +2787,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     /// <summary>
     ///     Deletes the app message, tells the member who ran it, and applies the punishment.
     /// </summary>
-    private async Task PunishExternalApp(IGuildUser member, AntiExternalAppStats stats, IUserMessage triggerMessage,
+    private async Task PunishExternalApp(SocketGuildMember member, AntiExternalAppStats stats, Message triggerMessage,
         string reason)
     {
         var settings = stats.AntiExternalAppSettings;
@@ -2815,7 +2817,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
             try
             {
                 var dmChannel = await member.CreateDMChannelAsync().ConfigureAwait(false);
-                await dmChannel.SendMessageAsync(strings.ExternalAppDetectedDm(member.GuildId, member.Guild.Name))
+                await dmChannel.SendAsync(strings.ExternalAppDetectedDm(member.GuildId, member.Guild.Name))
                     .ConfigureAwait(false);
             }
             catch (Exception ex)

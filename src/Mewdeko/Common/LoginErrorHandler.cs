@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using System.Runtime.CompilerServices;
-using Discord.Net;
 using Serilog;
 
 namespace Mewdeko.Common;
@@ -25,7 +24,7 @@ public static class LoginErrorHandler
     /// </summary>
     /// <param name="ex">The HTTP exception that occurred.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Handle(HttpException ex)
+    public static void Handle(FluxerApiException ex)
     {
         switch (ex.HttpCode)
         {

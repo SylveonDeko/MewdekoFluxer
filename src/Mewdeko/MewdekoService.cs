@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 
@@ -77,12 +77,10 @@ public class MewdekoService : IHostedService
                 await runningTask.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
             }
 
-            // Gracefully disconnect Discord client
-            if (mewdeko.Client?.ConnectionState == ConnectionState.Connected)
+            if (mewdeko.Client is not null)
             {
-                Log.Information("Disconnecting Discord client...");
-                await mewdeko.Client.StopAsync();
-                await mewdeko.Client.LogoutAsync();
+                Log.Information("Disconnecting from Fluxer...");
+                mewdeko.Client.Gateway.Dispose();
             }
         }
         catch (OperationCanceledException)

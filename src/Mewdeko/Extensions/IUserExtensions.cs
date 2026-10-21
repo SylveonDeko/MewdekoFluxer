@@ -166,7 +166,7 @@ public static partial class UserExtensions
     public static async Task SendConfirmAsync(this IUser user, string text)
     {
         await (await user.CreateDMChannelAsync().ConfigureAwait(false))
-            .SendMessageAsync(embed: new EmbedBuilder().WithOkColor().WithDescription(text).Build())
+            .SendAsync(embed: new EmbedBuilder().WithOkColor().WithDescription(text).Build())
             .ConfigureAwait(false);
     }
 
@@ -215,14 +215,14 @@ public static partial class UserExtensions
     /// <param name="text">The text of the confirmation message.</param>
     /// <param name="url">The URL to include in the confirmation message.</param>
     /// <returns>A task representing the asynchronous operation. The task result contains the sent message.</returns>
-    public static async Task<IUserMessage> SendConfirmAsync(this IUser user, string title, string text,
+    public static async Task<Message> SendConfirmAsync(this IUser user, string title, string text,
         string? url = null)
     {
         var eb = new EmbedBuilder().WithOkColor().WithDescription(text).WithTitle(title);
         if (url != null && Uri.IsWellFormedUriString(url, UriKind.Absolute))
             eb.WithUrl(url);
         return await (await user.CreateDMChannelAsync().ConfigureAwait(false))
-            .SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+            .SendAsync(embed: eb.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -233,7 +233,7 @@ public static partial class UserExtensions
     /// <param name="error">The error description.</param>
     /// <param name="url">The URL to include in the error message.</param>
     /// <returns>A task representing the asynchronous operation. The task result contains the sent message.</returns>
-    public static async Task<IUserMessage> SendErrorAsync(this IUser user, string title, string error,
+    public static async Task<Message> SendErrorAsync(this IUser user, string title, string error,
         string? url = null)
     {
         var eb = new EmbedBuilder().WithErrorColor().WithDescription(error).WithTitle(title);
@@ -241,7 +241,7 @@ public static partial class UserExtensions
             eb.WithUrl(url);
 
         return await (await user.CreateDMChannelAsync().ConfigureAwait(false))
-            .SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+            .SendAsync(embed: eb.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -250,10 +250,10 @@ public static partial class UserExtensions
     /// <param name="user">The user to send the error message to.</param>
     /// <param name="error">The error description.</param>
     /// <returns>A task representing the asynchronous operation. The task result contains the sent message.</returns>
-    public static async Task<IUserMessage> SendErrorAsync(this IUser? user, string? error)
+    public static async Task<Message> SendErrorAsync(this IUser? user, string? error)
     {
         return await (await user.CreateDMChannelAsync().ConfigureAwait(false))
-            .SendMessageAsync(embed: new EmbedBuilder().WithErrorColor().WithDescription(error).Build())
+            .SendAsync(embed: new EmbedBuilder().WithErrorColor().WithDescription(error).Build())
             .ConfigureAwait(false);
     }
 
@@ -267,13 +267,13 @@ public static partial class UserExtensions
     /// <param name="text">The text to include with the file.</param>
     /// <param name="isTts">Specifies whether the message is text-to-speech.</param>
     /// <returns>A task representing the asynchronous operation. The task result contains the sent message.</returns>
-    public static async Task<IUserMessage> SendFileAsync(this IUser user, string filePath, string? caption = null,
+    public static async Task<Message> SendFileAsync(this IUser user, string filePath, string? caption = null,
         string? text = null, bool isTts = false)
     {
         var file = File.Open(filePath, FileMode.Open);
         await using var _ = file.ConfigureAwait(false);
         return await (await user.CreateDMChannelAsync().ConfigureAwait(false))
-            .SendFileAsync(file, caption ?? "x", text, isTts).ConfigureAwait(false);
+            .SendFileAsync(file, caption ?? "x", text).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -285,11 +285,11 @@ public static partial class UserExtensions
     /// <param name="caption">The caption to include with the file.</param>
     /// <param name="isTts">Specifies whether the message is text-to-speech.</param>
     /// <returns>A task representing the asynchronous operation. The task result contains the sent message.</returns>
-    public static async Task<IUserMessage> SendFileAsync(this IUser user, Stream fileStream, string fileName,
+    public static async Task<Message> SendFileAsync(this IUser user, Stream fileStream, string fileName,
         string? caption = null, bool isTts = false)
     {
         return await (await user.CreateDMChannelAsync().ConfigureAwait(false))
-            .SendFileAsync(fileStream, fileName, caption, isTts).ConfigureAwait(false);
+            .SendFileAsync(fileStream, fileName, caption).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -300,9 +300,7 @@ public static partial class UserExtensions
     /// <returns>The URL of the user's avatar.</returns>
     public static Uri RealAvatarUrl(this IUser? usr, ushort size = 2048)
     {
-        return usr.AvatarId == null
-            ? new Uri(usr.GetDefaultAvatarUrl())
-            : new Uri(usr.GetAvatarUrl(ImageFormat.Auto, size));
+        return new Uri(usr.GetAvatarOrDefaultUrl(size));
     }
 
 

@@ -1,14 +1,7 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json.Serialization;
-using Discord.Commands;
-using Discord.Rest;
-using Lavalink4NET;
-using Lavalink4NET.Cluster.Extensions;
-using Lavalink4NET.Cluster.LoadBalancing.Strategies;
-using Lavalink4NET.Cluster.Nodes;
-using Lavalink4NET.DiscordNet;
 using MartineApiNet;
 using Mewdeko.AuthHandlers;
 using Mewdeko.Common.Configs;
@@ -42,7 +35,6 @@ using Prometheus;
 using Serilog;
 using Serilog.Events;
 using ZiggyCreatures.Caching.Fusion;
-using RunMode = Discord.Commands.RunMode;
 
 namespace Mewdeko;
 
@@ -116,26 +108,8 @@ public class Program
             log.Information("Database is up to date, no migrations needed");
         }
 
-        var discordRestClient = new DiscordRestClient();
-        await discordRestClient.LoginAsync(TokenType.Bot, credentials.Token);
-        var botGatewayInfo = await discordRestClient.GetBotGatewayAsync();
-        var serverCount = (await discordRestClient.GetCurrentBotInfoAsync()).ApproximateGuildCount;
-        await discordRestClient.LogoutAsync();
-        Cache = new RedisCache(credentials, botGatewayInfo.Shards);
-
-        if (credentials.LavalinkNodes.Length == 0)
-        {
-            log.Error("No Lavalink nodes are configured! Set LavalinkUrl or LavalinkNodes in the configuration");
-            Helpers.ReadErrorAndExit(5);
-        }
-
-        foreach (var node in credentials.LavalinkNodes.Where(node =>
-                     !Uri.TryCreate(node.Url, UriKind.Absolute, out _)))
-        {
-            log.Error("The Lavalink URL for {Label} ({Url}) is invalid! Please check the configuration",
-                node.Label, node.Url);
-            Helpers.ReadErrorAndExit(5);
-        }
+        const int serverCount = 0;
+        Cache = new RedisCache(credentials, 1);
 
         if (credentials.IsApiEnabled)
         {
@@ -156,7 +130,7 @@ public class Program
 
             builder.Logging.ClearProviders();
             builder.Services.AddTransient(typeof(ILogger<>), typeof(Logger<>));
-            ConfigureServices(builder.Services, credentials, Cache, serverCount.GetValueOrDefault());
+            ConfigureServices(builder.Services, credentials, Cache, serverCount);
 
             // Listen on all interfaces (0.0.0.0) to allow mobile app access
             builder.WebHost.UseUrls($"http://0.0.0.0:{credentials.ApiPort}");
@@ -361,7 +335,7 @@ public class Program
                 .ConfigureLogging(logging => logging.ClearProviders())
                 .ConfigureServices((_, services) =>
                 {
-                    ConfigureServices(services, credentials, Cache, serverCount.GetValueOrDefault());
+                    ConfigureServices(services, credentials, Cache, serverCount);
                 })
                 .Build();
 
@@ -380,18 +354,12 @@ public class Program
     private static void ConfigureServices(IServiceCollection services, BotCredentials credentials, IDataCache cache,
         int serverCount)
     {
-        var client = new DiscordShardedClient(new DiscordSocketConfig
+        var client = new FluxerClient(credentials.Token.Trim(), new FluxerConfig
         {
-            MessageCacheSize = 15,
-            LogLevel = LogSeverity.Info,
-            ConnectionTimeout = int.MaxValue,
-            AlwaysDownloadUsers = true,
-            GatewayIntents = GatewayIntents.All,
-            FormatUsersInBidirectionalUnicode = false,
-            LogGatewayIntentWarnings = false,
-            DefaultRetryMode = RetryMode.RetryRatelimit,
-            TotalShards = credentials.TotalShards
+            GatewaySerilog = Log.Logger.ForContext("SourceContext", "Fluxer.Gateway"),
+            RestSerilog = Log.Logger.ForContext("SourceContext", "Fluxer.Rest")
         });
+        FluxerContext.Client = client;
 
         services.AddSerilog((serviceProvider, loggerConfiguration) =>
         {
@@ -424,6 +392,7 @@ public class Program
 
         options.Validate();
         services.AddSingleton(options);
+        services.AddSingleton(FluxerContext.Snapshots);
         services.AddSingleton<EventHandler>();
 
         services.AddSingleton(new CommandService(new CommandServiceConfig
@@ -450,23 +419,6 @@ public class Program
             // Disable size tracking for better performance
             options.TrackLinkedCacheEntries = false;
         });
-        services.AddLavalinkCluster<DiscordClientWrapper>()
-            .ConfigureLavalinkCluster(x =>
-            {
-                x.ReadyTimeout = TimeSpan.FromMinutes(5);
-                x.Nodes =
-                [
-                    .. credentials.LavalinkNodes.Select(node => new LavalinkClusterNodeOptions
-                    {
-                        BaseAddress = new Uri(node.Url),
-                        Passphrase = node.Password,
-                        Label = node.Label,
-                        ReadyTimeout = TimeSpan.FromMinutes(5),
-                        ResumptionOptions = new LavalinkSessionResumptionOptions(TimeSpan.FromMinutes(2))
-                    })
-                ];
-            });
-        services.Replace(ServiceDescriptor.Singleton<INodeBalancingStrategy, RoundRobinBalancingStrategy>());
         services.AddSingleton<ISearchImagesService, SearchImagesService>();
         services.AddSingleton<ToneTagService>();
         services.AddTransient<GuildSettingsService>();

@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+﻿
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Administration.Services;
 
@@ -24,9 +24,9 @@ public partial class Administration
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
-        public async Task AutoAssignRole([Remainder] IRole role)
+        public async Task AutoAssignRole([Remainder] SocketRole role)
         {
-            var guser = (IGuildUser)ctx.User;
+            var guser = (SocketGuildMember)ctx.User;
             if (role.Id == ctx.Guild.EveryoneRole.Id)
                 return;
 
@@ -90,9 +90,9 @@ public partial class Administration
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageRoles)]
-        public async Task AutoAssignBotRole([Remainder] IRole role)
+        public async Task AutoAssignBotRole([Remainder] SocketRole role)
         {
-            var guser = (IGuildUser)ctx.User;
+            var guser = (SocketGuildMember)ctx.User;
             if (role.Id == ctx.Guild.EveryoneRole.Id)
                 return;
 

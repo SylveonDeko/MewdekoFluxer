@@ -49,12 +49,12 @@ public partial class Currency
         var chainState =
             await TriviaChainService.StartTriviaChainAsync(ctx.User.Id, ctx.Guild.Id, betAmount, category.ToLower());
 
-        var message = await ctx.Channel.SendMessageAsync(
+        var message = await ctx.Channel.SendAsync(
             embed: await TriviaChainService.BuildQuestionEmbedAsync(chainState, Service));
 
         while (true)
         {
-            var choices = TriviaChainEmotes.Numbers.Take(chainState.CurrentOptions.Length).Cast<IEmote>().ToList();
+            var choices = TriviaChainEmotes.Numbers.Take(chainState.CurrentOptions.Length).Cast<Emoji>().ToList();
             if (chainState.ChainLength > 0)
                 choices.Add(TriviaChainEmotes.CashOut);
 
@@ -75,7 +75,7 @@ public partial class Currency
             if (picked.Value == chainState.CurrentOptions.Length)
             {
                 var cashOut = await TriviaChainService.CashOutAsync(chainState, Service);
-                await ctx.Channel.SendMessageAsync(embed: cashOut.ResultEmbed);
+                await ctx.Channel.SendAsync(embed: cashOut.ResultEmbed);
                 return;
             }
 
@@ -84,12 +84,12 @@ public partial class Currency
 
             if (result.UpdatedState is null)
             {
-                await ctx.Channel.SendMessageAsync(embed: result.ResultEmbed);
+                await ctx.Channel.SendAsync(embed: result.ResultEmbed);
                 return;
             }
 
             chainState = result.UpdatedState;
-            message = await ctx.Channel.SendMessageAsync(embed: result.ResultEmbed);
+            message = await ctx.Channel.SendAsync(embed: result.ResultEmbed);
         }
     }
 }

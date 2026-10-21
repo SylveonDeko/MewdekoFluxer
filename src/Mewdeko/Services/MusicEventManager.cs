@@ -21,7 +21,7 @@ public class MusicEventManager : INService, IDisposable
     // Semaphore to prevent simultaneous broadcasts
     private readonly SemaphoreSlim broadcastSemaphore = new(1, 1);
     private readonly IDataCache cache;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly ILogger<MusicEventManager> logger;
 
     // Track active guilds with music players
@@ -45,7 +45,7 @@ public class MusicEventManager : INService, IDisposable
     /// <param name="logger">The logger instance for structured logging.</param>
     public MusicEventManager(
         IDataCache cache,
-        IAudioService audioService, DiscordShardedClient client, ILogger<MusicEventManager> logger)
+        IAudioService audioService, FluxerClient client, ILogger<MusicEventManager> logger)
     {
         this.cache = cache;
         this.audioService = audioService;

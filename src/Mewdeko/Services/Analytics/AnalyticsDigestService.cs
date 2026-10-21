@@ -22,7 +22,7 @@ public sealed class AnalyticsDigestService : INService, IReadyExecutor, IDisposa
     private static readonly TimeSpan PollInterval = TimeSpan.FromMinutes(15);
 
     private readonly AnalyticsAlertService alerts;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly AnalyticsCollector collector;
     private readonly BotConfigService config;
     private readonly BotCredentials credentials;
@@ -45,7 +45,7 @@ public sealed class AnalyticsDigestService : INService, IReadyExecutor, IDisposa
     /// <param name="logger">Records failures.</param>
     public AnalyticsDigestService(AnalyticsAlertService alerts, AnalyticsCollector collector,
         BotConfigService config, BotCredentials credentials, IDataConnectionFactory dbFactory,
-        DiscordShardedClient client, ILogger<AnalyticsDigestService> logger)
+        FluxerClient client, ILogger<AnalyticsDigestService> logger)
     {
         this.alerts = alerts;
         this.collector = collector;

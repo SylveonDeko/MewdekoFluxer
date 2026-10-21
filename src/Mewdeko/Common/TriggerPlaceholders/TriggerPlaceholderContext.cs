@@ -8,7 +8,7 @@ namespace Mewdeko.Common.TriggerPlaceholders;
 /// <param name="User">The user that caused the resolution, such as the author of a triggering message.</param>
 /// <param name="Target">The user targeted by the invocation, such as the first mentioned user, if any.</param>
 public sealed record TriggerPlaceholderContext(
-    IGuild? Guild,
-    IMessageChannel? Channel,
+    SocketGuild? Guild,
+    Channel? Channel,
     IUser User,
     IUser? Target = null);

@@ -15,7 +15,7 @@ public class XpCompetitionManager : INService, IDisposable
 {
     // Active competitions
     private readonly ConcurrentDictionary<ulong, List<XpCompetition>> activeCompetitions = new();
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly ILogger<XpCompetitionManager> logger;
     private readonly GeneratedBotStrings Strings;
@@ -28,7 +28,7 @@ public class XpCompetitionManager : INService, IDisposable
     /// <param name="strings">The localized strings service.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     public XpCompetitionManager(
-        DiscordShardedClient client,
+        FluxerClient client,
         IDataConnectionFactory dbFactory, GeneratedBotStrings strings, ILogger<XpCompetitionManager> logger)
     {
         this.client = client;
@@ -176,7 +176,7 @@ public class XpCompetitionManager : INService, IDisposable
 
                             if (channel != null && user != null)
                             {
-                                await channel.SendMessageAsync(
+                                await channel.SendAsync(
                                     embed: new EmbedBuilder()
                                         .WithColor(Color.Gold)
                                         .WithTitle(Strings.CompetitionMilestone(guild.Id))
@@ -342,7 +342,7 @@ public class XpCompetitionManager : INService, IDisposable
                         embed.AddField("Target Level", competition.TargetLevel.ToString(), true);
                     }
 
-                    await channel.SendMessageAsync(embed: embed.Build());
+                    await channel.SendAsync(embed: embed.Build());
                 }
             }
 
@@ -502,7 +502,7 @@ public class XpCompetitionManager : INService, IDisposable
                         embed.AddField($"#{i + 1}: {username}", value);
                     }
 
-                    await channel.SendMessageAsync(embed: embed.Build());
+                    await channel.SendAsync(embed: embed.Build());
                 }
             }
 

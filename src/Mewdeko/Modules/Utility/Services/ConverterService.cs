@@ -26,7 +26,7 @@ public class ConverterService : INService, IUnloadableService
     /// <param name="client">The Discord client, used for identifying the primary shard.</param>
     /// <param name="cache">The cache service for storing conversion units.</param>
     /// <param name="factory">The HTTP client factory for fetching currency conversion rates.</param>
-    public ConverterService(DiscordShardedClient client, IDataCache cache, IHttpClientFactory factory)
+    public ConverterService(FluxerClient client, IDataCache cache, IHttpClientFactory factory)
     {
         this.cache = cache;
         httpFactory = factory;

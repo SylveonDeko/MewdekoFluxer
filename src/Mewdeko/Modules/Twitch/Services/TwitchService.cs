@@ -20,7 +20,7 @@ public class TwitchService : INService, IReadyExecutor
 {
     private readonly ConcurrentDictionary<string, ulong> channelToGuild = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, int> chatActivityCounts = new(StringComparer.OrdinalIgnoreCase);
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly TwitchCommandHandler commandHandler;
     private readonly IBotCredentials creds;
     private readonly IDataConnectionFactory dbFactory;
@@ -58,7 +58,7 @@ public class TwitchService : INService, IReadyExecutor
         ILogger<TwitchService> logger,
         TwitchCommandHandler commandHandler,
         TwitchApiClient twitchApiClient,
-        DiscordShardedClient client,
+        FluxerClient client,
         GeneratedBotStrings strings)
     {
         this.creds = creds;
@@ -872,7 +872,7 @@ public class TwitchService : INService, IReadyExecutor
 
             if (SmartEmbed.TryParse(processed ?? string.Empty, stream.GuildId, out var embed, out var plainText))
             {
-                await textChannel.SendMessageAsync(plainText, embeds: embed);
+                await textChannel.SendAsync(plainText, embeds: embed);
                 return;
             }
 
@@ -1013,7 +1013,7 @@ public class TwitchService : INService, IReadyExecutor
             .Replace("%channel%", sub.Channel, StringComparison.OrdinalIgnoreCase)
             .Replace("%tier%", sub.SubPlan, StringComparison.OrdinalIgnoreCase);
 
-        await textChannel.SendMessageAsync(message);
+        await textChannel.SendAsync(message);
     }
 
     private async Task SendRaidNotificationAsync(TwitchRaidArgs raid)
@@ -1039,7 +1039,7 @@ public class TwitchService : INService, IReadyExecutor
             .Replace("%channel%", raid.Channel, StringComparison.OrdinalIgnoreCase)
             .Replace("%viewers%", raid.ViewerCount.ToString("N0"), StringComparison.OrdinalIgnoreCase);
 
-        await textChannel.SendMessageAsync(message);
+        await textChannel.SendAsync(message);
     }
 
     /// <summary>
@@ -1423,7 +1423,7 @@ public class TwitchService : INService, IReadyExecutor
             var channel = client.GetGuild(guildId)?.GetTextChannel(action.DiscordChannelId.Value);
             var discordMessage = ApplyRedemptionVariables(action.DiscordMessage, redemption);
             if (channel is not null && !string.IsNullOrWhiteSpace(discordMessage))
-                await channel.SendMessageAsync(discordMessage);
+                await channel.SendAsync(discordMessage);
         }
     }
 

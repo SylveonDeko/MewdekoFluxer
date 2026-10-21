@@ -1,4 +1,3 @@
-using Discord.Rest;
 using Mewdeko.Common.ModuleBehaviors;
 using Mewdeko.Services.Impl;
 using Mewdeko.Services.Settings;
@@ -14,7 +13,7 @@ namespace Mewdeko.Modules.OwnerOnly.Services;
 public class BotHellService : INService, IReadyExecutor
 {
     private readonly BotConfigService bss;
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly BotCredentials creds;
     private readonly EventHandler handler;
     private readonly ILogger<BotHellService> logger;
@@ -29,7 +28,7 @@ public class BotHellService : INService, IReadyExecutor
     /// <param name="creds">The bot credentials.</param>
     /// <param name="strings">The localization strings provider.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
-    public BotHellService(EventHandler handler, DiscordShardedClient client, BotConfigService bss,
+    public BotHellService(EventHandler handler, FluxerClient client, BotConfigService bss,
         BotCredentials creds, GeneratedBotStrings strings, ILogger<BotHellService> logger)
     {
         this.handler = handler;
@@ -268,7 +267,7 @@ public class BotHellService : INService, IReadyExecutor
 
         try
         {
-            if (await client.Rest.GetChannelAsync(channelId).ConfigureAwait(false) is not RestTextChannel channel)
+            if (await client.Rest.GetChannelAsync(channelId).ConfigureAwait(false) is not Channel channel)
                 return (null, 0, null, false);
 
             return (channel.Name, channel.GuildId, client.GetGuild(channel.GuildId)?.Name, true);
@@ -322,7 +321,7 @@ public class BotHellService : INService, IReadyExecutor
 
         try
         {
-            if (await client.Rest.GetChannelAsync(channelId).ConfigureAwait(false) is not RestTextChannel channel)
+            if (await client.Rest.GetChannelAsync(channelId).ConfigureAwait(false) is not Channel channel)
                 return;
 
             var eb = new EmbedBuilder()
@@ -335,7 +334,7 @@ public class BotHellService : INService, IReadyExecutor
                 .AddField("Trigger", verdict.TriggerDescription, true)
                 .AddField("Action", left ? "Left the server" : "Stayed", true);
 
-            await channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+            await channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

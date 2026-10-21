@@ -1,4 +1,3 @@
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Games.Common.Hangman;
 using Mewdeko.Modules.Games.Common.Hangman.Exceptions;

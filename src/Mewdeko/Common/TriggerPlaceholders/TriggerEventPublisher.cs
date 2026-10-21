@@ -35,7 +35,7 @@ public sealed class TriggerEventPublisher : INService
     /// <param name="eventType">The event that occurred.</param>
     /// <param name="user">The user the event concerns.</param>
     /// <param name="channel">The channel to respond in when a trigger does not name one of its own.</param>
-    public async Task PublishAsync(ulong guildId, CtEventType eventType, IUser user, IMessageChannel? channel = null)
+    public async Task PublishAsync(ulong guildId, CtEventType eventType, IUser user, Channel? channel = null)
     {
         try
         {

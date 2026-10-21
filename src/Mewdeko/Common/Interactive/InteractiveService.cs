@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using Mewdeko.Services.Strings;
 
 namespace Mewdeko.Common.Interactive;
@@ -15,41 +15,41 @@ public sealed class InteractiveService : INService
     /// <summary>
     ///     Jumps to the first page.
     /// </summary>
-    public static readonly Emoji First = new("⏮️");
+    public static readonly Emoji First = Emoji.FromUnicode("⏮️");
 
     /// <summary>
     ///     Goes back one page.
     /// </summary>
-    public static readonly Emoji Back = new("◀️");
+    public static readonly Emoji Back = Emoji.FromUnicode("◀️");
 
     /// <summary>
     ///     Goes forward one page.
     /// </summary>
-    public static readonly Emoji Forward = new("▶️");
+    public static readonly Emoji Forward = Emoji.FromUnicode("▶️");
 
     /// <summary>
     ///     Jumps to the last page.
     /// </summary>
-    public static readonly Emoji Last = new("⏭️");
+    public static readonly Emoji Last = Emoji.FromUnicode("⏭️");
 
     /// <summary>
     ///     Stops the paginator.
     /// </summary>
-    public static readonly Emoji Stop = new("🛑");
+    public static readonly Emoji Stop = Emoji.FromUnicode("🛑");
 
     /// <summary>
     ///     Accepts a confirmation prompt.
     /// </summary>
-    public static readonly Emoji Yes = new("✅");
+    public static readonly Emoji Yes = Emoji.FromUnicode("✅");
 
     /// <summary>
     ///     Declines a confirmation prompt.
     /// </summary>
-    public static readonly Emoji No = new("❌");
+    public static readonly Emoji No = Emoji.FromUnicode("❌");
 
-    private static readonly IEmote[] NavigationEmotes = [First, Back, Forward, Last, Stop];
+    private static readonly Emoji[] NavigationEmotes = [First, Back, Forward, Last, Stop];
 
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly ILogger<InteractiveService> logger;
     private readonly ConcurrentDictionary<ulong, PromptSession> prompts = new();
     private readonly ConcurrentDictionary<ulong, PaginatorSession> sessions = new();
@@ -58,18 +58,18 @@ public sealed class InteractiveService : INService
     /// <summary>
     ///     Initializes a new instance of the <see cref="InteractiveService" /> class.
     /// </summary>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="eventHandler">The event handler that delivers reaction events.</param>
     /// <param name="strings">The localized strings, used for the page footer.</param>
     /// <param name="logger">The logger instance.</param>
-    public InteractiveService(DiscordShardedClient client, EventHandler eventHandler, GeneratedBotStrings strings,
+    public InteractiveService(FluxerClient client, EventHandler eventHandler, GeneratedBotStrings strings,
         ILogger<InteractiveService> logger)
     {
         this.client = client;
         this.strings = strings;
         this.logger = logger;
-        eventHandler.Subscribe("ReactionAdded", ModuleName, OnReactionAddedAsync);
-        eventHandler.Subscribe("MessageDeleted", ModuleName, OnMessageDeletedAsync);
+        eventHandler.ReactionAdded.Subscribe(ModuleName, OnReactionAddedAsync);
+        eventHandler.MessageDeleted.Subscribe(ModuleName, OnMessageDeletedAsync);
     }
 
     /// <summary>
@@ -79,12 +79,12 @@ public sealed class InteractiveService : INService
     /// <param name="channel">The channel to send it to.</param>
     /// <param name="timeout">How long the paginator accepts input, ten minutes when not given.</param>
     /// <returns>The posted message.</returns>
-    public async Task<IUserMessage> SendPaginatorAsync(Paginator paginator, IMessageChannel channel,
+    public async Task<Message> SendPaginatorAsync(Paginator paginator, Channel channel,
         TimeSpan? timeout = null)
     {
-        var guildId = (channel as IGuildChannel)?.GuildId ?? 0;
+        var guildId = channel.GuildId ?? 0;
         var first = await paginator.PageFactory(0).ConfigureAwait(false);
-        var message = await channel.SendMessageAsync(first.Text,
+        var message = await channel.SendAsync(first.Text,
                 embed: first.BuildEmbed(FooterFor(paginator, guildId, 0)),
                 allowedMentions: AllowedMentions.None)
             .ConfigureAwait(false);
@@ -107,7 +107,7 @@ public sealed class InteractiveService : INService
     /// <param name="choices">The reactions to offer, in order.</param>
     /// <param name="timeout">How long to wait, thirty seconds when not given.</param>
     /// <returns>The index of the chosen reaction, or null when the user did not answer in time.</returns>
-    public async Task<int?> WaitForReactionAsync(IUserMessage message, ulong userId, IReadOnlyList<IEmote> choices,
+    public async Task<int?> WaitForReactionAsync(Message message, ulong userId, IReadOnlyList<Emoji> choices,
         TimeSpan? timeout = null)
     {
         var prompt = new PromptSession(userId, choices);
@@ -132,7 +132,7 @@ public sealed class InteractiveService : INService
             : null;
     }
 
-    private async Task AddReactionsAsync(IUserMessage message, IEnumerable<IEmote> emotes)
+    private async Task AddReactionsAsync(Message message, IEnumerable<Emoji> emotes)
     {
         try
         {
@@ -145,8 +145,7 @@ public sealed class InteractiveService : INService
         }
     }
 
-    private Task OnReactionAddedAsync(Cacheable<IUserMessage, ulong> cachedMessage,
-        Cacheable<IMessageChannel, ulong> cachedChannel, SocketReaction reaction)
+    private Task OnReactionAddedAsync(Cacheable<Message> cachedMessage, Channel channel, SocketReaction reaction)
     {
         if (reaction.UserId == client.CurrentUser.Id)
             return Task.CompletedTask;
@@ -155,7 +154,7 @@ public sealed class InteractiveService : INService
         {
             if (reaction.UserId != prompt.UserId)
                 return Task.CompletedTask;
-            var choice = prompt.IndexOf(reaction.Emote);
+            var choice = prompt.IndexOf(reaction.Emoji);
             if (choice >= 0)
                 prompt.Result.TrySetResult(choice);
             return Task.CompletedTask;
@@ -167,7 +166,7 @@ public sealed class InteractiveService : INService
         return Task.CompletedTask;
     }
 
-    private Task OnMessageDeletedAsync(Cacheable<IMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel)
+    private Task OnMessageDeletedAsync(Cacheable<Message> message, Channel channel)
     {
         if (sessions.TryRemove(message.Id, out var session))
             session.Expiry.Cancel();
@@ -188,18 +187,18 @@ public sealed class InteractiveService : INService
 
             _ = RemoveUserReactionAsync(session.Message, reaction);
 
-            if (reaction.Emote.Name == Stop.Name)
+            if (Stop.Matches(reaction.Emoji))
             {
                 await StopAsync(session, paginator.ActionOnCancellation).ConfigureAwait(false);
                 return;
             }
 
-            var target = reaction.Emote.Name switch
+            var target = reaction.Emoji switch
             {
-                var name when name == First.Name => 0,
-                var name when name == Back.Name => Math.Max(0, session.CurrentIndex - 1),
-                var name when name == Forward.Name => Math.Min(paginator.MaxPageIndex, session.CurrentIndex + 1),
-                var name when name == Last.Name => paginator.MaxPageIndex,
+                var emoji when First.Matches(emoji) => 0,
+                var emoji when Back.Matches(emoji) => Math.Max(0, session.CurrentIndex - 1),
+                var emoji when Forward.Matches(emoji) => Math.Min(paginator.MaxPageIndex, session.CurrentIndex + 1),
+                var emoji when Last.Matches(emoji) => paginator.MaxPageIndex,
                 _ => session.CurrentIndex
             };
 
@@ -224,11 +223,11 @@ public sealed class InteractiveService : INService
         }
     }
 
-    private static async Task RemoveUserReactionAsync(IUserMessage message, SocketReaction reaction)
+    private static async Task RemoveUserReactionAsync(Message message, SocketReaction reaction)
     {
         try
         {
-            await message.RemoveReactionAsync(reaction.Emote, reaction.UserId).ConfigureAwait(false);
+            await message.RemoveReactionAsync(Emoji.From(reaction.Emoji), reaction.UserId).ConfigureAwait(false);
         }
         catch
         {
@@ -283,26 +282,26 @@ public sealed class InteractiveService : INService
         }
     }
 
-    private sealed class PaginatorSession(Paginator paginator, IUserMessage message, ulong guildId)
+    private sealed class PaginatorSession(Paginator paginator, Message message, ulong guildId)
     {
         public Paginator Paginator { get; } = paginator;
-        public IUserMessage Message { get; } = message;
+        public Message Message { get; } = message;
         public ulong GuildId { get; } = guildId;
         public int CurrentIndex { get; set; }
         public SemaphoreSlim Lock { get; } = new(1, 1);
         public CancellationTokenSource Expiry { get; } = new();
     }
 
-    private sealed class PromptSession(ulong userId, IReadOnlyList<IEmote> choices)
+    private sealed class PromptSession(ulong userId, IReadOnlyList<Emoji> choices)
     {
         public ulong UserId { get; } = userId;
         public TaskCompletionSource<int> Result { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public int IndexOf(IEmote emote)
+        public int IndexOf(IEmoji emote)
         {
             for (var i = 0; i < choices.Count; i++)
             {
-                if (choices[i].Name == emote.Name)
+                if (choices[i].Matches(emote))
                     return i;
             }
 

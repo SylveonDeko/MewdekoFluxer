@@ -1,3 +1,5 @@
+using System.Threading.Channels;
+using Channel = Fluxer.Net.Channel;
 using System.Data;
 using System.Threading;
 using DataModel;
@@ -105,7 +107,7 @@ public class MessageCountService : INService, IDisposable
         this.statsSettings = statsSettings;
         _ = InitializeGuildSettings();
         handler.Subscribe("MessageReceived", "MessageCountService", HandleCount);
-        updateChannel = Channel.CreateUnbounded<(ulong, ulong, ulong, DateTime)>();
+        updateChannel = System.Threading.Channels.Channel.CreateUnbounded<(ulong, ulong, ulong, DateTime)>();
         _ = ProcessUpdatesAsync(); // Start background processor
     }
 
@@ -237,7 +239,7 @@ public class MessageCountService : INService, IDisposable
         if (!IsValidMessage(msg))
             return;
 
-        var channel = (IGuildChannel)msg.Channel;
+        var channel = (Channel)msg.Channel;
         await updateChannel.Writer.WriteAsync((
             channel.GuildId,
             channel.Id,
@@ -355,12 +357,12 @@ public class MessageCountService : INService, IDisposable
     private bool IsValidMessage(SocketMessage message)
     {
         if (countGuilds.Count == 0 ||
-            message.Channel is IDMChannel ||
-            message.Channel is not IGuildChannel channel ||
+            message.Channel is Channel ||
+            message.Channel is not Channel channel ||
             !countGuilds.Contains(channel.GuildId))
             return false;
 
-        if (message.Author is not IGuildUser author)
+        if (message.Author is not SocketGuildMember author)
             return false;
 
         if (author.IsBot && !statsSettings.GetCachedSettings(channel.GuildId).CountBots)

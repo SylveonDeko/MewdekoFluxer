@@ -21,8 +21,8 @@ public class RoleCommandsService : INService
     /// <param name="role">The primary role involved in the job.</param>
     /// <param name="role2">An optional secondary role involved in the job.</param>
     /// <returns>A task that represents the asynchronous operation of adding the job to the list.</returns>
-    public Task AddToList(IGuild guild, IGuildUser user, int jobId, int totalUsers, string jobType, IRole role,
-        IRole? role2 = null)
+    public Task AddToList(SocketGuild guild, SocketGuildMember user, int jobId, int totalUsers, string jobType, SocketRole role,
+        SocketRole? role2 = null)
     {
         var add = new RoleJobs
         {
@@ -47,7 +47,7 @@ public class RoleCommandsService : INService
     /// <param name="jobId">The identifier of the job to update.</param>
     /// <param name="addedTo">The new progress count of users processed by the job.</param>
     /// <returns>A task that represents the asynchronous operation of updating the job's progress.</returns>
-    public Task UpdateCount(IGuild guild, int jobId, int addedTo)
+    public Task UpdateCount(SocketGuild guild, int jobId, int addedTo)
     {
         var list1 = Jobslist.Find(x => x.GuildId == guild.Id && x.JobId == jobId);
         var add = new RoleJobs
@@ -73,7 +73,7 @@ public class RoleCommandsService : INService
     /// <param name="guild">The guild where the job is being executed.</param>
     /// <param name="job">The identifier of the job to check.</param>
     /// <returns>An enumerable of <see cref="RoleJobs" /> that matches the specified job identifier.</returns>
-    public IEnumerable<RoleJobs> JobCheck(IGuild guild, int job)
+    public IEnumerable<RoleJobs> JobCheck(SocketGuild guild, int job)
     {
         return Jobslist.Where(x => x.GuildId == guild.Id && x.JobId == job).ToArray();
     }
@@ -85,7 +85,7 @@ public class RoleCommandsService : INService
     /// <param name="jobId">The identifier of the job to stop.</param>
     /// <param name="guild">The guild where the job is being executed.</param>
     /// <returns>A task that represents the asynchronous operation of stopping the job and notifying the channel.</returns>
-    public async Task StopJob(ITextChannel ch, int jobId, IGuild guild)
+    public async Task StopJob(Channel ch, int jobId, SocketGuild guild)
     {
         var list1 = Jobslist.Find(x => x.GuildId == guild.Id && x.JobId == jobId);
         var add = new RoleJobs
@@ -108,7 +108,7 @@ public class RoleCommandsService : INService
                 $"Stopping Job {jobId}\nTask: {Format.Bold(list1.JobType)}\nProgress: {list1.AddedTo}/{list1.TotalUsers}\nStarted By: {list1.StartedBy.Mention}",
             Color = Mewdeko.ErrorColor
         };
-        await ch.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+        await ch.SendAsync(embed: eb.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -117,7 +117,7 @@ public class RoleCommandsService : INService
     /// <param name="guild">The guild where the job is being executed.</param>
     /// <param name="job">The identifier of the job to remove.</param>
     /// <returns>A task that represents the asynchronous operation of removing the job from the list.</returns>
-    public Task RemoveJob(IGuild guild, int job)
+    public Task RemoveJob(SocketGuild guild, int job)
     {
         var list = Jobslist.Find(x => x.GuildId == guild.Id && x.JobId == job);
         Jobslist.Remove(list);
@@ -132,7 +132,7 @@ public class RoleCommandsService : INService
         /// <summary>
         ///     The user who initiated the role job.
         /// </summary>
-        public IGuildUser StartedBy { get; set; }
+        public SocketGuildMember StartedBy { get; set; }
 
         /// <summary>
         ///     The unique identifier of the guild where the role job is being executed.
@@ -162,12 +162,12 @@ public class RoleCommandsService : INService
         /// <summary>
         ///     The primary role involved in the job, which may be assigned or removed from users.
         /// </summary>
-        public IRole? Role1 { get; set; }
+        public SocketRole? Role1 { get; set; }
 
         /// <summary>
         ///     An optional secondary role that may also be involved in the job.
         /// </summary>
-        public IRole? Role2 { get; set; }
+        public SocketRole? Role2 { get; set; }
 
         /// <summary>
         ///     Indicates whether the job is currently running or has been stopped.

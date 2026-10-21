@@ -38,17 +38,17 @@ public class RoleCommandsService : INService
     ///     Handles when a reaction is added to a message.
     /// </summary>
     private async Task HandleReactionAdded(
-        Cacheable<IUserMessage, ulong> msg,
-        Cacheable<IMessageChannel, ulong> chan,
+        Cacheable<Message> msg,
+        Cacheable<Channel> chan,
         SocketReaction reaction)
     {
         try
         {
             if (!reaction.User.IsSpecified || reaction.User.Value.IsBot ||
-                reaction.User.Value is not SocketGuildUser gusr)
+                reaction.User.Value is not SocketGuildMember gusr)
                 return;
 
-            if (chan.Value is not SocketGuildChannel gch)
+            if (chan.Value is not Channel gch)
                 return;
 
             var reactRoles = await guildSettings.GetReactionRoles(gch.Guild.Id);
@@ -58,7 +58,7 @@ public class RoleCommandsService : INService
             var conf = reactRoles.FirstOrDefault(x => x.MessageId == msg.Id);
 
             var reactionRole = conf?.ReactionRoles.FirstOrDefault(x =>
-                x.EmoteName == reaction.Emote.Name || x.EmoteName == reaction.Emote.ToString());
+                x.EmoteName == reaction.Emoji.Name || x.EmoteName == reaction.Emoji.ToString());
             if (reactionRole == null)
                 return;
 
@@ -73,14 +73,14 @@ public class RoleCommandsService : INService
         }
         catch (Exception ex)
         {
-            var gch = chan.Value as IGuildChannel;
+            var gch = chan.Value as Channel;
             logger.LogError(ex, "Reaction Role Add failed in Guild {GuildId}", gch?.GuildId);
         }
     }
 
     private async Task HandleExclusiveRole(
-        SocketGuildUser user,
-        Cacheable<IUserMessage, ulong> msg,
+        SocketGuildMember user,
+        Cacheable<Message> msg,
         ReactionRoleMessage conf,
         ReactionRole currentRole,
         SocketReaction reaction)
@@ -108,7 +108,7 @@ public class RoleCommandsService : INService
             var message = await msg.GetOrDownloadAsync().ConfigureAwait(false);
             foreach (var (key, _) in message.Reactions)
             {
-                if (key.Name == reaction.Emote.Name)
+                if (key.Name == reaction.Emoji.Name)
                     continue;
 
                 var reactedUsers = await message.GetReactionUsersAsync(key, 10).FlattenAsync();
@@ -136,17 +136,17 @@ public class RoleCommandsService : INService
     ///     Handles when a reaction is removed from a message.
     /// </summary>
     private async Task HandleReactionRemoved(
-        Cacheable<IUserMessage, ulong> msg,
-        Cacheable<IMessageChannel, ulong> chan,
+        Cacheable<Message> msg,
+        Cacheable<Channel> chan,
         SocketReaction reaction)
     {
         try
         {
             if (!reaction.User.IsSpecified || reaction.User.Value.IsBot ||
-                reaction.User.Value is not SocketGuildUser gusr)
+                reaction.User.Value is not SocketGuildMember gusr)
                 return;
 
-            if (chan.Value is not SocketGuildChannel gch)
+            if (chan.Value is not Channel gch)
                 return;
 
             var reactRoles = await guildSettings.GetReactionRoles(gch.Guild.Id);
@@ -160,7 +160,7 @@ public class RoleCommandsService : INService
                 return;
 
             var reactionRole = conf.ReactionRoles.FirstOrDefault(x =>
-                x.EmoteName == reaction.Emote.Name || x.EmoteName == reaction.Emote.ToString());
+                x.EmoteName == reaction.Emoji.Name || x.EmoteName == reaction.Emoji.ToString());
             if (reactionRole == null)
                 return;
 
@@ -170,7 +170,7 @@ public class RoleCommandsService : INService
         }
         catch (Exception ex)
         {
-            var gch = chan.Value as IGuildChannel;
+            var gch = chan.Value as Channel;
             logger.LogError(ex, "Reaction Role Remove failed in Guild {GuildId}", gch?.GuildId);
         }
     }

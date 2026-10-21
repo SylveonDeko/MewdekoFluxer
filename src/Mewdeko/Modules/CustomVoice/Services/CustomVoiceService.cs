@@ -14,7 +14,7 @@ namespace Mewdeko.Modules.CustomVoice.Services;
 public class CustomVoiceService : INService, IUnloadableService
 {
     private readonly ConcurrentDictionary<ulong, HashSet<ulong>> activeChannels = new();
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly IDataConnectionFactory dbFactory;
     private readonly ConcurrentDictionary<ulong, Timer> emptyChannelTimers = new();
@@ -38,7 +38,7 @@ public class CustomVoiceService : INService, IUnloadableService
     /// <param name="guildSettings">The guild settings service, used for the command prefix.</param>
     public CustomVoiceService(
         IDataConnectionFactory dbFactory,
-        DiscordShardedClient client,
+        FluxerClient client,
         EventHandler eventHandler,
         GeneratedBotStrings strings, ILogger<CustomVoiceService> logger, IAnalyticsCollector collector,
         GuildSettingsService guildSettings)
@@ -447,7 +447,7 @@ public class CustomVoiceService : INService, IUnloadableService
     /// <param name="guild">The guild.</param>
     /// <param name="user">The user.</param>
     /// <returns>The created voice channel if successful, null otherwise.</returns>
-    public async Task<IVoiceChannel> CreateVoiceChannelAsync(IGuild guild, IGuildUser user)
+    public async Task<Channel> CreateVoiceChannelAsync(SocketGuild guild, SocketGuildMember user)
     {
         if (guild == null)
             throw new ArgumentNullException(nameof(guild));
@@ -490,7 +490,7 @@ public class CustomVoiceService : INService, IUnloadableService
         channelName = SanitizeChannelName(channelName);
 
         // Determine channel category
-        ICategoryChannel category = null;
+        Channel category = null;
         if (config.ChannelCategoryId.HasValue)
         {
             category = await guild.GetCategoryChannelAsync(config.ChannelCategoryId.Value);
@@ -528,7 +528,7 @@ public class CustomVoiceService : INService, IUnloadableService
         }
 
         // Create the channel
-        IVoiceChannel voiceChannel;
+        Channel voiceChannel;
         if (category != null)
         {
             voiceChannel = await guild.CreateVoiceChannelAsync(channelName, props =>
@@ -693,7 +693,7 @@ public class CustomVoiceService : INService, IUnloadableService
         // Also set permissions for the associated text channel
         try
         {
-            ITextChannel textChannel = voiceChannel;
+            Channel textChannel = voiceChannel;
             if (textChannel != null && config.AutoPermission)
             {
                 // Give the creator management permissions for the text channel
@@ -763,7 +763,7 @@ public class CustomVoiceService : INService, IUnloadableService
                         await GetControlsHelpAsync(voiceChannel.Guild))
                     .Build();
 
-                await textChannel.SendMessageAsync(embed: embed);
+                await textChannel.SendAsync(embed: embed);
             }
         }
         catch (Exception ex)
@@ -774,7 +774,7 @@ public class CustomVoiceService : INService, IUnloadableService
         // Move the user to the new channel
         try
         {
-            await user.ModifyAsync(props => props.Channel = new Optional<IVoiceChannel>(voiceChannel));
+            await user.ModifyAsync(props => props.Channel = new Optional<Channel>(voiceChannel));
         }
         catch (Exception ex)
         {
@@ -864,7 +864,7 @@ public class CustomVoiceService : INService, IUnloadableService
 
         try
         {
-            if (client.GetGuild(guildId) is not IGuild guild)
+            if (client.GetGuild(guildId) is not SocketGuild guild)
                 return false;
 
             var channel = await guild.GetVoiceChannelAsync(channelId);
@@ -938,7 +938,7 @@ public class CustomVoiceService : INService, IUnloadableService
                     // Text channel
                     try
                     {
-                        ITextChannel textChannel = channel;
+                        Channel textChannel = channel;
                         if (textChannel != null)
                         {
                             await textChannel.AddPermissionOverwriteAsync(guild.EveryoneRole, new OverwritePermissions(
@@ -982,7 +982,7 @@ public class CustomVoiceService : INService, IUnloadableService
                             // Text channel
                             try
                             {
-                                ITextChannel textChannel = channel;
+                                Channel textChannel = channel;
                                 if (textChannel != null)
                                 {
                                     await textChannel.AddPermissionOverwriteAsync(user, new OverwritePermissions(
@@ -1022,7 +1022,7 @@ public class CustomVoiceService : INService, IUnloadableService
                     // Text channel
                     try
                     {
-                        ITextChannel textChannel = channel;
+                        Channel textChannel = channel;
                         if (textChannel != null)
                         {
                             var textOverwrites = textChannel.PermissionOverwrites;
@@ -1079,7 +1079,7 @@ public class CustomVoiceService : INService, IUnloadableService
         if (userId == 0)
             throw new ArgumentException("User ID cannot be 0", nameof(userId));
 
-        if (client.GetGuild(guildId) is not IGuild guild)
+        if (client.GetGuild(guildId) is not SocketGuild guild)
             return false;
 
         var channel = await guild.GetVoiceChannelAsync(channelId);
@@ -1133,7 +1133,7 @@ public class CustomVoiceService : INService, IUnloadableService
                 // Text channel
                 try
                 {
-                    ITextChannel textChannel = channel;
+                    Channel textChannel = channel;
                     if (textChannel != null)
                     {
                         await textChannel.AddPermissionOverwriteAsync(user, new OverwritePermissions(
@@ -1194,7 +1194,7 @@ public class CustomVoiceService : INService, IUnloadableService
         if (userId == 0)
             throw new ArgumentException("User ID cannot be 0", nameof(userId));
 
-        if (client.GetGuild(guildId) is not IGuild guild)
+        if (client.GetGuild(guildId) is not SocketGuild guild)
             return false;
 
         var channel = await guild.GetVoiceChannelAsync(channelId);
@@ -1250,7 +1250,7 @@ public class CustomVoiceService : INService, IUnloadableService
             // Text channel
             try
             {
-                ITextChannel textChannel = channel;
+                Channel textChannel = channel;
                 if (textChannel != null)
                 {
                     await textChannel.AddPermissionOverwriteAsync(user, new OverwritePermissions(
@@ -1322,7 +1322,7 @@ public class CustomVoiceService : INService, IUnloadableService
         if (newOwnerId == 0)
             throw new ArgumentException("New owner ID cannot be 0", nameof(newOwnerId));
 
-        if (client.GetGuild(guildId) is not IGuild guild)
+        if (client.GetGuild(guildId) is not SocketGuild guild)
             return false;
 
         var channel = await guild.GetVoiceChannelAsync(channelId);
@@ -1360,7 +1360,7 @@ public class CustomVoiceService : INService, IUnloadableService
                 // Text channel
                 try
                 {
-                    ITextChannel textChannel = channel;
+                    Channel textChannel = channel;
                     if (textChannel != null)
                     {
                         await textChannel.AddPermissionOverwriteAsync(oldOwner, new OverwritePermissions(
@@ -1393,7 +1393,7 @@ public class CustomVoiceService : INService, IUnloadableService
             // Text channel
             try
             {
-                ITextChannel textChannel = channel;
+                Channel textChannel = channel;
                 if (textChannel != null)
                 {
                     await textChannel.AddPermissionOverwriteAsync(newOwner, new OverwritePermissions(
@@ -1427,7 +1427,7 @@ public class CustomVoiceService : INService, IUnloadableService
     /// <summary>
     ///     Formats a channel name using placeholders.
     /// </summary>
-    private string FormatChannelName(string format, IGuildUser user, IGuild guild)
+    private string FormatChannelName(string format, SocketGuildMember user, SocketGuild guild)
     {
         return format
             .Replace("{0}", user.Username)
@@ -1461,7 +1461,7 @@ public class CustomVoiceService : INService, IUnloadableService
     /// </summary>
     /// <param name="guild">The guild the commands will be used in.</param>
     /// <returns>The localized command list.</returns>
-    public async Task<string> GetControlsHelpAsync(IGuild guild)
+    public async Task<string> GetControlsHelpAsync(SocketGuild guild)
     {
         return strings.CustomVoiceControlsCommands(guild.Id, await guildSettings.GetPrefix(guild));
     }
@@ -1471,7 +1471,7 @@ public class CustomVoiceService : INService, IUnloadableService
     /// </summary>
     private async Task OnUserVoiceStateUpdated(SocketUser user, SocketVoiceState oldState, SocketVoiceState newState)
     {
-        if (user is not SocketGuildUser guildUser)
+        if (user is not SocketGuildMember guildUser)
             return;
 
         var guild = guildUser.Guild;
@@ -1590,12 +1590,12 @@ public class CustomVoiceService : INService, IUnloadableService
     /// <summary>
     ///     Handles channel deletion to clean up database entries.
     /// </summary>
-    private async Task OnChannelDestroyed(SocketChannel channel)
+    private async Task OnChannelDestroyed(Channel channel)
     {
-        if (channel is not SocketVoiceChannel voiceChannel)
+        if (channel is not Channel voiceChannel)
             return;
 
-        var guild = (voiceChannel as IGuildChannel)?.Guild;
+        var guild = (voiceChannel as Channel)?.Guild;
         if (guild == null)
             return;
 
@@ -1635,7 +1635,7 @@ public class CustomVoiceService : INService, IUnloadableService
     /// <summary>
     ///     Handles guild join to set up tracking.
     /// </summary>
-    private async Task OnJoinedGuild(IGuild guild)
+    private async Task OnJoinedGuild(SocketGuild guild)
     {
         try
         {

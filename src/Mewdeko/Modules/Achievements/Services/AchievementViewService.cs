@@ -18,7 +18,7 @@ public sealed class AchievementViewService : INService
     /// </summary>
     public const int PageSize = 8;
 
-    private readonly DiscordShardedClient client;
+    private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly AchievementCardRenderer renderer;
     private readonly AchievementService service;
@@ -33,7 +33,7 @@ public sealed class AchievementViewService : INService
     /// <param name="client">The Discord client.</param>
     /// <param name="dbFactory">Database connection factory.</param>
     public AchievementViewService(AchievementService service, AchievementCardRenderer renderer,
-        GeneratedBotStrings strings, DiscordShardedClient client, IDataConnectionFactory dbFactory)
+        GeneratedBotStrings strings, FluxerClient client, IDataConnectionFactory dbFactory)
     {
         this.service = service;
         this.renderer = renderer;
@@ -77,7 +77,7 @@ public sealed class AchievementViewService : INService
     /// <param name="target">Whose achievements.</param>
     /// <param name="prefix">The command prefix, for the hint.</param>
     /// <returns>The embed.</returns>
-    public async Task<EmbedBuilder> OverviewAsync(SocketGuild guild, SocketGuildUser target, string prefix)
+    public async Task<EmbedBuilder> OverviewAsync(SocketGuild guild, SocketGuildMember target, string prefix)
     {
         var summary = await service.GetSummaryAsync(guild.Id, target.Id);
         var progress = await service.GetProgressAsync(guild, target.Id, d => d.Enabled);
@@ -122,7 +122,7 @@ public sealed class AchievementViewService : INService
         {
             var lines = recent.Select(p => strings.AchievementRecentLine(guild.Id,
                 p.Definition.Name, TimestampTag.FromDateTime(DateTime.SpecifyKind(p.UnlockedAt!.Value, DateTimeKind.Utc),
-                    TimestampTagStyles.Relative)));
+                    TimestampTagStyle.Relative)));
             embed.AddField(strings.AchievementRecentTitle(guild.Id), string.Join("\n", lines));
         }
 
@@ -137,7 +137,7 @@ public sealed class AchievementViewService : INService
     /// <param name="target">Whose progress.</param>
     /// <param name="categoryKey">The category key, or null for all.</param>
     /// <returns>The pages, or null when the category is unknown.</returns>
-    public async Task<List<PageBuilder>?> CategoryPagesAsync(SocketGuild guild, SocketGuildUser target,
+    public async Task<List<PageBuilder>?> CategoryPagesAsync(SocketGuild guild, SocketGuildMember target,
         string? categoryKey)
     {
         var catalog = await service.GetCatalogAsync(guild.Id);
@@ -194,7 +194,7 @@ public sealed class AchievementViewService : INService
         if (progress.Unlocked)
         {
             var when = TimestampTag.FromDateTime(DateTime.SpecifyKind(progress.UnlockedAt!.Value, DateTimeKind.Utc),
-                TimestampTagStyles.ShortDate);
+                TimestampTagStyle.ShortDate);
             return strings.AchievementLineUnlocked(guildId, def.Name, grade.Name, def.Points, def.Description, when);
         }
 
@@ -218,7 +218,7 @@ public sealed class AchievementViewService : INService
     /// <param name="target">Whose achievements.</param>
     /// <param name="highest">True for best by grade and points, false for most recent.</param>
     /// <returns>The embed.</returns>
-    public async Task<EmbedBuilder> TopFiveAsync(SocketGuild guild, SocketGuildUser target, bool highest)
+    public async Task<EmbedBuilder> TopFiveAsync(SocketGuild guild, SocketGuildMember target, bool highest)
     {
         var progress = (await service.GetProgressAsync(guild, target.Id)).Where(p => p.Unlocked);
         var picked = (highest
@@ -245,7 +245,7 @@ public sealed class AchievementViewService : INService
     /// <param name="viewer">Who searched.</param>
     /// <param name="query">The search text.</param>
     /// <returns>The embed.</returns>
-    public async Task<EmbedBuilder> SearchAsync(SocketGuild guild, SocketGuildUser viewer, string query)
+    public async Task<EmbedBuilder> SearchAsync(SocketGuild guild, SocketGuildMember viewer, string query)
     {
         var reveal = service.GetSettings(guild.Id).Row.RevealHidden;
         var unlocks = await service.GetUnlocksAsync(guild.Id, viewer.Id);
@@ -349,7 +349,7 @@ public sealed class AchievementViewService : INService
     /// <param name="guild">The guild.</param>
     /// <param name="target">Whose stats.</param>
     /// <returns>The embed.</returns>
-    public async Task<EmbedBuilder> StatsAsync(SocketGuild guild, SocketGuildUser target)
+    public async Task<EmbedBuilder> StatsAsync(SocketGuild guild, SocketGuildMember target)
     {
         var metrics = AchievementCatalog.Metrics
             .Where(m => m.AllowCustom && m.Metric is not (AchievementMetric.Unlocked or AchievementMetric.Points))
@@ -467,7 +467,7 @@ public sealed class AchievementViewService : INService
             ? strings.AchievementCardProgress(localeGuildId, (next.MinPoints - summary.Points).ToString("N0"), next.Name)
             : strings.AchievementOverviewTopTier(localeGuildId);
 
-        var name = target is SocketGuildUser member ? member.DisplayName : target.GlobalName ?? target.Username;
+        var name = target is SocketGuildMember member ? member.DisplayName : target.GlobalName ?? target.Username;
         return await renderer.RenderAsync(new AchievementCardRenderer.CardData
         {
             Name = name,
@@ -490,7 +490,7 @@ public sealed class AchievementViewService : INService
     /// <param name="guild">The guild.</param>
     /// <param name="target">Whose badges.</param>
     /// <returns>The pages.</returns>
-    public async Task<List<PageBuilder>> BadgePagesAsync(SocketGuild guild, SocketGuildUser target)
+    public async Task<List<PageBuilder>> BadgePagesAsync(SocketGuild guild, SocketGuildMember target)
     {
         var owned = await service.GetOwnedBadgesAsync(guild.Id, target.Id);
         var summary = await service.GetSummaryAsync(guild.Id, target.Id);

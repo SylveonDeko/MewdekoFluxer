@@ -1,7 +1,6 @@
 using System.IO;
 using System.Text;
 using System.Text.Json;
-using Discord.Commands;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.JsonSettings;
 using Mewdeko.Modules.Help.Services;
@@ -130,7 +129,7 @@ public class Help(
             .WithOkColor()
             .AddField(Strings.SearchCommandTitleCommand(ctx.Guild.Id), cmdnames, true)
             .AddField(Strings.SearchCommandTitleDescription(ctx.Guild.Id), cmdremarks, true);
-        await ctx.Channel.SendMessageAsync(embed: eb.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -143,7 +142,7 @@ public class Help(
         var embed = await Service.GetHelpEmbed(true, ctx.Guild ?? null, ctx.Channel, ctx.User);
         try
         {
-            await ctx.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+            await ctx.Channel.SendAsync(embed: embed.Build()).ConfigureAwait(false);
         }
         catch (Exception e)
         {
@@ -202,7 +201,7 @@ public class Help(
                 var overview = await Service.GetModuleOverview(resolved.Name, ctx.Guild);
                 if (overview is not null)
                 {
-                    await ctx.Channel.SendMessageAsync(embed: overview.Build()).ConfigureAwait(false);
+                    await ctx.Channel.SendAsync(embed: overview.Build()).ConfigureAwait(false);
                     return;
                 }
 
@@ -260,7 +259,7 @@ public class Help(
         }
 
         var embed = await Service.GetCommandHelp(com, ctx.Guild);
-        await channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+        await channel.SendAsync(embed: embed.Build()).ConfigureAwait(false);
     }
 
 
