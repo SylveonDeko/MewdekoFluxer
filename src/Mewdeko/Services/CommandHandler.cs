@@ -82,6 +82,17 @@ public class CommandHandler : INService
         clearUsersOnShortCooldown = new Timer(_ => UsersOnShortCooldown.Clear(), null, GlobalCommandsCooldown,
             GlobalCommandsCooldown);
         eventHandler.MessageReceived.Subscribe("CommandHandler", MessageReceivedHandler);
+        commandService.CommandExecuted += OnCommandServiceExecuted;
+    }
+
+    private Task OnCommandServiceExecuted(CommandInfo? command, ICommandContext context, IResult result)
+    {
+        if (result is not ExecuteResult { Exception: { } exception })
+            return Task.CompletedTask;
+
+        collector.Error(exception, "CommandHandler.CommandExecuted", command?.Module.Name, context.Guild?.Id);
+        logger.LogError(exception, "Command {Command} failed in {GuildId}", command?.Name, context.Guild?.Id);
+        return Task.CompletedTask;
     }
 
     /// <summary>
