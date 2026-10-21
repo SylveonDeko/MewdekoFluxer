@@ -354,7 +354,11 @@ public class Program
     private static void ConfigureServices(IServiceCollection services, BotCredentials credentials, IDataCache cache,
         int serverCount)
     {
-        var client = new FluxerClient(credentials.Token.Trim(), new FluxerConfig
+        var token = credentials.Token.Trim();
+        if (!token.StartsWith("Bot ", StringComparison.OrdinalIgnoreCase))
+            token = $"Bot {token}";
+
+        var client = new FluxerClient(token, new FluxerConfig
         {
             GatewaySerilog = Log.Logger.ForContext("SourceContext", "Fluxer.Gateway"),
             RestSerilog = Log.Logger.ForContext("SourceContext", "Fluxer.Rest")

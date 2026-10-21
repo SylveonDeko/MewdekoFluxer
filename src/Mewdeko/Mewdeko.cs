@@ -25,6 +25,7 @@ public class Mewdeko : IDisposable
     };
 
     private readonly BotConfigService bss;
+    private readonly EventHandler eventHandler;
 
     private readonly ILogger<Mewdeko> logger;
     private bool disposed;
@@ -44,6 +45,7 @@ public class Mewdeko : IDisposable
         CommandService = Services.GetRequiredService<CommandService>();
         GuildSettingsService = Services.GetRequiredService<GuildSettingsService>();
         bss = Services.GetRequiredService<BotConfigService>();
+        eventHandler = Services.GetRequiredService<EventHandler>();
     }
 
     /// <summary>
@@ -134,7 +136,6 @@ public class Mewdeko : IDisposable
 
     private async Task LoginAsync()
     {
-        var eventHandler = Services.GetRequiredService<EventHandler>();
         var clientReady = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         eventHandler.Ready.Subscribe("Mewdeko", SetClientReady);
 
@@ -345,9 +346,8 @@ public class Mewdeko : IDisposable
 
         if (disposing)
         {
-            var eventHandler = Services.GetService<EventHandler>();
-            eventHandler?.JoinedGuild.Unsubscribe("Mewdeko", Client_JoinedGuild);
-            eventHandler?.LeftGuild.Unsubscribe("Mewdeko", Client_LeftGuild);
+            eventHandler.JoinedGuild.Unsubscribe("Mewdeko", Client_JoinedGuild);
+            eventHandler.LeftGuild.Unsubscribe("Mewdeko", Client_LeftGuild);
         }
 
         disposed = true;
