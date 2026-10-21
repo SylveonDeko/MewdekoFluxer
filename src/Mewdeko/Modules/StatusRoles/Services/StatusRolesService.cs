@@ -20,7 +20,7 @@ public class StatusRolesService : INService
     /// <summary>
     ///     Initializes a new instance of the <see cref="StatusRolesService" /> class.
     /// </summary>
-    /// <param name="client">The Discord socket client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="dbFactory">The database context provider.</param>
     /// <param name="eventHandler">The event handler.</param>
     /// <param name="cache">The data cache service.</param>

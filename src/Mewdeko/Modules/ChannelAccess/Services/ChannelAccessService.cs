@@ -31,7 +31,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
     /// <summary>
     ///     Initializes a new instance of the <see cref="ChannelAccessService" /> class.
     /// </summary>
-    /// <param name="client">The Discord client instance.</param>
+    /// <param name="client">The Fluxer client instance.</param>
     /// <param name="dbFactory">The database connection factory.</param>
     /// <param name="eventHandler">The event handler used for reactions and replies.</param>
     /// <param name="strings">The localization service.</param>
@@ -48,15 +48,15 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
         this.eventHandler = eventHandler;
         this.strings = strings;
         this.logger = logger;
-        eventHandler.Subscribe("ReactionAdded", "ChannelAccessService", OnReactionAddedAsync);
-        eventHandler.Subscribe("ReactionRemoved", "ChannelAccessService", OnReactionRemovedAsync);
+        eventHandler.ReactionAdded.Subscribe("ChannelAccessService", OnReactionAddedAsync);
+        eventHandler.ReactionRemoved.Subscribe("ChannelAccessService", OnReactionRemovedAsync);
     }
 
     /// <inheritdoc />
     public void Dispose()
     {
-        eventHandler.Unsubscribe("ReactionAdded", "ChannelAccessService", OnReactionAddedAsync);
-        eventHandler.Unsubscribe("ReactionRemoved", "ChannelAccessService", OnReactionRemovedAsync);
+        eventHandler.ReactionAdded.Unsubscribe("ChannelAccessService", OnReactionAddedAsync);
+        eventHandler.ReactionRemoved.Unsubscribe("ChannelAccessService", OnReactionRemovedAsync);
         expiryTimer?.Dispose();
         voteLock.Dispose();
         GC.SuppressFinalize(this);
@@ -387,8 +387,8 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
 
         if (config.MinServerAgeDays > 0)
         {
-            var joined = user.JoinedAt?.UtcDateTime;
-            if (joined is null || (DateTime.UtcNow - joined.Value).TotalDays < config.MinServerAgeDays)
+            var joined = user.JoinedAt.UtcDateTime;
+            if ((DateTime.UtcNow - joined).TotalDays < config.MinServerAgeDays)
                 return (false, $"You must have been in this server for {config.MinServerAgeDays} days to apply.");
         }
 
@@ -733,10 +733,10 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
 
     #region Reactions
 
-    private static readonly Emoji ApplyEmoji = new("📝");
-    private static readonly Emoji ApproveEmoji = new("✅");
-    private static readonly Emoji DenyEmoji = new("❌");
-    private static readonly Emoji AbstainEmoji = new("🤷");
+    private static readonly Emoji ApplyEmoji = Emoji.FromUnicode("📝");
+    private static readonly Emoji ApproveEmoji = Emoji.FromUnicode("✅");
+    private static readonly Emoji DenyEmoji = Emoji.FromUnicode("❌");
+    private static readonly Emoji AbstainEmoji = Emoji.FromUnicode("🤷");
 
     private static List<Emoji> GetVoteEmotes(ChannelAccessConfig config)
     {
@@ -747,7 +747,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
         return emotes;
     }
 
-    private static int? GetVoteFromEmote(ChannelAccessConfig config, Emoji emote)
+    private static int? GetVoteFromEmote(ChannelAccessConfig config, IEmoji emote)
     {
         if (emote.Name == ApproveEmoji.Name)
             return 1;
@@ -759,10 +759,10 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
     }
 
     private async Task OnReactionAddedAsync(Cacheable<Message> message,
-        Cacheable<Channel> channel, SocketReaction reaction)
+        Channel channel, SocketReaction reaction)
     {
         if (!trackedMessages.ContainsKey(message.Id) || reaction.UserId == client.CurrentUser.Id ||
-            reaction.User.IsSpecified && reaction.User.Value.IsBot)
+            reaction.User is { IsBot: true })
             return;
 
         try
@@ -786,7 +786,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
     }
 
     private async Task OnReactionRemovedAsync(Cacheable<Message> message,
-        Cacheable<Channel> channel, SocketReaction reaction)
+        Channel channel, SocketReaction reaction)
     {
         if (!trackedMessages.ContainsKey(message.Id) || reaction.UserId == client.CurrentUser.Id)
             return;
@@ -876,11 +876,11 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
         }
     }
 
-    private async Task TryRemoveReactionAsync(Message message, Emoji emote, ulong userId)
+    private async Task TryRemoveReactionAsync(Message message, IEmoji emote, ulong userId)
     {
         try
         {
-            await message.RemoveReactionAsync(emote, userId);
+            await message.RemoveReactionAsync(Emoji.From(emote), userId);
         }
         catch (Exception ex)
         {
@@ -914,7 +914,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
             _ = Task.Run(() => RunApplicationAsync(config, user, dm, questions));
             return true;
         }
-        catch (Discord.Net.FluxerApiException)
+        catch (FluxerApiException)
         {
             activeApplicants.TryRemove(user.Id, out _);
             return false;
@@ -994,14 +994,14 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
     private async Task<string?> WaitForReplyAsync(ulong channelId, ulong userId, TimeSpan timeout)
     {
         var reply = new TaskCompletionSource<string>();
-        eventHandler.Subscribe("MessageReceived", "ChannelAccessService", OnMessage);
+        eventHandler.MessageReceived.Subscribe("ChannelAccessService", OnMessage);
         try
         {
             return await Task.WhenAny(reply.Task, Task.Delay(timeout)) == reply.Task ? await reply.Task : null;
         }
         finally
         {
-            eventHandler.Unsubscribe("MessageReceived", "ChannelAccessService", OnMessage);
+            eventHandler.MessageReceived.Unsubscribe("ChannelAccessService", OnMessage);
         }
 
         Task OnMessage(SocketMessage arg)

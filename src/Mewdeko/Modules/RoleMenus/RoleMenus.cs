@@ -83,7 +83,7 @@ public class RoleMenus : MewdekoModuleBase<RoleMenuService>
                 .ToList()
         };
 
-        var result = await Service.CreateAsync(ctx.Guild.Id, (SocketGuildMember)ctx.User, draft);
+        var result = await Service.CreateAsync(ctx.Guild.Id, ctx.Member!, draft);
         if (!result.Success || result.Menu is null)
         {
             await ErrorAsync(Service.DescribeError(ctx.Guild.Id, result, null, channel.Id));
@@ -476,7 +476,7 @@ public class RoleMenus : MewdekoModuleBase<RoleMenuService>
             return;
         }
 
-        var result = await Service.ImportAsync(ctx.Guild.Id, (SocketGuildMember)ctx.User, new RoleMenuImportDraft
+        var result = await Service.ImportAsync(ctx.Guild.Id, ctx.Member!, new RoleMenuImportDraft
         {
             SourceId = source.Id,
             CopyMessage = true,
@@ -513,7 +513,7 @@ public class RoleMenus : MewdekoModuleBase<RoleMenuService>
     /// <returns>The saved menu, or null after replying.</returns>
     private async Task<RoleMenu?> SaveAsync(RoleMenu menu, RoleMenuDraft draft)
     {
-        var result = await Service.UpdateAsync(ctx.Guild.Id, menu.Id, (SocketGuildMember)ctx.User, draft);
+        var result = await Service.UpdateAsync(ctx.Guild.Id, menu.Id, ctx.Member!, draft);
         if (result.Success && result.Menu is not null)
             return result.Menu;
 

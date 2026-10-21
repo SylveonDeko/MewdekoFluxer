@@ -23,7 +23,7 @@ public class RoleMenuResult
     public RoleMenuError Error { get; set; }
 
     /// <summary>
-    ///     The offending role name, emoji text, field name, or Discord failure reason.
+    ///     The offending role name, emoji text, field name, or Fluxer failure reason.
     /// </summary>
     public string? Detail { get; set; }
 

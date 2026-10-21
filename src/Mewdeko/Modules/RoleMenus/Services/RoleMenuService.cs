@@ -148,7 +148,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     private readonly Func<Channel, Task> channelDestroyedHandler;
 
     /// <summary>
-    ///     The Discord client.
+    ///     The Fluxer client.
     /// </summary>
     private readonly FluxerClient client;
 
@@ -190,7 +190,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <summary>
     ///     Handler for the MessageDeleted event, kept so it can be unsubscribed.
     /// </summary>
-    private readonly Func<Cacheable<Message>, Cacheable<Channel>, Task> messageDeletedHandler;
+    private readonly Func<Cacheable<Message>, Channel, Task> messageDeletedHandler;
 
     /// <summary>
     ///     Posted message ID to menu ID, used to notice when a menu's message is deleted.
@@ -200,7 +200,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <summary>
     ///     Handler for the MessagesBulkDeleted event, kept so it can be unsubscribed.
     /// </summary>
-    private readonly Func<IReadOnlyCollection<Cacheable<Message>>, Cacheable<Channel>, Task>
+    private readonly Func<IReadOnlyCollection<Cacheable<Message>>, Channel, Task>
         messagesBulkDeletedHandler;
 
     /// <summary>
@@ -222,13 +222,13 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <summary>
     ///     Handler for the ReactionAdded event, kept so it can be unsubscribed.
     /// </summary>
-    private readonly Func<Cacheable<Message>, Cacheable<Channel>, SocketReaction, Task>
+    private readonly Func<Cacheable<Message>, Channel, SocketReaction, Task>
         reactionAddedHandler;
 
     /// <summary>
     ///     Handler for the ReactionRemoved event, kept so it can be unsubscribed.
     /// </summary>
-    private readonly Func<Cacheable<Message>, Cacheable<Channel>, SocketReaction, Task>
+    private readonly Func<Cacheable<Message>, Channel, SocketReaction, Task>
         reactionRemovedHandler;
 
     /// <summary>
@@ -250,7 +250,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <summary>
     ///     Initializes a new instance of the <see cref="RoleMenuService" /> class.
     /// </summary>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="dbFactory">Database connection factory.</param>
     /// <param name="strings">Localized bot strings.</param>
     /// <param name="eventHandler">Event handler for cleanup events.</param>
@@ -288,12 +288,12 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
         reactionAddedHandler = OnReactionAddedAsync;
         reactionRemovedHandler = OnReactionRemovedAsync;
 
-        eventHandler.Subscribe("MessageDeleted", EventModuleName, messageDeletedHandler);
-        eventHandler.Subscribe("MessagesBulkDeleted", EventModuleName, messagesBulkDeletedHandler);
-        eventHandler.Subscribe("ChannelDestroyed", EventModuleName, channelDestroyedHandler);
-        eventHandler.Subscribe("RoleDeleted", EventModuleName, roleDeletedHandler);
-        eventHandler.Subscribe("ReactionAdded", EventModuleName, reactionAddedHandler);
-        eventHandler.Subscribe("ReactionRemoved", EventModuleName, reactionRemovedHandler);
+        eventHandler.MessageDeleted.Subscribe(EventModuleName, messageDeletedHandler);
+        eventHandler.MessagesBulkDeleted.Subscribe(EventModuleName, messagesBulkDeletedHandler);
+        eventHandler.ChannelDestroyed.Subscribe(EventModuleName, channelDestroyedHandler);
+        eventHandler.RoleDeleted.Subscribe(EventModuleName, roleDeletedHandler);
+        eventHandler.ReactionAdded.Subscribe(EventModuleName, reactionAddedHandler);
+        eventHandler.ReactionRemoved.Subscribe(EventModuleName, reactionRemovedHandler);
     }
 
     /// <summary>
@@ -334,12 +334,12 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <returns>A completed task.</returns>
     public Task Unload()
     {
-        eventHandler.Unsubscribe("MessageDeleted", EventModuleName, messageDeletedHandler);
-        eventHandler.Unsubscribe("MessagesBulkDeleted", EventModuleName, messagesBulkDeletedHandler);
-        eventHandler.Unsubscribe("ChannelDestroyed", EventModuleName, channelDestroyedHandler);
-        eventHandler.Unsubscribe("RoleDeleted", EventModuleName, roleDeletedHandler);
-        eventHandler.Unsubscribe("ReactionAdded", EventModuleName, reactionAddedHandler);
-        eventHandler.Unsubscribe("ReactionRemoved", EventModuleName, reactionRemovedHandler);
+        eventHandler.MessageDeleted.Unsubscribe(EventModuleName, messageDeletedHandler);
+        eventHandler.MessagesBulkDeleted.Unsubscribe(EventModuleName, messagesBulkDeletedHandler);
+        eventHandler.ChannelDestroyed.Unsubscribe(EventModuleName, channelDestroyedHandler);
+        eventHandler.RoleDeleted.Unsubscribe(EventModuleName, roleDeletedHandler);
+        eventHandler.ReactionAdded.Unsubscribe(EventModuleName, reactionAddedHandler);
+        eventHandler.ReactionRemoved.Unsubscribe(EventModuleName, reactionRemovedHandler);
         return Task.CompletedTask;
     }
 
@@ -436,7 +436,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     public static string? GetJumpUrl(RoleMenu menu)
     {
         return menu.MessageId is { } messageId
-            ? $"https://discord.com/channels/{menu.GuildId}/{menu.ChannelId}/{messageId}"
+            ? $"{FluxerContext.WebUrl}/channels/{menu.GuildId}/{menu.ChannelId}/{messageId}"
             : null;
     }
 
@@ -458,8 +458,6 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
             return RoleMenuRoleProblem.Missing;
         if (role.Id == guild.Id)
             return RoleMenuRoleProblem.Everyone;
-        if (role.IsManaged)
-            return RoleMenuRoleProblem.Managed;
         if (!guild.CurrentUser.GuildPermissions.ManageRoles || role.Position >= guild.CurrentUser.Hierarchy)
             return RoleMenuRoleProblem.AboveBot;
         if (actor is not null && actor.Id != guild.OwnerId && role.Position >= ActorHierarchy(guild, actor))
@@ -629,7 +627,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
 
             switch (emote)
             {
-                case Emoji custom:
+                case Emoji { IsCustom: true } custom:
                     if (!client.Guilds.Any(g => g.Emotes.Any(e => e.Id == custom.Id)))
                         return (RoleMenuError.InvalidEmoji, emojiText);
                     option.Emoji = custom.ToString();
@@ -1247,7 +1245,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
                 {
                     var emote = ResolveLegacyEmoji(guild, pair.EmoteName);
                     if (emote is not null && emote.TryToIEmote(out var parsed) && parsed is not null)
-                        await original.RemoveReactionAsync(parsed, client.CurrentUser);
+                        await original.RemoveReactionAsync(parsed, client.CurrentUser.Id);
                 }
             }
         }
@@ -1286,14 +1284,14 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     private static string? SerializeForBuilder(Message message)
     {
         var content = string.IsNullOrWhiteSpace(message.Content) ? null : message.Content;
-        var embeds = message.Embeds
-            .Where(e => e.Type == EmbedType.Rich)
+        var embeds = (message.Embeds ?? [])
+            .Where(e => e.RawType == "rich")
             .Select(e => new
             {
                 title = e.Title,
                 description = e.Description,
                 url = e.Url,
-                color = e.Color is { } color ? $"#{color.RawValue:X6}" : null,
+                color = e.Color is { } color ? $"#{color:X6}" : null,
                 author = e.Author is { } author
                     ? new
                     {
@@ -1318,11 +1316,11 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
                         text = footer.Text, icon_url = footer.IconUrl
                     }
                     : null,
-                fields = e.Fields.Length == 0
+                fields = e.Fields is null || e.Fields.Length == 0
                     ? null
                     : e.Fields.Select(f => new
                     {
-                        name = f.Name, value = f.Value, inline = f.Inline
+                        name = f.Name, value = f.Value, inline = f.IsInline
                     }).ToList()
             })
             .ToList();
@@ -1501,12 +1499,12 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
         var wanted = menu.Options.Select(o => ParseEmote(o.Emoji)).OfType<Emoji>().ToList();
         var wantedKeys = wanted.Select(EmoteKey).ToHashSet();
 
-        foreach (var present in message.Reactions.Keys.Where(e => !wantedKeys.Contains(EmoteKey(e))).ToList())
-            await message.RemoveAllReactionsForEmoteAsync(present);
+        foreach (var present in (message.Reactions ?? []).Select(r => r.Emoji).Where(e => !wantedKeys.Contains(EmoteKey(e))).ToList())
+            await message.RemoveAllReactionsForEmojiAsync(present);
 
         foreach (var emote in wanted)
         {
-            if (message.Reactions.TryGetValue(emote, out var metadata) && metadata.IsMe)
+            if ((message.Reactions ?? []).Any(r => r.Me == true && EmoteKey(r.Emoji) == EmoteKey(emote)))
                 continue;
             await message.AddReactionAsync(emote);
         }
@@ -1517,9 +1515,9 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// </summary>
     /// <param name="emote">The emoji.</param>
     /// <returns>The identifying text.</returns>
-    private static string EmoteKey(Emoji emote)
+    private static string EmoteKey(IEmoji emote)
     {
-        return emote is Emoji custom ? custom.Id.ToString() : emote.Name;
+        return emote.Id != 0 ? emote.Id.ToString() : emote.Name;
     }
 
     /// <summary>
@@ -1618,7 +1616,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="reaction">The reaction.</param>
     /// <returns>A task that completes when the reaction has been handled.</returns>
     private async Task OnReactionAddedAsync(Cacheable<Message> message,
-        Cacheable<Channel> channel, SocketReaction reaction)
+        Channel channel, SocketReaction reaction)
     {
         try
         {
@@ -1638,7 +1636,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="reaction">The reaction.</param>
     /// <returns>A task that completes when the removal has been handled.</returns>
     private async Task OnReactionRemovedAsync(Cacheable<Message> message,
-        Cacheable<Channel> channel, SocketReaction reaction)
+        Channel channel, SocketReaction reaction)
     {
         try
         {
@@ -1667,7 +1665,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
         if (menu is null || guild is null)
             return;
 
-        var member = guild.GetUser(reaction.UserId) ?? reaction.User.GetValueOrDefault() as SocketGuildMember;
+        var member = guild.GetUser(reaction.UserId) ?? reaction.Member;
         if (member is null || member.IsBot)
             return;
 
@@ -1685,14 +1683,14 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
 
         if (option is null)
         {
-            await RemoveMemberReactionAsync(cached, reaction.Emoji, member);
+            await RemoveMemberReactionAsync(cached, reaction.Emoji, member.Id);
             return;
         }
 
         var blocked = AccessProblem(guild, member, menu);
         if (blocked is not null)
         {
-            await RemoveMemberReactionAsync(cached, reaction.Emoji, member);
+            await RemoveMemberReactionAsync(cached, reaction.Emoji, member.Id);
             await SendTextAsync(guild, menu, member, blocked);
             return;
         }
@@ -1701,11 +1699,11 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
         foreach (var other in menu.Options.Where(o => outcome.Removed.Contains(o.RoleId) && o.Id != option.Id))
         {
             if (ParseEmote(other.Emoji) is { } otherEmote)
-                await RemoveMemberReactionAsync(cached, otherEmote, member);
+                await RemoveMemberReactionAsync(cached, otherEmote, member.Id);
         }
 
         if (!CurrentRoleIds(guild.Id, member).Contains(option.RoleId))
-            await RemoveMemberReactionAsync(cached, reaction.Emoji, member);
+            await RemoveMemberReactionAsync(cached, reaction.Emoji, member.Id);
 
         await SendNoteAsync(guild, menu, member, outcome);
     }
@@ -1718,9 +1716,9 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="emote">The reaction to remove.</param>
     /// <param name="member">The member whose reaction it is.</param>
     /// <returns>A task that completes when the attempt is done.</returns>
-    private async Task RemoveMemberReactionAsync(Cacheable<Message> cached, Emoji emote, IUser member)
+    private async Task RemoveMemberReactionAsync(Cacheable<Message> cached, IEmoji emote, ulong memberId)
     {
-        var key = (cached.Id, member.Id, EmoteKey(emote));
+        var key = (cached.Id, memberId, EmoteKey(emote));
         var now = DateTime.UtcNow;
         botRemovedReactions[key] = now + BotRemovalWindow;
         if (botRemovedReactions.Count > 1000)
@@ -1735,7 +1733,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
         try
         {
             var message = await cached.GetOrDownloadAsync();
-            await message.RemoveReactionAsync(emote, member);
+            await message.RemoveReactionAsync(Emoji.From(emote), memberId);
         }
         catch (Exception ex)
         {
@@ -1751,7 +1749,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="userId">The member ID.</param>
     /// <param name="emote">The removed reaction.</param>
     /// <returns>True when the bot removed it just now.</returns>
-    private bool TakeBotRemoval(ulong messageId, ulong userId, Emoji emote)
+    private bool TakeBotRemoval(ulong messageId, ulong userId, IEmoji emote)
     {
         return botRemovedReactions.TryRemove((messageId, userId, EmoteKey(emote)), out var expires) &&
                expires >= DateTime.UtcNow;
@@ -1873,7 +1871,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
             bool Usable(RoleMenuOption option)
             {
                 var role = guild.GetRole(option.RoleId);
-                return canManage && role is not null && role.Id != guild.Id && !role.IsManaged &&
+                return canManage && role is not null && role.Id != guild.Id &&
                        role.Position < botTop;
             }
 
@@ -1941,7 +1939,8 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
                 {
                     try
                     {
-                        await member.RemoveRolesAsync(toRemove, options);
+                        foreach (var id in toRemove)
+                            await member.RemoveRoleAsync(id, options);
                         outcome.Removed.AddRange(toRemove);
                     }
                     catch (FluxerApiException ex) when (IsPermissionFailure(ex))
@@ -1955,7 +1954,8 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
                 {
                     try
                     {
-                        await member.AddRolesAsync(toAdd, options);
+                        foreach (var id in toAdd)
+                            await member.AddRoleAsync(id, options);
                         outcome.Added.AddRange(toAdd);
                     }
                     catch (FluxerApiException ex) when (IsPermissionFailure(ex))
@@ -1987,13 +1987,13 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     }
 
     /// <summary>
-    ///     Checks whether a Discord error means the bot lacks permission for a role.
+    ///     Checks whether a Fluxer error means the bot lacks permission for a role.
     /// </summary>
     /// <param name="ex">The error.</param>
     /// <returns>True for a permission failure.</returns>
     private static bool IsPermissionFailure(FluxerApiException ex)
     {
-        return ex.DiscordCode == DiscordErrorCode.MissingPermissions;
+        return ex.ErrorCode == FluxerErrorCodes.MissingPermissions;
     }
 
     /// <summary>
@@ -2069,7 +2069,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="channel">The channel it was in.</param>
     /// <returns>A task that completes when cleanup is done.</returns>
     private async Task OnMessageDeletedAsync(Cacheable<Message> message,
-        Cacheable<Channel> channel)
+        Channel channel)
     {
         if (!messageIndex.TryRemove(message.Id, out var menuId))
             return;
@@ -2083,7 +2083,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <param name="channel">The channel they were in.</param>
     /// <returns>A task that completes when cleanup is done.</returns>
     private async Task OnMessagesBulkDeletedAsync(IReadOnlyCollection<Cacheable<Message>> messages,
-        Cacheable<Channel> channel)
+        Channel channel)
     {
         foreach (var message in messages)
         {
@@ -2129,7 +2129,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <returns>A task that completes when cleanup is done.</returns>
     private async Task OnChannelDestroyedAsync(Channel channel)
     {
-        if (channel is not Channel guildChannel)
+        if (channel.Guild is not { } guildOfChannel)
             return;
 
         await writeLock.WaitAsync();
@@ -2137,7 +2137,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
         {
             await using var db = await dbFactory.CreateConnectionAsync();
             var affected = await db.RoleMenus
-                .Where(x => x.GuildId == guildChannel.Guild.Id && x.ChannelId == channel.Id)
+                .Where(x => x.GuildId == guildOfChannel.Id && x.ChannelId == channel.Id)
                 .Select(x => new
                 {
                     x.Id, x.MessageId

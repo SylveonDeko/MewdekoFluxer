@@ -16,6 +16,12 @@ public class RoleStatesService : INService
     private readonly ILogger<RoleStatesService> logger;
 
     /// <summary>
+    ///     The roles members had when last seen, kept because Fluxer drops a member from the guild before the leave event
+    ///     reaches the bot.
+    /// </summary>
+    private readonly ConcurrentDictionary<(ulong GuildId, ulong UserId), ulong[]> memberRoles = new();
+
+    /// <summary>
     ///     Initializes a new instance of the <see cref="RoleStatesService" /> class.
     /// </summary>
     /// <param name="dbFactory">The database service to interact with stored data.</param>
@@ -28,23 +34,41 @@ public class RoleStatesService : INService
         this.collector = collector;
         this.dbFactory = dbFactory;
         this.logger = logger;
-        eventHandler.Subscribe("UserLeft", "RoleStatesService", OnUserLeft);
-        eventHandler.Subscribe("UserBanned", "RoleStatesService", OnUserBanned);
-        eventHandler.Subscribe("UserJoined", "RoleStatesService", OnUserJoined);
+        eventHandler.UserLeft.Subscribe("RoleStatesService", OnUserLeft);
+        eventHandler.UserBanned.Subscribe("RoleStatesService", OnUserBanned);
+        eventHandler.UserJoined.Subscribe("RoleStatesService", OnUserJoined);
+        eventHandler.GuildMemberUpdated.Subscribe("RoleStatesService", OnMemberUpdated);
+        eventHandler.GuildAvailable.Subscribe("RoleStatesService", OnGuildAvailable);
     }
 
-    private async Task OnUserBanned(SocketUser args, SocketGuild arsg2)
+    private Task OnMemberUpdated(MemberSnapshot? before, SocketGuildMember after)
+    {
+        memberRoles[(after.GuildId, after.Id)] = after.RoleIds.ToArray();
+        return Task.CompletedTask;
+    }
+
+    private async Task OnGuildAvailable(SocketGuild guild)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var enabled = await db.RoleStateSettings
+            .AnyAsync(x => x.GuildId == guild.Id && x.Enabled);
+        if (!enabled) return;
+
+        foreach (var member in guild.Members.Values)
+            memberRoles[(guild.Id, member.Id)] = member.RoleIds.ToArray();
+    }
+
+    private async Task OnUserBanned(User args, SocketGuild arsg2)
     {
         await using var db = await dbFactory.CreateConnectionAsync();
 
-        if (args is not SocketGuildMember usr) return;
         var roleStateSettings = await db.RoleStateSettings
             .FirstOrDefaultAsync(x => x.GuildId == arsg2.Id);
 
         if (roleStateSettings is null || !roleStateSettings.Enabled || !roleStateSettings.ClearOnBan) return;
 
         var roleState = await db.UserRoleStates
-            .FirstOrDefaultAsync(x => x.GuildId == arsg2.Id && x.UserId == usr.Id);
+            .FirstOrDefaultAsync(x => x.GuildId == arsg2.Id && x.UserId == args.Id);
 
         if (roleState is null) return;
 
@@ -95,7 +119,7 @@ public class RoleStatesService : INService
     }
 
 
-    private async Task OnUserLeft(SocketGuild args, IUser args2)
+    private async Task OnUserLeft(SocketGuild args, User args2)
     {
         await using var db = await dbFactory.CreateConnectionAsync();
 
@@ -116,9 +140,9 @@ public class RoleStatesService : INService
 
         if (deniedUsers.Contains(args2.Id)) return;
 
-        if (args2 is not SocketGuildMember usr) return;
+        if (!memberRoles.TryRemove((args.Id, args2.Id), out var currentRoles)) return;
 
-        var rolesToSave = usr.Roles.Where(x => !x.IsManaged && !x.IsEveryone).Select(x => x.Id);
+        var rolesToSave = currentRoles.Where(x => x != args.Id && args.GetRole(x) is not null);
         if (deniedRoles.Any())
         {
             rolesToSave = rolesToSave.Except(deniedRoles);
@@ -127,15 +151,15 @@ public class RoleStatesService : INService
         if (!rolesToSave.Any()) return;
 
         var roleState = await db.UserRoleStates
-            .FirstOrDefaultAsync(x => x.GuildId == args.Id && x.UserId == usr.Id);
+            .FirstOrDefaultAsync(x => x.GuildId == args.Id && x.UserId == args2.Id);
 
         if (roleState is null)
         {
             var newRoleState = new UserRoleState
             {
-                UserName = usr.ToString(),
+                UserName = args2.ToString(),
                 GuildId = args.Id,
-                UserId = usr.Id,
+                UserId = args2.Id,
                 SavedRoles = string.Join(",", rolesToSave)
             };
             await db.InsertAsync(newRoleState);
@@ -490,7 +514,7 @@ public class RoleStatesService : INService
         if (sourceUserRoleState is null || string.IsNullOrWhiteSpace(sourceUserRoleState.SavedRoles)) return false;
 
         var sourceUserSavedRoleIds = sourceUserRoleState.SavedRoles.Split(',').Select(ulong.Parse).ToList();
-        var rolesToAssign = targetUser.Guild.Roles.Where(role => sourceUserSavedRoleIds.Contains(role.Id)).ToList();
+        var rolesToAssign = targetUser.Guild.Roles.Values.Where(role => sourceUserSavedRoleIds.Contains(role.Id)).ToList();
 
         if (!rolesToAssign.Any()) return false;
         try
@@ -592,8 +616,8 @@ public class RoleStatesService : INService
             return (0, "No role states found in the source guild.");
 
         // Get all roles from both guilds to create a name-based mapping
-        var sourceRoles = sourceGuild.Roles.ToDictionary(r => r.Id, r => r);
-        var targetRoles = targetGuild.Roles;
+        var sourceRoles = sourceGuild.Roles;
+        var targetRoles = targetGuild.Roles.Values;
 
         // Create role mapping based on role names
         var roleMapping = new Dictionary<ulong, ulong>();
@@ -601,7 +625,6 @@ public class RoleStatesService : INService
         {
             var matchingTargetRole = targetRoles.FirstOrDefault(r =>
                 r.Name.Equals(sourceRole.Name, StringComparison.OrdinalIgnoreCase) &&
-                !r.IsManaged &&
                 r.Id != targetGuild.Id);
 
             if (matchingTargetRole != null)
@@ -733,7 +756,7 @@ public class RoleStatesService : INService
             var roles = user.RoleIds.Where(r =>
             {
                 var role = guild.GetRole(r);
-                return role is { IsManaged: false } && role.Id != guild.Id;
+                return role is not null && role.Id != guild.Id;
             });
 
             // Filter out denied roles

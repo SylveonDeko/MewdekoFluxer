@@ -272,14 +272,14 @@ public class ChannelAccess : MewdekoModuleBase<ChannelAccessService>
             return;
         }
 
-        var (canApply, reason) = await Service.CanApplyAsync(config, (SocketGuildMember)ctx.User);
+        var (canApply, reason) = await Service.CanApplyAsync(config, ctx.Member!);
         if (!canApply)
         {
             await ErrorAsync(reason!);
             return;
         }
 
-        if (!await Service.StartApplicationAsync(config, (SocketGuildMember)ctx.User))
+        if (!await Service.StartApplicationAsync(config, ctx.Member!))
             await ErrorAsync(Strings.ChannelAccessApplyDmClosed(ctx.Guild.Id, ctx.User.Mention));
     }
 
@@ -327,9 +327,9 @@ public class ChannelAccess : MewdekoModuleBase<ChannelAccessService>
     [RequireContext(ContextType.Guild)]
     public async Task ChannelAccessHistory(SocketGuildMember? user = null)
     {
-        user ??= (SocketGuildMember)ctx.User;
+        user ??= ctx.Member!;
 
-        if (user.Id != ctx.User.Id && !((SocketGuildMember)ctx.User).GuildPermissions.ManageRoles)
+        if (user.Id != ctx.User.Id && !(ctx.Member!).GuildPermissions.ManageRoles)
         {
             await ErrorAsync(Strings.ChannelAccessNotYourApplication(ctx.Guild.Id));
             return;
@@ -428,7 +428,7 @@ public class ChannelAccess : MewdekoModuleBase<ChannelAccessService>
         if (config is null)
             return;
 
-        var user = (SocketGuildMember)ctx.User;
+        var user = ctx.Member!;
         if (!Service.CanVote(config, user))
         {
             await ErrorAsync(Strings.ChannelAccessVoteNotEligible(ctx.Guild.Id));

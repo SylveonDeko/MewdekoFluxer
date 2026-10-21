@@ -8,7 +8,7 @@ namespace Mewdeko.Modules.RoleStates;
 /// </summary>
 /// <param name="bss">The BotConfigService instance.</param>
 /// <param name="interactivity">The InteractiveService instance.</param>
-/// <param name="client">The Discord client instance.</param>
+/// <param name="client">The Fluxer client instance.</param>
 public class RoleStates(BotConfigService bss, InteractiveService interactivity, FluxerClient client)
     : MewdekoModuleBase<RoleStatesService>
 {
@@ -435,11 +435,11 @@ public class RoleStates(BotConfigService bss, InteractiveService interactivity, 
     [UserPerm(GuildPermission.Administrator)]
     public async Task SetUserRoleState(SocketGuildMember user, params SocketRole[] roles)
     {
-        var roleIds = roles.Where(x => x.Id != ctx.Guild.Id && !x.IsManaged).Select(x => x.Id);
+        var roleIds = roles.Where(x => x.Id != ctx.Guild.Id).Select(x => x.Id);
         if (!roleIds.Any())
             await ctx.Channel.SendErrorAsync(Strings.RoleStatesNoValidRoles(ctx.Guild.Id, bss.Data.ErrorEmote),
                 Config);
-        await Service.SetRoleStateManually(user, ctx.Guild.Id, roleIds);
+        await Service.SetRoleStateManually(user.User, ctx.Guild.Id, roleIds);
         await ctx.Channel.SendConfirmAsync(
             $"{bss.Data.SuccessEmote} {Strings.RoleStatesSetSuccess(ctx.Guild.Id, user.Mention)}");
     }
