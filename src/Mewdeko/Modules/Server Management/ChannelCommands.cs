@@ -321,6 +321,7 @@ public partial class ServerManagement
 
             if (chan != null)
             {
+                var position = chan.Position;
                 try
                 {
                     await chan.DeleteAsync().ConfigureAwait(false);
@@ -346,6 +347,17 @@ public partial class ServerManagement
                     ParentCategoryId = chan.CategoryId,
                     RatelimitPerUser = chan.SlowModeInterval
                 }).ConfigureAwait(false);
+
+                if (position is { } restored)
+                {
+                    await ctx.Guild.UpdateChannelPositionsAsync(
+                    [
+                        new ChannelPositionUpdateRequestItem
+                        {
+                            Id = chan2.Id, Position = restored
+                        }
+                    ]).ConfigureAwait(false);
+                }
 
                 await chan2.SendAsync(
                         "https://pa1.narvii.com/6463/6494fab512c8f2ac0d652c44dae78be4cb644569_hq.gif")
