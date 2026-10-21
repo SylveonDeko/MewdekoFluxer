@@ -33,10 +33,10 @@ public partial class UtilityService : INService
         EventHandler eventHandler,
         FluxerClient client)
     {
-        eventHandler.Subscribe("MessageDeleted", "UtilityService", MsgStore);
-        eventHandler.Subscribe("MessageUpdated", "UtilityService", MsgStore2);
-        eventHandler.Subscribe("MessageReceived", "UtilityService", MsgReciev);
-        eventHandler.Subscribe("MessagesBulkDeleted", "UtilityService", BulkMsgStore);
+        eventHandler.MessageDeleted.Subscribe("UtilityService", MsgStore);
+        eventHandler.MessageUpdated.Subscribe("UtilityService", MsgStore2);
+        eventHandler.MessageReceived.Subscribe("UtilityService", MsgReciev);
+        eventHandler.MessagesBulkDeleted.Subscribe("UtilityService", BulkMsgStore);
         this.dbFactory = dbFactory;
         this.cache = cache;
         this.guildSettings = guildSettings;
@@ -131,30 +131,28 @@ public partial class UtilityService : INService
         await guildSettings.UpdateGuildConfig(guild.Id, gc);
     }
 
-    private async Task BulkMsgStore(IReadOnlyCollection<Cacheable<Message>> messages,
-        Cacheable<Channel> channel)
+    private static string? DescribeReference(Message msg, int length)
     {
-        if (!channel.HasValue)
+        if (msg.MessageReference is not { } reference ||
+            FluxerContext.Snapshots.GetMessage(reference.MessageId) is not { } referenced)
+            return null;
+
+        return $"{Format.Bold(referenced.Author.ToString())}: {referenced.Content.TrimTo(length)}";
+    }
+
+    private async Task BulkMsgStore(IReadOnlyCollection<Cacheable<Message>> messages, Channel chan)
+    {
+        if (chan.GuildId is not { } guildId)
             return;
 
-        if (channel.Value is not Channel chan)
+        if (!await GetSnipeSet(guildId))
             return;
 
-        if (!await GetSnipeSet(chan.Guild.Id))
-            return;
-
-        if (!messages.Select(x => x.HasValue).Any())
-            return;
-
-
-        var msgs = messages.Where(x => x.HasValue).Select(x => new SnipeStore
+        var msgs = messages.Where(x => x.HasValue && x.Value.Author is not null).Select(x => new SnipeStore
         {
-            GuildId = chan.Guild.Id,
+            GuildId = guildId,
             ChannelId = chan.Id,
-            ReferenceMessage =
-                (x.Value as Message).ReferencedMessage == null
-                    ? null
-                    : $"{Format.Bold((x.Value as Message).ReferencedMessage.Author.ToString())}: {(x.Value as Message).ReferencedMessage.Content.TrimTo(400)}",
+            ReferenceMessage = DescribeReference(x.Value, 400),
             Message = x.Value.Content,
             UserId = x.Value.Author.Id,
             Edited = false,
@@ -164,55 +162,49 @@ public partial class UtilityService : INService
         if (msgs.Count == 0)
             return;
 
-        await cache.AddSnipeToCache(chan.Guild.Id, msgs).ConfigureAwait(false);
+        await cache.AddSnipeToCache(guildId, msgs).ConfigureAwait(false);
     }
 
-    private async Task MsgStore(Cacheable<Message> optMsg, Cacheable<Channel> ch)
+    private async Task MsgStore(Cacheable<Message> optMsg, Channel channel)
     {
-        if (!ch.HasValue || ch.Value is not Channel channel)
+        if (channel.GuildId is not { } guildId)
             return;
 
-        if (!await GetSnipeSet(channel.Guild.Id)) return;
+        if (!await GetSnipeSet(guildId)) return;
 
         if ((optMsg.HasValue ? optMsg.Value : null) is not Message msg) return;
-        if (msg.Author is null /*for some reason*/) return;
+        if (msg.Author is null) return;
         var snipemsg = new SnipeStore
         {
-            GuildId = channel.Guild.Id,
+            GuildId = guildId,
             ChannelId = channel.Id,
             Message = msg.Content,
-            ReferenceMessage =
-                msg.ReferencedMessage == null
-                    ? null
-                    : $"{Format.Bold(msg.ReferencedMessage.Author.ToString())}: {msg.ReferencedMessage.Content.TrimTo(400)}",
+            ReferenceMessage = DescribeReference(msg, 400),
             UserId = msg.Author.Id,
             Edited = false,
             DateAdded = DateTime.UtcNow
         };
-        await cache.AddSnipeToCache(channel.Guild.Id, [snipemsg]).ConfigureAwait(false);
+        await cache.AddSnipeToCache(guildId, [snipemsg]).ConfigureAwait(false);
     }
 
-    private async Task MsgStore2(Cacheable<Message> optMsg, SocketMessage imsg2, Channel ch)
+    private async Task MsgStore2(Message? before, SocketMessage after)
     {
-        if (ch is not Channel channel) return;
+        if (after.Channel is not { GuildId: { } guildId } channel) return;
 
-        if (!await GetSnipeSet(channel.Guild.Id)) return;
+        if (!await GetSnipeSet(guildId)) return;
 
-        if ((optMsg.HasValue ? optMsg.Value : null) is not Message msg) return;
+        if (before is null || before.Author is null) return;
         var snipemsg = new SnipeStore
         {
-            GuildId = channel.GuildId,
+            GuildId = guildId,
             ChannelId = channel.Id,
-            Message = msg.Content,
-            ReferenceMessage =
-                msg.ReferencedMessage == null
-                    ? null
-                    : $"{Format.Bold(msg.ReferencedMessage.Author.ToString())}: {msg.ReferencedMessage.Content.TrimTo(1048)}",
-            UserId = msg.Author.Id,
+            Message = before.Content,
+            ReferenceMessage = DescribeReference(before, 1048),
+            UserId = before.Author.Id,
             Edited = true,
             DateAdded = DateTime.UtcNow
         };
-        await cache.AddSnipeToCache(channel.Guild.Id, [snipemsg]).ConfigureAwait(false);
+        await cache.AddSnipeToCache(guildId, [snipemsg]).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -228,7 +220,7 @@ public partial class UtilityService : INService
 
     private async Task MsgReciev(Message msg)
     {
-        if (msg.Channel is Channel t)
+        if (msg.Channel is Channel { GuildId: not null } t)
         {
             if (msg.Author.IsBot) return;
             var gid = t.Guild;
@@ -239,7 +231,7 @@ public partial class UtilityService : INService
                 {
                     var e = new Uri(m.Value);
                     var en = e.Host.Split(".");
-                    if (!en.Contains("discord")) continue;
+                    if (!en.Contains("fluxer")) continue;
                     var eb = string.Join("", e.Segments).Split("/");
                     if (!eb.Contains("channels")) continue;
                     if (eb.Length < 5
@@ -276,20 +268,16 @@ public partial class UtilityService : INService
                             IconUrl = ((SocketGuild)guild).IconUrl, Text = $"{((SocketGuild)guild).Name}: {em.Name}"
                         }
                     };
-                    if (msg2.Embeds.Count > 0)
+                    if (msg2.Embeds?.FirstOrDefault() is { } firstEmbed)
                     {
-                        en2.AddField("Embed Content:", msg2.Embeds.FirstOrDefault()?.Description);
-                        if (msg2.Embeds.FirstOrDefault()!.Image != null)
-                        {
-                            var embedImage = msg2.Embeds.FirstOrDefault()?.Image;
-                            if (embedImage != null)
-                                en2.ImageUrl = embedImage?.Url;
-                        }
+                        en2.AddField("Embed Content:", firstEmbed.Description);
+                        if (firstEmbed.Image != null)
+                            en2.ImageUrl = firstEmbed.Image.Url;
                     }
 
                     if (msg2.Content.Length > 0) en2.Description = msg2.Content;
 
-                    if (msg2.Attachments.Count > 0) en2.ImageUrl = msg2.Attachments.FirstOrDefault().Url;
+                    if (msg2.Attachments?.FirstOrDefault() is { } firstAttachment) en2.ImageUrl = firstAttachment.Url;
 
                     await msg.Channel.SendAsync(embed: en2.WithTimestamp(msg2.Timestamp).Build())
                         .ConfigureAwait(false);

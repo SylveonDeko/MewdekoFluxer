@@ -1034,7 +1034,7 @@ public partial class Searches(
     [RequireContext(ContextType.Guild)]
     public Task Revav([Remainder] SocketGuildMember? usr = null)
     {
-        usr ??= (SocketGuildMember)ctx.User;
+        usr ??= ctx.Member;
 
         var av = usr.RealAvatarUrl();
         // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract

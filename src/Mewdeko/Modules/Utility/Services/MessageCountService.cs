@@ -106,7 +106,7 @@ public class MessageCountService : INService, IDisposable
         this.collector = collector;
         this.statsSettings = statsSettings;
         _ = InitializeGuildSettings();
-        handler.Subscribe("MessageReceived", "MessageCountService", HandleCount);
+        handler.MessageReceived.Subscribe("MessageCountService", HandleCount);
         updateChannel = System.Threading.Channels.Channel.CreateUnbounded<(ulong, ulong, ulong, DateTime)>();
         _ = ProcessUpdatesAsync(); // Start background processor
     }
@@ -241,12 +241,12 @@ public class MessageCountService : INService, IDisposable
 
         var channel = (Channel)msg.Channel;
         await updateChannel.Writer.WriteAsync((
-            channel.GuildId,
+            channel.GuildId!.Value,
             channel.Id,
             msg.Author.Id,
             msg.Timestamp.UtcDateTime
         ));
-        collector.Feature("message_count", channel.GuildId);
+        collector.Feature("message_count", channel.GuildId!.Value);
     }
 
     /// <summary>
@@ -357,24 +357,23 @@ public class MessageCountService : INService, IDisposable
     private bool IsValidMessage(SocketMessage message)
     {
         if (countGuilds.Count == 0 ||
-            message.Channel is Channel ||
-            message.Channel is not Channel channel ||
-            !countGuilds.Contains(channel.GuildId))
+            message.Channel is not { GuildId: { } guildId } channel ||
+            !countGuilds.Contains(guildId))
             return false;
 
-        if (message.Author is not SocketGuildMember author)
+        if (message.Member is not { } author)
             return false;
 
-        if (author.IsBot && !statsSettings.GetCachedSettings(channel.GuildId).CountBots)
+        if (author.IsBot && !statsSettings.GetCachedSettings(guildId).CountBots)
             return false;
 
-        if (statsSettings.IsExcluded(channel.GuildId, channel.Id, author))
+        if (statsSettings.IsExcluded(guildId, channel.Id, author))
             return false;
 
-        if (minCounts.TryGetValue(channel.GuildId, out var minValue) && message.Content.Length < minValue)
+        if (minCounts.TryGetValue(guildId, out var minValue) && message.Content.Length < minValue)
             return false;
 
-        return statsSettings.PassesCooldown(channel.GuildId, author.Id, message.Timestamp.UtcDateTime);
+        return statsSettings.PassesCooldown(guildId, author.Id, message.Timestamp.UtcDateTime);
     }
 
     /// <summary>

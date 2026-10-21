@@ -87,7 +87,7 @@ public class AiService : INService
         this.serviceProvider = serviceProvider;
         this.collector = collector;
         aiClientFactory = new AiClientFactory(httpFactory);
-        handler.Subscribe("MessageReceived", "AiService", HandleMessage);
+        handler.MessageReceived.Subscribe("AiService", HandleMessage);
         modelCache = new ConcurrentDictionary<AiProvider, List<AiModel>>();
     }
 
@@ -149,21 +149,21 @@ public class AiService : INService
     private async Task HandleMessage(SocketMessage msg)
     {
         if (msg is not Message || msg.Author.IsBot) return;
-        if (msg.Channel is not Channel guildChannel) return;
+        if (msg.Channel is not Channel { GuildId: { } guildId }) return;
 
-        var config = await GetOrCreateConfig(guildChannel.GuildId);
+        var config = await GetOrCreateConfig(guildId);
         if (!config.Enabled || config.ChannelId != msg.Channel.Id) return;
 
         if (msg.Content == "deletesession")
         {
-            await ClearConversation(guildChannel.GuildId, msg.Author.Id);
-            await msg.Channel.SendConfirmAsync(strings.AiConversationDeleted(guildChannel.GuildId));
+            await ClearConversation(guildId, msg.Author.Id);
+            await msg.Channel.SendConfirmAsync(strings.AiConversationDeleted(guildId));
             return;
         }
 
         if (string.IsNullOrEmpty(config.ApiKey))
         {
-            await msg.Channel.SendErrorAsync(strings.AiNoApiKey(guildChannel.GuildId, config.Provider), botConfig);
+            await msg.Channel.SendErrorAsync(strings.AiNoApiKey(guildId, config.Provider), botConfig);
             return;
         }
 
@@ -176,25 +176,25 @@ public class AiService : INService
             [
                 new EmbedBuilder()
                     .WithOkColor()
-                    .WithDescription(strings.AiProcessingRequest(guildChannel.GuildId, msg.Author.Mention))
+                    .WithDescription(strings.AiProcessingRequest(guildId, msg.Author.Mention))
                     .Build()
             ]);
         }
         else
         {
-            await msg.Channel.SendConfirmAsync(strings.AiProcessingRequest(guildChannel.GuildId, msg.Author.Mention));
+            await msg.Channel.SendConfirmAsync(strings.AiProcessingRequest(guildId, msg.Author.Mention));
         }
 
         try
         {
             await StreamResponse(config, webhookMessageId, msg, webhook);
             await UpdateConfig(config);
-            collector.Feature("ai_chat", guildChannel.GuildId);
+            collector.Feature("ai_chat", guildId);
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Error in AI processing");
-            collector.Feature("ai_chat", guildChannel.GuildId, false, ex.GetType().Name);
+            collector.Feature("ai_chat", guildId, false, ex.GetType().Name);
             collector.Counter("ai.requests", 1, ("model", config.Model ?? string.Empty),
                 ("provider", ((AiProvider)config.Provider).ToString().ToLowerInvariant()), ("ok", "0"));
             if (webhook != null && webhookMessageId.HasValue)
@@ -205,19 +205,15 @@ public class AiService : INService
                     {
                         new EmbedBuilder()
                             .WithErrorColor()
-                            .WithDescription(strings.AiErrorOccurred(guildChannel.GuildId, ex.Message))
+                            .WithDescription(strings.AiErrorOccurred(guildId, ex.Message))
                             .Build()
                     };
                 });
             }
             else
             {
-                await msg.Channel.SendErrorAsync(strings.AiErrorOccurred(guildChannel.GuildId, ex.Message), botConfig);
+                await msg.Channel.SendErrorAsync(strings.AiErrorOccurred(guildId, ex.Message), botConfig);
             }
-        }
-        finally
-        {
-            webhook?.Dispose();
         }
     }
 
@@ -635,14 +631,15 @@ public class AiService : INService
                         // Use the parsed embed data
                         var modifiedEmbeds = embedData.Select(embed =>
                         {
-                            var builder = embed.ToEmbedBuilder();
-                            if (builder.Footer is null || isFinalUpdate)
+                            if (embed.Footer is null || isFinalUpdate)
                             {
-                                builder.WithFooter(strings.AiResponseFooter(config.GuildId, userMsg.Author.Username,
-                                    tokenCount));
+                                embed.Footer = new EmbedFooterRequest
+                                    {
+                                        Text = strings.AiResponseFooter(config.GuildId, userMsg.Author.Username, tokenCount)
+                                    };
                             }
 
-                            return builder.Build();
+                            return embed;
                         }).ToList();
 
                         await webhook.ModifyMessageAsync(webhookMessageId.Value, x =>
@@ -681,14 +678,15 @@ public class AiService : INService
                             // Use the parsed embed data for the initial message
                             var modifiedEmbeds = embedData.Select(embed =>
                             {
-                                var builder = embed.ToEmbedBuilder();
-                                if (builder.Footer is null || isFinalUpdate)
+                                if (embed.Footer is null || isFinalUpdate)
                                 {
-                                    builder.WithFooter(strings.AiResponseFooter(config.GuildId, userMsg.Author.Username,
-                                        tokenCount));
+                                    embed.Footer = new EmbedFooterRequest
+                                    {
+                                        Text = strings.AiResponseFooter(config.GuildId, userMsg.Author.Username, tokenCount)
+                                    };
                                 }
 
-                                return builder.Build();
+                                return embed;
                             }).ToList();
 
                             // Send the initial message and store the reference
@@ -710,14 +708,15 @@ public class AiService : INService
                             // Use the parsed embed data for updates
                             var modifiedEmbeds = embedData.Select(embed =>
                             {
-                                var builder = embed.ToEmbedBuilder();
-                                if (builder.Footer is null || isFinalUpdate)
+                                if (embed.Footer is null || isFinalUpdate)
                                 {
-                                    builder.WithFooter(strings.AiResponseFooter(config.GuildId, userMsg.Author.Username,
-                                        tokenCount));
+                                    embed.Footer = new EmbedFooterRequest
+                                    {
+                                        Text = strings.AiResponseFooter(config.GuildId, userMsg.Author.Username, tokenCount)
+                                    };
                                 }
 
-                                return builder.Build();
+                                return embed;
                             }).ToList();
 
                             // Update the existing message
@@ -758,7 +757,7 @@ public class AiService : INService
                 }
                 else if (newEmbed.Embed != null)
                 {
-                    discordEmbeds.AddRange(NewEmbed.ToEmbedArray(new List<global::Mewdeko.Common.Embed>
+                    discordEmbeds.AddRange(NewEmbed.ToEmbedArray(new List<EmbedData>
                     {
                         newEmbed.Embed
                     }));
@@ -824,7 +823,7 @@ public class AiService : INService
                                     }
                                 }
 
-                                discordEmbeds.AddRange(NewEmbed.ToEmbedArray(new List<global::Mewdeko.Common.Embed>
+                                discordEmbeds.AddRange(NewEmbed.ToEmbedArray(new List<EmbedData>
                                 {
                                     newEmbed.Embed
                                 }));

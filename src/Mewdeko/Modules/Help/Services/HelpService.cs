@@ -4,6 +4,7 @@ using CommandLine;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.ModuleBehaviors;
 using Mewdeko.Modules.Administration.Services;
+using Mewdeko.Modules.Help.Common;
 using Mewdeko.Modules.OwnerOnly.Services;
 using Mewdeko.Modules.Permissions.Common;
 using Mewdeko.Modules.Permissions.Services;
@@ -143,8 +144,8 @@ public class HelpService : INService, IReadyExecutor
         this.cmds = cmds;
         this.bss = bss;
         this.logger = logger;
-        eventHandler.Subscribe("MessageReceived", "HelpService", HandlePing);
-        eventHandler.Subscribe("JoinedGuild", "HelpService", HandleJoin);
+        eventHandler.MessageReceived.Subscribe("HelpService", HandlePing);
+        eventHandler.JoinedGuild.Subscribe("HelpService", HandleJoin);
         this.perms = perms;
         this.nPerms = nPerms;
         this.guildSettings = guildSettings;
@@ -220,7 +221,7 @@ public class HelpService : INService, IReadyExecutor
         embed.WithOkColor();
         embed.WithDescription(
             genStrings.HelpCategoriesDescription(guildId, prefix) +
-            $"\n\n[Documentation](https://mewdeko.tech) | [Support Server]({bss.Data.SupportServer}) | [Invite Me](https://discord.com/oauth2/authorize?client_id={bot.Client.CurrentUser.Id}&scope=bot&permissions=66186303&scope=bot%20applications.commands) | [Top.gg Listing](https://top.gg/bot/752236274261426212) | [Donate!](https://ko-fi.com/mewdeko)");
+            $"\n\n[Documentation](https://mewdeko.tech) | [Support Server]({bss.Data.SupportServer}) | [Invite Me]({FluxerContext.WebUrl}/oauth2/authorize?client_id={bot.Client.CurrentUser.Id}&scope=bot&permissions=66186303) | [Donate!](https://ko-fi.com/mewdeko)");
 
         var categories = GetPopulatedCategories();
 
@@ -555,7 +556,6 @@ public class HelpService : INService, IReadyExecutor
                 eb.WithOkColor();
                 eb.WithDescription(
                     $"Hi there! To see my command categories do `{prefix}cmds`\nMy current Prefix is `{prefix}`\nIf you need help using the bot feel free to join the [Support Server]({bss.Data.SupportServer})!\n**Please support me! While this bot is free it's not free to run! https://ko-fi.com/mewdeko**\n\n I hope you have a great day!");
-                eb.WithThumbnailUrl("https://cdn.discordapp.com/emojis/914307922287276052.gif");
                 eb.WithFooter(new EmbedFooterBuilder().WithText(client.CurrentUser.Username)
                     .WithIconUrl(client.CurrentUser.RealAvatarUrl().ToString()));
 
@@ -585,9 +585,7 @@ public class HelpService : INService, IReadyExecutor
         eb.AddField("Prefer commands?",
             $"1) `{px}cmds` lists the categories\n2) `{px}cmds mod` shows the commands in one\n3) `{px}h purge` explains a single command");
         eb.AddField("Need a hand?",
-            "Support Server: https://discord.gg/mewdeko");
-        eb.WithThumbnailUrl(
-            "https://cdn.discordapp.com/emojis/968564817784877066.gif");
+            $"Support Server: {bss.Data.SupportServer}");
         eb.WithOkColor();
 
         var inviter = await ResolveInviter(guild).ConfigureAwait(false);
@@ -625,12 +623,18 @@ public class HelpService : INService, IReadyExecutor
         {
             try
             {
-                var logs = await guild.GetAuditLogsAsync(10, actionType: ActionType.BotAdded).ConfigureAwait(false);
-                var entry = logs.FirstOrDefault(x =>
-                    x.Data is BotAddAuditLogData data && data.Target.Id == botUser.Id);
+                var logs = await guild.GetAuditLogsAsync(new GuildAuditLogListRequest
+                {
+                    Limit = 10, ActionType = ActionType.BotAdded
+                }).ConfigureAwait(false);
+                var entry = logs.Entries.FirstOrDefault(x => x.TargetId == botUser.Id && x.UserId.HasValue);
 
-                if (entry?.User is not null && !entry.User.IsBot)
-                    return entry.User;
+                if (entry?.UserId is { } inviterId)
+                {
+                    var inviterUser = await client.GetUserAsync(inviterId).ConfigureAwait(false);
+                    if (inviterUser is not null && !inviterUser.IsBot)
+                        return inviterUser;
+                }
             }
             catch (FluxerApiException ex)
             {
@@ -790,9 +794,9 @@ public class HelpService : INService, IReadyExecutor
         var userPermString = string.Empty;
         if (userPerm is not null)
         {
-            if (userPerm.UserPermissionAttribute.ChannelPermission is { } cPerm)
+            if (RequiredPermissions.Channel(userPerm) is { } cPerm)
                 userPermString = GetPreconditionString(cPerm);
-            if (userPerm.UserPermissionAttribute.GuildPermission is { } gPerm)
+            if (RequiredPermissions.Guild(userPerm) is { } gPerm)
                 userPermString = GetPreconditionString(gPerm);
         }
 
@@ -920,9 +924,9 @@ public class HelpService : INService, IReadyExecutor
         var botPermString = string.Empty;
         if (botPerm is not null)
         {
-            if (botPerm.ChannelPermission is { } cPerm)
+            if (RequiredPermissions.Channel(botPerm) is { } cPerm)
                 botPermString = GetPreconditionString(cPerm);
-            if (botPerm.GuildPermission is { } gPerm)
+            if (RequiredPermissions.Guild(botPerm) is { } gPerm)
                 botPermString = GetPreconditionString(gPerm);
         }
 

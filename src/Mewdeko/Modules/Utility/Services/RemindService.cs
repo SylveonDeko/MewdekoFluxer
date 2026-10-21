@@ -123,19 +123,19 @@ public partial class RemindService : INService
             // Remove the executed reminder from the database and timer
             await RemoveReminder(reminder);
         }
-        catch (FluxerApiException ex) when (ex.DiscordCode == DiscordErrorCode.CannotSendMessageToUser)
+        catch (FluxerApiException ex) when (ex.ErrorCode == FluxerErrorCodes.CannotSendMessagesToUser)
         {
             logger.LogWarning("Cannot send reminder to user {UserId}, removing reminder {ReminderId}",
                 reminder.UserId, reminder.Id);
             await RemoveReminder(reminder);
         }
-        catch (FluxerApiException ex) when (ex.DiscordCode == DiscordErrorCode.UnknownChannel)
+        catch (FluxerApiException ex) when (ex.ErrorCode == FluxerErrorCodes.UnknownChannel)
         {
             logger.LogWarning("Channel {ChannelId} no longer exists, removing reminder {ReminderId}",
                 reminder.ChannelId, reminder.Id);
             await RemoveReminder(reminder);
         }
-        catch (FluxerApiException ex) when (ex.DiscordCode == DiscordErrorCode.MissingPermissions)
+        catch (FluxerApiException ex) when (ex.ErrorCode == FluxerErrorCodes.MissingPermissions)
         {
             logger.LogWarning(
                 "Missing permissions to send reminder in channel {ChannelId}, removing reminder {ReminderId}",
@@ -144,8 +144,8 @@ public partial class RemindService : INService
         }
         catch (FluxerApiException ex)
         {
-            logger.LogWarning(ex, "Discord API error executing reminder {ReminderId}: {ErrorCode} - {ErrorMessage}",
-                reminder.Id, ex.DiscordCode, ex.Message);
+            logger.LogWarning(ex, "Fluxer API error executing reminder {ReminderId}: {ErrorCode} - {ErrorMessage}",
+                reminder.Id, ex.ErrorCode, ex.Message);
             await RemoveReminder(reminder);
         }
         catch (Exception ex)

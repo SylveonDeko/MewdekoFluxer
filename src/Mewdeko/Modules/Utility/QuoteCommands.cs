@@ -315,7 +315,7 @@ public partial class Utility
         [RequireContext(ContextType.Guild)]
         public async Task QuoteDelete(int id)
         {
-            var isAdmin = ((SocketGuildMember)ctx.Message.Author).GuildPermissions.Administrator;
+            var isAdmin = ctx.Member!.GuildPermissions.Administrator;
 
             var success = false;
             string? response;
@@ -408,9 +408,8 @@ public partial class Utility
             var fileName = $"quotes-{ctx.Guild.Name.Replace(" ", "-")}-{DateTime.UtcNow:yyyy-MM-dd}.json";
 
             using var stream = new MemoryStream(Encoding.UTF8.GetBytes(jsonContent));
-            var fileAttachment = new AttachmentRequest(stream, fileName);
 
-            await ctx.Channel.SendFileAsync(fileAttachment,
+            await ctx.Channel.SendFileAsync(stream, fileName,
                     Strings.QuoteExportSuccess(ctx.Guild.Id, quotes.Count))
                 .ConfigureAwait(false);
         }

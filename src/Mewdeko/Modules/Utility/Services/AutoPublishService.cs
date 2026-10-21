@@ -27,7 +27,7 @@ public class AutoPublishService : INService
         this.dbFactory = dbFactory;
         this.client = client;
         this.logger = logger;
-        handler.Subscribe("MessageReceived", "AutoPublishService", AutoPublish);
+        handler.MessageReceived.Subscribe("AutoPublishService", AutoPublish);
     }
 
     /// <summary>

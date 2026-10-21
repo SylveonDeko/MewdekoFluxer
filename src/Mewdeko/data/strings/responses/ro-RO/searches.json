@@ -10,17 +10,5 @@
   "stream_removed": "Eliminat fluxul lui {0} ({1}) din notificări.",
   "stream_tracked": "Voi notifica acest canal când statutul se schimbă",
   "wiki_page_not_found": "Pagina nu a fost găsită.",
-  "define_unknown": "Nu pot găsi definiția pentru acel termen.",
-  "stream_role_enabled": "Când un utilizator din rolul {0} transmite un flux live, îi voi da rolul {1}.",
-  "stream_role_disabled": "Rolul transmițătorilor de flux live a fost dezactivat.",
-  "stream_role_kw_set": "\nTransmițătorii de flux live au nevoie de cuvântul cheie {0} pentru a primi rolul.",
-  "stream_role_kw_reset": "Cuvântul cheie pentru rolul transmițătorilor de flux a fost resetat.",
-  "stream_role_bl_add": "Utilizatorul {0} nu va primi niciodată rolul transmițătorilor de flux.",
-  "stream_role_bl_add_fail": "Utilizatorul {0} este deja pe lista neagră.",
-  "stream_role_bl_rem": "Utilizatorul {0} nu mai este pe lista neagră.",
-  "stream_role_bl_rem_fail": "Utilizatorul {0} nu este pe lista neagră.",
-  "stream_role_wl_add": "Utilizatorul {0} va primi rolul de transmițător de flux chiar dacă nu au cuvântul cheie in fluxul lor.",
-  "stream_role_wl_add_fail": "Utilizatorul {0} este deja pe lista albă.",
-  "stream_role_wl_rem": "Utilizatorul {0} nu mai este pe lista albă.",
-  "stream_role_wl_rem_fail": "Utilizatorul {0} nu este pe lista albă."
+  "define_unknown": "Nu pot găsi definiția pentru acel termen."
 }

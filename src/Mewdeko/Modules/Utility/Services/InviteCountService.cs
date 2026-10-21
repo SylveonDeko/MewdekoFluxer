@@ -62,12 +62,12 @@ public class InviteCountService : INService, IReadyExecutor
         this.collector = collector;
         this.strings = strings;
 
-        handler.Subscribe("JoinedGuild", "InviteCountService", UpdateGuildInvites);
-        handler.Subscribe("UserJoined", "InviteCountService", OnUserJoined);
-        handler.Subscribe("UserLeft", "InviteCountService", OnUserLeft);
-        handler.Subscribe("InviteCreated", "InviteCountService", OnInviteCreated);
-        handler.Subscribe("InviteDeleted", "InviteCountService", OnInviteDeleted);
-        handler.Subscribe("LeftGuild", "InviteCountService", OnLeftGuild);
+        handler.JoinedGuild.Subscribe("InviteCountService", UpdateGuildInvites);
+        handler.UserJoined.Subscribe("InviteCountService", OnUserJoined);
+        handler.UserLeft.Subscribe("InviteCountService", OnUserLeft);
+        handler.InviteCreated.Subscribe("InviteCountService", OnInviteCreated);
+        handler.InviteDeleted.Subscribe("InviteCountService", OnInviteDeleted);
+        handler.LeftGuild.Subscribe("InviteCountService", OnLeftGuild);
     }
 
     /// <inheritdoc />
@@ -593,7 +593,7 @@ public class InviteCountService : INService, IReadyExecutor
         var inviterId = label?.OwnerUserId ?? usedInvite?.Inviter?.Id ?? 0;
         IUser? inviter = null;
         if (inviterId != 0)
-            inviter = await guild.GetUserAsync(inviterId) ?? usedInvite?.Inviter;
+            inviter = (await guild.GetUserAsync(inviterId))?.User ?? usedInvite?.Inviter;
 
         var fakeReason = InviteFakeReason.None;
         if (joinType == InviteJoinType.Invite)
@@ -797,7 +797,7 @@ public class InviteCountService : INService, IReadyExecutor
         IUser? inviter = null;
         if (record.InviterId != 0)
         {
-            inviter = await guild.GetUserAsync(record.InviterId);
+            inviter = (await guild.GetUserAsync(record.InviterId))?.User;
             inviter ??= await client.Rest.GetUserAsync(record.InviterId);
         }
 
@@ -891,14 +891,13 @@ public class InviteCountService : INService, IReadyExecutor
 
     #region Invite cache
 
-    private Task OnInviteCreated(IInvite invite)
+    private Task OnInviteCreated(Invite invite)
     {
         if (invite.Guild == null)
             return Task.CompletedTask;
 
         var invites = guildInvites.GetOrAdd(invite.Guild.Id, _ => new ConcurrentDictionary<string, Invite>());
-        if (invite is Invite metadata)
-            invites[invite.Code] = metadata;
+        invites[invite.Code] = invite;
         return Task.CompletedTask;
     }
 
@@ -918,13 +917,13 @@ public class InviteCountService : INService, IReadyExecutor
             var invites = (await guild.GetInvitesAsync()).ToList();
             RefreshInviteCache(guild.Id, invites);
 
-            if (guild.VanityURLCode != null)
+            if (guild.VanityUrlCode != null)
             {
                 try
                 {
-                    var vanity = await guild.GetVanityInviteAsync();
+                    var vanity = await guild.GetVanityUrlAsync();
                     if (vanity != null)
-                        vanityUses[guild.Id] = vanity.Uses ?? 0;
+                        vanityUses[guild.Id] = vanity.Uses;
                 }
                 catch (Exception ex) when (ex is FluxerApiException or InvalidOperationException
                                                or NullReferenceException)
@@ -935,7 +934,7 @@ public class InviteCountService : INService, IReadyExecutor
 
             logger.LogDebug("Updated {Count} invites for guild {GuildId}", invites.Count, guild.Id);
         }
-        catch (FluxerApiException ex) when (ex.DiscordCode == DiscordErrorCode.MissingPermissions)
+        catch (FluxerApiException ex) when (ex.ErrorCode == FluxerErrorCodes.MissingPermissions)
         {
             logger.LogWarning("Missing permissions to fetch invites for guild {GuildId}", guild.Id);
         }
@@ -966,8 +965,8 @@ public class InviteCountService : INService, IReadyExecutor
         var bestDelta = 0;
         foreach (var newInvite in newInvites)
         {
-            var oldUses = oldInvites.TryGetValue(newInvite.Code, out var oldInvite) ? oldInvite.Uses ?? 0 : 0;
-            var delta = (newInvite.Uses ?? 0) - oldUses;
+            var oldUses = oldInvites.TryGetValue(newInvite.Code, out var oldInvite) ? oldInvite.Uses : 0;
+            var delta = newInvite.Uses - oldUses;
             if (delta <= 0)
                 continue;
 
@@ -1011,16 +1010,16 @@ public class InviteCountService : INService, IReadyExecutor
 
     private async Task<bool> DetectVanityJoinAsync(SocketGuild guild)
     {
-        if (guild.VanityURLCode == null)
+        if (guild.VanityUrlCode == null)
             return false;
 
         try
         {
-            var vanity = await guild.GetVanityInviteAsync();
+            var vanity = await guild.GetVanityUrlAsync();
             if (vanity == null)
                 return false;
 
-            var uses = vanity.Uses ?? 0;
+            var uses = vanity.Uses;
             var previous = vanityUses.GetOrAdd(guild.Id, uses);
             vanityUses[guild.Id] = uses;
             return uses > previous;
@@ -1214,7 +1213,7 @@ public class InviteCountService : INService, IReadyExecutor
             var inviterId = owners.TryGetValue(invite.Code, out var owner) ? owner : invite.Inviter?.Id ?? 0;
             if (inviterId == 0 || userId.HasValue && inviterId != userId.Value)
                 continue;
-            totals[inviterId] = totals.GetValueOrDefault(inviterId) + (invite.Uses ?? 0);
+            totals[inviterId] = totals.GetValueOrDefault(inviterId) + invite.Uses;
         }
 
         await using var db = await dbFactory.CreateConnectionAsync();
@@ -1250,7 +1249,7 @@ public class InviteCountService : INService, IReadyExecutor
         if (record == null || record.InviterId == 0)
             return null;
 
-        IUser? inviter = await guild.GetUserAsync(record.InviterId);
+        IUser? inviter = (await guild.GetUserAsync(record.InviterId))?.User;
         inviter ??= await client.Rest.GetUserAsync(record.InviterId);
         return inviter;
     }
@@ -1297,7 +1296,7 @@ public class InviteCountService : INService, IReadyExecutor
         var users = new List<IUser>();
         foreach (var record in records)
         {
-            var user = await guild.GetUserAsync(record.UserId);
+            var user = (await guild.GetUserAsync(record.UserId))?.User;
             if (user != null)
                 users.Add(user);
         }
@@ -1520,8 +1519,8 @@ public class InviteCountService : INService, IReadyExecutor
     public async Task<Invite?> GetOrCreateUserLinkAsync(SocketGuild guild, SocketGuildMember user)
     {
         var existing = (await GetUserInviteCodesAsync(guild, user.Id))
-            .Where(x => !x.IsTemporary && x.MaxAge is null or 0 && x.MaxUses is null or 0)
-            .OrderByDescending(x => x.Uses ?? 0)
+            .Where(x => !x.IsTemporary && x.MaxAge == 0 && x.MaxUses == 0)
+            .OrderByDescending(x => x.Uses)
             .FirstOrDefault();
         if (existing != null)
             return existing;
@@ -1530,12 +1529,12 @@ public class InviteCountService : INService, IReadyExecutor
         Channel? channel = null;
         if (settings.LinkChannelId is { } linkChannelId)
             channel = await guild.GetTextChannelAsync(linkChannelId);
-        channel ??= await guild.GetSystemChannelAsync();
+        channel ??= guild.SystemChannel;
         channel ??= (await guild.GetTextChannelsAsync()).OrderBy(x => x.Position).FirstOrDefault();
         if (channel == null)
             return null;
 
-        var invite = await channel.CreateInviteAsync(null, null, false, true);
+        var invite = await client.Rest.CreateInviteAsync(channel.Id, new CreateInviteRequest { Temporary = false, Unique = true });
         await SetLabelAsync(guild.Id, invite.Code, $"{user.Username}'s link", ownerUserId: user.Id);
 
         var cache = guildInvites.GetOrAdd(guild.Id, _ => new ConcurrentDictionary<string, Invite>());
@@ -1556,7 +1555,7 @@ public class InviteCountService : INService, IReadyExecutor
         if (invite == null)
             return false;
 
-        await invite.DeleteAsync();
+        await client.Rest.DeleteInviteAsync(invite.Code);
         if (guildInvites.TryGetValue(guild.Id, out var cache))
             cache.TryRemove(code, out _);
         return true;
@@ -1587,22 +1586,23 @@ public class InviteCountService : INService, IReadyExecutor
                 break;
             if (labelled.Contains(invite.Code))
                 continue;
-            if (maxUses.HasValue && (invite.Uses ?? 0) > maxUses.Value)
+            if (maxUses.HasValue && invite.Uses > maxUses.Value)
                 continue;
 
             var inviterId = invite.Inviter?.Id ?? 0;
+            var channelId = invite.Channel?.Id ?? 0;
             if (includeUsers.Count > 0 && !includeUsers.Contains(inviterId))
                 continue;
             if (excludeUsers.Contains(inviterId))
                 continue;
-            if (includeChannels.Count > 0 && !includeChannels.Contains(invite.ChannelId))
+            if (includeChannels.Count > 0 && !includeChannels.Contains(channelId))
                 continue;
-            if (excludeChannels.Contains(invite.ChannelId))
+            if (excludeChannels.Contains(channelId))
                 continue;
 
             try
             {
-                await invite.DeleteAsync();
+                await client.Rest.DeleteInviteAsync(invite.Code);
                 deleted++;
                 if (guildInvites.TryGetValue(guild.Id, out var cache))
                     cache.TryRemove(invite.Code, out _);

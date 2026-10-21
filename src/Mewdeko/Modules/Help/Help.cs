@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.JsonSettings;
+using Mewdeko.Modules.Help.Common;
 using Mewdeko.Modules.Help.Services;
 using Mewdeko.Services.Impl;
 using Mewdeko.Services.Settings;
@@ -63,17 +64,17 @@ public class Help(
                         Description = j.RealSummary(strings, ctx.Guild.Id, prefix),
                         Example = j.RealRemarksArr(strings, ctx.Guild.Id, prefix).ToList() ?? [],
                         GuildUserPermissions =
-                            userPerm?.UserPermissionAttribute.GuildPermission != null
-                                ? userPerm.UserPermissionAttribute.GuildPermission.ToString()
+                            RequiredPermissions.Guild(userPerm) != null
+                                ? RequiredPermissions.Guild(userPerm)!.Value.ToString()
                                 : "",
                         ChannelUserPermissions =
-                            userPerm?.UserPermissionAttribute.ChannelPermission != null
-                                ? userPerm.UserPermissionAttribute.ChannelPermission.ToString()
+                            RequiredPermissions.Channel(userPerm) != null
+                                ? RequiredPermissions.Channel(userPerm)!.Value.ToString()
                                 : "",
                         GuildBotPermissions =
-                            botPerm?.GuildPermission != null ? botPerm.GuildPermission.ToString() : "",
+                            RequiredPermissions.Guild(botPerm) != null ? RequiredPermissions.Guild(botPerm)!.Value.ToString() : "",
                         ChannelBotPermissions =
-                            botPerm?.ChannelPermission != null ? botPerm.ChannelPermission.ToString() : "",
+                            RequiredPermissions.Channel(botPerm) != null ? RequiredPermissions.Channel(botPerm)!.Value.ToString() : "",
                         IsDragon = isDragon is not null
                     }).ToList();
                 newList.AddOrUpdate(modulename, commands, (_, old) =>

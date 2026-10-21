@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
@@ -117,14 +118,14 @@ public partial class Utility(
 
         if (searchType == PermissionType.And)
         {
-            rolesWithPerms = (from role in ctx.Guild.Roles
+            rolesWithPerms = (from role in ctx.Guild.RoleList
                 let hasAllPerms = perms.All(perm => role.Permissions.Has(perm))
                 where hasAllPerms
                 select role).ToList();
         }
         else // PermissionType.Or
         {
-            rolesWithPerms = (from role in ctx.Guild.Roles
+            rolesWithPerms = (from role in ctx.Guild.RoleList
                 let matchedPerms = perms.Where(perm => role.Permissions.Has(perm)).ToList()
                 where matchedPerms.Any()
                 select role).ToList();
@@ -319,8 +320,8 @@ public partial class Utility(
     {
         var emotes = emotetype switch
         {
-            "animated" => ctx.Guild.Emotes.Where(x => x.Animated).ToArray(),
-            "nonanimated" => ctx.Guild.Emotes.Where(x => !x.Animated).ToArray(),
+            "animated" => ctx.Guild.Emotes.Where(x => x.IsAnimated).ToArray(),
+            "nonanimated" => ctx.Guild.Emotes.Where(x => !x.IsAnimated).ToArray(),
             _ => ctx.Guild.Emotes.ToArray()
         };
 
@@ -349,14 +350,14 @@ public partial class Utility(
                 "animated" => $"{emotes.Length} Animated Emotes",
                 "nonanimated" => $"{emotes.Length} Non Animated Emotes",
                 _ =>
-                    $"{emotes.Count(x => x.Animated)} Animated Emotes | {emotes.Count(x => !x.Animated)} Non Animated Emotes"
+                    $"{emotes.Count(x => x.IsAnimated)} Animated Emotes | {emotes.Count(x => !x.IsAnimated)} Non Animated Emotes"
             };
 
             return new PageBuilder()
                 .WithTitle(titleText)
                 .WithDescription(string.Join("\n",
                     emotes.OrderBy(x => x.Name).Skip(10 * page).Take(10)
-                        .Select(x => $"{x} `{x.Name}` [Link]({x.Url})")))
+                        .Select(x => $"{x} `{x.Name}` [Link]({x.GetEmojiUrl()})")))
                 .WithOkColor();
         }
     }
@@ -370,7 +371,7 @@ public partial class Utility(
     {
         var eb = new EmbedBuilder()
             .AddField(Strings.InviteFieldInvite(ctx.Guild?.Id ?? 0),
-                "[Invite Link](https://discord.com/oauth2/authorize?client_id=752236274261426212&scope=bot&permissions=66186303)")
+                $"[Invite Link]({FluxerContext.WebUrl}/oauth2/authorize?client_id={client.CurrentUser.Id}&scope=bot&permissions=66186303)")
             .AddField(Strings.InviteFieldWebsite(ctx.Guild?.Id ?? 0), "https://mewdeko.tech")
             .AddField(Strings.InviteFieldSupport(ctx.Guild?.Id ?? 0), config.Data.SupportServer)
             .WithOkColor();
@@ -415,7 +416,7 @@ public partial class Utility(
             return;
         }
 
-        var user = await ctx.Channel.GetUserAsync(msg.UserId).ConfigureAwait(false) ??
+        var user = (await ctx.Channel.GetUserAsync(msg.UserId).ConfigureAwait(false))?.User ??
                    await client.Rest.GetUserAsync(msg.UserId).ConfigureAwait(false);
 
         var em = new EmbedBuilder
@@ -481,7 +482,7 @@ public partial class Utility(
             async Task<PageBuilder> PageFactory(int page)
             {
                 var msg1 = msg.Skip(page).FirstOrDefault();
-                var user = await ctx.Channel.GetUserAsync(msg1.UserId).ConfigureAwait(false) ??
+                var user = (await ctx.Channel.GetUserAsync(msg1.UserId).ConfigureAwait(false))?.User ??
                            await client.Rest.GetUserAsync(msg1.UserId).ConfigureAwait(false);
 
                 var builder = new PageBuilder()
@@ -543,7 +544,7 @@ public partial class Utility(
             async Task<PageBuilder> PageFactory(int page)
             {
                 var msg1 = msg.Skip(page).FirstOrDefault();
-                var user = await ctx.Channel.GetUserAsync(msg1.UserId).ConfigureAwait(false) ??
+                var user = (await ctx.Channel.GetUserAsync(msg1.UserId).ConfigureAwait(false))?.User ??
                            await client.Rest.GetUserAsync(msg1.UserId).ConfigureAwait(false);
 
                 var builder = new PageBuilder()
@@ -605,7 +606,7 @@ public partial class Utility(
             async Task<PageBuilder> PageFactory(int page)
             {
                 var msg1 = msg.Skip(page).FirstOrDefault();
-                var user = await ctx.Channel.GetUserAsync(msg1.UserId).ConfigureAwait(false) ??
+                var user = (await ctx.Channel.GetUserAsync(msg1.UserId).ConfigureAwait(false))?.User ??
                            await client.Rest.GetUserAsync(msg1.UserId).ConfigureAwait(false);
 
                 var builder = new PageBuilder()
@@ -668,7 +669,7 @@ public partial class Utility(
             async Task<PageBuilder> PageFactory(int page)
             {
                 var msg1 = msg.Skip(page).FirstOrDefault();
-                var user = await ctx.Channel.GetUserAsync(msg1.UserId).ConfigureAwait(false) ??
+                var user = (await ctx.Channel.GetUserAsync(msg1.UserId).ConfigureAwait(false))?.User ??
                            await client.Rest.GetUserAsync(msg1.UserId).ConfigureAwait(false);
 
                 var builder = new PageBuilder()
@@ -729,7 +730,7 @@ public partial class Utility(
             async Task<PageBuilder> PageFactory(int page)
             {
                 var msg1 = msg.Skip(page).FirstOrDefault();
-                var user = await ctx.Channel.GetUserAsync(msg1.UserId).ConfigureAwait(false) ??
+                var user = (await ctx.Channel.GetUserAsync(msg1.UserId).ConfigureAwait(false))?.User ??
                            await client.Rest.GetUserAsync(msg1.UserId).ConfigureAwait(false);
 
                 var builder = new PageBuilder()
@@ -791,7 +792,7 @@ public partial class Utility(
             async Task<PageBuilder> PageFactory(int page)
             {
                 var msg1 = msg.Skip(page).FirstOrDefault();
-                var user = await ctx.Channel.GetUserAsync(msg1.UserId).ConfigureAwait(false) ??
+                var user = (await ctx.Channel.GetUserAsync(msg1.UserId).ConfigureAwait(false))?.User ??
                            await client.Rest.GetUserAsync(msg1.UserId).ConfigureAwait(false);
 
                 var builder = new PageBuilder()
@@ -853,7 +854,7 @@ public partial class Utility(
             async Task<PageBuilder> PageFactory(int page)
             {
                 var msg1 = msg.Skip(page).FirstOrDefault();
-                var user = await ctx.Channel.GetUserAsync(msg1.UserId).ConfigureAwait(false) ??
+                var user = (await ctx.Channel.GetUserAsync(msg1.UserId).ConfigureAwait(false))?.User ??
                            await client.Rest.GetUserAsync(msg1.UserId).ConfigureAwait(false);
 
                 var builder = new PageBuilder()
@@ -916,7 +917,7 @@ public partial class Utility(
             async Task<PageBuilder> PageFactory(int page)
             {
                 var msg1 = msg.Skip(page).FirstOrDefault();
-                var user = await ctx.Channel.GetUserAsync(msg1.UserId).ConfigureAwait(false) ??
+                var user = (await ctx.Channel.GetUserAsync(msg1.UserId).ConfigureAwait(false))?.User ??
                            await client.Rest.GetUserAsync(msg1.UserId).ConfigureAwait(false);
 
                 var builder = new PageBuilder()
@@ -962,7 +963,7 @@ public partial class Utility(
             return;
         }
 
-        var user = await ctx.Channel.GetUserAsync(msg.UserId).ConfigureAwait(false) ??
+        var user = (await ctx.Channel.GetUserAsync(msg.UserId).ConfigureAwait(false))?.User ??
                    await client.Rest.GetUserAsync(msg.UserId).ConfigureAwait(false);
         var em = new EmbedBuilder
         {
@@ -1038,7 +1039,7 @@ public partial class Utility(
             return;
         }
 
-        var user = await ctx.Channel.GetUserAsync(msg.UserId).ConfigureAwait(false) ??
+        var user = (await ctx.Channel.GetUserAsync(msg.UserId).ConfigureAwait(false))?.User ??
                    await client.Rest.GetUserAsync(msg.UserId).ConfigureAwait(false);
 
         var em = new EmbedBuilder
@@ -1091,7 +1092,7 @@ public partial class Utility(
                 return;
             }
 
-            var user = await ctx.Channel.GetUserAsync(msg.UserId).ConfigureAwait(false) ??
+            var user = (await ctx.Channel.GetUserAsync(msg.UserId).ConfigureAwait(false))?.User ??
                        await client.Rest.GetUserAsync(msg.UserId).ConfigureAwait(false);
 
             var em = new EmbedBuilder
@@ -1143,7 +1144,7 @@ public partial class Utility(
             return;
         }
 
-        var user = await ctx.Channel.GetUserAsync(msg.UserId).ConfigureAwait(false) ??
+        var user = (await ctx.Channel.GetUserAsync(msg.UserId).ConfigureAwait(false))?.User ??
                    await client.Rest.GetUserAsync(msg.UserId).ConfigureAwait(false);
 
         var em = new EmbedBuilder
@@ -1196,7 +1197,7 @@ public partial class Utility(
                 return;
             }
 
-            var user = await ctx.Channel.GetUserAsync(msg.UserId).ConfigureAwait(false) ??
+            var user = (await ctx.Channel.GetUserAsync(msg.UserId).ConfigureAwait(false))?.User ??
                        await client.Rest.GetUserAsync(msg.UserId).ConfigureAwait(false);
 
             var em = new EmbedBuilder
@@ -1250,7 +1251,7 @@ public partial class Utility(
                 return;
             }
 
-            var user = await ctx.Channel.GetUserAsync(msg.UserId).ConfigureAwait(false) ??
+            var user = (await ctx.Channel.GetUserAsync(msg.UserId).ConfigureAwait(false))?.User ??
                        await client.Rest.GetUserAsync(msg.UserId).ConfigureAwait(false);
 
             var em = new EmbedBuilder
@@ -1306,7 +1307,7 @@ public partial class Utility(
                 return;
             }
 
-            var user = await ctx.Channel.GetUserAsync(msg.UserId).ConfigureAwait(false) ??
+            var user = (await ctx.Channel.GetUserAsync(msg.UserId).ConfigureAwait(false))?.User ??
                        await client.Rest.GetUserAsync(msg.UserId).ConfigureAwait(false);
 
             var em = new EmbedBuilder
@@ -1331,62 +1332,6 @@ public partial class Utility(
 
 
             await ctx.Channel.SendAsync(embed: em.Build()).ConfigureAwait(false);
-        }
-    }
-
-    /// <summary>
-    ///     Shows a list of users playing a specified game.
-    /// </summary>
-    /// <param name="game">The game to search for.</param>
-    [Cmd]
-    [Aliases]
-    [RequireContext(ContextType.Guild)]
-    public async Task WhosPlaying([Remainder] string? game)
-    {
-        game = game?.Trim().ToUpperInvariant();
-        if (string.IsNullOrWhiteSpace(game))
-            return;
-
-        if (ctx.Guild is not SocketGuild socketGuild)
-        {
-            logger.LogWarning("Can't cast guild to socket guild");
-            return;
-        }
-
-        var rng = new MewdekoRandom();
-        var arr = await Task.Run(() => socketGuild.Users
-            .Where(x => x.Activities.Any())
-            .Where(u => u.Activities.FirstOrDefault().Name.ToUpperInvariant().Contains(game))
-            .OrderBy(_ => rng.Next())
-            .ToArray()).ConfigureAwait(false);
-
-        var i = 0;
-        if (arr.Length == 0)
-        {
-            await ReplyErrorAsync(Strings.NobodyPlayingGame(ctx.Guild.Id)).ConfigureAwait(false);
-        }
-        else
-        {
-            var paginator = new LazyPaginatorBuilder()
-                .AddUser(ctx.User)
-                .WithPageFactory(PageFactory)
-                .WithFooter(PaginatorFooter.PageNumber)
-                .WithMaxPageIndex(arr.Length / 20)
-                .WithActionOnCancellation(ActionOnStop.DeleteMessage)
-                .Build();
-
-            await serv.SendPaginatorAsync(paginator, Context.Channel,
-                TimeSpan.FromMinutes(60)).ConfigureAwait(false);
-
-            async Task<PageBuilder> PageFactory(int page)
-            {
-                await Task.CompletedTask.ConfigureAwait(false);
-                var pagebuilder = new PageBuilder().WithOkColor()
-                    .WithDescription(string.Join("\n",
-                        arr.Skip(page * 20).Take(20).Select(x =>
-                            $"{i++ + 1}. {x.Username}#{x.Discriminator} `{x.Id}`: `{(x.Activities.FirstOrDefault() is CustomStatusGame cs ? cs.State : x.Activities.FirstOrDefault().Name)}`")));
-                return pagebuilder;
-            }
         }
     }
 
@@ -1494,7 +1439,7 @@ public partial class Utility(
     [RequireContext(ContextType.Guild)]
     public async Task UserId([Remainder] SocketGuildMember? target = null)
     {
-        var usr = target ?? ctx.User;
+        var usr = target?.User ?? ctx.User;
         await ReplyConfirmAsync(Strings.Userid(ctx.Guild.Id, "🆔", Format.Bold(usr.ToString()),
             Format.Code(usr.Id.ToString()))).ConfigureAwait(false);
     }
@@ -1549,7 +1494,7 @@ public partial class Utility(
 
         if (target != null)
         {
-            var roles = target.GetRoles().Except([
+            var roles = target.Roles.Except([
                 guild.EveryoneRole
             ]).OrderBy(r => -r.Position);
             if (!roles.Any())
@@ -1573,13 +1518,13 @@ public partial class Utility(
                     return new PageBuilder().WithOkColor().WithTitle(Strings.RolesListFor(ctx.Guild.Id, target))
                         .WithDescription(string.Join("\n",
                             roles.Skip(page * 10).Take(10).Select(x =>
-                                $"{x.Mention} | {x.Id} | {x.GetMembersAsync().GetAwaiter().GetResult().Count()} Members")));
+                                $"{x.Mention} | {x.Id} | {guild.Users.Count(m => m.RoleIds.Contains(x.Id))} Members")));
                 }
             }
         }
         else
         {
-            var roles = guild.Roles.Except([
+            var roles = guild.RoleList.Except([
                 guild.EveryoneRole
             ]).OrderBy(r => -r.Position);
             if (!roles.Any())
@@ -1604,7 +1549,7 @@ public partial class Utility(
                         .WithDescription(string.Join("\n",
                             roles.Skip(page * 10).Take(10).Select(x => x as SocketRole)
                                 .Select(x =>
-                                    $"{x.Mention} | {x.Id} | {x.GetMembersAsync().GetAwaiter().GetResult().Count()}")));
+                                    $"{x.Mention} | {x.Id} | {guild.Users.Count(m => m.RoleIds.Contains(x.Id))}")));
                 }
             }
         }
@@ -1645,7 +1590,7 @@ public partial class Utility(
         if (string.IsNullOrWhiteSpace(message) && !isTextInAttachments)
             return;
 
-        var canMention = ((SocketGuildMember)ctx.User).GuildPermissions.MentionEveryone;
+        var canMention = ctx.Member!.GuildPermissions.MentionEveryone;
 
         var (attachments, processedMessage, streams) = await HandleAttachmentsAsync(isTextInAttachments, message);
 
@@ -1661,7 +1606,7 @@ public partial class Utility(
             {
                 try
                 {
-                    await channel.SendFilesAsync(attachments, plainText, embeds: embedData,
+                    await channel.SendAsync(plainText, embeds: embedData, attachments: attachments,
                             allowedMentions: !canMention
                                 ? new AllowedMentions(AllowedMentionTypes.Users)
                                 : AllowedMentions.All)
@@ -1696,7 +1641,7 @@ public partial class Utility(
             {
                 try
                 {
-                    await channel.SendFilesAsync(attachments, msg,
+                    await channel.SendAsync(msg, attachments: attachments,
                             allowedMentions: !canMention
                                 ? new AllowedMentions(AllowedMentionTypes.Users)
                                 : AllowedMentions.All)
@@ -1802,8 +1747,6 @@ public partial class Utility(
                 .AddField(Strings.CommandCount(ctx.Guild.Id), cmdServ.Commands.DistinctBy(x => x.Name).Count())
                 .AddField("Library", stats.Library)
                 .AddField(Strings.OwnerIds(ctx.Guild.Id), string.Join("\n", creds.OwnerIds.Select(x => $"<@{x}>")))
-                .AddField(Strings.Shard(ctx.Guild.Id),
-                    $"#{client.GetShardFor(ctx.Guild).ShardId} / {creds.TotalShards}")
                 .AddField(Strings.Memory(ctx.Guild.Id),
                     $"{stats.Heap} MB resident\n{stats.ManagedHeap} MB managed\n{stats.CommittedHeap} MB committed\n{stats.GcMode}")
                 .AddField("Cache", stats.CacheCounts)
@@ -1819,9 +1762,14 @@ public partial class Utility(
     [Aliases]
     public async Task Showemojis([Remainder] string _)
     {
-        var tags = ctx.Message.Tags.Where(t => t.Type == TagType.Emoji).Select(t => (Emoji)t.Value);
+        var tags = Regex.Matches(ctx.Message.Content ?? "", @"<a?:\w+:\d+>")
+            .Select(t => Emoji.TryParseCustom(t.Value, out var parsed) ? parsed : null)
+            .Where(t => t is not null)
+            .Select(t => t!);
+        var mediaUrl = client.Config.MediaUrl;
 
-        var result = string.Join("\n", tags.Select(m => Strings.Showemojis(ctx.Guild.Id, m, m.Url)));
+        var result = string.Join("\n",
+            tags.Select(m => Strings.Showemojis(ctx.Guild.Id, m, $"{mediaUrl}/emojis/{m.Id}.webp?size=2048")));
 
         if (string.IsNullOrWhiteSpace(result))
             await ReplyErrorAsync(Strings.ShowemojisNone(ctx.Guild.Id)).ConfigureAwait(false);

@@ -170,8 +170,8 @@ public class StreamNotificationService : IReadyExecutor, INService
         });
 
         // Register guild events
-        eventHandler.Subscribe("JoinedGuild", "StreamNotificationService", ClientOnJoinedGuild);
-        eventHandler.Subscribe("LeftGuild", "StreamNotificationService", ClientOnLeftGuild);
+        eventHandler.JoinedGuild.Subscribe("StreamNotificationService", ClientOnJoinedGuild);
+        eventHandler.LeftGuild.Subscribe("StreamNotificationService", ClientOnLeftGuild);
     }
 
     private List<ulong> OfflineNotificationServers { get; set; } = [];
@@ -333,9 +333,9 @@ public class StreamNotificationService : IReadyExecutor, INService
                string.Equals(twitchConfig.TwitchChannel, key.Name, StringComparison.OrdinalIgnoreCase);
     }
 
-    private async Task ClientOnJoinedGuild(GuildConfig guildConfig)
+    private async Task ClientOnJoinedGuild(SocketGuild guild)
     {
-        var guildId = guildConfig.GuildId;
+        var guildId = guild.Id;
         await using var db = await dbFactory.CreateConnectionAsync();
 
         // Get guild config for notification setting

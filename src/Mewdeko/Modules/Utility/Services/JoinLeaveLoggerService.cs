@@ -49,8 +49,8 @@ public class JoinLeaveLoggerService : INService, IDisposable
         this.eventHandler = eventHandler;
 
         flushTimer = new Timer(_ => _ = FlushAsync(), null, FlushInterval, FlushInterval);
-        eventHandler.Subscribe("UserJoined", "JoinLeaveLoggerService", LogUserJoined);
-        eventHandler.Subscribe("UserLeft", "JoinLeaveLoggerService", LogUserLeft);
+        eventHandler.UserJoined.Subscribe("JoinLeaveLoggerService", LogUserJoined);
+        eventHandler.UserLeft.Subscribe("JoinLeaveLoggerService", LogUserLeft);
     }
 
     /// <summary>
@@ -58,8 +58,8 @@ public class JoinLeaveLoggerService : INService, IDisposable
     /// </summary>
     public void Dispose()
     {
-        eventHandler.Unsubscribe("UserJoined", "JoinLeaveLoggerService", LogUserJoined);
-        eventHandler.Unsubscribe("UserLeft", "JoinLeaveLoggerService", LogUserLeft);
+        eventHandler.UserJoined.Unsubscribe("JoinLeaveLoggerService", LogUserJoined);
+        eventHandler.UserLeft.Unsubscribe("JoinLeaveLoggerService", LogUserLeft);
         flushTimer.Dispose();
         FlushAsync().GetAwaiter().GetResult();
         flushLock.Dispose();

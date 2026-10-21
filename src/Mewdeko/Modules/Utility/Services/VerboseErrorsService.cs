@@ -62,11 +62,11 @@ public class VerboseErrorsService : INService, IUnloadableService
     {
         if (channel == null)
             return;
-        var config = await guildSettings.GetGuildConfig(channel.GuildId);
+        var config = await guildSettings.GetGuildConfig(channel.Guild.Id);
         if (!config.VerboseErrors)
             return;
         var perms = services.GetService<PermissionService>();
-        var pc = await perms.GetCacheFor(channel.GuildId);
+        var pc = await perms.GetCacheFor(channel.Guild.Id);
         if (cmd.Aliases.Any(i => !(pc.Permissions != null
                                    && pc.Permissions.CheckPermissions(SyntheticMessage.Create(user, channel),
                                        i,

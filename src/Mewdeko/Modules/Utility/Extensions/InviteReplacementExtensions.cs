@@ -51,7 +51,7 @@ public static class InviteReplacementExtensions
         builder.WithOverride("%invite.code%", () => result?.Code ?? unknown);
         builder.WithOverride("%invite.uses%", () => (result?.Uses ?? 0).ToString());
         builder.WithOverride("%invite.url%",
-            () => result?.Code is { } code && code != "vanity" ? $"https://discord.gg/{code}" : unknown);
+            () => result?.Code is { } code && code != "vanity" ? $"{FluxerContext.Client.Config.InviteUrl}/{code}" : unknown);
         builder.WithOverride("%invite.label%", () => result?.Label ?? result?.Code ?? unknown);
         builder.WithOverride("%invite.type%", () => (result?.JoinType ?? InviteJoinType.Unknown).ToString());
         builder.WithOverride("%invite.fake%",
@@ -76,14 +76,11 @@ public static class InviteReplacementExtensions
             builder.WithOverride($"%user.created.{suffix}%",
                 () => TimestampTag.FromDateTimeOffset(user.CreatedAt, style).ToString());
             builder.WithOverride($"%user.joined.{suffix}%",
-                () => user.JoinedAt.HasValue
-                    ? TimestampTag.FromDateTimeOffset(user.JoinedAt.Value, style).ToString()
-                    : "-");
+                () => TimestampTag.FromDateTimeOffset(user.JoinedAt, style).ToString());
         }
 
         builder.WithOverride("%user.created.ago%", () => Ago(DateTimeOffset.UtcNow - user.CreatedAt));
-        builder.WithOverride("%user.joined.ago%",
-            () => user.JoinedAt.HasValue ? Ago(DateTimeOffset.UtcNow - user.JoinedAt.Value) : "-");
+        builder.WithOverride("%user.joined.ago%", () => Ago(DateTimeOffset.UtcNow - user.JoinedAt));
         return builder;
     }
 
@@ -102,7 +99,7 @@ public static class InviteReplacementExtensions
 
     private static int GetMemberCount(SocketGuild guild)
     {
-        return guild is SocketGuild sg ? sg.MemberCount : guild.ApproximateMemberCount ?? 0;
+        return guild.TotalMembers;
     }
 
     /// <summary>

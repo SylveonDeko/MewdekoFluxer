@@ -48,7 +48,7 @@ public partial class Utility
             var target = meorhere == MeOrHere.Me ? ctx.User.Id : ctx.Channel.Id;
             var isPrivate = meorhere == MeOrHere.Me || ctx.Guild == null;
             var shouldSanitize = ctx.Guild != null &&
-                                 !((SocketGuildMember)ctx.User).GetPermissions((Channel)ctx.Channel).MentionEveryone;
+                                 !ctx.Member!.GetPermissions((Channel)ctx.Channel).MentionEveryone;
 
             var (success, message) = await Service.CreateReminderAsync(
                 target,
@@ -79,7 +79,7 @@ public partial class Utility
         [Priority(0)]
         public async Task Remind(Channel channel, [Remainder] string remindString)
         {
-            var perms = ((SocketGuildMember)ctx.User).GetPermissions(channel);
+            var perms = ctx.Member!.GetPermissions(channel);
             if (!perms.SendMessages || !perms.ViewChannel)
             {
                 await ReplyErrorAsync(Strings.CantReadOrSend(ctx.Guild.Id)).ConfigureAwait(false);

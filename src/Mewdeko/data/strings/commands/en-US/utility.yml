@@ -4213,22 +4213,6 @@ stats:
     - ''
   desc: 'Shows the bot''s stats.'
   params: [ ]
-streamrole:
-  args:
-    - '@role @role'
-  desc: 'Disables the stream role feature in the server.'
-  params:
-    - &ref_576
-      desc: 'The role to monitor for streaming activity.'
-      name: fromRole
-      optional: false
-      type: IRole
-    - &ref_577
-      desc: 'The role to assign to users who start streaming.'
-      name: addRole
-      optional: false
-      type: IRole
-streamrole_IRole_IRole:
   args:
     - '@role @role'
   desc: 'Disables the stream role feature in the server.'
@@ -4241,7 +4225,6 @@ streamrole_IRole_IRole:
       name: addRole
       optional: false
       type: IRole
-streamrole_IRole_IRole_1:
   args:
     - '@role @role'
   desc: 'Disables the stream role feature in the server.'
@@ -4254,55 +4237,14 @@ streamrole_IRole_IRole_1:
       name: addRole
       optional: false
       type: IRole
-streamrole_IRole_IRole_2:
-  args:
-    - '@role @role'
-  desc: 'Disables the stream role feature in the server.'
-  params:
-    - desc: 'The role to monitor for streaming activity.'
-      name: fromRole
-      optional: false
-      type: IRole
-    - desc: 'The role to assign to users who start streaming.'
-      name: addRole
-      optional: false
-      type: IRole
-streamrole_noparams:
   args:
     - ''
   desc: 'Disables the stream role feature in the server.'
   params: [ ]
-streamrole_noparams_1:
   args:
     - ''
   desc: 'Disables the stream role feature in the server.'
   params: [ ]
-streamrole_noparams_2:
-  args:
-    - ''
-  desc: 'Disables the stream role feature in the server.'
-  params: [ ]
-streamrole_noparams_3:
-  args:
-    - ''
-  desc: 'Disables the stream role feature in the server.'
-  params: [ ]
-streamroleblacklist:
-  args:
-    - action @user
-  desc: 'Adds or removes a user to/from the blacklist for the stream role feature.'
-  params:
-    - &ref_578
-      desc: 'The action to perform (add or remove).'
-      name: action
-      optional: false
-      type: AddRemove
-    - &ref_579
-      desc: 'The user to add or remove from the list.'
-      name: user
-      optional: false
-      type: IGuildUser
-streamroleblacklist_AddRemove_IGuildUser:
   args:
     - action @user
   desc: 'Adds or removes a user to/from the blacklist for the stream role feature.'
@@ -4315,7 +4257,6 @@ streamroleblacklist_AddRemove_IGuildUser:
       name: user
       optional: false
       type: IGuildUser
-streamroleblacklist_AddRemove_IGuildUser_1:
   args:
     - action @user
   desc: 'Adds or removes a user to/from the blacklist for the stream role feature.'
@@ -4328,31 +4269,6 @@ streamroleblacklist_AddRemove_IGuildUser_1:
       name: user
       optional: false
       type: IGuildUser
-streamroleblacklist_AddRemove_IGuildUser_2:
-  args:
-    - action @user
-  desc: 'Adds or removes a user to/from the blacklist for the stream role feature.'
-  params:
-    - desc: 'The action to perform (add or remove).'
-      name: action
-      optional: false
-      type: AddRemove
-    - desc: 'The user to add or remove from the list.'
-      name: user
-      optional: false
-      type: IGuildUser
-streamrolekeyword:
-  args:
-    - '[keyword]'
-  desc: >-
-    Sets a keyword for the stream role feature. Only users with streams
-    containing this keyword will receive the stream role.
-  params:
-    - desc: 'The keyword to set for the stream role feature.'
-      name: keyword
-      optional: true
-      type: string
-streamrolewhitelist:
   args:
     - action @user
   desc: 'Adds or removes a user to/from the whitelist for the stream role feature.'
@@ -4529,17 +4445,6 @@ whoinvited:
       name: user
       optional: true
       type: user
-whosplaying:
-  args:
-    - text
-  desc: 'Shows a list of users playing a specified game.'
-  params:
-    - &ref_660
-      desc: 'The game to search for.'
-      name: game
-      optional: true
-      type: string
-whosplaying_string:
   args:
     - text
   desc: 'Shows a list of users playing a specified game.'
@@ -4548,16 +4453,6 @@ whosplaying_string:
       name: game
       optional: true
       type: string
-whosplaying_string_1:
-  args:
-    - text
-  desc: 'Shows a list of users playing a specified game.'
-  params:
-    - desc: 'The game to search for.'
-      name: game
-      optional: true
-      type: string
-whosplaying_string_2:
   args:
     - text
   desc: 'Shows a list of users playing a specified game.'

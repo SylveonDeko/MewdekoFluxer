@@ -111,17 +111,17 @@ public partial class Utility
                 var http = new HttpClient();
                 using var sr = await http.GetAsync(avatar, HttpCompletionOption.ResponseHeadersRead);
                 var imgData = await sr.Content.ReadAsByteArrayAsync();
-                var imgStream = imgData.ToStream();
-                await using var _ = imgStream;
-                var webhook = await channel.CreateWebhookAsync(name, imgStream);
+                var contentType = sr.Content.Headers.ContentType?.MediaType ?? "image/png";
+                var webhook = await channel.CreateWebhookAsync(name,
+                    $"data:{contentType};base64,{System.Convert.ToBase64String(imgData)}");
                 await Service.SetWebhook(ctx.Guild.Id,
-                    $"https://discord.com/api/webhooks/{webhook.Id}/{webhook.Token}");
+                    $"{FluxerContext.Client.Config.RealApiBaseUrl}/webhooks/{webhook.Id}/{webhook.Token}");
             }
             else
             {
                 var webhook = await channel.CreateWebhookAsync(name);
                 await Service.SetWebhook(ctx.Guild.Id,
-                    $"https://discord.com/api/webhooks/{webhook.Id}/{webhook.Token}");
+                    $"{FluxerContext.Client.Config.RealApiBaseUrl}/webhooks/{webhook.Id}/{webhook.Token}");
             }
 
             await ctx.Channel.SendConfirmAsync(Strings.AiWebhookSet(ctx.Guild.Id));

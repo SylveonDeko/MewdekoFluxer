@@ -66,9 +66,9 @@ public class AfkService : INService, IReadyExecutor, IDisposable
         this.strings = strings;
         this.logger = logger;
 
-        this.eventHandler.Subscribe("MessageReceived", "AFKService", MessageReceived);
-        this.eventHandler.Subscribe("MessageUpdated", "AFKService", MessageUpdated);
-        this.eventHandler.Subscribe("UserIsTyping", "AFKService", UserTyping);
+        this.eventHandler.MessageReceived.Subscribe("AFKService", MessageReceived);
+        this.eventHandler.MessageUpdated.Subscribe("AFKService", MessageUpdated);
+        this.eventHandler.UserIsTyping.Subscribe("AFKService", UserTyping);
 
         cleanupTimer = new Timer(async _ => await CleanupTimersAsync().ConfigureAwait(false), null,
             TimeSpan.FromMinutes(30), TimeSpan.FromMinutes(30));
@@ -603,7 +603,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
 
     private async Task MessageReceived(SocketMessage msg)
     {
-        if (msg.Author.IsBot || msg.Author is not SocketGuildMember user)
+        if (msg.Author is null || msg.Author.IsBot || msg.Member is not { } user)
             return;
 
         // Deduplicate rapid message events for the same message
@@ -681,7 +681,8 @@ public class AfkService : INService, IReadyExecutor, IDisposable
                 foreach (var mentionedUser in msg.MentionedUsers.Take(5)) // Limit checks per message
                 {
                     if (mentionedUser.IsBot || mentionedUser.Id == user.Id) continue;
-                    if (mentionedUser is not SocketGuildMember mentionedGuildUser) continue;
+                    var mentionedGuildUser = user.Guild.GetUser(mentionedUser.Id);
+                    if (mentionedGuildUser is null) continue;
 
                     var mentionedAfk = await GetAfk(user.GuildId, mentionedUser.Id);
                     if (mentionedAfk == null) continue;
@@ -748,53 +749,15 @@ public class AfkService : INService, IReadyExecutor, IDisposable
         }
     }
 
-    private async Task MessageUpdated(Cacheable<Message> msg, SocketMessage updatedMsg,
-        Channel channel)
+    private async Task MessageUpdated(Message? before, SocketMessage updatedMsg)
     {
         try
         {
-            // Skip processing if we already have the updated message
-            if (updatedMsg == null || updatedMsg.Author.IsBot || updatedMsg.EditedTimestamp == null)
+            if (updatedMsg.Author is null || updatedMsg.Author.IsBot || updatedMsg.EditedTimestamp == null)
                 return;
 
-            // Skip if message is too old or not edited recently enough
             if (DateTimeOffset.UtcNow - updatedMsg.EditedTimestamp.Value > TimeSpan.FromMinutes(5)) return;
 
-            // Check if we have the message cached first
-            Message? message = null;
-            if (msg.HasValue)
-            {
-                message = msg.Value;
-            }
-            else
-            {
-                // Try to download with timeout and rate limit protection
-                try
-                {
-                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-                    var options = new RequestOptions
-                    {
-                        CancelToken = cts.Token, RetryMode = RetryMode.AlwaysRetry, Timeout = 3000
-                    };
-
-                    // Use updatedMsg directly if download fails or times out
-                    message = await msg.GetOrDownloadAsync();
-                }
-                catch (TimeoutException)
-                {
-                    // Log at debug level since this is expected under rate limits
-                    logger.LogDebug("Timeout downloading message {MessageId} in MessageUpdated, using cached data",
-                        msg.Id);
-                    // Continue processing with updatedMsg which we already have
-                }
-                catch (FluxerApiException httpEx) when (httpEx.HttpCode == HttpStatusCode.TooManyRequests)
-                {
-                    logger.LogDebug("Rate limited when downloading message {MessageId} in MessageUpdated", msg.Id);
-                    // Continue processing with updatedMsg
-                }
-            }
-
-            // Process the updated message - we already have updatedMsg so we can proceed
             await MessageReceived(updatedMsg);
         }
         catch (Exception ex)
@@ -803,19 +766,19 @@ public class AfkService : INService, IReadyExecutor, IDisposable
         }
     }
 
-    private async Task UserTyping(Cacheable<IUser> userCache, Cacheable<Channel> chanCache)
+    private async Task UserTyping(ulong userId, Channel chan)
     {
         try
         {
-            var user = await userCache.GetOrDownloadAsync();
-            if (user is not SocketGuildMember guildUser) return;
+            var guildUser = chan.Guild?.GetUser(userId);
+            if (guildUser is null) return;
 
             var guildConfig = await GetGuildConfigCached(guildUser.GuildId);
             if (guildConfig == null) return;
 
             if (guildConfig.AfkType is 3 or 4)
             {
-                var afkEntry = await GetAfk(guildUser.GuildId, user.Id);
+                var afkEntry = await GetAfk(guildUser.GuildId, userId);
                 // Check if user is AFK, it's not a timed one (or timed one expired), and timeout passed
                 if (afkEntry != null &&
                     (!afkEntry.WasTimed || afkEntry.When.HasValue && afkEntry.When.Value < DateTime.UtcNow) &&
@@ -824,14 +787,10 @@ public class AfkService : INService, IReadyExecutor, IDisposable
                 {
                     await AfkSet(guildUser.GuildId, guildUser.Id, ""); // Clear AFK
 
-                    var chan = await chanCache.GetOrDownloadAsync();
-                    if (chan != null)
-                    {
-                        var notifyMsg =
-                            await chan.SendAsync(
-                                strings.WelcomeBackAfk(guildUser.GuildId, user.Mention));
-                        notifyMsg.DeleteAfter(5);
-                    }
+                    var notifyMsg =
+                        await chan.SendAsync(
+                            strings.WelcomeBackAfk(guildUser.GuildId, guildUser.Mention));
+                    notifyMsg.DeleteAfter(5);
 
                     try
                     {
@@ -862,9 +821,9 @@ public class AfkService : INService, IReadyExecutor, IDisposable
 
         try
         {
-            eventHandler.Unsubscribe("MessageReceived", "AFKService", MessageReceived);
-            eventHandler.Unsubscribe("MessageUpdated", "AFKService", MessageUpdated);
-            eventHandler.Unsubscribe("UserIsTyping", "AFKService", UserTyping);
+            eventHandler.MessageReceived.Unsubscribe("AFKService", MessageReceived);
+            eventHandler.MessageUpdated.Unsubscribe("AFKService", MessageUpdated);
+            eventHandler.UserIsTyping.Unsubscribe("AFKService", UserTyping);
             // Unsubscribe from Bot Joined/Left Guild events if needed
 
             cleanupTimer?.Dispose();

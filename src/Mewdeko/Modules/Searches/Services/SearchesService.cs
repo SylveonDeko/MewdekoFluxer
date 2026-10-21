@@ -114,7 +114,7 @@ public class SearchesService : INService, IUnloadableService
         rng = new MewdekoRandom();
 
         //translate commands
-        handler.Subscribe("MessageReceived", "SearchesService", async (SocketMessage msg) =>
+        handler.MessageReceived.Subscribe("SearchesService", async (SocketMessage msg) =>
         {
             try
             {
@@ -132,13 +132,13 @@ public class SearchesService : INService, IUnloadableService
                 if (langs.Contains('<'))
                 {
                     var split = langs.Split('<');
-                    text = await AutoTranslate(umsg.Resolve(TagHandling.Ignore), split[1], split[0])
+                    text = await AutoTranslate(umsg.Content, split[1], split[0])
                         .ConfigureAwait(false);
                 }
                 else
                 {
                     var split = langs.Split('>');
-                    text = await AutoTranslate(umsg.Resolve(TagHandling.Ignore), split[0], split[1])
+                    text = await AutoTranslate(umsg.Content, split[0], split[1])
                         .ConfigureAwait(false);
                 }
 

@@ -56,12 +56,12 @@ public class MessageRepeaterService : INService, IReadyExecutor, IDisposable
         this.guildTimezoneService = guildTimezoneService;
 
 
-        handler.Subscribe("GuildAvailable", "MessageRepeaterService", OnGuildAvailable);
-        handler.Subscribe("GuildUnavailable", "MessageRepeaterService", OnGuildUnavailable);
-        handler.Subscribe("JoinedGuild", "MessageRepeaterService", OnJoinedGuild);
-        handler.Subscribe("LeftGuild", "MessageRepeaterService", OnLeftGuild);
-        handler.Subscribe("ThreadCreated", "MessageRepeaterService", OnThreadCreated);
-        handler.Subscribe("MessageReceived", "MessageRepeaterService", OnMessageReceived);
+        handler.GuildAvailable.Subscribe("MessageRepeaterService", OnGuildAvailable);
+        handler.GuildUnavailable.Subscribe("MessageRepeaterService", OnGuildUnavailable);
+        handler.JoinedGuild.Subscribe("MessageRepeaterService", OnJoinedGuild);
+        handler.LeftGuild.Subscribe("MessageRepeaterService", OnLeftGuild);
+        handler.ThreadCreated.Subscribe("MessageRepeaterService", OnThreadCreated);
+        handler.MessageReceived.Subscribe("MessageRepeaterService", OnMessageReceived);
     }
 
     /// <summary>
@@ -92,12 +92,12 @@ public class MessageRepeaterService : INService, IReadyExecutor, IDisposable
             }
         }
 
-        handler.Unsubscribe("GuildAvailable", "MessageRepeaterService", OnGuildAvailable);
-        handler.Unsubscribe("GuildUnavailable", "MessageRepeaterService", OnGuildUnavailable);
-        handler.Unsubscribe("JoinedGuild", "MessageRepeaterService", OnJoinedGuild);
-        handler.Unsubscribe("LeftGuild", "MessageRepeaterService", OnLeftGuild);
-        handler.Unsubscribe("ThreadCreated", "MessageRepeaterService", OnThreadCreated);
-        handler.Unsubscribe("MessageReceived", "MessageRepeaterService", OnMessageReceived);
+        handler.GuildAvailable.Unsubscribe("MessageRepeaterService", OnGuildAvailable);
+        handler.GuildUnavailable.Unsubscribe("MessageRepeaterService", OnGuildUnavailable);
+        handler.JoinedGuild.Unsubscribe("MessageRepeaterService", OnJoinedGuild);
+        handler.LeftGuild.Unsubscribe("MessageRepeaterService", OnLeftGuild);
+        handler.ThreadCreated.Unsubscribe("MessageRepeaterService", OnThreadCreated);
+        handler.MessageReceived.Unsubscribe("MessageRepeaterService", OnMessageReceived);
     }
 
 
@@ -255,9 +255,6 @@ public class MessageRepeaterService : INService, IReadyExecutor, IDisposable
         try
         {
             if (!Repeaters.TryGetValue(thread.Guild.Id, out var guildRepeaters))
-                return;
-
-            if (thread.CachedMessages.Count > 0)
                 return;
 
             // Find repeaters that should auto-create in threads for this channel
@@ -1056,14 +1053,13 @@ public class MessageRepeaterService : INService, IReadyExecutor, IDisposable
         try
         {
             // Only process messages in guild channels, ignore bot messages
-            if (message.Channel is not Channel guildChannel || message.Author.IsBot)
+            if (message.Channel is not Channel { GuildId: { } guildId } guildChannel || message.Author.IsBot)
                 return;
 
             // Skip if this is our own sticky message being posted
             if (message.Author.Id == client.CurrentUser?.Id)
                 return;
 
-            var guildId = guildChannel.GuildId;
             if (!Repeaters.TryGetValue(guildId, out var guildRepeaters))
                 return;
 

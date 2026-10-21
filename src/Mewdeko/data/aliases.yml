@@ -2915,17 +2915,6 @@ streamofflinemessage:
 streamremove:
   - streamremove
   - strm
-streamrole:
-  - streamrole
-streamroleblacklist:
-  - streamroleblacklist
-  - srbl
-streamrolekeyword:
-  - streamrolekeyword
-  - srkw
-streamrolewhitelist:
-  - streamrolewhitelist
-  - srwl
 streamsclear:
   - streamsclear
   - stclear
@@ -3606,9 +3595,6 @@ wheelfortune:
 whoinvited:
   - whoinvited
   - invitedby
-whosplaying:
-  - whosplaying
-  - whpl
 wiki:
   - wiki
   - wikipedia

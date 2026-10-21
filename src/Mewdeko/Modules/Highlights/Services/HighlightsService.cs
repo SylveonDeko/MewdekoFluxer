@@ -48,11 +48,11 @@ public class HighlightsService : INService, IReadyExecutor, IUnloadableService
         this.dbFactory = dbFactory;
         this.eventHandler = eventHandler;
         this.logger = logger;
-        eventHandler.Subscribe("MessageReceived", "HighlightsService", StaggerHighlights);
-        eventHandler.Subscribe("UserIsTyping", "HighlightsService", AddHighlightTimer);
+        eventHandler.MessageReceived.Subscribe("HighlightsService", StaggerHighlights);
+        eventHandler.UserIsTyping.Subscribe("HighlightsService", AddHighlightTimer);
 
         // Clean up cache when leaving guilds
-        eventHandler.Subscribe("LeftGuild", "HighlightsService", OnLeftGuild);
+        eventHandler.LeftGuild.Subscribe("HighlightsService", OnLeftGuild);
 
         _ = HighlightLoop();
     }
@@ -117,9 +117,9 @@ public class HighlightsService : INService, IReadyExecutor, IUnloadableService
     /// </summary>
     public Task Unload()
     {
-        eventHandler.Unsubscribe("MessageReceived", "HighlightsService", StaggerHighlights);
-        eventHandler.Unsubscribe("UserIsTyping", "HighlightsService", AddHighlightTimer);
-        eventHandler.Unsubscribe("LeftGuild", "HighlightsService", OnLeftGuild);
+        eventHandler.MessageReceived.Unsubscribe("HighlightsService", StaggerHighlights);
+        eventHandler.UserIsTyping.Unsubscribe("HighlightsService", AddHighlightTimer);
+        eventHandler.LeftGuild.Unsubscribe("HighlightsService", OnLeftGuild);
         return Task.CompletedTask;
     }
 
@@ -158,12 +158,12 @@ public class HighlightsService : INService, IReadyExecutor, IUnloadableService
         }
     }
 
-    private async Task AddHighlightTimer(Cacheable<IUser> arg1, Cacheable<Channel> _)
+    private async Task AddHighlightTimer(ulong userId, Channel channel)
     {
-        if (arg1.Value is not SocketGuildMember user)
+        if (channel.GuildId is not { } guildId)
             return;
 
-        await TryAddHighlightStaggerUser(user.GuildId, user.Id).ConfigureAwait(false);
+        await TryAddHighlightStaggerUser(guildId, userId).ConfigureAwait(false);
     }
 
     private Task StaggerHighlights(SocketMessage message)
@@ -202,8 +202,8 @@ public class HighlightsService : INService, IReadyExecutor, IUnloadableService
                 continue;
 
             var settings =
-                (await GetSettingsForGuild(channel.GuildId)).FirstOrDefault(x =>
-                    x.UserId == i.UserId && x.GuildId == channel.GuildId);
+                (await GetSettingsForGuild(channel.Guild.Id)).FirstOrDefault(x =>
+                    x.UserId == i.UserId && x.GuildId == channel.Guild.Id);
             if (settings is not null)
             {
                 if (!settings.HighlightsOn)
@@ -223,7 +223,7 @@ public class HighlightsService : INService, IReadyExecutor, IUnloadableService
                 continue;
 
             var messages =
-                (await channel.GetMessagesAsync(message.Id, Direction.Before, 5).FlattenAsync().ConfigureAwait(false))
+                (await channel.GetMessagesAsync(5, beforeId: message.Id).FlattenAsync().ConfigureAwait(false))
                 .Append(message);
             if (i.Word != null)
             {
@@ -233,7 +233,7 @@ public class HighlightsService : INService, IReadyExecutor, IUnloadableService
                         .Select(x =>
                             $"<t:{x.Timestamp.ToUnixTimeSeconds()}:T>: {Format.Bold(x.Author.ToString())}: {(x == message ? "***" : "")}" +
                             $"[{x.Content?.TrimTo(100)}]({message.GetJumpLink()}){(x == message ? "***" : "")}" +
-                            $" {(x.Embeds?.Count >= 1 || x.Attachments?.Count >= 1 ? " [has embed]" : "")}")));
+                            $" {(x.Embeds?.Any() == true || x.Attachments?.Length >= 1 ? " [has embed]" : "")}")));
 
                 try
                 {

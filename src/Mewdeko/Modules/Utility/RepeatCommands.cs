@@ -241,7 +241,7 @@ public partial class Utility
                     realInterval,
                     message,
                     startTimeOfDay?.ToString(),
-                    ((SocketGuildMember)ctx.User).GuildPermissions.MentionEveryone);
+                    ctx.Member!.GuildPermissions.MentionEveryone);
 
                 if (runner == null)
                 {
@@ -357,7 +357,7 @@ public partial class Utility
                 ctx.Guild.Id,
                 repeater.Repeater.Id,
                 message,
-                ((SocketGuildMember)ctx.User).GuildPermissions.MentionEveryone);
+                ctx.Member!.GuildPermissions.MentionEveryone);
 
             if (!success)
             {

@@ -432,8 +432,8 @@ public partial class Utility
             var eb = new EmbedBuilder()
                 .WithOkColor()
                 .WithTitle(Strings.InviteCodesTitle(ctx.Guild.Id, user.Username))
-                .WithDescription(string.Join("\n", codes.OrderByDescending(x => x.Uses ?? 0).Take(25).Select(x =>
-                    $"`{x.Code}` <#{x.ChannelId}> uses: **{x.Uses ?? 0}**" +
+                .WithDescription(string.Join("\n", codes.OrderByDescending(x => x.Uses).Take(25).Select(x =>
+                    $"`{x.Code}` <#{x.Channel?.Id}> uses: **{x.Uses}**" +
                     (x.MaxUses is > 0 ? $"/{x.MaxUses}" : "") +
                     (x.MaxAge is > 0 ? " (expires)" : ""))));
 
@@ -449,14 +449,14 @@ public partial class Utility
         [BotPerm(GuildPermission.CreateInstantInvite)]
         public async Task InviteLink()
         {
-            var invite = await Service.GetOrCreateUserLinkAsync(ctx.Guild, (SocketGuildMember)ctx.User);
+            var invite = await Service.GetOrCreateUserLinkAsync(ctx.Guild, ctx.Member!);
             if (invite == null)
             {
                 await ReplyErrorAsync(Strings.InviteLinkFailed(ctx.Guild.Id));
                 return;
             }
 
-            await ReplyConfirmAsync(Strings.InviteLinkYours(ctx.Guild.Id, invite.Url, invite.Uses ?? 0));
+            await ReplyConfirmAsync(Strings.InviteLinkYours(ctx.Guild.Id, $"{FluxerContext.Client.Config.InviteUrl}/{invite.Code}", invite.Uses));
         }
 
         /// <summary>

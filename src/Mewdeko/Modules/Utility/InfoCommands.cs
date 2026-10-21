@@ -17,24 +17,21 @@ public partial class Utility
     [RequireContext(ContextType.Guild)]
     public async Task Banner([Remainder] SocketGuildMember? usr = null)
     {
-        usr ??= (SocketGuildMember)ctx.User;
-        var guildUser = await client.Rest.GetGuildUserAsync(ctx.Guild.Id, usr.Id);
-        var user = await client.Rest.GetUserAsync(usr.Id);
-        if (user.GetBannerUrl(size: 2048) == null && guildUser.GetBannerUrl() == null)
+        usr ??= ctx.Member!;
+        var bannerUrl = usr.GetBannerUrl(2048);
+        if (bannerUrl == null)
         {
             await ReplyErrorAsync(Strings.AvatarNone(ctx.Guild.Id, usr.ToString())).ConfigureAwait(false);
             return;
         }
 
-        var avatarUrl = guildUser.GetBannerUrl() ?? user.GetBannerUrl(size: 2048);
-
         await ctx.Channel.SendAsync(embed: new EmbedBuilder()
                 .WithOkColor()
                 .AddField(efb => efb.WithName("Username").WithValue(usr.ToString()).WithIsInline(true))
                 .AddField(efb =>
-                    efb.WithName($"{(guildUser.BannerId is null ? "" : "Guild")} Banner Url")
-                        .WithValue($"[Link]({avatarUrl})").WithIsInline(true))
-                .WithImageUrl(avatarUrl).Build())
+                    efb.WithName("Guild Banner Url")
+                        .WithValue($"[Link]({bannerUrl})").WithIsInline(true))
+                .WithImageUrl(bannerUrl).Build())
             .ConfigureAwait(false);
     }
 
@@ -60,14 +57,12 @@ public partial class Utility
                 .AddField("Users in role",
                     (await ctx.Guild.GetUsersAsync().ConfigureAwait(false)).Count(x => x.RoleIds.Contains(role.Id)))
                 .AddField("Is Mentionable", role.IsMentionable)
-                .AddField("Is Hoisted", role.IsHoisted).AddField("Color", role.Colors.PrimaryColor.RawValue)
-                .AddField("Is Managed", role.IsManaged)
+                .AddField("Is Hoisted", role.IsHoisted).AddField("Color", role.Color)
                 .AddField("Permissions", string.Join(",", role.Permissions))
                 .AddField("Creation Date", TimestampTag.FromDateTimeOffset(role.CreatedAt))
                 .AddField("Position", role.Position)
                 .AddField("ID", role.Id)
-                .WithThumbnailUrl(role.GetIconUrl())
-                .WithColor(role.Colors.PrimaryColor);
+                .WithColor(role.Colour);
             await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
         }
 
@@ -81,7 +76,7 @@ public partial class Utility
         [RequireContext(ContextType.Guild)]
         public async Task VInfo([Remainder] Channel? channel = null)
         {
-            var voiceChannel = ((SocketGuildMember)ctx.User).VoiceChannel;
+            var voiceChannel = ctx.Member!.VoiceChannel;
             var eb = new EmbedBuilder();
             switch (voiceChannel)
             {
@@ -94,7 +89,7 @@ public partial class Utility
                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                 case null when channel is not null:
                     eb.WithTitle(channel.Name);
-                    eb.AddField("Users", (await channel.GetUsersAsync().FlattenAsync().ConfigureAwait(false)).Count());
+                    eb.AddField("Users", channel.ConnectedUsers.Count());
                     eb.AddField("Created On", channel.CreatedAt);
                     eb.AddField("Bitrate", channel.Bitrate);
                     eb.AddField("User Limit", channel.UserLimit == null ? "Infinite" : channel.UserLimit);
@@ -107,7 +102,7 @@ public partial class Utility
             if (voiceChannel is not null && channel is not null)
             {
                 eb.WithTitle(channel.Name);
-                eb.AddField("Users", (await channel.GetUsersAsync().FlattenAsync().ConfigureAwait(false)).Count());
+                eb.AddField("Users", channel.ConnectedUsers.Count());
                 eb.AddField("Created On", channel.CreatedAt);
                 eb.AddField("Bitrate", channel.Bitrate);
                 eb.AddField("User Limit", channel.UserLimit == null ? "Infinite" : channel.UserLimit);
@@ -119,7 +114,7 @@ public partial class Utility
             if (voiceChannel is not null && channel is null)
             {
                 eb.WithTitle(voiceChannel.Name);
-                eb.AddField("Users", (await voiceChannel.GetUsersAsync().FlattenAsync().ConfigureAwait(false)).Count());
+                eb.AddField("Users", voiceChannel.ConnectedUsers.Count());
                 eb.AddField("Created On", voiceChannel.CreatedAt);
                 eb.AddField("Bitrate", voiceChannel.Bitrate);
                 eb.AddField("User Limit", voiceChannel.UserLimit == null ? "Infinite" : voiceChannel.UserLimit);
@@ -151,7 +146,7 @@ public partial class Utility
                     .WithTitle(Strings.FetchedUserInfo(ctx.Guild.Id))
                     .AddField("Username", usr)
                     .AddField("Created At", TimestampTag.FromDateTimeOffset(usr.CreatedAt))
-                    .AddField("Public Flags", usr.PublicFlags)
+                    .AddField("Public Flags", usr.Flags)
                     .WithImageUrl(usr.RealAvatarUrl().ToString())
                     .WithOkColor();
                 await ctx.Channel.EmbedAsync(embed).ConfigureAwait(false);
@@ -193,8 +188,8 @@ public partial class Utility
                 .AddField("Total Users", guild.Users.Count.ToString())
                 .AddField("Created On", TimestampTag.FromDateTimeOffset(guild.CreatedAt))
                 .WithColor(Mewdeko.OkColor);
-            if (guild.SplashUrl != null)
-                embed.WithImageUrl($"{guild.SplashUrl}?size=2048");
+            if (guild.GetInviteSplashUrl(2048) is { } splashUrl)
+                embed.WithImageUrl(splashUrl);
             if (Uri.IsWellFormedUriString(guild.IconUrl, UriKind.Absolute))
                 embed.WithThumbnailUrl(guild.IconUrl);
             if (guild.Emotes.Count > 0)
@@ -228,10 +223,10 @@ public partial class Utility
                 .AddField(Strings.Id(ctx.Guild.Id), ch.Id.ToString())
                 .AddField(Strings.CreatedAt(ctx.Guild.Id), TimestampTag.FromDateTimeOffset(ch.CreatedAt))
                 .AddField(Strings.Users(ctx.Guild.Id),
-                    (await ch.GetUsersAsync().FlattenAsync().ConfigureAwait(false)).Count())
+                    ch.Guild?.Users.Count(x => x.GetPermissions(ch).ViewChannel) ?? 0)
                 .AddField("NSFW", ch.IsNsfw)
                 .AddField("Slowmode Interval", TimeSpan.FromSeconds(ch.SlowModeInterval).Humanize())
-                .AddField("Default Thread Archive Duration", ch.DefaultArchiveDuration)
+                .AddField("Default Thread Archive Duration", ch.DefaultAutoArchiveDuration)
                 .WithColor(Mewdeko.OkColor);
             if (!string.IsNullOrWhiteSpace(ch.Topic))
                 embed.WithDescription(ch.Topic);
@@ -248,28 +243,24 @@ public partial class Utility
         [RequireContext(ContextType.Guild)]
         public async Task UserInfo(SocketGuildMember? usr = null)
         {
-            var user = usr ?? ctx.User as SocketGuildMember;
-            var userbanner = (await client.Rest.GetUserAsync(user.Id).ConfigureAwait(false)).GetBannerUrl(size: 2048);
+            var user = usr ?? ctx.Member!;
+            var userbanner = user.GetBannerUrl(2048);
             var serverUserType = user.GuildPermissions.Administrator ? "Administrator" : "Regular User";
-            var restUser = await client.Rest.GetUserAsync(user.Id);
             var embed = new EmbedBuilder()
                 .AddField("Username", user.ToString())
-                .WithColor(restUser.AccentColor ?? Mewdeko.OkColor);
+                .WithColor(user.AccentColor is { } accent ? new Color((uint)accent) : Mewdeko.OkColor);
 
             if (!string.IsNullOrWhiteSpace(user.Nickname))
                 embed.AddField("Nickname", user.Nickname);
 
             embed.AddField("User Id", user.Id)
                 .AddField("User Type", serverUserType)
-                .AddField("Joined Server", TimestampTag.FromDateTimeOffset(user.JoinedAt.GetValueOrDefault()))
-                .AddField("Joined Discord", TimestampTag.FromDateTimeOffset(user.CreatedAt))
-                .AddField("Role Count", user.GetRoles().Count(r => r.Id != r.Guild.EveryoneRole.Id));
+                .AddField("Joined Server", TimestampTag.FromDateTimeOffset(user.JoinedAt))
+                .AddField("Joined Fluxer", TimestampTag.FromDateTimeOffset(user.CreatedAt))
+                .AddField("Role Count", user.Roles.Count(r => r.Id != r.Guild.EveryoneRole.Id));
 
-            if (user.Activities.Count > 0)
-            {
-                embed.AddField("Activities",
-                    string.Join("\n", user.Activities.Select(x => string.Format($"{x.Name}: {x.Details ?? ""}"))));
-            }
+            if (FluxerContext.Snapshots.GetPresence(user.Id)?.CustomStatusText is { Length: > 0 } customStatus)
+                embed.AddField("Status", customStatus);
 
             var av = user.RealAvatarUrl();
             if (av.IsAbsoluteUri)
@@ -292,16 +283,16 @@ public partial class Utility
             if (input == 0)
             {
                 embed.Footer = null;
-                if (user.GetRoles().Any(x => x.Id != ctx.Guild.EveryoneRole.Id))
+                if (user.Roles.Any(x => x.Id != ctx.Guild.EveryoneRole.Id))
                 {
                     embed.AddField("Roles",
-                        string.Join("", user.GetRoles().OrderBy(x => x.Position).Select(x => x.Mention)));
+                        string.Join("", user.Roles.OrderBy(x => x.Position).Select(x => x.Mention)));
                 }
 
-                embed.AddField("Deafened", user.IsDeafened);
-                embed.AddField("Is VC Muted", user.IsMuted);
+                embed.AddField("Deafened", user.IsDeaf);
+                embed.AddField("Is VC Muted", user.IsMute);
                 embed.AddField("Is Server Muted",
-                    user.GetRoles().Contains(await muteService.GetMuteRole(ctx.Guild).ConfigureAwait(false)));
+                    user.Roles.Contains(await muteService.GetMuteRole(ctx.Guild).ConfigureAwait(false)));
                 await msg.ModifyAsync(x => x.Embed = embed.Build()).ConfigureAwait(false);
             }
 
@@ -324,8 +315,8 @@ public partial class Utility
         [RequireContext(ContextType.Guild)]
         public async Task Avatar([Remainder] SocketGuildMember? usr = null)
         {
-            usr ??= (SocketGuildMember)ctx.User;
-            var avatarUrl = usr.GetAvatarUrl(ImageFormat.Auto, 2048);
+            usr ??= ctx.Member!;
+            var avatarUrl = usr.GetAvatarUrl(2048);
 
             if (avatarUrl == null)
             {
@@ -333,17 +324,11 @@ public partial class Utility
                 return;
             }
 
-            var av = await client.Rest.GetGuildUserAsync(ctx.Guild.Id, usr.Id);
-            if (av.GuildAvatarId is not null)
-                avatarUrl = usr.GuildAvatarId.StartsWith("a_", StringComparison.InvariantCulture)
-                    ? $"{DiscordConfig.CDNUrl}guilds/{ctx.Guild.Id}/users/{usr.Id}/avatars/{av.GuildAvatarId}.gif?size=2048"
-                    : $"{DiscordConfig.CDNUrl}guilds/{ctx.Guild.Id}/users/{usr.Id}/avatars/{av.GuildAvatarId}.png?size=2048";
-
             await ctx.Channel.SendAsync(embed: new EmbedBuilder()
                     .WithOkColor()
                     .AddField(efb => efb.WithName("Username").WithValue(usr.ToString()).WithIsInline(true))
                     .AddField(efb =>
-                        efb.WithName($"{(av.GuildAvatarId is null ? "" : "Guild")} Avatar Url")
+                        efb.WithName($"{(usr.AvatarHash is null ? "" : "Guild")} Avatar Url")
                             .WithValue($"[Link]({avatarUrl})").WithIsInline(true))
                     .WithImageUrl(avatarUrl).Build())
                 .ConfigureAwait(false);

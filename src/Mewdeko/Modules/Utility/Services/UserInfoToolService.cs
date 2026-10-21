@@ -58,7 +58,7 @@ public class UserInfoToolService : INService
                     display_name = guildUser.DisplayName,
                     nickname = guildUser.Nickname,
                     is_bot = guildUser.IsBot,
-                    joined_at = guildUser.JoinedAt?.ToString("yyyy-MM-dd HH:mm:ss UTC"),
+                    joined_at = guildUser.JoinedAt.ToString("yyyy-MM-dd HH:mm:ss UTC"),
                     account_created = guildUser.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss UTC"),
                     avatar_url = guildUser.GetAvatarUrl() ?? guildUser.GetDefaultAvatarUrl(),
                     roles = guildUser.Roles.Where(r => r.Id != guildId).Select(r => r.Name).ToArray()

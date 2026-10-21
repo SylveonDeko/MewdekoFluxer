@@ -287,7 +287,7 @@ public class FeedsService : INService
         embed.WithTitle(title.TrimTo(256));
         var desc = feedItem.Description?.StripHtml();
         if (!string.IsNullOrWhiteSpace(feedItem.Description)) embed.WithDescription(desc.TrimTo(2048));
-        var (builder, content) = await GetFeedEmbed(repbuilder.Replace(sub.Message), channel.GuildId);
+        var (builder, content) = await GetFeedEmbed(repbuilder.Replace(sub.Message), channel.Guild.Id);
         if (sub.Message is "-" or null) await channel.EmbedAsync(embed);
         else
             await channel.SendAsync(content ?? "", embeds: builder ?? null);
