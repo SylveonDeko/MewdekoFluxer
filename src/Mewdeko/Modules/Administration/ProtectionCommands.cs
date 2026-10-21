@@ -488,10 +488,9 @@ public partial class Administration
         {
             var (spam, raid, alt, massMention, pattern, massPost, postChannel) = Service.GetAntiStats(ctx.Guild.Id);
             var imageHash = Service.GetAntiImageHashStats(ctx.Guild.Id);
-            var externalApp = Service.GetAntiExternalAppStats(ctx.Guild.Id);
 
             if (spam is null && raid is null && alt is null && massMention is null && pattern is null &&
-                massPost is null && postChannel is null && imageHash is null && externalApp is null)
+                massPost is null && postChannel is null && imageHash is null)
             {
                 await ReplyConfirmAsync(Strings.ProtNone(ctx.Guild.Id)).ConfigureAwait(false);
                 return;
@@ -540,12 +539,6 @@ public partial class Administration
             if (imageHash != null)
             {
                 embed.AddField("Anti-Image-Hash", GetAntiImageHashString(imageHash).TrimTo(1024), true);
-            }
-
-            if (externalApp != null)
-            {
-                embed.AddField("Anti-External-App",
-                    GetAntiExternalAppString(externalApp).TrimTo(1024), true);
             }
 
             await ctx.Channel.EmbedAsync(embed).ConfigureAwait(false);
@@ -1277,73 +1270,6 @@ public partial class Administration
         }
 
         /// <summary>
-        ///     Disables Anti-External-App protection for the guild.
-        /// </summary>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.Administrator)]
-        public async Task AntiExternalApp()
-        {
-            if (await Service.TryStopAntiExternalApp(ctx.Guild.Id).ConfigureAwait(false))
-            {
-                await ReplyConfirmAsync(Strings.AntiExternalAppDisabled(ctx.Guild.Id)).ConfigureAwait(false);
-                return;
-            }
-
-            await ReplyErrorAsync(Strings.AntiExternalAppNotEnabled(ctx.Guild.Id)).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        ///     Enables Anti-External-App protection, which watches messages members send through apps they added to their
-        ///     own account and punishes the member who ran the app when a message breaks the rules.
-        /// </summary>
-        /// <param name="action">The punishment for the member who ran the app.</param>
-        /// <param name="mentionThreshold">How many mentions one app message may carry, 0 to turn the check off.</param>
-        /// <param name="maxMessages">How many app messages one member may send in 10 seconds, 0 to turn the check off.</param>
-        /// <param name="punishTime">The punishment duration, for actions that support one.</param>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.Administrator)]
-        public async Task AntiExternalApp(PunishmentAction action, int mentionThreshold = 5, int maxMessages = 5,
-            [Remainder] StoopidTime? punishTime = null)
-        {
-            if (mentionThreshold < 0 || maxMessages < 0)
-            {
-                await ReplyErrorAsync(Strings.InvalidInput(ctx.Guild.Id)).ConfigureAwait(false);
-                return;
-            }
-
-            switch (action)
-            {
-                case PunishmentAction.Timeout when punishTime?.Time.Days > 28:
-                    await ReplyErrorAsync(Strings.TimeoutLengthTooLong(ctx.Guild.Id)).ConfigureAwait(false);
-                    return;
-                case PunishmentAction.Timeout when punishTime is null || punishTime.Time == TimeSpan.Zero:
-                    await ReplyErrorAsync(Strings.TimeoutNeedsTime(ctx.Guild.Id)).ConfigureAwait(false);
-                    return;
-            }
-
-            var punishDuration = (int?)punishTime?.Time.TotalMinutes ?? 0;
-            var result = await Service.StartAntiExternalAppAsync(ctx.Guild.Id, action, punishDuration, null,
-                mentionThreshold, true, maxMessages, 10, true, true).ConfigureAwait(false);
-
-            if (result is null)
-            {
-                await ReplyErrorAsync(Strings.AntiExternalAppFailedStart(ctx.Guild.Id)).ConfigureAwait(false);
-                return;
-            }
-
-            var durationText = punishDuration > 0 ? $" for {TimeSpan.FromMinutes(punishDuration).Humanize()}" : "";
-            var settings = result.AntiExternalAppSettings;
-            await ReplyConfirmAsync(Strings.AntiExternalAppEnabled(ctx.Guild.Id, action.ToString(), durationText,
-                settings.MentionThreshold > 0 ? settings.MentionThreshold.ToString() : "Off",
-                settings.MaxMessages > 0 ? settings.MaxMessages.ToString() : "Off",
-                settings.TimeWindowSeconds)).ConfigureAwait(false);
-        }
-
-        /// <summary>
         ///     Blocks an image, using the guild default action. The image is taken from an attachment on this message, from the
         ///     message being replied to, or from a URL given as the first word.
         /// </summary>
@@ -1382,7 +1308,8 @@ public partial class Administration
                 return;
             }
 
-            var url = ResolveImageUrl(ref name);
+            string? url;
+            (url, name) = await ResolveImageUrlAsync(name).ConfigureAwait(false);
             if (url is null)
             {
                 await ReplyErrorAsync(Strings.ImageHashNoImage(ctx.Guild.Id)).ConfigureAwait(false);
@@ -1447,7 +1374,8 @@ public partial class Administration
         [UserPerm(GuildPermission.Administrator)]
         public async Task ImageHash([Remainder] string? url = null)
         {
-            var resolved = ResolveImageUrl(ref url);
+            string? resolved;
+            (resolved, url) = await ResolveImageUrlAsync(url).ConfigureAwait(false);
             if (resolved is null)
             {
                 await ReplyErrorAsync(Strings.ImageHashNoImage(ctx.Guild.Id)).ConfigureAwait(false);
@@ -1584,40 +1512,45 @@ public partial class Administration
         ///     Finds the image to hash: an attachment on the invoking message, an image on the message being replied to, or a URL
         ///     given as the first word of the remaining text. When the first word is a URL it is stripped from the label.
         /// </summary>
-        private string? ResolveImageUrl(ref string? text)
+        private async Task<(string? Url, string? Text)> ResolveImageUrlAsync(string? text)
         {
-            var attachment = ctx.Message.Attachments.FirstOrDefault(a =>
+            var attachment = ctx.Message.Attachments?.FirstOrDefault(a =>
                 a.ContentType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) == true);
 
             if (attachment is not null)
-                return attachment.Url;
+                return (attachment.Url, text);
 
-            if (ctx.Message.ReferencedMessage is { } reply)
+            if (ctx.Message.MessageReference is { } reference)
             {
-                var replyAttachment = reply.Attachments.FirstOrDefault(a =>
-                    a.ContentType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) == true);
+                var reply = FluxerContext.Snapshots.GetMessage(reference.MessageId)
+                            ?? await ctx.Channel.GetMessageAsync(reference.MessageId).ConfigureAwait(false);
 
-                if (replyAttachment is not null)
-                    return replyAttachment.Url;
+                if (reply is not null)
+                {
+                    var replyAttachment = reply.Attachments?.FirstOrDefault(a =>
+                        a.ContentType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) == true);
 
-                var embedImage = reply.Embeds
-                    .Select(e => e.Image?.Url ?? e.Thumbnail?.Url)
-                    .FirstOrDefault(u => u is not null);
+                    if (replyAttachment is not null)
+                        return (replyAttachment.Url, text);
 
-                if (embedImage is not null)
-                    return embedImage;
+                    var embedImage = reply.Embeds?
+                        .Select(e => e.Image?.Url ?? e.Thumbnail?.Url)
+                        .FirstOrDefault(u => u is not null);
+
+                    if (embedImage is not null)
+                        return (embedImage, text);
+                }
             }
 
             if (string.IsNullOrWhiteSpace(text))
-                return null;
+                return (null, text);
 
             var parts = text.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
             if (!Uri.TryCreate(parts[0], UriKind.Absolute, out var uri) ||
                 uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
-                return null;
+                return (null, text);
 
-            text = parts.Length > 1 ? parts[1] : null;
-            return uri.ToString();
+            return (uri.ToString(), parts.Length > 1 ? parts[1] : null);
         }
 
         /// <summary>
@@ -1635,26 +1568,6 @@ public partial class Administration
                 add,
                 Format.Bold(stats.Hashes.Count.ToString()),
                 Format.Bold(settings.HashThreshold.ToString()),
-                Format.Bold(stats.Counter.ToString()));
-        }
-
-        /// <summary>
-        ///     Builds the string for the Anti-External-App settings display.
-        /// </summary>
-        private string GetAntiExternalAppString(AntiExternalAppStats stats)
-        {
-            var settings = stats.AntiExternalAppSettings;
-            var add = "";
-            if (settings.PunishDuration > 0)
-                add = $" ({TimeSpan.FromMinutes(settings.PunishDuration).Humanize()})";
-
-            return Strings.AntiExternalAppStats(ctx.Guild.Id,
-                Format.Bold(((PunishmentAction)settings.Action).ToString()),
-                add,
-                Format.Bold(settings.MentionThreshold > 0 ? settings.MentionThreshold.ToString() : "Off"),
-                Format.Bold(settings.BlockInvites ? "Yes" : "No"),
-                Format.Bold(settings.MaxMessages > 0 ? settings.MaxMessages.ToString() : "Off"),
-                Format.Bold(settings.TimeWindowSeconds.ToString()),
                 Format.Bold(stats.Counter.ToString()));
         }
     }

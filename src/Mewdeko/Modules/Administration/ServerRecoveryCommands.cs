@@ -136,10 +136,13 @@ public partial class Administration
 
             var currentBotUser = await ctx.Guild.GetCurrentUserAsync();
             var highestRole = currentBotUser.GetRoles().Max(role => role.Position);
-            var newRole = await ctx.Guild.CreateRoleAsync("Recovered Server Owner Role",
-                new GuildPermissions(administrator: true), null, false, null);
-            await newRole.ModifyAsync(x => x.Position = highestRole - 1);
-            await ((SocketGuildMember)ctx.User).AddRoleAsync(newRole);
+            var newRole = await ctx.Guild.CreateRoleAsync(new CreateGuildRoleRequest
+            {
+                Name = "Recovered Server Owner Role", Permissions = (ulong)GuildPermission.Administrator
+            });
+            await ctx.Client.Rest.UpdateRolePositionsAsync(ctx.Guild.Id,
+                [new RolePositionItemJson { Id = newRole.Id, Position = highestRole - 1 }]);
+            await ctx.Member!.AddRoleAsync(newRole);
             await dm.SendConfirmAsync(Strings.Highestpossiblerole(ctx.Guild.Id));
         }
     }

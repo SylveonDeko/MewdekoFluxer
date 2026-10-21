@@ -1,13 +1,6 @@
 {
   "bandm": "您已被 {0} 服务器封禁。\n原因：{1}",
   "banmsg_default": "未设置封禁消息。将使用默认行为。",
-  "boost_off": "Boost 通告已禁用。",
-  "boost_on": "已在此频道启用 Boost 通告。",
-  "boostdel_off": "Boost 消息的自动删除已禁用。",
-  "boostdel_on": "Boost 消息将在 {0} 秒后被删除。",
-  "boostmsg_cur": "当前 Boost 消息：{0}",
-  "boostmsg_enable": "通过输入 {0} 启用 Boost 消息",
-  "boostmsg_new": "已设置新的 Boost 消息。",
   "bye_off": "告别公告已禁用。",
   "bye_on": "此频道启用告别公告。",
   "byedel_off": "自动删除告别消息已禁用。",

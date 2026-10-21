@@ -8,7 +8,7 @@ namespace Mewdeko.Modules.Administration;
 public partial class Administration
 {
     /// <summary>
-    ///     Module for managing Discord permission overrides. This module allows administrators to override the required
+    ///     Module for managing permission overrides. This module allows administrators to override the required
     ///     permissions for a command.
     /// </summary>
     /// <param name="serv"></param>

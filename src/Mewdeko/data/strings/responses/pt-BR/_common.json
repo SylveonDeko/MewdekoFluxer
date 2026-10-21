@@ -328,8 +328,6 @@
   "rolehoist_enabled": "O cargo {0} agora é exibido separadamente dos membros online.",
   "rolehoist_disabled": "O cargo {0} não é mais exibido separadamente dos membros online.",
   "type": "Tipo",
-  "gvc_disabled": "A função \"Canal de Voz de Jogo\" foi desativada nesse servidor.",
-  "gvc_enabled": "{0} agora é um \"Canal de Voz de Jogo\".",
   "not_in_voice": "Você não está em um canal de voz nesse servidor.",
   "item": "Item",
   "blocked_commands": "Comandos Bloqueados",

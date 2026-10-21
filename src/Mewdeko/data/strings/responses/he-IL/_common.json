@@ -328,8 +328,6 @@
   "rolehoist_enabled": "Role {0} is now displayed separately from online members.",
   "rolehoist_disabled": "Role {0} is no longer displayed separately from online members.",
   "type": "סוג",
-  "gvc_disabled": "התכונה 'ערוץ קול' של המשחק הושבתה בשרת זה.",
-  "gvc_enabled": "{0} הוא ערוץ קול של משחקים כעת.",
   "not_in_voice": "אינך נמצא בערוץ קול בשרת זה.",
   "item": "פריט",
   "blocked_commands": "פקודות חסומות",

@@ -17,7 +17,7 @@ namespace Mewdeko.Modules.Administration.Services;
 ///     Service for managing log commands.
 /// </summary>
 /// <param name="dbFactory">The database service.</param>
-/// <param name="client">The Discord client.</param>
+/// <param name="client">The Fluxer client.</param>
 /// <param name="handler">The event handler.</param>
 /// <param name="muteService">The mute service.</param>
 /// <param name="strings">The localization service.</param>
@@ -87,9 +87,6 @@ public class LogCommandService(
     {
         /// <summary> Miscellaneous or custom log events not covered by other types. </summary>
         Other,
-
-        /// <summary> A scheduled server event was created. </summary>
-        EventCreated,
 
         /// <summary> A role's properties (name, color, perms, etc.) were updated. </summary>
         RoleUpdated,
@@ -259,7 +256,7 @@ public class LogCommandService(
         FitEmbed(eb);
 
         if (files is { Count: > 0 })
-            await channel.SendFilesAsync(files, embed: eb.Build(), allowedMentions: AllowedMentions.None);
+            await channel.SendAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None, attachments: files);
         else
             await channel.SendAsync(embed: eb.Build(), allowedMentions: AllowedMentions.None);
 
@@ -293,33 +290,33 @@ public class LogCommandService(
         }
 
         // yeaaaa would be a good idea to add events AFTER we get all guild settings.
-        handler.Subscribe("RoleUpdated", "LogCommandService", OnRoleUpdated);
-        handler.Subscribe("RoleCreated", "LogCommandService", OnRoleCreated);
-        handler.Subscribe("RoleDeleted", "LogCommandService", OnRoleDeleted);
-        handler.Subscribe("GuildUpdated", "LogCommandService", OnGuildUpdated);
-        handler.Subscribe("ThreadCreated", "LogCommandService", OnThreadCreated);
-        handler.Subscribe("GuildMemberUpdated", "LogCommandService", OnUserRoleAdded);
-        handler.Subscribe("GuildMemberUpdated", "LogCommandService", OnUserRoleRemoved);
-        handler.Subscribe("UserUpdated", "LogCommandService", OnUsernameUpdated);
-        handler.Subscribe("UserUpdated", "LogCommandService", OnUserUpdated);
-        handler.Subscribe("GuildMemberUpdated", "LogCommandService", OnNicknameUpdated);
-        handler.Subscribe("ThreadDeleted", "LogCommandService", OnThreadDeleted);
-        handler.Subscribe("ThreadUpdated", "LogCommandService", OnThreadUpdated);
-        handler.Subscribe("MessageUpdated", "LogCommandService", OnMessageUpdated);
-        handler.Subscribe("MessageDeleted", "LogCommandService", OnMessageDeleted);
-        handler.Subscribe("UserJoined", "LogCommandService", OnUserJoined);
-        handler.Subscribe("UserLeft", "LogCommandService", OnUserLeft);
-        handler.Subscribe("ChannelCreated", "LogCommandService", OnChannelCreated);
-        handler.Subscribe("ChannelDestroyed", "LogCommandService", OnChannelDestroyed);
-        handler.Subscribe("ChannelUpdated", "LogCommandService", OnChannelUpdated);
-        handler.Subscribe("UserVoiceStateUpdated", "LogCommandService", OnVoicePresence);
-        handler.Subscribe("UserVoiceStateUpdated", "LogCommandService", OnVoicePresenceTts);
-        handler.Subscribe("AuditLogCreated", "LogCommandService", OnAuditLogCreated);
-        handler.Subscribe("InviteCreated", "LogCommandService", OnInviteCreated);
-        handler.Subscribe("InviteDeleted", "LogCommandService", OnInviteDeleted);
-        handler.Subscribe("MessagesBulkDeleted", "LogCommandService", OnMessagesBulkDeleted);
-        handler.Subscribe("ReactionAdded", "LogCommandService", OnReactionAdded);
-        handler.Subscribe("ReactionRemoved", "LogCommandService", OnReactionRemoved);
+        handler.RoleUpdated.Subscribe("LogCommandService", OnRoleUpdated);
+        handler.RoleCreated.Subscribe("LogCommandService", OnRoleCreated);
+        handler.RoleDeleted.Subscribe("LogCommandService", OnRoleDeleted);
+        handler.GuildUpdated.Subscribe("LogCommandService", OnGuildUpdated);
+        handler.ThreadCreated.Subscribe("LogCommandService", OnThreadCreated);
+        handler.GuildMemberUpdated.Subscribe("LogCommandService", OnUserRoleAdded);
+        handler.GuildMemberUpdated.Subscribe("LogCommandService", OnUserRoleRemoved);
+        handler.UserUpdated.Subscribe("LogCommandService", OnUsernameUpdated);
+        handler.UserUpdated.Subscribe("LogCommandService", OnUserUpdated);
+        handler.GuildMemberUpdated.Subscribe("LogCommandService", OnNicknameUpdated);
+        handler.ThreadDeleted.Subscribe("LogCommandService", OnThreadDeleted);
+        handler.ThreadUpdated.Subscribe("LogCommandService", OnThreadUpdated);
+        handler.MessageUpdated.Subscribe("LogCommandService", OnMessageUpdated);
+        handler.MessageDeleted.Subscribe("LogCommandService", OnMessageDeleted);
+        handler.UserJoined.Subscribe("LogCommandService", OnUserJoined);
+        handler.UserLeft.Subscribe("LogCommandService", OnUserLeft);
+        handler.ChannelCreated.Subscribe("LogCommandService", OnChannelCreated);
+        handler.ChannelDestroyed.Subscribe("LogCommandService", OnChannelDestroyed);
+        handler.ChannelUpdated.Subscribe("LogCommandService", OnChannelUpdated);
+        handler.UserVoiceStateUpdated.Subscribe("LogCommandService", OnVoicePresence);
+        handler.UserVoiceStateUpdated.Subscribe("LogCommandService", OnVoicePresenceTts);
+        handler.AuditLogCreated.Subscribe("LogCommandService", OnAuditLogCreated);
+        handler.InviteCreated.Subscribe("LogCommandService", OnInviteCreated);
+        handler.InviteDeleted.Subscribe("LogCommandService", OnInviteDeleted);
+        handler.MessagesBulkDeleted.Subscribe("LogCommandService", OnMessagesBulkDeleted);
+        handler.ReactionAdded.Subscribe("LogCommandService", OnReactionAdded);
+        handler.ReactionRemoved.Subscribe("LogCommandService", OnReactionRemoved);
         muteService.UserMuted += OnUserMuted;
         muteService.UserUnmuted += OnUserUnmuted;
 
@@ -339,14 +336,14 @@ public class LogCommandService(
         {
             case ActionType.Ban:
             {
-                if (args.Data is BanAuditLogData data)
-                    await OnUserBanned(data.Target, arsg2, args.User, args.Reason);
+                if (args.TargetId is { } targetId && await client.GetUserAsync(targetId) is { } target)
+                    await OnUserBanned(target, arsg2, args.User, args.Reason);
                 break;
             }
             case ActionType.Unban:
             {
-                if (args.Data is UnbanAuditLogData data)
-                    await OnUserUnbanned(data.Target, arsg2, args.User, args.Reason);
+                if (args.TargetId is { } targetId && await client.GetUserAsync(targetId) is { } target)
+                    await OnUserUnbanned(target, arsg2, args.User, args.Reason);
                 break;
             }
         }
@@ -378,17 +375,28 @@ public class LogCommandService(
             var eb = LogEmbed(strings.RoleCreated(args.Guild.Id),
                 strings.NameField(args.Guild.Id, args.Name) +
                 strings.IdField(args.Guild.Id, args.Id) +
-                strings.ColorField(args.Guild.Id, args.Colors.PrimaryColor) +
+                strings.ColorField(args.Guild.Id, args.Colour) +
                 strings.HoistedField(args.Guild.Id, args.IsHoisted) +
                 strings.MentionableField(args.Guild.Id, args.IsMentionable) +
                 strings.PositionField(args.Guild.Id, args.Position) +
                 strings.PermissionsField(args.Guild.Id, string.Join(", ", args.Permissions.ToList())) +
-                strings.CreatedByField(args.Guild.Id, auditLog.User.Mention, auditLog.User.Id) +
-                strings.ManagedField(args.Guild.Id, args.IsManaged), Mewdeko.OkColor);
+                strings.CreatedByField(args.Guild.Id, auditLog.User.Mention, auditLog.User.Id),
+                Mewdeko.OkColor);
 
             await SendLogAsync(channel, eb);
         }
     }
+
+    /// <summary>
+    ///     An audit log entry reduced to who did what to which target.
+    /// </summary>
+    /// <param name="Action">The kind of action.</param>
+    /// <param name="User">The user who performed the action.</param>
+    /// <param name="TargetId">The ID of the affected entity, when there is one.</param>
+    /// <param name="Reason">The reason given for the action.</param>
+    /// <param name="CreatedAt">When the action happened.</param>
+    private sealed record AuditEntry(ActionType Action, User User, ulong? TargetId, string? Reason,
+        DateTimeOffset CreatedAt);
 
     /// <summary>
     ///     Fetches audit log entries without throwing when the bot lacks the View Audit Log permission. Guilds where the
@@ -398,7 +406,7 @@ public class LogCommandService(
     /// <param name="actionType">The action type to filter by.</param>
     /// <param name="limit">The maximum number of entries to fetch.</param>
     /// <returns>The matching audit log entries, or an empty collection if they are unavailable.</returns>
-    private async Task<IReadOnlyCollection<SocketAuditLog>> GetAuditLogsSafeAsync(SocketGuild? guild, ActionType actionType,
+    private async Task<IReadOnlyCollection<AuditEntry>> GetAuditLogsSafeAsync(SocketGuild? guild, ActionType actionType,
         int limit = 1)
     {
         if (guild is null)
@@ -410,7 +418,27 @@ public class LogCommandService(
 
         try
         {
-            return await guild.GetAuditLogsAsync(limit, actionType: actionType).ConfigureAwait(false);
+            var list = await guild.GetAuditLogsAsync(new GuildAuditLogListRequest
+            {
+                Limit = limit, ActionType = actionType
+            }).ConfigureAwait(false);
+
+            var entries = new List<AuditEntry>();
+            foreach (var entry in list.Entries)
+            {
+                if (entry.UserId is not { } userId)
+                    continue;
+
+                var user = client.GetUser(userId);
+                if (user is null && list.Users.FirstOrDefault(x => x.Id == userId) is { } userJson)
+                    user = User.Create(client, userJson);
+
+                if (user is not null)
+                    entries.Add(new AuditEntry(entry.Action, user, entry.TargetId, entry.Reason,
+                        SnowflakeUtils.FromSnowflake(entry.Id)));
+            }
+
+            return entries;
         }
         catch (FluxerApiException ex)
         {
@@ -468,24 +496,17 @@ public class LogCommandService(
                 beforeImage = args.BannerUrl;
                 afterImage = arsg2.BannerUrl;
             }
-            else if (args.SplashUrl != arsg2.SplashUrl)
-            {
-                title = strings.ServerSplashUpdated(guildId);
-                description = updatedByStr;
-                beforeImage = args.SplashUrl;
-                afterImage = arsg2.SplashUrl;
-            }
-            else if (args.VanityURLCode != arsg2.VanityURLCode)
+            else if (args.VanityUrlCode != arsg2.VanityUrlCode)
             {
                 title = strings.ServerVanityUrlUpdated(guildId);
-                description = strings.ServerVanityUrlChange(guildId, arsg2.VanityURLCode ?? strings.None(guildId),
-                    args.VanityURLCode ?? strings.None(guildId), updatedByStr);
+                description = strings.ServerVanityUrlChange(guildId, arsg2.VanityUrlCode ?? strings.None(guildId),
+                    args.VanityUrlCode ?? strings.None(guildId), updatedByStr);
             }
             else if (args.OwnerId != arsg2.OwnerId)
             {
                 title = strings.ServerOwnerUpdated(guildId);
-                description = strings.ServerOwnerChange(guildId, arsg2.Owner.Mention, arsg2.Owner.Id,
-                    args.Owner.Mention, args.Owner.Id, updatedByStr);
+                description = strings.ServerOwnerChange(guildId, MentionUtils.MentionUser(arsg2.OwnerId),
+                    arsg2.OwnerId, MentionUtils.MentionUser(args.OwnerId), args.OwnerId, updatedByStr);
             }
             else if (args.AFKChannel?.Id != arsg2.AFKChannel?.Id)
             {
@@ -495,10 +516,10 @@ public class LogCommandService(
                     args.AFKChannel?.Mention ?? strings.None(guildId), args.AFKChannel?.Id.ToString() ?? "N/A",
                     updatedByStr);
             }
-            else if (args.AFKTimeout != arsg2.AFKTimeout)
+            else if (args.AfkTimeout != arsg2.AfkTimeout)
             {
                 title = strings.ServerAfkTimeoutUpdated(guildId);
-                description = strings.ServerAfkTimeoutChange(guildId, arsg2.AFKTimeout, args.AFKTimeout, updatedByStr);
+                description = strings.ServerAfkTimeoutChange(guildId, arsg2.AfkTimeout, args.AfkTimeout, updatedByStr);
             }
             else if (args.DefaultMessageNotifications != arsg2.DefaultMessageNotifications)
             {
@@ -540,28 +561,6 @@ public class LogCommandService(
                     arsg2.RulesChannel?.Id.ToString() ?? "N/A",
                     args.RulesChannel?.Mention ?? strings.None(guildId),
                     args.RulesChannel?.Id.ToString() ?? "N/A", updatedByStr);
-            }
-            else if (args.PublicUpdatesChannel?.Id != arsg2.PublicUpdatesChannel?.Id)
-            {
-                title = strings.ServerPublicUpdatesChannelUpdated(guildId);
-                description = strings.ServerPublicUpdatesChannelChange(guildId,
-                    arsg2.PublicUpdatesChannel?.Mention ?? strings.None(guildId),
-                    arsg2.PublicUpdatesChannel?.Id.ToString() ?? "N/A",
-                    args.PublicUpdatesChannel?.Mention ?? strings.None(guildId),
-                    args.PublicUpdatesChannel?.Id.ToString() ?? "N/A", updatedByStr);
-            }
-            else if (args.MaxVideoChannelUsers != arsg2.MaxVideoChannelUsers)
-            {
-                title = strings.ServerMaxVideoUsersUpdated(guildId);
-                description = strings.ServerMaxVideoUsersChange(guildId,
-                    arsg2.MaxVideoChannelUsers?.ToString() ?? strings.Unlimited(guildId),
-                    args.MaxVideoChannelUsers?.ToString() ?? strings.Unlimited(guildId), updatedByStr);
-            }
-            else if (args.MaxMembers != arsg2.MaxMembers)
-            {
-                title = strings.ServerMaxMembersUpdated(guildId);
-                description = strings.ServerMaxMembersChange(guildId, arsg2.MaxMembers?.ToString() ?? "N/A",
-                    args.MaxMembers?.ToString() ?? "N/A", updatedByStr);
             }
             else
                 return;
@@ -641,7 +640,6 @@ public class LogCommandService(
             var roleStr = $"`Role:` {args.Mention} | {args.Id}";
             var guildId = args.Guild.Id;
             var color = Mewdeko.OkColor;
-            string? thumbnailUrl = null;
             string title;
             string description;
 
@@ -650,12 +648,11 @@ public class LogCommandService(
                 title = strings.RoleNameUpdated(guildId);
                 description = strings.RoleNameChange(guildId, arsg2.Name, args.Name, updatedByStr);
             }
-            else if (args.Colors.PrimaryColor != arsg2.Colors.PrimaryColor)
+            else if (args.Color != arsg2.Color)
             {
                 title = strings.RoleColorUpdated(guildId);
-                description = strings.RoleColorChange(guildId, roleStr, arsg2.Colors.PrimaryColor,
-                    args.Colors.PrimaryColor, updatedByStr);
-                color = arsg2.Colors.PrimaryColor;
+                description = strings.RoleColorChange(guildId, roleStr, arsg2.Colour, args.Colour, updatedByStr);
+                color = arsg2.Colour;
             }
             else if (args.IsHoisted != arsg2.IsHoisted)
             {
@@ -669,12 +666,6 @@ public class LogCommandService(
                 description = strings.RoleMentionableChange(guildId, roleStr, arsg2.IsMentionable,
                     args.IsMentionable, updatedByStr);
             }
-            else if (args.IsManaged != arsg2.IsManaged)
-            {
-                title = strings.RoleManagedUpdated(guildId);
-                description = strings.RoleManagedChange(guildId, roleStr, arsg2.IsManaged, args.IsManaged,
-                    updatedByStr);
-            }
             else if (args.Position != arsg2.Position)
             {
                 title = strings.RolePositionUpdated(guildId);
@@ -687,20 +678,15 @@ public class LogCommandService(
                 description = strings.RolePermissionsChange(guildId, roleStr, arsg2.Permissions, args.Permissions,
                     updatedByStr);
             }
-            else if (args.Icon != arsg2.Icon || args.Emoji?.ToString() != arsg2.Emoji?.ToString())
+            else if (args.UnicodeEmoji != arsg2.UnicodeEmoji)
             {
                 title = strings.RoleIconUpdated(guildId);
                 description = strings.RoleIconChange(guildId, roleStr, updatedByStr);
-                thumbnailUrl = arsg2.GetIconUrl() ?? args.GetIconUrl();
             }
             else
                 return;
 
-            var eb = LogEmbed(title, description, color);
-            if (!string.IsNullOrEmpty(thumbnailUrl))
-                eb.WithThumbnailUrl(thumbnailUrl);
-
-            await SendLogAsync(channel, eb);
+            await SendLogAsync(channel, LogEmbed(title, description, color));
         }
     }
 
@@ -708,7 +694,7 @@ public class LogCommandService(
     ///     Handles logging for when a thread is created.
     /// </summary>
     /// <param name="socketThreadChannel">The created thread channel.</param>
-    private async Task OnThreadCreated(Channel socketThreadChannel)
+    private async Task OnThreadCreated(ThreadChannel socketThreadChannel)
     {
         // Check if thread or its parent channel is ignored
         if (IsChannelIgnored(socketThreadChannel.Guild.Id, socketThreadChannel.Id) ||
@@ -727,10 +713,10 @@ public class LogCommandService(
 
             var eb = LogEmbed(strings.ThreadCreated(socketThreadChannel.Guild.Id),
                 strings.ThreadName(socketThreadChannel.Guild.Id, socketThreadChannel.Name) +
-                $"`Created By:` {socketThreadChannel.Owner?.Mention ?? "N/A"} | {socketThreadChannel.Owner?.Id.ToString() ?? "N/A"}\n" +
+                $"`Created By:` {(socketThreadChannel.OwnerId is { } ownerId ? MentionUtils.MentionUser(ownerId) : "N/A")} | {socketThreadChannel.OwnerId?.ToString() ?? "N/A"}\n" +
                 $"`Created At:` {socketThreadChannel.CreatedAt:dd/MM/yyyy HH:mm:ss}\n" +
                 $"`Thread Type:` {socketThreadChannel.Type}\n" +
-                $"`Thread Tags:` {string.Join(", ", socketThreadChannel.AppliedTags)}", Mewdeko.OkColor);
+                $"`Thread Tags:` {string.Join(", ", socketThreadChannel.AppliedTags ?? [])}", Mewdeko.OkColor);
 
             await SendLogAsync(channel, eb);
             collector.Feature("logging", channel.Guild.Id);
@@ -740,17 +726,17 @@ public class LogCommandService(
     /// <summary>
     ///     Handles the event when a user has a role added to them.
     /// </summary>
-    /// <param name="cacheable">The user before the event fired</param>
-    /// <param name="arsg2">The user after the event was fired</param>
-    private async Task OnUserRoleAdded(Cacheable<SocketGuildMember> cacheable, SocketGuildMember arsg2)
+    /// <param name="before">The member before the event fired</param>
+    /// <param name="arsg2">The member after the event was fired</param>
+    private async Task OnUserRoleAdded(MemberSnapshot? before, SocketGuildMember arsg2)
     {
-        if (!GuildLogSettings.TryGetValue(arsg2.Guild.Id, out var logSetting) || !cacheable.HasValue)
+        if (!GuildLogSettings.TryGetValue(arsg2.Guild.Id, out var logSetting) || before is null)
             return;
 
         if (logSetting.UserRoleAddedId is null or 0)
             return;
 
-        var addedRoles = arsg2.Roles.Except(cacheable.Value.Roles).ToList();
+        var addedRoles = arsg2.RoleIds.Except(before.RoleIds).ToList();
         if (!addedRoles.Any()) return;
 
         var channel = arsg2.Guild.GetTextChannel(logSetting.UserRoleAddedId.Value);
@@ -763,7 +749,7 @@ public class LogCommandService(
 
         var eb = LogEmbed(strings.UserRolesAdded(arsg2.Guild.Id),
             strings.RolesField(arsg2.Guild.Id,
-                string.Join(strings.CommaSeparator(arsg2.Guild.Id), addedRoles.Select(x => x.Mention))) +
+                string.Join(strings.CommaSeparator(arsg2.Guild.Id), addedRoles.Select(MentionUtils.MentionRole))) +
             strings.AddedByField(arsg2.Guild.Id, auditLog.User.Mention, auditLog.User.Id) +
             strings.AddedToField(arsg2.Guild.Id, arsg2.Mention, arsg2.Id), Mewdeko.OkColor);
 
@@ -774,17 +760,17 @@ public class LogCommandService(
     /// <summary>
     ///     Handles the event where a user has a role removed.
     /// </summary>
-    /// <param name="cacheable">The user before the removal</param>
-    /// <param name="arsg2">The user after the removal</param>
-    private async Task OnUserRoleRemoved(Cacheable<SocketGuildMember> cacheable, SocketGuildMember arsg2)
+    /// <param name="before">The member before the removal</param>
+    /// <param name="arsg2">The member after the removal</param>
+    private async Task OnUserRoleRemoved(MemberSnapshot? before, SocketGuildMember arsg2)
     {
-        if (!GuildLogSettings.TryGetValue(arsg2.Guild.Id, out var logSetting) || !cacheable.HasValue)
+        if (!GuildLogSettings.TryGetValue(arsg2.Guild.Id, out var logSetting) || before is null)
             return;
 
         if (logSetting.UserRoleRemovedId is null or 0)
             return;
 
-        var removedRoles = cacheable.Value.Roles.Except(arsg2.Roles).ToList();
+        var removedRoles = before.RoleIds.Except(arsg2.RoleIds).ToList();
         if (!removedRoles.Any()) return;
 
         var channel = arsg2.Guild.GetTextChannel(logSetting.UserRoleRemovedId.Value);
@@ -797,7 +783,7 @@ public class LogCommandService(
 
         var eb = LogEmbed(strings.UserRolesRemoved(arsg2.Guild.Id),
             strings.RolesField(arsg2.Guild.Id,
-                string.Join(strings.CommaSeparator(arsg2.Guild.Id), removedRoles.Select(x => x.Mention))) +
+                string.Join(strings.CommaSeparator(arsg2.Guild.Id), removedRoles.Select(MentionUtils.MentionRole))) +
             strings.RemovedByField(arsg2.Guild.Id, auditLog.User.Mention, auditLog.User.Id) +
             strings.RemovedFromField(arsg2.Guild.Id, arsg2.Mention, arsg2.Id), Mewdeko.OkColor);
 
@@ -809,43 +795,39 @@ public class LogCommandService(
     ///     Handles the event when a user updates their username.
     /// </summary>
     /// <param name="args">The user before they updated their username.</param>
-    /// <param name="arsg2">The user after they updated their username.</param>
-    private async Task OnUsernameUpdated(SocketUser args, SocketUser arsg2)
+    /// <param name="user">The member after they updated their username.</param>
+    private async Task OnUsernameUpdated(UserSnapshot args, SocketGuildMember user)
     {
-        if (string.Equals(args.Username, arsg2.Username))
+        if (string.Equals(args.Username, user.Username))
             return;
 
-        // Find relevant guilds
-        foreach (var guild in client.Guilds)
-        {
-            var user = guild.GetUser(args.Id);
-            if (user != null && GuildLogSettings.TryGetValue(guild.Id, out var logSetting))
-            {
-                if (logSetting.UsernameUpdatedId is null or 0)
-                    continue;
+        var guild = user.Guild;
+        if (!GuildLogSettings.TryGetValue(guild.Id, out var logSetting))
+            return;
 
-                var channel = guild.GetTextChannel(logSetting.UsernameUpdatedId.Value);
-                if (channel is null)
-                    continue;
+        if (logSetting.UsernameUpdatedId is null or 0)
+            return;
 
-                var eb = LogEmbed(strings.UsernameUpdated(guild.Id),
-                    strings.UserField(guild.Id, user.Mention, user.Id) +
-                    strings.OldUsernameField(guild.Id, args.Username) +
-                    strings.NewUsernameField(guild.Id, arsg2.Username), Mewdeko.OkColor);
+        var channel = guild.GetTextChannel(logSetting.UsernameUpdatedId.Value);
+        if (channel is null)
+            return;
 
-                await SendLogAsync(channel, eb);
-            }
-        }
+        var eb = LogEmbed(strings.UsernameUpdated(guild.Id),
+            strings.UserField(guild.Id, user.Mention, user.Id) +
+            strings.OldUsernameField(guild.Id, args.Username) +
+            strings.NewUsernameField(guild.Id, user.Username), Mewdeko.OkColor);
+
+        await SendLogAsync(channel, eb);
     }
 
     /// <summary>
     ///     Handles the event when a user updates their nickname.
     /// </summary>
-    /// <param name="cacheable">The user before they updated their nickname</param>
-    /// <param name="arsg2">The user after they updated their nickname</param>
-    private async Task OnNicknameUpdated(Cacheable<SocketGuildMember> cacheable, SocketGuildMember arsg2)
+    /// <param name="before">The member before they updated their nickname</param>
+    /// <param name="arsg2">The member after they updated their nickname</param>
+    private async Task OnNicknameUpdated(MemberSnapshot? before, SocketGuildMember arsg2)
     {
-        if (!cacheable.HasValue || cacheable.Value.Nickname == arsg2.Nickname) return;
+        if (before is null || before.Nickname == arsg2.Nickname) return;
 
         if (GuildLogSettings.TryGetValue(arsg2.Guild.Id, out var logSetting))
         {
@@ -863,7 +845,7 @@ public class LogCommandService(
 
             var eb = LogEmbed(strings.NicknameUpdated(arsg2.Guild.Id),
                 strings.UserField(arsg2.Guild.Id, arsg2.Mention, arsg2.Id) +
-                strings.OldNicknameField(arsg2.Guild.Id, cacheable.Value.Nickname ?? cacheable.Value.Username) +
+                strings.OldNicknameField(arsg2.Guild.Id, before.Nickname ?? before.User.Username) +
                 strings.NewNicknameField(arsg2.Guild.Id, arsg2.Nickname ?? arsg2.Username) +
                 strings.UpdatedByField(arsg2.Guild.Id, entry.User.Mention, entry.User.Id), Mewdeko.OkColor);
 
@@ -875,7 +857,7 @@ public class LogCommandService(
     ///     Handles the event when a thread gets deleted.
     /// </summary>
     /// <param name="args">The cached thread. May return null. See <see cref="Cacheable{TEntity,TId}" /></param>
-    private async Task OnThreadDeleted(Cacheable<Channel> args)
+    private async Task OnThreadDeleted(Cacheable<ThreadChannel> args)
     {
         if (!args.HasValue) return;
         var deletedThread = args.Value;
@@ -895,18 +877,10 @@ public class LogCommandService(
             if (channel is null)
                 return;
 
-            await Task.Delay(500);
-            var auditLogs = await GetAuditLogsSafeAsync(deletedThread.Guild, ActionType.ThreadDelete);
-            var entry = auditLogs.FirstOrDefault();
-            if (entry == null) return;
-
             var guildId = deletedThread.Guild.Id;
             var eb = LogEmbed(strings.ThreadDeleted(guildId),
                 strings.ThreadNameField(guildId, deletedThread.Name) +
                 strings.ThreadIdField(guildId, deletedThread.Id), Mewdeko.OkColor);
-
-            AddSection(eb, strings.LogSectionDeletionDetails(guildId),
-                strings.DeletedByField(guildId, entry.User.Mention, entry.User.Id));
 
             await SendLogAsync(channel, eb);
         }
@@ -917,7 +891,7 @@ public class LogCommandService(
     /// </summary>
     /// <param name="cacheable">The cached thread. May return null. See <see cref="Cacheable{TEntity,TId}" /></param>
     /// <param name="arsg2">The updated thread.</param>
-    private async Task OnThreadUpdated(Cacheable<Channel> cacheable, Channel arsg2)
+    private async Task OnThreadUpdated(Cacheable<ThreadChannel> cacheable, ThreadChannel arsg2)
     {
         if (!cacheable.HasValue) return;
         var oldThread = cacheable.Value;
@@ -936,12 +910,7 @@ public class LogCommandService(
             if (channel is null)
                 return;
 
-            await Task.Delay(500);
-            var auditLogs = await GetAuditLogsSafeAsync(arsg2.Guild, ActionType.ThreadUpdate);
-            var entry = auditLogs.FirstOrDefault();
-            if (entry == null) return;
-
-            var updatedByStr = $"`Updated By:` {entry.User.Mention} | {entry.User.Id}";
+            var updatedByStr = string.Empty;
             var threadIdStr = $"`Thread:` {arsg2.Mention} | {arsg2.Id}";
             var guildId = arsg2.Guild.Id;
             string title;
@@ -952,17 +921,19 @@ public class LogCommandService(
                 title = strings.ThreadNameUpdated(guildId);
                 description = strings.ThreadNameChange(guildId, threadIdStr, oldThread.Name, arsg2.Name, updatedByStr);
             }
-            else if (oldThread.IsArchived != arsg2.IsArchived)
+            else if (oldThread.ThreadMetadata?.IsArchived != arsg2.ThreadMetadata?.IsArchived)
             {
                 title = strings.ThreadArchiveStatusUpdated(guildId);
-                description = strings.ThreadArchiveStatusChange(guildId, threadIdStr, oldThread.IsArchived,
-                    arsg2.IsArchived, updatedByStr);
+                description = strings.ThreadArchiveStatusChange(guildId, threadIdStr,
+                    oldThread.ThreadMetadata?.IsArchived ?? false, arsg2.ThreadMetadata?.IsArchived ?? false,
+                    updatedByStr);
             }
-            else if (oldThread.IsLocked != arsg2.IsLocked)
+            else if (oldThread.ThreadMetadata?.IsLocked != arsg2.ThreadMetadata?.IsLocked)
             {
                 title = strings.ThreadLockStatusUpdated(guildId);
-                description = strings.ThreadLockStatusChange(guildId, threadIdStr, oldThread.IsLocked,
-                    arsg2.IsLocked, updatedByStr);
+                description = strings.ThreadLockStatusChange(guildId, threadIdStr,
+                    oldThread.ThreadMetadata?.IsLocked ?? false, arsg2.ThreadMetadata?.IsLocked ?? false,
+                    updatedByStr);
             }
             else if (oldThread.SlowModeInterval != arsg2.SlowModeInterval)
             {
@@ -970,11 +941,12 @@ public class LogCommandService(
                 description = strings.ThreadSlowModeChange(guildId, threadIdStr, oldThread.SlowModeInterval,
                     arsg2.SlowModeInterval, updatedByStr);
             }
-            else if (oldThread.AutoArchiveDuration != arsg2.AutoArchiveDuration)
+            else if (oldThread.ThreadMetadata?.AutoArchiveDuration != arsg2.ThreadMetadata?.AutoArchiveDuration)
             {
                 title = strings.ThreadAutoArchiveUpdated(guildId);
-                description = strings.ThreadAutoArchiveChange(guildId, threadIdStr, oldThread.AutoArchiveDuration,
-                    arsg2.AutoArchiveDuration, updatedByStr);
+                description = strings.ThreadAutoArchiveChange(guildId, threadIdStr,
+                    oldThread.ThreadMetadata?.AutoArchiveDuration, arsg2.ThreadMetadata?.AutoArchiveDuration,
+                    updatedByStr);
             }
             else
                 return;
@@ -986,15 +958,12 @@ public class LogCommandService(
     /// <summary>
     ///     Handles the event when a message is updated.
     /// </summary>
-    /// <param name="cacheable">The cached message. May return null. See <see cref="Cacheable{TEntity,TId}" /></param>
+    /// <param name="oldMessage">The cached message from before the edit. Null when it was not cached.</param>
     /// <param name="args2">The new message</param>
-    /// <param name="args3">The channel where the message was updated</param>
-    private async Task OnMessageUpdated(Cacheable<Message> cacheable, SocketMessage args2,
-        Channel args3)
+    private async Task OnMessageUpdated(Message? oldMessage, SocketMessage args2)
     {
-        if (!cacheable.HasValue || args2.Author.IsBot) return;
-        var oldMessage = cacheable.Value;
-        if (args3 is not Channel guildChannel) return;
+        if (oldMessage is null || args2.Author is not { IsBot: false }) return;
+        if (args2.Channel is not { } guildChannel) return;
         if (oldMessage.Content == args2.Content) return; // Compare content directly
 
         // Check if channel is ignored
@@ -1030,15 +999,13 @@ public class LogCommandService(
     /// </summary>
     /// <param name="args">The cached message. May return null. See <see cref="Cacheable{TEntity,TId}" /></param>
     /// <param name="arsg2">The channel where the message was deleted</param>
-    private async Task OnMessageDeleted(Cacheable<Message> args, Cacheable<Channel> arsg2)
+    private async Task OnMessageDeleted(Cacheable<Message> args, Channel guildChannel)
     {
         // Get message from cache if available
         var message = args.HasValue ? args.Value : null;
         // If message not in cache, we cannot proceed as we don't have content/author
         if (message == null || message.Author.IsBot) return;
-        // Get channel from cache if available
-        var messageChannel = arsg2.HasValue ? arsg2.Value : null;
-        if (messageChannel is not Channel guildChannel) return; // Ensure it's a guild channel
+        if (guildChannel.Guild is null) return; // Ensure it's a guild channel
 
         // Check if channel is ignored
         if (IsChannelIgnored(guildChannel.Guild.Id, guildChannel.Id))
@@ -1059,8 +1026,7 @@ public class LogCommandService(
 
             // Try to find who deleted the message
             var deleteUser = message.Author; // Assume self-delete initially
-            var entry = auditLogs.FirstOrDefault(e =>
-                e.Data is MessageDeleteAuditLogData data && data.Target.Id == message.Author.Id);
+            var entry = auditLogs.FirstOrDefault(e => e.TargetId == message.Author.Id);
 
             if (entry != null &&
                 (DateTimeOffset.UtcNow - entry.CreatedAt).TotalSeconds < 10) // Check if recent audit log matches
@@ -1071,6 +1037,7 @@ public class LogCommandService(
 
             var guildId = guildChannel.Guild.Id;
             var tempFiles = new List<AttachmentRequest>();
+            var tempStreams = new List<MemoryStream>();
 
             var eb = LogEmbed(strings.MessageDeleted(guildId),
                     strings.MessageAuthorField(guildId, message.Author.Mention, message.Author.Id) +
@@ -1082,14 +1049,14 @@ public class LogCommandService(
             if (!string.IsNullOrWhiteSpace(message.Content))
                 AddSection(eb, strings.LogSectionMessageContent(guildId), message.Content.TrimTo(1000));
 
-            if (message.Attachments.Count > 0)
+            if (message.Attachments is { Length: > 0 } messageAttachments)
             {
                 var attachmentLines = new List<string>();
 
                 using var httpClient = new HttpClient();
                 httpClient.Timeout = TimeSpan.FromSeconds(10);
 
-                foreach (var att in message.Attachments.Take(10))
+                foreach (var att in messageAttachments.Take(10))
                 {
                     var preserved = false;
                     try
@@ -1098,7 +1065,9 @@ public class LogCommandService(
                         if (response.IsSuccessStatusCode)
                         {
                             var content = await response.Content.ReadAsByteArrayAsync();
-                            tempFiles.Add(new AttachmentRequest(new MemoryStream(content), att.Filename, att.Filename));
+                            var contentStream = new MemoryStream(content);
+                            tempStreams.Add(contentStream);
+                            tempFiles.Add(new AttachmentRequest(contentStream, att.Filename));
                             preserved = true;
 
                             if (string.IsNullOrEmpty(eb.ImageUrl) && IsImageAttachment(att.Filename))
@@ -1117,7 +1086,7 @@ public class LogCommandService(
                         : strings.LogAttachmentNotPreserved(guildId, att.Filename, sizeText));
                 }
 
-                AddSection(eb, $"{strings.Attachments(guildId)} ({message.Attachments.Count})",
+                AddSection(eb, $"{strings.Attachments(guildId)} ({messageAttachments.Length})",
                     string.Join("\n", attachmentLines));
             }
 
@@ -1127,9 +1096,9 @@ public class LogCommandService(
             }
             finally
             {
-                foreach (var tempFile in tempFiles)
+                foreach (var tempStream in tempStreams)
                 {
-                    tempFile.Dispose();
+                    await tempStream.DisposeAsync();
                 }
             }
         }
@@ -1169,7 +1138,7 @@ public class LogCommandService(
 
             AddSection(eb, strings.LogSectionAccountDetails(guildId),
                 strings.AccountCreatedField(guildId, guildUser.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss")) + "\n" +
-                strings.JoinedServerField(guildId, guildUser.JoinedAt?.ToString("dd/MM/yyyy HH:mm:ss") ?? "N/A") +
+                strings.JoinedServerField(guildId, guildUser.JoinedAt.ToString("dd/MM/yyyy HH:mm:ss")) +
                 "\n" + strings.UserStatusField(guildId, guildUser.Status));
 
             await SendLogAsync(channel, eb);
@@ -1181,7 +1150,7 @@ public class LogCommandService(
     /// </summary>
     /// <param name="guild">The guild the user left.</param>
     /// <param name="user">The user that left the guild.</param>
-    private async Task OnUserLeft(SocketGuild guild, IUser user)
+    private async Task OnUserLeft(SocketGuild guild, User user)
     {
         if (GuildLogSettings.TryGetValue(guild.Id, out var logSetting))
         {
@@ -1198,13 +1167,11 @@ public class LogCommandService(
             await Task.Delay(1000); // Delay for audit log
             var auditLogsKick = await GetAuditLogsSafeAsync(guild, ActionType.Kick);
             var kickLog = auditLogsKick.FirstOrDefault(e =>
-                e.Data is KickAuditLogData data && data.Target.Id == user.Id &&
-                (DateTimeOffset.UtcNow - e.CreatedAt).TotalSeconds < 10);
+                e.TargetId == user.Id && (DateTimeOffset.UtcNow - e.CreatedAt).TotalSeconds < 10);
 
             var auditLogsBan = await GetAuditLogsSafeAsync(guild, ActionType.Ban);
             var banLog = auditLogsBan.FirstOrDefault(e =>
-                e.Data is BanAuditLogData data && data.Target.Id == user.Id &&
-                (DateTimeOffset.UtcNow - e.CreatedAt).TotalSeconds < 10);
+                e.TargetId == user.Id && (DateTimeOffset.UtcNow - e.CreatedAt).TotalSeconds < 10);
 
             if (kickLog != null)
             {
@@ -1239,7 +1206,7 @@ public class LogCommandService(
     /// <param name="guild">The guild the user was banned from.</param>
     /// <param name="bannedBy">The user that banned the user.</param>
     /// <param name="reason">The reason for the ban.</param>
-    private async Task OnUserBanned(IUser user, SocketGuild guild, SocketUser bannedBy, string? reason = null)
+    private async Task OnUserBanned(User user, SocketGuild guild, User? bannedBy, string? reason = null)
     {
         if (GuildLogSettings.TryGetValue(guild.Id, out var logSetting))
         {
@@ -1269,7 +1236,7 @@ public class LogCommandService(
     /// <param name="guild">The guild the user was unbanned from.</param>
     /// <param name="unbannedBy">The user that unbanned the user.</param>
     /// <param name="reason">The reason for the unban, if provided.</param>
-    private async Task OnUserUnbanned(IUser user, SocketGuild guild, SocketUser unbannedBy, string reason)
+    private async Task OnUserUnbanned(User user, SocketGuild guild, User? unbannedBy, string? reason)
     {
         if (GuildLogSettings.TryGetValue(guild.Id, out var logSetting))
         {
@@ -1296,56 +1263,75 @@ public class LogCommandService(
     ///     Handles the event when a user is updated.
     /// </summary>
     /// <param name="args">The user before the update.</param>
-    /// <param name="arsg2">The user after the update.</param>
-    private async Task OnUserUpdated(SocketUser args, SocketUser arsg2)
+    /// <param name="userInGuild">The member after the update.</param>
+    private async Task OnUserUpdated(UserSnapshot args, SocketGuildMember userInGuild)
     {
         if (args.IsBot) return;
 
-        var hasAvatarChanged = args.AvatarHash != arsg2.AvatarHash;
-        var hasGlobalNameChanged = args.GlobalName != arsg2.GlobalName;
+        var after = userInGuild.User;
+        var hasAvatarChanged = args.AvatarHash != after.AvatarHash;
+        var hasGlobalNameChanged = args.DisplayName != after.DisplayName;
 
         if (!hasAvatarChanged && !hasGlobalNameChanged) return;
 
-        // Iterate through shared guilds
-        foreach (var guild in client.Guilds)
+        var guild = userInGuild.Guild;
+        if (!GuildLogSettings.TryGetValue(guild.Id, out var logSetting)) return;
+        if (logSetting.UserUpdatedId is null or 0)
+            return;
+
+        var logChannel = guild.GetTextChannel(logSetting.UserUpdatedId.Value);
+        if (logChannel is null)
+            return;
+
+        var before = args.ToUser();
+
+        if (hasAvatarChanged)
         {
-            var userInGuild = guild.GetUser(args.Id);
-            if (userInGuild == null || !GuildLogSettings.TryGetValue(guild.Id, out var logSetting)) continue;
-            if (logSetting.UserUpdatedId is null or 0)
-                continue;
-
-            var logChannel = guild.GetTextChannel(logSetting.UserUpdatedId.Value);
+            if (logSetting.AvatarUpdatedId != null)
+                logChannel = guild.GetTextChannel(logSetting.AvatarUpdatedId.Value);
             if (logChannel is null)
-                continue;
+                return;
 
-            if (hasAvatarChanged)
-            {
-                if (logSetting.AvatarUpdatedId != null)
-                    logChannel = guild.GetTextChannel(logSetting.AvatarUpdatedId.Value);
-                if (logChannel is null)
-                    continue;
+            var avatarEmbed = LogEmbed(strings.UserAvatarUpdated(guild.Id),
+                    strings.UserLogEntry(guild.Id, userInGuild.Mention, userInGuild.Id), Mewdeko.OkColor)
+                .WithThumbnailUrl(before.GetAvatarOrDefaultUrl(2048))
+                .WithImageUrl(after.GetAvatarOrDefaultUrl(2048));
 
-                var avatarEmbed = LogEmbed(strings.UserAvatarUpdated(guild.Id),
-                        strings.UserLogEntry(guild.Id, userInGuild.Mention, userInGuild.Id), Mewdeko.OkColor)
-                    .WithThumbnailUrl(args.RealAvatarUrl().ToString())
-                    .WithImageUrl(arsg2.RealAvatarUrl().ToString());
-
-                await SendLogAsync(logChannel, avatarEmbed);
-            }
-
-            if (!hasGlobalNameChanged) continue;
-            if (logSetting.UsernameUpdatedId != null)
-                logChannel = guild.GetTextChannel(logSetting.UsernameUpdatedId.Value);
-            if (logChannel is null)
-                continue;
-            var globalNameEmbed = LogEmbed(strings.UserGlobalNameUpdated(guild.Id),
-                    strings.UserLogEntry(guild.Id, userInGuild.Mention, userInGuild.Id) + "\n" +
-                    $"`Old Global Name:` {args.GlobalName ?? args.Username}\n" +
-                    $"`New Global Name:` {arsg2.GlobalName ?? arsg2.Username}", Mewdeko.OkColor)
-                .WithThumbnailUrl(arsg2.RealAvatarUrl().ToString());
-
-            await SendLogAsync(logChannel, globalNameEmbed);
+            await SendLogAsync(logChannel, avatarEmbed);
         }
+
+        if (!hasGlobalNameChanged) return;
+        if (logSetting.UsernameUpdatedId != null)
+            logChannel = guild.GetTextChannel(logSetting.UsernameUpdatedId.Value);
+        if (logChannel is null)
+            return;
+        var globalNameEmbed = LogEmbed(strings.UserGlobalNameUpdated(guild.Id),
+                strings.UserLogEntry(guild.Id, userInGuild.Mention, userInGuild.Id) + "\n" +
+                $"`Old Global Name:` {args.DisplayName ?? args.Username}\n" +
+                $"`New Global Name:` {after.DisplayName ?? after.Username}", Mewdeko.OkColor)
+            .WithThumbnailUrl(after.GetAvatarOrDefaultUrl(2048));
+
+        await SendLogAsync(logChannel, globalNameEmbed);
+    }
+
+    /// <summary>
+    ///     Gets the name of a channel's kind for log messages.
+    /// </summary>
+    /// <param name="channel">The channel.</param>
+    /// <returns>The name of the channel kind.</returns>
+    private static string ChannelTypeName(Channel channel)
+    {
+        return channel.Type switch
+        {
+            ChannelType.GuildVoice => "Voice",
+            ChannelType.GuildNews => "News",
+            ChannelType.GuildText => "Text",
+            ChannelType.GuildCategory => "Category",
+            ChannelType.GuildForum => "Forum",
+            ChannelType.GuildMedia => "Media",
+            ChannelType.GuildLink => "Link",
+            _ => "Unknown"
+        };
     }
 
     /// <summary>
@@ -1369,15 +1355,7 @@ public class LogCommandService(
             if (logChannel is null)
                 return;
 
-            var createdType = channel switch
-            {
-                SocketStageChannel => "Stage",
-                Channel => "Voice",
-                Channel => "News",
-                Channel => "Text",
-                Channel => "Category",
-                _ => "Unknown"
-            };
+            var createdType = ChannelTypeName(channel);
 
             await Task.Delay(500);
             var auditLogs = await GetAuditLogsSafeAsync(channel.Guild, ActionType.ChannelCreated);
@@ -1417,15 +1395,7 @@ public class LogCommandService(
             if (logChannel is null)
                 return;
 
-            var createdType = channel switch
-            {
-                SocketStageChannel => "Stage",
-                Channel => "Voice",
-                Channel => "News",
-                Channel => "Text",
-                Channel => "Category",
-                _ => "Unknown"
-            };
+            var createdType = ChannelTypeName(channel);
 
             await Task.Delay(500);
             var auditLogs = await GetAuditLogsSafeAsync(channel.Guild, ActionType.ChannelDeleted);
@@ -1493,11 +1463,13 @@ public class LogCommandService(
                 // changed = true;
             }
 
-            switch (channel)
+            switch (channel.Type)
             {
                 // Text Channel specific changes
-                case Channel textChannel when channel2 is Channel textChannel2:
+                case ChannelType.GuildText or ChannelType.GuildNews:
                 {
+                    var textChannel = channel;
+                    var textChannel2 = channel2;
                     if (textChannel.Topic != textChannel2.Topic)
                     {
                         title = strings.ChannelTopicUpdated(channel.Guild.Id);
@@ -1533,8 +1505,10 @@ public class LogCommandService(
                     break;
                 }
                 // Voice Channel specific changes
-                case Channel voiceChannel when channel2 is Channel voiceChannel2:
+                case ChannelType.GuildVoice:
                 {
+                    var voiceChannel = channel;
+                    var voiceChannel2 = channel2;
                     if (voiceChannel.Bitrate != voiceChannel2.Bitrate)
                     {
                         title = strings.ChannelBitrateUpdated(channel.Guild.Id);
@@ -1555,15 +1529,7 @@ public class LogCommandService(
                     {
                         title = strings.ChannelCategoryUpdated(channel.Guild.Id);
                         description =
-                            $"{channelIdStr}\n`Old Category:` {(await voiceChannel.GetCategoryAsync())?.Name ?? strings.None(channel.Guild.Id)}\n`New Category:` {(await voiceChannel2.GetCategoryAsync())?.Name ?? strings.None(channel.Guild.Id)}\n{updatedByStr}";
-                        changed = true;
-                    }
-                    else if (voiceChannel.VideoQualityMode != voiceChannel2.VideoQualityMode)
-                    {
-                        title = strings.ChannelVideoQualityUpdated(channel.Guild.Id);
-                        description = strings.ChannelVideoQualityChange(channel.Guild.Id, channelIdStr,
-                            voiceChannel.VideoQualityMode,
-                            voiceChannel2.VideoQualityMode, updatedByStr);
+                            $"{channelIdStr}\n`Old Category:` {voiceChannel.Category?.Name ?? strings.None(channel.Guild.Id)}\n`New Category:` {voiceChannel2.Category?.Name ?? strings.None(channel.Guild.Id)}\n{updatedByStr}";
                         changed = true;
                     }
 
@@ -1586,9 +1552,10 @@ public class LogCommandService(
     /// <param name="user">The user that had their voice state updated.</param>
     /// <param name="oldState">The voice state before the update.</param>
     /// <param name="newState">The voice state after the update.</param>
-    private async Task OnVoicePresence(SocketUser user, SocketVoiceState oldState, SocketVoiceState newState)
+    private async Task OnVoicePresence(SocketGuildMember guildUser, VoiceStateSnapshot oldState,
+        VoiceStateSnapshot newState)
     {
-        if (user.IsBot || user is not SocketGuildMember guildUser)
+        if (guildUser.IsBot)
             return;
 
         // Check if old or new channel is ignored
@@ -1606,7 +1573,7 @@ public class LogCommandService(
                 return;
 
             var stateChanged = false;
-            var userInfo = strings.UserInfoLine(guildUser.Guild.Id, user.Mention, user.Id).TrimEnd('\n');
+            var userInfo = strings.UserInfoLine(guildUser.Guild.Id, guildUser.Mention, guildUser.Id).TrimEnd('\n');
             var title = "";
             var description = "";
 
@@ -1657,7 +1624,7 @@ public class LogCommandService(
                             !newState.IsSelfMuted
                                 ? strings.Server(guildUser.Guild.Id)
                                 : strings.Self(guildUser.Guild.Id))
-                        : strings.UserVoiceUnmuted(guildUser.Guild.Id, user.Username);
+                        : strings.UserVoiceUnmuted(guildUser.Guild.Id, guildUser.Username);
                     description = strings.UserVoiceStateDesc(guildUser.Guild.Id, userInfo,
                         newState.VoiceChannel.Name);
                     stateChanged = true;
@@ -1697,9 +1664,10 @@ public class LogCommandService(
     /// <param name="user">The user that used tts.</param>
     /// <param name="oldState">The voice state before the update.</param>
     /// <param name="newState">The voice state after the update.</param>
-    private async Task OnVoicePresenceTts(SocketUser user, SocketVoiceState oldState, SocketVoiceState newState)
+    private async Task OnVoicePresenceTts(SocketGuildMember guildUser, VoiceStateSnapshot oldState,
+        VoiceStateSnapshot newState)
     {
-        if (user.IsBot || user is not SocketGuildMember guildUser)
+        if (guildUser.IsBot)
             return;
 
         // Check if old or new channel is ignored
@@ -1805,7 +1773,6 @@ public class LogCommandService(
         switch (type)
         {
             case LogType.Other: logSetting.LogOtherId = channelId; break;
-            case LogType.EventCreated: logSetting.EventCreatedId = channelId; break;
             case LogType.RoleUpdated: logSetting.RoleUpdatedId = channelId; break;
             case LogType.RoleCreated: logSetting.RoleCreatedId = channelId; break;
             case LogType.ServerUpdated: logSetting.ServerUpdatedId = channelId; break;
@@ -1882,7 +1849,6 @@ public class LogCommandService(
                 logSetting.ChannelCreatedId = channelId;
                 logSetting.ChannelDestroyedId = channelId;
                 logSetting.ChannelUpdatedId = channelId;
-                logSetting.EventCreatedId = channelId;
                 logSetting.LogOtherId = channelId;
                 logSetting.MessageDeletedId = channelId;
                 logSetting.MessageUpdatedId = channelId;
@@ -1934,7 +1900,6 @@ public class LogCommandService(
                 break;
             case LogCategoryTypes.Server:
                 logSetting.ServerUpdatedId = channelId;
-                logSetting.EventCreatedId = channelId;
                 logSetting.InviteCreatedId = channelId;
                 logSetting.InviteDeletedId = channelId;
                 break;
@@ -1961,7 +1926,6 @@ public class LogCommandService(
                 logSetting.ChannelCreatedId = noneValue;
                 logSetting.ChannelDestroyedId = noneValue;
                 logSetting.ChannelUpdatedId = noneValue;
-                logSetting.EventCreatedId = noneValue;
                 logSetting.LogOtherId = noneValue;
                 logSetting.MessageDeletedId = noneValue;
                 logSetting.MessageUpdatedId = noneValue;
@@ -2134,7 +2098,7 @@ public class LogCommandService(
             if (logSetting.InviteCreatedId is null or 0)
                 return;
 
-            var channel = invite.Guild.GetTextChannel(logSetting.InviteCreatedId.Value);
+            var channel = client.GetGuild(invite.Guild.Id)?.GetTextChannel(logSetting.InviteCreatedId.Value);
             if (channel is null)
                 return;
 
@@ -2146,7 +2110,7 @@ public class LogCommandService(
                 $"`Max Age:` {(invite.MaxAge == 0 ? "Never" : TimeSpan.FromSeconds(invite.MaxAge).ToString(@"dd\.hh\:mm\:ss"))}\n" +
                 $"`Temporary:` {invite.IsTemporary}\n" +
                 $"`Created At:` {invite.CreatedAt:dd/MM/yyyy HH:mm:ss}\n" +
-                strings.LogInviteLink(invite.Guild.Id, invite.Url), Mewdeko.OkColor);
+                strings.LogInviteLink(invite.Guild.Id, $"{client.Config.InviteUrl}/{invite.Code}"), Mewdeko.OkColor);
 
             await SendLogAsync(channel, eb);
         }
@@ -2183,9 +2147,9 @@ public class LogCommandService(
     /// <param name="messages">The collection of deleted messages.</param>
     /// <param name="channel">The channel where messages were deleted.</param>
     private async Task OnMessagesBulkDeleted(IReadOnlyCollection<Cacheable<Message>> messages,
-        Cacheable<Channel> channel)
+        Channel guildChannel)
     {
-        if (!channel.HasValue || channel.Value is not Channel guildChannel) return;
+        if (guildChannel.Guild is null) return;
 
         // Check if channel is ignored
         if (IsChannelIgnored(guildChannel.Guild.Id, guildChannel.Id))
@@ -2225,19 +2189,18 @@ public class LogCommandService(
     /// <param name="message">The cached message.</param>
     /// <param name="channel">The channel containing the message.</param>
     /// <param name="reaction">The reaction that was added.</param>
-    private Task OnReactionAdded(Cacheable<Message> message, Cacheable<Channel> channel,
+    private Task OnReactionAdded(Cacheable<Message> message, Channel guildChannel,
         SocketReaction reaction)
     {
-        if (!channel.HasValue || channel.Value is not Channel guildChannel) return Task.CompletedTask;
-        var reactionUser = reaction.User.GetValueOrDefault();
-        if (reactionUser?.IsBot == true) return Task.CompletedTask;
+        if (guildChannel.Guild is null) return Task.CompletedTask;
+        if (reaction.Member?.IsBot == true) return Task.CompletedTask;
 
         // Check if channel is ignored
         if (IsChannelIgnored(guildChannel.Guild.Id, guildChannel.Id))
             return Task.CompletedTask;
 
         AddReactionToBatch(message.Id, guildChannel.Id, guildChannel.Guild.Id, guildChannel.Name,
-            reactionUser?.Id ?? 0, reaction.Emoji, true);
+            reaction.UserId, Emoji.From(reaction.Emoji), true);
         return Task.CompletedTask;
     }
 
@@ -2247,19 +2210,18 @@ public class LogCommandService(
     /// <param name="message">The cached message.</param>
     /// <param name="channel">The channel containing the message.</param>
     /// <param name="reaction">The reaction that was removed.</param>
-    private Task OnReactionRemoved(Cacheable<Message> message, Cacheable<Channel> channel,
+    private Task OnReactionRemoved(Cacheable<Message> message, Channel guildChannel,
         SocketReaction reaction)
     {
-        if (!channel.HasValue || channel.Value is not Channel guildChannel) return Task.CompletedTask;
-        var reactionUser = reaction.User.GetValueOrDefault();
-        if (reactionUser?.IsBot == true) return Task.CompletedTask;
+        if (guildChannel.Guild is null) return Task.CompletedTask;
+        if (reaction.Member?.IsBot == true) return Task.CompletedTask;
 
         // Check if channel is ignored
         if (IsChannelIgnored(guildChannel.Guild.Id, guildChannel.Id))
             return Task.CompletedTask;
 
         AddReactionToBatch(message.Id, guildChannel.Id, guildChannel.Guild.Id, guildChannel.Name,
-            reactionUser?.Id ?? 0, reaction.Emoji, false);
+            reaction.UserId, Emoji.From(reaction.Emoji), false);
         return Task.CompletedTask;
     }
 
@@ -2347,7 +2309,7 @@ public class LogCommandService(
 
         var guildId = batch.GuildId;
         var summary =
-            $"`Message:` <#{batch.ChannelId}>: [Jump to Message](https://discord.com/channels/{batch.GuildId}/{batch.ChannelId}/{batch.MessageId})\n" +
+            $"`Message:` <#{batch.ChannelId}>: [Jump to Message]({FluxerContext.WebUrl}/channels/{batch.GuildId}/{batch.ChannelId}/{batch.MessageId})\n" +
             $"`Channel:` <#{batch.ChannelId}> ({batch.ChannelName}) | {batch.ChannelId}\n" +
             $"`Total Added:` {batch.TotalAdded}\n" +
             $"`Total Removed:` {batch.TotalRemoved}";

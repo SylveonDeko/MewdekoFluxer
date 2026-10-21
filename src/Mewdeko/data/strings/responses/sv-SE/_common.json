@@ -328,8 +328,6 @@
   "rolehoist_enabled": "Role {0} is now displayed separately from online members.",
   "rolehoist_disabled": "Role {0} is no longer displayed separately from online members.",
   "type": "Typ",
-  "gvc_disabled": "Spel Röst Kanal funktion har blivit inaktiverad på denna servern. ",
-  "gvc_enabled": "{0} är ett Spel Röst Kanal nu.\n",
   "not_in_voice": "Du är inte i röst kanalen på denna server. ",
   "item": "Föremål",
   "blocked_commands": "Blockerad Kommandos",

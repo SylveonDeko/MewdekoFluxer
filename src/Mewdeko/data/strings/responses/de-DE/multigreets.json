@@ -1,13 +1,6 @@
 {
   "bandm": "Du wurdest vom Server {0} gebannt.\nGrund: {1}",
   "banmsg_default": "Keine Ban-Nachricht gesetzt. Standardverhalten wird verwendet.",
-  "boost_off": "Boost-Ankündigungen deaktiviert.",
-  "boost_on": "Boost-Ankündigungen in diesem Kanal aktiviert.",
-  "boostdel_off": "Automatisches Löschen von Boost-Nachrichten wurde deaktiviert.",
-  "boostdel_on": "Boost-Nachrichten werden nach {0} Sekunden gelöscht.",
-  "boostmsg_cur": "Aktuelle Boost-Nachricht: {0}",
-  "boostmsg_enable": "Aktiviere Boost-Nachrichten durch Eingabe {0}",
-  "boostmsg_new": "Neue Boost-Nachricht gesetzt.",
   "bye_off": "Abschiedsankündigungen deaktiviert.",
   "bye_on": "Abschiedsankündigungen auf diesem Kanal aktiviert.",
   "byedel_off": "Automatisches Löschen von Abschiedsnachrichten wurde deaktiviert.",

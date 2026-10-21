@@ -381,7 +381,7 @@ public class SelfAssignedRolesService(
             .ToList(); // ToList to avoid multiple enumerations
 
         var modelsToRemove = rolesWithIRole
-            .Where(x => x.Role == null) // Find models where the Discord role doesn't exist anymore
+            .Where(x => x.Role == null) // Find models where the role doesn't exist anymore
             .Select(x => x.Model)
             .ToList();
 

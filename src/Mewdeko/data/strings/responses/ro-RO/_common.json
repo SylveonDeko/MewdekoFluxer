@@ -328,8 +328,6 @@
   "rolehoist_enabled": "Role {0} is now displayed separately from online members.",
   "rolehoist_disabled": "Role {0} is no longer displayed separately from online members.",
   "type": "Tip",
-  "gvc_disabled": "Caracteristica Canalul Vocal de Joc a fost dezactivat pe acest server.",
-  "gvc_enabled": "{0} este un Canal Vocal de Joc acum.",
   "not_in_voice": "Nu ești într-un canal vocal pe acest server.",
   "item": "Item",
   "blocked_commands": "Comenzi blocate",

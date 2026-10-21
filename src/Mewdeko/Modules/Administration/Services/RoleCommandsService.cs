@@ -18,7 +18,7 @@ public class RoleCommandsService : INService
     ///     Initializes a new instance of the RoleCommandsService.
     /// </summary>
     /// <param name="dbFactory">Provider for database context access.</param>
-    /// <param name="eventHandler">Event handler for Discord events.</param>
+    /// <param name="eventHandler">Event handler for Fluxer events.</param>
     /// <param name="guildSettings">Service for accessing guild configurations.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     public RoleCommandsService(
@@ -30,8 +30,8 @@ public class RoleCommandsService : INService
         this.guildSettings = guildSettings;
         this.logger = logger;
 
-        eventHandler.Subscribe("ReactionAdded", "RoleCommandsService", HandleReactionAdded);
-        eventHandler.Subscribe("ReactionRemoved", "RoleCommandsService", HandleReactionRemoved);
+        eventHandler.ReactionAdded.Subscribe("RoleCommandsService", HandleReactionAdded);
+        eventHandler.ReactionRemoved.Subscribe("RoleCommandsService", HandleReactionRemoved);
     }
 
     /// <summary>
@@ -39,26 +39,22 @@ public class RoleCommandsService : INService
     /// </summary>
     private async Task HandleReactionAdded(
         Cacheable<Message> msg,
-        Cacheable<Channel> chan,
+        Channel chan,
         SocketReaction reaction)
     {
         try
         {
-            if (!reaction.User.IsSpecified || reaction.User.Value.IsBot ||
-                reaction.User.Value is not SocketGuildMember gusr)
+            if (reaction.Member is not { IsBot: false } gusr || chan.Guild is not { } guild)
                 return;
 
-            if (chan.Value is not Channel gch)
-                return;
-
-            var reactRoles = await guildSettings.GetReactionRoles(gch.Guild.Id);
+            var reactRoles = await guildSettings.GetReactionRoles(guild.Id);
             if (reactRoles == null || reactRoles.Count == 0)
                 return;
 
             var conf = reactRoles.FirstOrDefault(x => x.MessageId == msg.Id);
 
             var reactionRole = conf?.ReactionRoles.FirstOrDefault(x =>
-                x.EmoteName == reaction.Emoji.Name || x.EmoteName == reaction.Emoji.ToString());
+                x.EmoteName == reaction.Emoji.Name || x.EmoteName == Emoji.From(reaction.Emoji).ToString());
             if (reactionRole == null)
                 return;
 
@@ -67,14 +63,13 @@ public class RoleCommandsService : INService
                 await HandleExclusiveRole(gusr, msg, conf, reactionRole, reaction).ConfigureAwait(false);
             }
 
-            var toAdd = gusr.Guild.GetRole(reactionRole.RoleId);
-            if (toAdd != null && gusr.Roles.All(r => r.Id != toAdd.Id))
+            var toAdd = guild.GetRole(reactionRole.RoleId);
+            if (toAdd != null && !gusr.RoleIds.Contains(toAdd.Id))
                 await gusr.AddRolesAsync([toAdd]).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            var gch = chan.Value as Channel;
-            logger.LogError(ex, "Reaction Role Add failed in Guild {GuildId}", gch?.GuildId);
+            logger.LogError(ex, "Reaction Role Add failed in Guild {GuildId}", chan.GuildId);
         }
     }
 
@@ -88,7 +83,7 @@ public class RoleCommandsService : INService
         var roleIdsToRemove = conf.ReactionRoles
             .Where(x => x.RoleId != currentRole.RoleId)
             .Select(x => user.Guild.GetRole(x.RoleId))
-            .Where(x => x != null && user.Roles.Any(ur => ur.Id == x.Id))
+            .Where(x => x != null && user.RoleIds.Contains(x.Id))
             .ToList();
 
         if (roleIdsToRemove.Any())
@@ -106,17 +101,18 @@ public class RoleCommandsService : INService
         try
         {
             var message = await msg.GetOrDownloadAsync().ConfigureAwait(false);
-            foreach (var (key, _) in message.Reactions)
+            foreach (var existing in message.Reactions ?? [])
             {
+                var key = existing.Emoji;
                 if (key.Name == reaction.Emoji.Name)
                     continue;
 
-                var reactedUsers = await message.GetReactionUsersAsync(key, 10).FlattenAsync();
+                var reactedUsers = await message.GetReactionsForEmojiAsync(key).ConfigureAwait(false);
                 if (reactedUsers.Any(u => u.Id == user.Id))
                 {
                     try
                     {
-                        await message.RemoveReactionAsync(key, user).ConfigureAwait(false);
+                        await message.RemoveReactionAsync(key, user.Id).ConfigureAwait(false);
                         await Task.Delay(100);
                     }
                     catch
@@ -137,19 +133,15 @@ public class RoleCommandsService : INService
     /// </summary>
     private async Task HandleReactionRemoved(
         Cacheable<Message> msg,
-        Cacheable<Channel> chan,
+        Channel chan,
         SocketReaction reaction)
     {
         try
         {
-            if (!reaction.User.IsSpecified || reaction.User.Value.IsBot ||
-                reaction.User.Value is not SocketGuildMember gusr)
+            if (reaction.Member is not { IsBot: false } gusr || chan.Guild is not { } guild)
                 return;
 
-            if (chan.Value is not Channel gch)
-                return;
-
-            var reactRoles = await guildSettings.GetReactionRoles(gch.Guild.Id);
+            var reactRoles = await guildSettings.GetReactionRoles(guild.Id);
             if (reactRoles == null || reactRoles.Count == 0)
                 return;
 
@@ -160,18 +152,17 @@ public class RoleCommandsService : INService
                 return;
 
             var reactionRole = conf.ReactionRoles.FirstOrDefault(x =>
-                x.EmoteName == reaction.Emoji.Name || x.EmoteName == reaction.Emoji.ToString());
+                x.EmoteName == reaction.Emoji.Name || x.EmoteName == Emoji.From(reaction.Emoji).ToString());
             if (reactionRole == null)
                 return;
 
-            var toRemove = gusr.Guild.GetRole(reactionRole.RoleId);
-            if (toRemove != null && gusr.Roles.Any(r => r.Id == toRemove.Id))
+            var toRemove = guild.GetRole(reactionRole.RoleId);
+            if (toRemove != null && gusr.RoleIds.Contains(toRemove.Id))
                 await gusr.RemoveRolesAsync([toRemove]).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            var gch = chan.Value as Channel;
-            logger.LogError(ex, "Reaction Role Remove failed in Guild {GuildId}", gch?.GuildId);
+            logger.LogError(ex, "Reaction Role Remove failed in Guild {GuildId}", chan.GuildId);
         }
     }
 

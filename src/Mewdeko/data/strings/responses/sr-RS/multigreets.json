@@ -1,13 +1,6 @@
 {
   "bandm": "Banovani ste sa servera {0}.\nRazlog: {1}",
   "banmsg_default": "Nije postavljena poruka za banovanje. Biće korišćeno podrazumevano ponašanje.",
-  "boost_off": "Obaveštenja o boostovanju onemogućena.",
-  "boost_on": "Obaveštenja o boostovanju omogućena na ovom kanalu.",
-  "boostdel_off": "Automatsko brisanje poruka o boostovanju je onemogućeno.",
-  "boostdel_on": "Poruke o boostovanju će biti obrisane nakon {0} sekundi.",
-  "boostmsg_cur": "Trenutna poruka za boost: {0}",
-  "boostmsg_enable": "Omogućite poruke za boost kucanjem {0}",
-  "boostmsg_new": "Nova poruka za boost postavljena.",
   "bye_off": "Obaveštenja o odlasku onemogućena.",
   "bye_on": "Obaveštenja o odlasku omogućena na ovom kanalu.",
   "byedel_off": "Automatsko brisanje poruka o odlasku je onemogućeno.",

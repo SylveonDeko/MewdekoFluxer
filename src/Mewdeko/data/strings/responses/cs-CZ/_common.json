@@ -328,8 +328,6 @@
   "rolehoist_enabled": "Role {0} is now displayed separately from online members.",
   "rolehoist_disabled": "Role {0} is no longer displayed separately from online members.",
   "type": "Typ",
-  "gvc_disabled": "Herní hlasový kanál byl zakázán na tomto serveru.",
-  "gvc_enabled": "{0} je nyní Herní hlasový kanál.",
   "not_in_voice": "Nejseš v hlasovém kanále na tomto serveru.",
   "item": "Předmět",
   "blocked_commands": "Zablokované příkazy",

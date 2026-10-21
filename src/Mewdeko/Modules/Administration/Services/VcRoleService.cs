@@ -22,7 +22,7 @@ public class VcRoleService : INService, IReadyExecutor
     /// <summary>
     ///     Initializes a new instance of the <see cref="VcRoleService" /> class.
     /// </summary>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="dbFactory">The database service.</param>
     /// <param name="eventHandler">The event handler.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
@@ -34,7 +34,7 @@ public class VcRoleService : INService, IReadyExecutor
         this.client = client;
 
         this.eventHandler = eventHandler;
-        eventHandler.Subscribe("UserVoiceStateUpdated", "VcRoleService", ClientOnUserVoiceStateUpdated);
+        eventHandler.UserVoiceStateUpdated.Subscribe("VcRoleService", ClientOnUserVoiceStateUpdated);
 
         ToAssign = new NonBlocking.ConcurrentDictionary<ulong, ConcurrentQueue<(bool, SocketGuildMember, SocketRole)>>();
 
@@ -76,8 +76,8 @@ public class VcRoleService : INService, IReadyExecutor
             }
         });
 
-        eventHandler.Subscribe("LeftGuild", "VcRoleService", _client_LeftGuild);
-        eventHandler.Subscribe("JoinedGuild", "VcRoleService", Bot_JoinedGuild);
+        eventHandler.LeftGuild.Subscribe("VcRoleService", _client_LeftGuild);
+        eventHandler.JoinedGuild.Subscribe("VcRoleService", Bot_JoinedGuild);
     }
 
     /// <summary>
@@ -122,9 +122,9 @@ public class VcRoleService : INService, IReadyExecutor
     /// </summary>
     public Task Unload()
     {
-        eventHandler.Unsubscribe("UserVoiceStateUpdated", "VcRoleService", ClientOnUserVoiceStateUpdated);
-        eventHandler.Unsubscribe("LeftGuild", "VcRoleService", _client_LeftGuild);
-        eventHandler.Unsubscribe("JoinedGuild", "VcRoleService", Bot_JoinedGuild);
+        eventHandler.UserVoiceStateUpdated.Unsubscribe("VcRoleService", ClientOnUserVoiceStateUpdated);
+        eventHandler.LeftGuild.Unsubscribe("VcRoleService", _client_LeftGuild);
+        eventHandler.JoinedGuild.Unsubscribe("VcRoleService", Bot_JoinedGuild);
         return Task.CompletedTask;
     }
 
@@ -298,15 +298,13 @@ public class VcRoleService : INService, IReadyExecutor
     ///     Event handler for when a user's voice state is updated. Assigns or removes roles based on the user's new voice
     ///     state.
     /// </summary>
-    /// <param name="usr">The user whose voice state was updated.</param>
-    /// <param name="oldState">The user's old voice state.</param>
-    /// <param name="newState">The user's new voice state.</param>
+    /// <param name="gusr">The member whose voice state was updated.</param>
+    /// <param name="oldState">The member's old voice state.</param>
+    /// <param name="newState">The member's new voice state.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    private Task ClientOnUserVoiceStateUpdated(SocketUser usr, SocketVoiceState oldState, SocketVoiceState newState)
+    private Task ClientOnUserVoiceStateUpdated(SocketGuildMember gusr, VoiceStateSnapshot oldState,
+        VoiceStateSnapshot newState)
     {
-        if (usr is not SocketGuildMember gusr)
-            return Task.CompletedTask;
-
         var oldVc = oldState.VoiceChannel;
         var newVc = newState.VoiceChannel;
 
@@ -315,7 +313,7 @@ public class VcRoleService : INService, IReadyExecutor
             try
             {
                 if (oldVc?.Id == newVc?.Id) return; // No channel change
-                var guildId = newVc?.Guild.Id ?? oldVc?.Guild.Id; // Get GuildId safely
+                var guildId = newVc?.GuildId ?? oldVc?.GuildId; // Get GuildId safely
                 if (guildId == null) return; // Cannot proceed without GuildId
 
                 if (!VcRoles.TryGetValue(guildId.Value, out var guildVcRoles)) return;
@@ -330,7 +328,7 @@ public class VcRoleService : INService, IReadyExecutor
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Error in VcRoleService VoiceStateUpdate for user {UserId}", usr.Id);
+                logger.LogWarning(ex, "Error in VcRoleService VoiceStateUpdate for user {UserId}", gusr.Id);
             }
         });
         return Task.CompletedTask;

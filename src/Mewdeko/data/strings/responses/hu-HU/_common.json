@@ -259,8 +259,6 @@
   "warnpl_none": "Nincs büntetés beállítva.",
   "time": "{0} -ban az idő {1} - {2}",
   "type": "Típus",
-  "gvc_disabled": "Játék Beszéd Szoba funkció kikapcsolva ezen a szerveren.",
-  "gvc_enabled": "{0} egy Játék Beszéd Szoba.",
   "not_in_voice": "Nem vagy beszéd szobában ezen a szerveren.",
   "item": "Tárgy",
   "blocked_commands": "Blokkolt parancsok",

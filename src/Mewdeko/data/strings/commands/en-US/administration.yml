@@ -1600,114 +1600,6 @@ banunder_StoopidTime_=_=_2:
       name: time1
       optional: true
       type: duration
-boost:
-  args:
-    - ''
-  desc: 'Enables or disables boost messages.'
-  params: [ ]
-boostdel:
-  args:
-    - 30
-  desc: 'Sets the timer for deleting boost messages.'
-  params:
-    - &ref_114
-      desc: 'Sets the timer for deleting boost messages.'
-      name: 30
-      optional: false
-      type: '='
-boostdel_=:
-  args:
-    - 30
-  desc: 'Sets the timer for deleting boost messages.'
-  params:
-    - desc: 'Sets the timer for deleting boost messages.'
-      name: 30
-      optional: false
-      type: '='
-boostdel_=_1:
-  args:
-    - 30
-  desc: 'Sets the timer for deleting boost messages.'
-  params:
-    - desc: 'Sets the timer for deleting boost messages.'
-      name: 30
-      optional: false
-      type: '='
-boostdel_=_2:
-  args:
-    - 30
-  desc: 'Sets the timer for deleting boost messages.'
-  params:
-    - desc: 'Sets the timer for deleting boost messages.'
-      name: 30
-      optional: false
-      type: '='
-boostmsg:
-  args:
-    - ''
-  desc: 'Sets the boost message for the server.'
-  params: [ ]
-boostmsg_noparams:
-  args:
-    - ''
-  desc: 'Sets the boost message for the server.'
-  params: [ ]
-boostmsg_noparams_1:
-  args:
-    - ''
-  desc: 'Sets the boost message for the server.'
-  params: [ ]
-boostmsg_noparams_2:
-  args:
-    - ''
-  desc: 'Sets the boost message for the server.'
-  params: [ ]
-boostmsg_string:
-  args:
-    - text
-  desc: 'Sets the boost message for the server.'
-  params:
-    - &ref_115
-      desc: 'The new boost message.'
-      name: text
-      optional: true
-      type: string
-boostmsg_string_1:
-  args:
-    - text
-  desc: 'Sets the boost message for the server.'
-  params:
-    - desc: 'The new boost message.'
-      name: text
-      optional: true
-      type: string
-boostmsg_string_2:
-  args:
-    - text
-  desc: 'Sets the boost message for the server.'
-  params:
-    - desc: 'The new boost message.'
-      name: text
-      optional: true
-      type: string
-boostmsg_string_3:
-  args:
-    - text
-  desc: 'Sets the boost message for the server.'
-  params:
-    - desc: 'The new boost message.'
-      name: text
-      optional: true
-      type: string
-boosttest:
-  args:
-    - '[@user]'
-  desc: 'Sends a test message for boosting.'
-  params:
-    - desc: 'The user to send the test message to.'
-      name: user
-      optional: true
-      type: user
 bye:
   args:
     - ''
@@ -2614,11 +2506,6 @@ edit_ITextChannel_ulong_string_2:
       name: text
       optional: true
       type: string
-gamevoicechannel:
-  args:
-    - ''
-  desc: 'Toggles the current voice channel as the game voice channel for the guild.'
-  params: [ ]
 greetdm:
   args:
     - ''
@@ -3511,63 +3398,6 @@ prefixcommand_string_3:
       name: prefix
       optional: false
       type: string
-prunemembers:
-  args:
-    - time "no"
-    - time
-  desc: 'Prunes members from the server based on their activity or inactivity.'
-  params:
-    - desc: 'Time duration in a custom format'
-      name: time
-      optional: false
-      type: StoopidTime
-    - &ref_360
-      desc: 'Prunes members from the server based on their activity or inactivity.'
-      name: '"no"'
-      optional: false
-      type: '='
-prunemembers_StoopidTime_=:
-  args:
-    - time "no"
-    - time
-  desc: 'Prunes members from the server based on their activity or inactivity.'
-  params:
-    - desc: 'Time duration in a custom format'
-      name: time
-      optional: false
-      type: StoopidTime
-    - desc: 'Prunes members from the server based on their activity or inactivity.'
-      name: '"no"'
-      optional: false
-      type: '='
-prunemembers_StoopidTime_=_1:
-  args:
-    - time "no"
-    - time
-  desc: 'Prunes members from the server based on their activity or inactivity.'
-  params:
-    - desc: 'Time duration in a custom format'
-      name: time
-      optional: false
-      type: StoopidTime
-    - desc: 'Prunes members from the server based on their activity or inactivity.'
-      name: '"no"'
-      optional: false
-      type: '='
-prunemembers_StoopidTime_=_2:
-  args:
-    - time "no"
-    - time
-  desc: 'Prunes members from the server based on their activity or inactivity.'
-  params:
-    - desc: 'Time duration in a custom format'
-      name: time
-      optional: false
-      type: StoopidTime
-    - desc: 'Prunes members from the server based on their activity or inactivity.'
-      name: '"no"'
-      optional: false
-      type: '='
 reactionroles:
   args:
     - messageid text
@@ -5082,21 +4912,6 @@ antiimagehashignore:
     - '<role>'
     - '<channel>'
   desc: 'Toggles a role or channel as exempt from Anti-Image-Hash protection.'
-  params: [ ]
-antiexternalapp:
-  args:
-    - ''
-    - 'Timeout'
-    - 'Timeout 5 5 1h'
-    - 'Kick 3 0'
-  desc: >-
-    Enables Anti-External-App protection, which watches messages members send
-    through apps they added to their own account. A message is removed and the
-    member who ran the app is punished when it mentions too many people or roles
-    (default 5, 0 turns it off), pings everyone, contains an invite link, or when
-    the member runs apps more than the allowed number of times in 10 seconds
-    (default 5, 0 turns it off). Apps added to the server itself are not checked.
-    Run with no arguments to disable it.
   params: [ ]
 blockimage:
   args:

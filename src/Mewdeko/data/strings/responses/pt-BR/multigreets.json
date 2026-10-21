@@ -1,11 +1,4 @@
 {
-  "boost_on": "Mensagens de boost ativadas.",
-  "boost_off": "Mensagens de boost desativadas.",
-  "boostmsg_cur": "Mensagem de boost atual: {0}",
-  "boostmsg_enable": "Ative mensagens de boost digitando {0}",
-  "boostmsg_new": "Nova mensagem de boost definida.",
-  "boostdel_off": "Remoção automática de mensagens de boost desativada.",
-  "boostdel_on": "Mensagens de boost serão deletadas após {0} segundos.",
   "bandm": "Você foi banido do servidor {0}.\nMotivo: {1}",
   "banmsg_default": "",
   "byedel_off": "Remoção automática de mensagens de despedida foi desativada.",

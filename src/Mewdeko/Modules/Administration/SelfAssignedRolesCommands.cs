@@ -79,7 +79,7 @@ public partial class Administration
         [Priority(0)]
         public async Task Asar(int group, [Remainder] SocketRole role)
         {
-            var guser = (SocketGuildMember)ctx.User;
+            var guser = ctx.Member!;
             if (ctx.User.Id != guser.Guild.OwnerId && guser.GetRoles().Max(x => x.Position) <= role.Position)
                 return;
 
@@ -144,7 +144,7 @@ public partial class Administration
         [UserPerm(GuildPermission.ManageRoles)]
         public async Task Rsar([Remainder] SocketRole role)
         {
-            var guser = (SocketGuildMember)ctx.User;
+            var guser = ctx.Member!;
             if (ctx.User.Id != guser.Guild.OwnerId && guser.GetRoles().Max(x => x.Position) <= role.Position)
                 return;
 
@@ -287,7 +287,7 @@ public partial class Administration
         [RequireContext(ContextType.Guild)]
         public async Task Iam([Remainder] SocketRole role)
         {
-            var guildUser = (SocketGuildMember)ctx.User;
+            var guildUser = ctx.Member!;
 
             var (result, autoDelete, extra) = await Service.Assign(guildUser, role).ConfigureAwait(false);
 
@@ -329,7 +329,7 @@ public partial class Administration
         [RequireContext(ContextType.Guild)]
         public async Task Iamnot([Remainder] SocketRole role)
         {
-            var guildUser = (SocketGuildMember)ctx.User;
+            var guildUser = ctx.Member!;
 
             var (result, autoDelete) = await Service.Remove(guildUser, role).ConfigureAwait(false);
 

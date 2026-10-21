@@ -328,8 +328,6 @@
   "rolehoist_enabled": "Role {0} is now displayed separately from online members.",
   "rolehoist_disabled": "Role {0} is no longer displayed separately from online members.",
   "type": "Type, you need more explanation than that?",
-  "gvc_disabled": "Game Voice Channel feature has been disabled on this server.",
-  "gvc_enabled": "{0} is a Game Voice Channel now.",
   "not_in_voice": "It seems like you're not in a voice channel in this server...",
   "item": "Things and stuff.",
   "blocked_commands": "Ignoring Commands, that's what i always do when you talk to me.",

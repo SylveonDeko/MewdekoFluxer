@@ -1,13 +1,6 @@
 {
   "bandm": "You have been banned from {0} server.\nReason: {1}",
   "banmsg_default": "No ban message set. Default behavior will be used.",
-  "boost_off": "Boost announcements disabled.",
-  "boost_on": "Boost announcements enabled on this channel.",
-  "boostdel_off": "Automatic deletion of boost messages has been disabled.",
-  "boostdel_on": "Boost messages will be deleted after {0} seconds.",
-  "boostmsg_cur": "Current boost message: {0}",
-  "boostmsg_enable": "Enable boost messages by typing {0}",
-  "boostmsg_new": "New boost message set.",
   "bye_off": "Bye announcements disabled.",
   "bye_on": "Bye announcements enabled on this channel.",
   "byedel_off": "Automatic deletion of bye messages has been disabled.",

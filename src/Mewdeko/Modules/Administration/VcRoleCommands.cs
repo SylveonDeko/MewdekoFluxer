@@ -81,7 +81,7 @@ public partial class Administration
         [RequireContext(ContextType.Guild)]
         public async Task VcRole([Remainder] SocketRole? role = null)
         {
-            var user = (SocketGuildMember)ctx.User;
+            var user = ctx.Member!;
 
             var vc = user.VoiceChannel;
 

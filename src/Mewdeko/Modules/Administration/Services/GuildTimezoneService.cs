@@ -10,7 +10,7 @@ public class GuildTimezoneService : INService
     /// <summary>
     ///     Constructs a new instance of the GuildTimezoneService.
     /// </summary>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="dbFactory">The database service.</param>
     /// <param name="gss">The guild config service.</param>
     public GuildTimezoneService(FluxerClient client, IDataConnectionFactory dbFactory,

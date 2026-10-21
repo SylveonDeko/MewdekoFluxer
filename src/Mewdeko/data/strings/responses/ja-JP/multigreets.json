@@ -1,11 +1,4 @@
 {
-  "boost_on": "Boost announcements enabled on this channel.",
-  "boost_off": "Boost announcements disabled.",
-  "boostmsg_cur": "Current boost message: {0}",
-  "boostmsg_enable": "Enable boost messages by typing {0}",
-  "boostmsg_new": "New boost message set.",
-  "boostdel_off": "Automatic deletion of boost messages has been disabled.",
-  "boostdel_on": "Boost messages will be deleted after {0} seconds.",
   "bandm": "あなたは《{0}》サーバーからBANされました。\n理由: {1}",
   "banmsg_default": "No ban message set. Default behavior will be used.",
   "byedel_off": "退出時メッセージの自動削除が無効になりました。\n",

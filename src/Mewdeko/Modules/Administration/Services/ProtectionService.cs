@@ -25,7 +25,6 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     private const int MaxImagesPerMessage = 4;
 
     private readonly ConcurrentDictionary<ulong, AntiAltStats> antiAltGuilds = new();
-    private readonly ConcurrentDictionary<ulong, AntiExternalAppStats> antiExternalAppGuilds = new();
     private readonly ConcurrentDictionary<ulong, AntiImageHashStats> antiImageHashGuilds = new();
     private readonly ConcurrentDictionary<ulong, AntiMassMentionStats> antiMassMentionGuilds = new();
     private readonly ConcurrentDictionary<ulong, AntiMassPostStats> antiMassPostGuilds = new();
@@ -65,7 +64,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     /// <summary>
     ///     Constructs a new instance of the ProtectionService.
     /// </summary>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="mute">The mute service.</param>
     /// <param name="dbFactory">The database service.</param>
     /// <param name="punishService">The user punish service.</param>
@@ -93,16 +92,15 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
         this.scamPresets = scamPresets;
         this.bss = bss;
 
-        eventHandler.Subscribe("MessageReceived", "ProtectionService", HandleAntiSpam);
-        eventHandler.Subscribe("UserJoined", "ProtectionService", HandleUserJoined);
-        eventHandler.Subscribe("MessageReceived", "ProtectionService", HandleAntiMassMention);
-        eventHandler.Subscribe("MessageReceived", "ProtectionService", HandleAntiMassPost);
-        eventHandler.Subscribe("MessageReceived", "ProtectionService", HandleAntiPostChannel);
-        eventHandler.Subscribe("MessageReceived", "ProtectionService", HandleAntiImageHash);
-        eventHandler.Subscribe("MessageReceived", "ProtectionService", HandleAntiExternalApp);
+        eventHandler.MessageReceived.Subscribe("ProtectionService", HandleAntiSpam);
+        eventHandler.UserJoined.Subscribe("ProtectionService", HandleUserJoined);
+        eventHandler.MessageReceived.Subscribe("ProtectionService", HandleAntiMassMention);
+        eventHandler.MessageReceived.Subscribe("ProtectionService", HandleAntiMassPost);
+        eventHandler.MessageReceived.Subscribe("ProtectionService", HandleAntiPostChannel);
+        eventHandler.MessageReceived.Subscribe("ProtectionService", HandleAntiImageHash);
 
-        eventHandler.Subscribe("JoinedGuild", "ProtectionService", _bot_JoinedGuild);
-        eventHandler.Subscribe("LeftGuild", "ProtectionService", _client_LeftGuild);
+        eventHandler.JoinedGuild.Subscribe("ProtectionService", _bot_JoinedGuild);
+        eventHandler.LeftGuild.Subscribe("ProtectionService", _client_LeftGuild);
 
         _ = Task.Run(RunQueue);
     }
@@ -139,15 +137,14 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     /// </summary>
     public Task Unload()
     {
-        eventHandler.Unsubscribe("MessageReceived", "ProtectionService", HandleAntiSpam);
-        eventHandler.Unsubscribe("UserJoined", "ProtectionService", HandleUserJoined);
-        eventHandler.Unsubscribe("MessageReceived", "ProtectionService", HandleAntiMassMention);
-        eventHandler.Unsubscribe("MessageReceived", "ProtectionService", HandleAntiMassPost);
-        eventHandler.Unsubscribe("MessageReceived", "ProtectionService", HandleAntiPostChannel);
-        eventHandler.Unsubscribe("MessageReceived", "ProtectionService", HandleAntiImageHash);
-        eventHandler.Unsubscribe("MessageReceived", "ProtectionService", HandleAntiExternalApp);
-        eventHandler.Unsubscribe("JoinedGuild", "ProtectionService", _bot_JoinedGuild);
-        eventHandler.Unsubscribe("LeftGuild", "ProtectionService", _client_LeftGuild);
+        eventHandler.MessageReceived.Unsubscribe("ProtectionService", HandleAntiSpam);
+        eventHandler.UserJoined.Unsubscribe("ProtectionService", HandleUserJoined);
+        eventHandler.MessageReceived.Unsubscribe("ProtectionService", HandleAntiMassMention);
+        eventHandler.MessageReceived.Unsubscribe("ProtectionService", HandleAntiMassPost);
+        eventHandler.MessageReceived.Unsubscribe("ProtectionService", HandleAntiPostChannel);
+        eventHandler.MessageReceived.Unsubscribe("ProtectionService", HandleAntiImageHash);
+        eventHandler.JoinedGuild.Unsubscribe("ProtectionService", _bot_JoinedGuild);
+        eventHandler.LeftGuild.Unsubscribe("ProtectionService", _client_LeftGuild);
         return Task.CompletedTask;
     }
 
@@ -184,10 +181,10 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
                     await punishService.ApplyPunishment(gu.Guild, gu, currentUser, (PunishmentAction)item.Action,
                         muteTime, item.RoleId, $"{item.Type} Protection").ConfigureAwait(false);
                 }
-                catch (Discord.Net.FluxerApiException ex) when (ex.DiscordCode == DiscordErrorCode.MissingPermissions)
+                catch (FluxerApiException ex) when (ex.ErrorCode == FluxerErrorCodes.MissingPermissions)
                 {
                     await PausePunishmentsAsync(gu.Guild, (PunishmentAction)item.Action, item.Type,
-                        "Discord rejected the action with Missing Permissions").ConfigureAwait(false);
+                        "Fluxer rejected the action with Missing Permissions").ConfigureAwait(false);
                 }
 
                 await Task.Delay(1000);
@@ -216,7 +213,6 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
         antiMassPostGuilds.TryRemove(guild.Id, out _);
         antiPostChannelGuilds.TryRemove(guild.Id, out _);
         antiImageHashGuilds.TryRemove(guild.Id, out _);
-        antiExternalAppGuilds.TryRemove(guild.Id, out _);
         return Task.CompletedTask;
     }
 
@@ -361,12 +357,6 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
             };
         }
         else antiImageHashGuilds.TryRemove(guildId, out _);
-
-        var externalApp = await db.GetTable<AntiExternalAppSetting>().FirstOrDefaultAsync(x => x.GuildId == guildId)
-            .ConfigureAwait(false);
-
-        if (externalApp != null) antiExternalAppGuilds[guildId] = new AntiExternalAppStats(externalApp);
-        else antiExternalAppGuilds.TryRemove(guildId, out _);
     }
 
     /// <summary>
@@ -425,9 +415,9 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
                 }
 
                 // Join timing check
-                if (settings.CheckJoinTiming && user.JoinedAt.HasValue)
+                if (settings.CheckJoinTiming)
                 {
-                    var timeBetween = (user.JoinedAt.Value - user.CreatedAt).TotalHours;
+                    var timeBetween = (user.JoinedAt - user.CreatedAt).TotalHours;
                     if (timeBetween <= settings.MaxJoinHours)
                     {
                         score += timeBetween < 1 ? 10 : timeBetween < 6 ? 7 : 3;
@@ -572,7 +562,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     /// <returns>A task that represents the asynchronous operation.</returns>
     private Task HandleAntiSpam(Message arg)
     {
-        if (arg is not SocketMessage msg || msg.Author.IsBot || msg.Author is SocketGuildMember
+        if (arg is not SocketMessage msg || msg.Author.IsBot || msg.Member is
             {
                 GuildPermissions.Administrator: true
             })
@@ -604,7 +594,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
                         removedStats.Dispose();
                         var settings = spamStats.AntiSpamSettings;
                         await PunishUsers(settings.Action, ProtectionType.Spamming, settings.MuteTime, settings.RoleId,
-                            (SocketGuildMember)msg.Author).ConfigureAwait(false);
+                            msg.Member!).ConfigureAwait(false);
                     }
                 }
             }
@@ -642,7 +632,6 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
             ProtectionType.Spamming => "automod_spam",
             ProtectionType.MassMention => "automod_mention",
             ProtectionType.ImageHash => "automod_image",
-            ProtectionType.ExternalApp => "automod_app",
             _ => "automod_post"
         }, gus[0].GuildId);
 
@@ -860,7 +849,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     /// <returns>A task that represents the asynchronous operation.</returns>
     private Task HandleAntiMassMention(Message arg)
     {
-        if (arg is not SocketMessage msg || msg.Author is SocketGuildMember { GuildPermissions.Administrator: true })
+        if (arg is not SocketMessage msg || msg.Member is { GuildPermissions.Administrator: true })
             return Task.CompletedTask;
 
         if (msg.Channel is not Channel channel)
@@ -873,7 +862,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
         if (settings.IgnoreBots && msg.Author.IsBot)
             return Task.CompletedTask;
 
-        var mentionCount = msg.MentionedUsers.Count + msg.MentionedRoles.Count;
+        var mentionCount = msg.MentionedUsers.Count + msg.MentionedRoleIds.Count;
         if (mentionCount == 0) return Task.CompletedTask;
 
 
@@ -884,7 +873,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
                 if (mentionCount >= settings.MentionThreshold)
                 {
                     await PunishUsers(settings.Action, ProtectionType.MassMention, settings.MuteTime, settings.RoleId,
-                        (SocketGuildMember)msg.Author).ConfigureAwait(false);
+                        msg.Member!).ConfigureAwait(false);
                     if (massMentionStats.UserStats.TryRemove(msg.Author.Id, out var removedStats))
                         removedStats.Dispose();
                     return;
@@ -896,7 +885,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
                 if (userStats.AddMentions(mentionCount, settings.MaxMentionsInTimeWindow))
                 {
                     await PunishUsers(settings.Action, ProtectionType.MassMention, settings.MuteTime, settings.RoleId,
-                        (SocketGuildMember)msg.Author).ConfigureAwait(false);
+                        msg.Member!).ConfigureAwait(false);
                     if (massMentionStats.UserStats.TryRemove(msg.Author.Id, out var removedStats))
                         removedStats.Dispose();
                 }
@@ -1478,7 +1467,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     /// <returns>A task that represents the asynchronous operation.</returns>
     private Task HandleAntiMassPost(Message arg)
     {
-        if (arg is not SocketMessage msg || msg.Author.IsBot || msg.Author is not SocketGuildMember guildUser)
+        if (arg is not SocketMessage msg || msg.Author.IsBot || msg.Member is not { } guildUser)
             return Task.CompletedTask;
 
         if (msg.Channel is not Channel channel)
@@ -1633,7 +1622,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     /// <returns>A task that represents the asynchronous operation.</returns>
     private Task HandleAntiPostChannel(Message arg)
     {
-        if (arg is not SocketMessage msg || msg.Author.IsBot || msg.Author is not SocketGuildMember guildUser ||
+        if (arg is not SocketMessage msg || msg.Author.IsBot || msg.Member is not { } guildUser ||
             msg.Channel is not Channel channel ||
             !antiPostChannelGuilds.TryGetValue(channel.Guild.Id, out var postChannelStats))
             return Task.CompletedTask;
@@ -1837,12 +1826,10 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
             return;
 
         var violations = stats.RecentViolations.ToArray();
-        var thumbnailUrl = Emoji.TryParse("<:HaneAngry:1026529071825420408>", out var emote) ? emote.Url : null;
 
         var embed = new EmbedBuilder()
             .WithTitle(strings.AntiPostChannelStatusWarning(guildId,
                 ((PunishmentAction)settings.Action).ToString().ToLower()))
-            .WithThumbnailUrl(thumbnailUrl)
             .WithErrorColor()
             .AddField(strings.AntiPostChannelStatusAction(guildId), ((PunishmentAction)settings.Action).ToString(),
                 true)
@@ -2132,7 +2119,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     /// <returns>A task that represents the asynchronous operation.</returns>
     private Task HandleAntiImageHash(Message arg)
     {
-        if (arg is not SocketMessage msg || msg.Author is not SocketGuildMember guildUser ||
+        if (arg is not SocketMessage msg || msg.Member is not { } guildUser ||
             msg.Channel is not Channel channel ||
             !antiImageHashGuilds.TryGetValue(channel.Guild.Id, out var stats))
             return Task.CompletedTask;
@@ -2566,7 +2553,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     /// </param>
     /// <param name="name">An optional label for the blocked image.</param>
     /// <param name="sourceUrl">The URL the hash was generated from, kept for previews.</param>
-    /// <param name="addedBy">The Discord user ID that added the image.</param>
+    /// <param name="addedBy">The user ID that added the image.</param>
     /// <param name="action">An optional action that overrides the guild default for this image.</param>
     /// <param name="punishDuration">An optional punishment duration that overrides the guild default for this image.</param>
     /// <param name="roleId">An optional role that overrides the guild default for this image.</param>
@@ -2697,234 +2684,5 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
 
         await Initialize(guildId);
         return deleted == 0;
-    }
-
-    /// <summary>
-    ///     Handles messages sent through apps a member installed on their own account. These post as the app, so every
-    ///     check that looks at the author misses them; the member who actually ran the app comes from the message's
-    ///     interaction metadata instead. Apps installed on the server itself are left alone.
-    /// </summary>
-    /// <param name="arg">The message that was received.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    private Task HandleAntiExternalApp(Message arg)
-    {
-        if (arg is not SocketMessage msg || msg.Channel is not Channel channel ||
-            !antiExternalAppGuilds.TryGetValue(channel.Guild.Id, out var stats))
-            return Task.CompletedTask;
-
-        var metadata = msg.InteractionMetadata;
-        var owners = metadata?.IntegrationOwners;
-        if (metadata is null || owners is null || !owners.ContainsKey(ApplicationIntegrationType.UserInstall) ||
-            owners.ContainsKey(ApplicationIntegrationType.GuildInstall))
-            return Task.CompletedTask;
-
-        var member = channel.Guild.GetUser(metadata.UserId);
-        if (member is null || member.GuildPermissions.Administrator)
-            return Task.CompletedTask;
-
-        var settings = stats.AntiExternalAppSettings;
-        var reason = FindExternalAppViolation(msg, member.Id, stats, settings);
-        if (reason is null)
-            return Task.CompletedTask;
-
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await PunishExternalApp(member, stats, msg, reason).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "Error processing anti-external-app for user {UserId}", member.Id);
-            }
-        });
-
-        return Task.CompletedTask;
-    }
-
-    /// <summary>
-    ///     Works out which rule, if any, an external app message breaks. Every run is recorded for the rate check, so a
-    ///     member flooding harmless messages is still caught.
-    /// </summary>
-    /// <returns>A short name for the broken rule, or null when the message is fine.</returns>
-    private static string? FindExternalAppViolation(SocketMessage msg, ulong memberId, AntiExternalAppStats stats,
-        AntiExternalAppSetting settings)
-    {
-        var now = DateTime.UtcNow;
-        var runs = stats.RecentRuns.GetOrAdd(memberId, _ => new System.Collections.Concurrent.ConcurrentQueue<DateTime>());
-        runs.Enqueue(now);
-        var window = TimeSpan.FromSeconds(Math.Max(1, settings.TimeWindowSeconds));
-        while (runs.TryPeek(out var oldest) && now - oldest > window)
-            runs.TryDequeue(out _);
-
-        if (settings.MentionThreshold > 0)
-        {
-            var mentions = msg.MentionedUsers.Count + msg.MentionedRoles.Count;
-            if (msg.MentionedEveryone || mentions >= settings.MentionThreshold)
-                return "mentions";
-        }
-
-        if (settings.BlockInvites)
-        {
-            var text = string.Join('\n', msg.Embeds
-                .SelectMany(e => new[] { e.Title, e.Description, e.Url }
-                    .Concat(e.Fields.SelectMany(f => new[] { f.Name, f.Value })))
-                .Prepend(msg.Content)
-                .Where(s => !string.IsNullOrEmpty(s)));
-            if (text.IsDiscordInvite())
-                return "invite";
-        }
-
-        if (settings.MaxMessages > 0 && runs.Count > settings.MaxMessages)
-        {
-            runs.Clear();
-            return "rate";
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    ///     Deletes the app message, tells the member who ran it, and applies the punishment.
-    /// </summary>
-    private async Task PunishExternalApp(SocketGuildMember member, AntiExternalAppStats stats, Message triggerMessage,
-        string reason)
-    {
-        var settings = stats.AntiExternalAppSettings;
-        var action = (PunishmentAction)settings.Action;
-
-        stats.Increment();
-        stats.RecentViolations.Enqueue((member.Id, member.Username, reason, DateTimeOffset.UtcNow));
-        while (stats.RecentViolations.Count > 10)
-            stats.RecentViolations.TryDequeue(out _);
-
-        _ = Task.Run(() => RecordExternalAppHitAsync(member.GuildId));
-
-        if (settings.DeleteMessages || action == PunishmentAction.Delete)
-        {
-            try
-            {
-                await triggerMessage.DeleteAsync().ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "Failed to delete external app message {MessageId}", triggerMessage.Id);
-            }
-        }
-
-        if (settings.NotifyUser)
-        {
-            try
-            {
-                var dmChannel = await member.CreateDMChannelAsync().ConfigureAwait(false);
-                await dmChannel.SendAsync(strings.ExternalAppDetectedDm(member.GuildId, member.Guild.Name))
-                    .ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                logger.LogDebug(ex, "Could not DM {UserId} about an external app violation", member.Id);
-            }
-        }
-
-        if (action is PunishmentAction.Delete or PunishmentAction.None)
-            return;
-
-        await PunishUsers((int)action, ProtectionType.ExternalApp, settings.PunishDuration, settings.RoleId, member)
-            .ConfigureAwait(false);
-    }
-
-    /// <summary>
-    ///     Persists the trigger counter for anti-external-app protection.
-    /// </summary>
-    private async Task RecordExternalAppHitAsync(ulong guildId)
-    {
-        try
-        {
-            await using var db = await dbFactory.CreateConnectionAsync();
-
-            await db.GetTable<AntiExternalAppSetting>()
-                .Where(s => s.GuildId == guildId)
-                .Set(s => s.TotalTriggers, s => s.TotalTriggers + 1)
-                .UpdateAsync().ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to persist external app hit for guild {GuildId}", guildId);
-        }
-    }
-
-    /// <summary>
-    ///     Gets the anti-external-app statistics for a guild.
-    /// </summary>
-    /// <param name="guildId">The ID of the guild.</param>
-    /// <returns>The anti-external-app stats, or null when the protection is off.</returns>
-    public AntiExternalAppStats? GetAntiExternalAppStats(ulong guildId)
-    {
-        return antiExternalAppGuilds.GetValueOrDefault(guildId);
-    }
-
-    /// <summary>
-    ///     Starts or reconfigures anti-external-app protection for a guild.
-    /// </summary>
-    /// <param name="guildId">The ID of the guild.</param>
-    /// <param name="action">The punishment for the member who ran the app.</param>
-    /// <param name="punishDuration">The punishment duration in minutes, if the action supports one.</param>
-    /// <param name="roleId">The ID of the role to be added, if the action is AddRole.</param>
-    /// <param name="mentionThreshold">How many mentions one app message may carry; zero turns the check off.</param>
-    /// <param name="blockInvites">Whether app messages with invite links count as violations.</param>
-    /// <param name="maxMessages">How many app messages one member may trigger in the window; zero turns the check off.</param>
-    /// <param name="timeWindowSeconds">The length of the window for <paramref name="maxMessages" />, in seconds.</param>
-    /// <param name="deleteMessages">Whether the offending app message is deleted.</param>
-    /// <param name="notifyUser">Whether the member is told by DM.</param>
-    /// <returns>The resulting stats, or null if the settings could not be saved.</returns>
-    public async Task<AntiExternalAppStats?> StartAntiExternalAppAsync(ulong guildId, PunishmentAction action,
-        int punishDuration, ulong? roleId, int mentionThreshold, bool blockInvites, int maxMessages,
-        int timeWindowSeconds, bool deleteMessages, bool notifyUser)
-    {
-        if (!IsDurationAllowed(action)) punishDuration = 0;
-
-        await using var db = await dbFactory.CreateConnectionAsync();
-        var settings = await db.GetTable<AntiExternalAppSetting>().FirstOrDefaultAsync(x => x.GuildId == guildId)
-            .ConfigureAwait(false);
-        var isNew = settings == null;
-        settings ??= new AntiExternalAppSetting
-        {
-            GuildId = guildId, DateAdded = DateTime.UtcNow
-        };
-
-        settings.Action = (int)action;
-        settings.PunishDuration = punishDuration;
-        settings.RoleId = roleId;
-        settings.MentionThreshold = Math.Clamp(mentionThreshold, 0, 100);
-        settings.BlockInvites = blockInvites;
-        settings.MaxMessages = Math.Clamp(maxMessages, 0, 100);
-        settings.TimeWindowSeconds = Math.Clamp(timeWindowSeconds, 1, 300);
-        settings.DeleteMessages = deleteMessages;
-        settings.NotifyUser = notifyUser;
-
-        if (isNew)
-            await db.InsertAsync(settings).ConfigureAwait(false);
-        else
-            await db.UpdateAsync(settings).ConfigureAwait(false);
-
-        await Initialize(guildId);
-        return antiExternalAppGuilds.GetValueOrDefault(guildId);
-    }
-
-    /// <summary>
-    ///     Stops anti-external-app protection for a guild.
-    /// </summary>
-    /// <param name="guildId">The ID of the guild.</param>
-    /// <returns>True if the protection was running; otherwise false.</returns>
-    public async Task<bool> TryStopAntiExternalApp(ulong guildId)
-    {
-        var removed = antiExternalAppGuilds.TryRemove(guildId, out _);
-
-        await using var db = await dbFactory.CreateConnectionAsync();
-        var deletedCount = await db.GetTable<AntiExternalAppSetting>()
-            .Where(x => x.GuildId == guildId)
-            .DeleteAsync().ConfigureAwait(false);
-
-        return removed || deletedCount > 0;
     }
 }

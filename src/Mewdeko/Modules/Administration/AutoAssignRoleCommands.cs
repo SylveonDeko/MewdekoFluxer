@@ -26,7 +26,7 @@ public partial class Administration
         [UserPerm(GuildPermission.ManageRoles)]
         public async Task AutoAssignRole([Remainder] SocketRole role)
         {
-            var guser = (SocketGuildMember)ctx.User;
+            var guser = ctx.Member!;
             if (role.Id == ctx.Guild.EveryoneRole.Id)
                 return;
 
@@ -92,7 +92,7 @@ public partial class Administration
         [UserPerm(GuildPermission.ManageRoles)]
         public async Task AutoAssignBotRole([Remainder] SocketRole role)
         {
-            var guser = (SocketGuildMember)ctx.User;
+            var guser = ctx.Member!;
             if (role.Id == ctx.Guild.EveryoneRole.Id)
                 return;
 

@@ -58,7 +58,7 @@ public sealed class UserSpamStats : IDisposable
         lock (applyLock)
         {
             var upperMsg = message.Content.ToUpperInvariant();
-            if (upperMsg != LastMessage || string.IsNullOrWhiteSpace(upperMsg) && message.Attachments.Count > 0)
+            if (upperMsg != LastMessage || string.IsNullOrWhiteSpace(upperMsg) && message.Attachments?.Length > 0)
             {
                 LastMessage = upperMsg;
                 while (Timers.TryDequeue(out var old))

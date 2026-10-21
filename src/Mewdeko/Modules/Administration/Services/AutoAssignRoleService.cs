@@ -47,9 +47,8 @@ public sealed class AutoAssignRoleService : INService
         this.roleStatesService = roleStatesService;
         _ = RunAutoLoop();
 
-        eventHandler.Subscribe("UserJoined", "AutoAssignRoleService", OnClientOnUserJoined);
-        eventHandler.Subscribe("GuildMemberUpdated", "AutoAssignRoleService", OnClientOnGuildMemberUpdated);
-        eventHandler.Subscribe("RoleDeleted", "AutoAssignRoleService", OnClientRoleDeleted);
+        eventHandler.UserJoined.Subscribe("AutoAssignRoleService", OnClientOnUserJoined);
+        eventHandler.RoleDeleted.Subscribe("AutoAssignRoleService", OnClientRoleDeleted);
     }
 
     private async Task RunAutoLoop()
@@ -76,7 +75,7 @@ public sealed class AutoAssignRoleService : INService
     ///     Applies the guild's auto-assign roles to one user: the bot set when the user is a bot and one is configured,
     ///     otherwise the member set.
     /// </summary>
-    /// <param name="user">The user who joined or passed screening.</param>
+    /// <param name="user">The user who joined.</param>
     private async Task AssignAsync(SocketGuildMember user)
     {
         if (await roleStatesService.ShouldSkipAutoAssignRoles(user.Guild.Id) &&
@@ -103,7 +102,7 @@ public sealed class AutoAssignRoleService : INService
 
     /// <summary>
     ///     Adds the configured roles the bot is actually able to assign. The feature is disabled for the guild when
-    ///     none of its roles exist or sit below the bot any more, or when Discord refuses with missing permissions, so
+    ///     none of its roles exist or sit below the bot any more, or when Fluxer refuses with missing permissions, so
     ///     the same failure isn't retried on every join.
     /// </summary>
     /// <param name="user">The user to add roles to.</param>
@@ -115,12 +114,12 @@ public sealed class AutoAssignRoleService : INService
         var roles = roleIds.Select(id => user.Guild.GetRole(id)).Where(x => x is not null).ToList();
         if (user.Guild is SocketGuild socketGuild && socketGuild.CurrentUser is { } me)
         {
-            var unassignable = roles.Where(r => r.Id == user.Guild.Id || r.IsManaged || r.Position >= me.Hierarchy)
+            var unassignable = roles.Where(r => r.Id == user.Guild.Id || r.Position >= me.Hierarchy)
                 .ToList();
             if (unassignable.Count > 0)
             {
                 logger.LogDebug(
-                    "Skipping {Roles} in {GuildId} for '{Feature}': everyone, managed or above my highest role",
+                    "Skipping {Roles} in {GuildId} for '{Feature}': everyone or above my highest role",
                     string.Join(", ", unassignable.Select(r => r.Name)), user.Guild.Id, featureName);
                 roles = roles.Except(unassignable).ToList();
             }
@@ -160,21 +159,6 @@ public sealed class AutoAssignRoleService : INService
     }
 
     /// <summary>
-    ///     Event handler for when a guild member is updated.
-    /// </summary>
-    /// <param name="args">The cached user.</param>
-    /// <param name="arsg2">The updated user.</param>
-    private async Task OnClientOnGuildMemberUpdated(Cacheable<SocketGuildMember> args, SocketGuildMember arsg2)
-    {
-        if (arsg2.IsBot)
-            return;
-
-        var old = args.HasValue ? args.Value : null;
-        if (old?.IsPending != null && old.IsPending.Value && arsg2.IsPending.HasValue && !arsg2.IsPending.Value)
-            await assignQueue.Writer.WriteAsync(arsg2).ConfigureAwait(false);
-    }
-
-    /// <summary>
     ///     Event handler for when a role is deleted in a guild.
     /// </summary>
     /// <param name="role">The role that was deleted.</param>
@@ -207,10 +191,6 @@ public sealed class AutoAssignRoleService : INService
     /// <returns>A task that represents the asynchronous operation.</returns>
     private async Task OnClientOnUserJoined(SocketGuildMember user)
     {
-        // If the user is pending, return
-        if (user.IsPending.HasValue && user.IsPending.Value)
-            return;
-
         // Get the auto-assign bot roles and auto-assign roles for the guild
         var broles = await TryGetBotRoles(user.Guild.Id);
         var roles = await TryGetNormalRoles(user.Guild.Id);
@@ -422,9 +402,8 @@ public sealed class AutoAssignRoleService : INService
     /// </summary>
     public Task Unload()
     {
-        eventHandler.Unsubscribe("UserJoined", "AutoAssignRoleService", OnClientOnUserJoined);
-        eventHandler.Unsubscribe("GuildMemberUpdated", "AutoAssignRoleService", OnClientOnGuildMemberUpdated);
-        eventHandler.Unsubscribe("RoleDeleted", "AutoAssignRoleService", OnClientRoleDeleted);
+        eventHandler.UserJoined.Unsubscribe("AutoAssignRoleService", OnClientOnUserJoined);
+        eventHandler.RoleDeleted.Unsubscribe("AutoAssignRoleService", OnClientRoleDeleted);
         return Task.CompletedTask;
     }
 }

@@ -26,23 +26,22 @@ public class AutoBanRoleService : INService
         this.dbFactory = dbFactory;
         this.banPrune = banPrune;
         var eventHandler1 = eventHandler;
-        eventHandler1.Subscribe("GuildMemberUpdated", "AutoBanRoleService", OnGuildMemberUpdated);
+        eventHandler1.GuildMemberUpdated.Subscribe("AutoBanRoleService", OnGuildMemberUpdated);
     }
 
     /// <summary>
-    ///     Handles the GuildMemberUpdated event to check for auto-ban roles.
+    ///     Handles member updates to check for auto-ban roles.
     /// </summary>
-    /// <param name="before">The cached state of the user before the update</param>
+    /// <param name="before">The state of the member before the update</param>
     /// <param name="after">The current state of the user after the update</param>
-    private async Task OnGuildMemberUpdated(Cacheable<SocketGuildMember> before, SocketGuildMember after)
+    private async Task OnGuildMemberUpdated(MemberSnapshot? before, SocketGuildMember after)
     {
         // Ensure we have the before state
-        var beforeUser = before.HasValue ? before.Value : null;
-        if (beforeUser == null)
+        if (before == null)
             return;
 
         // Get newly added roles
-        var addedRoles = after.Roles.Except(beforeUser.Roles).ToList();
+        var addedRoles = after.RoleIds.Except(before.RoleIds).ToList();
         if (!addedRoles.Any())
             return;
 
@@ -54,7 +53,7 @@ public class AutoBanRoleService : INService
             .ConfigureAwait(false);
 
         // Check if any added role is an auto-ban role
-        var matchingAutoBanRole = autoBanRoles.FirstOrDefault(x => addedRoles.Any(r => r.Id == x.RoleId));
+        var matchingAutoBanRole = autoBanRoles.FirstOrDefault(x => addedRoles.Contains(x.RoleId));
         if (matchingAutoBanRole == null)
             return;
 
@@ -68,7 +67,7 @@ public class AutoBanRoleService : INService
         {
             var pruneDays = await banPrune.GetPruneDaysAsync(after.Guild.Id, BanPruneAction.AutoBanRole)
                 .ConfigureAwait(false);
-            await after.Guild.AddBanAsync(after, pruneDays, reason).ConfigureAwait(false);
+            await after.Guild.AddBanAsync(after.Id, pruneDays, reason).ConfigureAwait(false);
         }
         catch
         {

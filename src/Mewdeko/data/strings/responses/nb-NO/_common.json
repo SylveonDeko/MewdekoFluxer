@@ -328,8 +328,6 @@
   "rolehoist_enabled": "Role {0} is now displayed separately from online members.",
   "rolehoist_disabled": "Role {0} is no longer displayed separately from online members.",
   "type": "Type",
-  "gvc_disabled": "Funksjonen 'Talekanal for spill' er slått av.",
-  "gvc_enabled": "{0} er nå 'talekanal for spill'.",
   "not_in_voice": "Du er ikke i en talekanal på denne serveren.",
   "item": "Gjenstand",
   "blocked_commands": "Blokkerte kommandoer",

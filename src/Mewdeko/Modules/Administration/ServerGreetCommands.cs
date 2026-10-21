@@ -14,112 +14,15 @@ public partial class Administration
     public class ServerGreetCommands(IHttpClientFactory fact, GuildSettingsService guildSettings)
         : MewdekoSubmodule<GreetSettingsService>
     {
-        /// <summary>
-        ///     Displays the current boost message.
-        /// </summary>
-        /// <remarks>
-        ///     This command allows users to view the current boost message.
-        /// </remarks>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.ManageGuild)]
-        public async Task BoostMsg()
-        {
-            var boostMessage = await Service.GetBoostMessage(ctx.Guild.Id);
-            await ReplyConfirmAsync(Strings.BoostmsgCur(ctx.Guild.Id, boostMessage.SanitizeMentions()));
-        }
-
-        /// <summary>
-        ///     Enables or disables boost messages.
-        /// </summary>
-        /// <remarks>
-        ///     This command allows users to enable or disable boost messages.
-        /// </remarks>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.ManageGuild)]
-        public async Task Boost()
-        {
-            var enabled = await Service.SetBoost(ctx.Guild.Id, ctx.Channel.Id).ConfigureAwait(false);
-
-            if (enabled)
-                await ReplyConfirmAsync(Strings.BoostOn(ctx.Guild.Id)).ConfigureAwait(false);
-            else
-                await ReplyConfirmAsync(Strings.BoostOff(ctx.Guild.Id)).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        ///     Sets the timer for deleting boost messages.
-        /// </summary>
-        /// <remarks>
-        ///     This command allows users to set the timer for deleting boost messages.
-        /// </remarks>
-        /// <param name="timer">The timer in seconds. Must be between 0 and 600.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.ManageGuild)]
-        public async Task BoostDel(int timer = 30)
-        {
-            if (timer is < 0 or > 600)
-            {
-                await ctx.Channel.SendErrorAsync(Strings.Maxdeletetime(ctx.Guild.Id, "600 seconds"), Config)
-                    .ConfigureAwait(false);
-                return;
-            }
-
-            await Service.SetBoostDel(ctx.Guild.Id, timer).ConfigureAwait(false);
-
-            if (timer > 0)
-                await ReplyConfirmAsync(Strings.BoostdelOn(ctx.Guild.Id, timer)).ConfigureAwait(false);
-            else
-                await ReplyConfirmAsync(Strings.BoostdelOff(ctx.Guild.Id)).ConfigureAwait(false);
-        }
-
-
-        /// <summary>
-        ///     Sets the boost message for the server.
-        /// </summary>
-        /// <remarks>
-        ///     This command allows users to set the boost message for the server.
-        /// </remarks>
-        /// <param name="text">The new boost message.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.ManageGuild)]
-        public async Task BoostMsg([Remainder] string? text)
-        {
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                await BoostMsg().ConfigureAwait(false);
-                return;
-            }
-
-            var sendBoostEnabled = await Service.SetBoostMessage(ctx.Guild.Id, text);
-
-            await ReplyConfirmAsync(Strings.BoostmsgNew(ctx.Guild.Id)).ConfigureAwait(false);
-            if (!sendBoostEnabled)
-                await ReplyConfirmAsync(Strings.BoostmsgEnable(ctx.Guild.Id,
-                        $"{await guildSettings.GetPrefix(ctx.Guild)}boost"))
-                    .ConfigureAwait(false);
-        }
-
-        private async Task<IWebhook> CreateWebhook(Channel? chan, string? name, string imageUrl)
+        private async Task<Webhook> CreateWebhook(Channel chan, string name, string imageUrl)
         {
             using var http = fact.CreateClient();
             var uri = new Uri(imageUrl);
             using var sr = await http.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
             var imgData = await sr.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
-            var imgStream = imgData.ToStream();
-            await using var _ = imgStream.ConfigureAwait(false);
-            return await chan.CreateWebhookAsync(name, imgStream).ConfigureAwait(false);
+            var mediaType = sr.Content.Headers.ContentType?.MediaType ?? "image/png";
+            var avatar = $"data:{mediaType};base64,{Convert.ToBase64String(imgData)}";
+            return await chan.CreateWebhookAsync(name, avatar).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -146,17 +49,17 @@ public partial class Administration
                 return;
             }
 
-            if (image != null || ctx.Message.Attachments.Count > 0)
+            if (image != null || ctx.Message.Attachments?.Length > 0)
             {
-                var imageUrl = image ?? ctx.Message.Attachments.FirstOrDefault()?.Url;
-                var webhook = await CreateWebhook(chan, name, imageUrl).ConfigureAwait(false);
-                var txt = $"https://discord.com/api/webhooks/{webhook.Id}/{webhook.Token}";
+                var imageUrl = image ?? ctx.Message.Attachments?.FirstOrDefault()?.Url;
+                var webhook = await CreateWebhook(chan!, name!, imageUrl!).ConfigureAwait(false);
+                var txt = $"{ctx.Client.Config.RealApiBaseUrl}/webhooks/{webhook.Id}/{webhook.Token}";
                 await Service.SetWebLeaveUrl(ctx.Guild, txt).ConfigureAwait(false);
             }
             else if (image == null && text == null)
             {
-                var webhook = await chan.CreateWebhookAsync(name).ConfigureAwait(false);
-                var txt = $"https://discord.com/api/webhooks/{webhook.Id}/{webhook.Token}";
+                var webhook = await chan!.CreateWebhookAsync(name!).ConfigureAwait(false);
+                var txt = $"{ctx.Client.Config.RealApiBaseUrl}/webhooks/{webhook.Id}/{webhook.Token}";
                 await Service.SetWebLeaveUrl(ctx.Guild, txt).ConfigureAwait(false);
             }
 
@@ -198,12 +101,6 @@ public partial class Administration
         [UserPerm(GuildPermission.ManageGuild)]
         public async Task GreetDm()
         {
-            if (!ctx.Client.CurrentUser.Flags.HasFlag(UserProperties.VerifiedBot))
-            {
-                if (!await PromptUserConfirmAsync(Strings.Dmgreetcheck(ctx.Guild.Id), ctx.User.Id))
-                    return;
-            }
-
             var enabled = await Service.SetGreetDm(ctx.Guild.Id).ConfigureAwait(false);
 
             if (enabled)
@@ -362,38 +259,14 @@ public partial class Administration
         [Ratelimit(5)]
         public async Task ByeTest([Remainder] SocketGuildMember? user = null)
         {
-            user ??= (SocketGuildMember)Context.User;
+            user ??= Context.Member!;
 
-            await Service.ByeTest((Channel)Context.Channel, user).ConfigureAwait(false);
+            await Service.ByeTest(Context.Channel, user).ConfigureAwait(false);
             var enabled = await Service.GetByeEnabled(Context.Guild.Id);
             if (!enabled)
                 await ReplyConfirmAsync(Strings.ByemsgEnable(ctx.Guild.Id,
                         $"`{await guildSettings.GetPrefix(ctx.Guild)}bye`"))
                     .ConfigureAwait(false);
-        }
-
-
-        /// <summary>
-        ///     Sends a test message for boosting.
-        /// </summary>
-        /// <remarks>
-        ///     This command allows users to send a test message for boosting.
-        /// </remarks>
-        /// <param name="user">The user to send the test message to.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.ManageGuild)]
-        [Ratelimit(5)]
-        public async Task BoostTest([Remainder] SocketGuildMember? user = null)
-        {
-            user ??= (SocketGuildMember)Context.User;
-            await Service.BoostTest(ctx.Channel as Channel, user).ConfigureAwait(false);
-            var enabled = await Service.GetBoostEnabled(Context.Guild.Id);
-            if (!enabled)
-                await ReplyConfirmAsync(Strings.BoostmsgEnable(ctx.Guild.Id,
-                    $"`{await guildSettings.GetPrefix(ctx.Guild)}greet`")).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -412,7 +285,7 @@ public partial class Administration
         [Ratelimit(5)]
         public async Task GreetDmTest([Remainder] SocketGuildMember? user = null)
         {
-            user ??= (SocketGuildMember)Context.User;
+            user ??= Context.Member!;
 
             var channel = await user.CreateDMChannelAsync().ConfigureAwait(false);
             var success = await Service.GreetDmTest(channel, user).ConfigureAwait(false);

@@ -372,17 +372,6 @@ bondage:
   - bondage
 boobs:
   - boobs
-boost:
-  - boost
-boostdel:
-  - boostdel
-  - boostdelete
-boostmsg:
-  - boostmsg
-  - boostmessage
-boosttest:
-  - boosttest
-  - testboost
 bored:
   - bored
 buttoninfo:
@@ -1242,9 +1231,6 @@ fwarn:
   - filteredwarn
 fwclear:
   - fwclear
-gamevoicechannel:
-  - gamevoicechannel
-  - gvc
 gatari:
   - gatari
 gbanner:
@@ -1942,9 +1928,6 @@ pronouns:
 pronounsforceclear:
   - pronounsforceclear
   - pnfc
-prunemembers:
-  - prunemembers
-  - memberprune
 punch:
   - punch
 purge:
@@ -3830,10 +3813,6 @@ antiimagehash:
 antiimagehashignore:
   - antiimagehashignore
   - aihignore
-antiexternalapp:
-  - antiexternalapp
-  - aea
-  - antiuserapp
 antiimagehashpreset:
   - antiimagehashpreset
   - aihpreset

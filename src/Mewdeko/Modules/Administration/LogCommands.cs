@@ -235,7 +235,6 @@ public partial class Administration
                 LogType.VoicePresence => l.LogVoicePresenceId,
                 LogType.VoicePresenceTts => l.LogVoicePresenceTtsId,
                 LogType.UserMuted => l.UserMutedId,
-                LogType.EventCreated => l.EventCreatedId,
                 LogType.ThreadCreated => l.ThreadCreatedId,
                 LogType.ThreadDeleted => l.ThreadDeletedId,
                 LogType.ThreadUpdated => l.ThreadUpdatedId,

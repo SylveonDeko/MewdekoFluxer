@@ -1,13 +1,6 @@
 {
   "bandm": "Has sido baneado del servidor {0}.\nRazón: {1}",
   "banmsg_default": "No se estableció ningún mensaje de baneo. Se utilizará el comportamiento predeterminado.",
-  "boost_off": "Anuncios de boost deshabilitados.",
-  "boost_on": "Anuncios de boost habilitados en este canal.",
-  "boostdel_off": "La eliminación automática de mensajes de boost ha sido deshabilitada.",
-  "boostdel_on": "Los mensajes de boost se eliminarán después de {0} segundos.",
-  "boostmsg_cur": "Mensaje de boost actual: {0}",
-  "boostmsg_enable": "Habilita los mensajes de boost escribiendo {0}",
-  "boostmsg_new": "Nuevo mensaje de boost establecido.",
   "bye_off": "Anuncios de despedida deshabilitados.",
   "bye_on": "Anuncios de despedida habilitados en este canal.",
   "byedel_off": "La eliminación automática de mensajes de despedida ha sido deshabilitada.",

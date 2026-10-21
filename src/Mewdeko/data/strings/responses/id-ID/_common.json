@@ -328,8 +328,6 @@
   "rolehoist_enabled": "Role {0} is now displayed separately from online members.",
   "rolehoist_disabled": "Role {0} is no longer displayed separately from online members.",
   "type": "Tipe",
-  "gvc_disabled": "Fitur channel suara permainan telah dinonaktifkan di server ini. ",
-  "gvc_enabled": "{0} sekarang adalah saluran suara permainan.",
   "not_in_voice": "Anda tidak ada di saluran suara server ini.",
   "item": "Barang",
   "blocked_commands": "Perintah yang dilarang",

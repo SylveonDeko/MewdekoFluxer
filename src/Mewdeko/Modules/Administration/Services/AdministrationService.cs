@@ -29,7 +29,7 @@ public class AdministrationService : INService
     /// <param name="bot">The bot instance.</param>
     /// <param name="httpClientFactory">The HTTP client factory for making REST requests.</param>
     /// <param name="credentials">The bot credentials for authorization.</param>
-    /// <param name="shardedClient">The Discord sharded client.</param>
+    /// <param name="shardedClient">The Fluxer client.</param>
     public AdministrationService(CommandHandler cmdHandler,
         GuildSettingsService guildSettings, Mewdeko bot, IDataConnectionFactory dbFactory,
         IHttpClientFactory httpClientFactory, IBotCredentials credentials, FluxerClient shardedClient)
@@ -155,10 +155,10 @@ public class AdministrationService : INService
     /// <returns>A completed task.</returns>
     private async Task DelMsgOnCmd_Handler(Message msg, CommandInfo cmd)
     {
-        if (msg.Channel is not Channel channel)
+        if (msg.Channel is not { GuildId: { } guildId } channel)
             return;
         await using var db = await dbFactory.CreateConnectionAsync();
-        var conf = await guildSettings.GetGuildConfig(channel.GuildId);
+        var conf = await guildSettings.GetGuildConfig(guildId);
 
         var exists = await db.DelMsgOnCmdChannels.FirstOrDefaultAsync(x => x.ChannelId == channel.Id);
         if (exists is not null)
@@ -262,7 +262,7 @@ public class AdministrationService : INService
         {
             try
             {
-                await u.ModifyAsync(usr => usr.Deaf = value).ConfigureAwait(false);
+                await u.ModifyAsync(usr => usr.IsDeaf = value).ConfigureAwait(false);
             }
             catch
             {
@@ -279,7 +279,7 @@ public class AdministrationService : INService
     /// <param name="messageId">The ID of the message to edit.</param>
     /// <param name="text">The new text for the message. If null, the message content will be removed.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public static async Task EditMessage(ICommandContext context, Channel chanl, ulong messageId, string? text)
+    public static async Task EditMessage(CommandContext context, Channel chanl, ulong messageId, string? text)
     {
         var msg = await chanl.GetMessageAsync(messageId).ConfigureAwait(false);
 
@@ -303,14 +303,13 @@ public class AdministrationService : INService
             await umsg.ModifyAsync(x =>
             {
                 x.Content = text.SanitizeMentions();
-                x.Embed = null;
-                x.Components = null;
+                x.Embeds = [];
             }).ConfigureAwait(false);
         }
     }
 
     /// <summary>
-    ///     Sets the bot's guild-specific avatar, banner, and/or bio in database and Discord API.
+    ///     Sets the bot's guild-specific avatar, banner, and/or bio in database and through the Fluxer API.
     /// </summary>
     /// <param name="guildId">The ID of the guild</param>
     /// <param name="avatarUrl">Optional URL or base64 data for avatar image</param>
@@ -387,16 +386,16 @@ public class AdministrationService : INService
         if (bio != null)
             payload["bio"] = bio;
 
-        // Only make Discord API call if there's something to update
+        // Only make the API call if there's something to update
         if (payload.Count > 0)
         {
             var jsonContent = JsonSerializer.Serialize(payload);
             using var request = new HttpRequestMessage(HttpMethod.Patch,
-                $"https://discord.com/api/v10/guilds/{guildId}/members/@me")
+                $"{shardedClient.Config.RealApiBaseUrl}/guilds/{guildId}/members/@me")
             {
                 Content = new StringContent(jsonContent, Encoding.UTF8, "application/json")
             };
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bot", credentials.Token);
+            request.Headers.TryAddWithoutValidation("Authorization", shardedClient.Token);
 
             using var response = await httpClient.SendAsync(request).ConfigureAwait(false);
 
@@ -405,7 +404,7 @@ public class AdministrationService : INService
     }
 
     /// <summary>
-    ///     Resets parts of the bot's guild-specific profile back to its global profile, on Discord and in the
+    ///     Resets parts of the bot's guild-specific profile back to its global profile, on Fluxer and in the
     ///     database. The stored record is removed once nothing custom is left on it.
     /// </summary>
     /// <param name="guildId">The ID of the guild</param>
@@ -428,11 +427,11 @@ public class AdministrationService : INService
 
         using var httpClient = httpClientFactory.CreateClient();
         using var request = new HttpRequestMessage(HttpMethod.Patch,
-            $"https://discord.com/api/v10/guilds/{guildId}/members/@me")
+            $"{shardedClient.Config.RealApiBaseUrl}/guilds/{guildId}/members/@me")
         {
             Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json")
         };
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bot", credentials.Token);
+        request.Headers.TryAddWithoutValidation("Authorization", shardedClient.Token);
 
         using var response = await httpClient.SendAsync(request).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
@@ -493,15 +492,14 @@ public class AdministrationService : INService
             result["bio"] = profile.Bio;
         }
 
-        // Get current nickname from Discord.Net
         var guild = shardedClient.GetGuild(guildId);
         var botMember = guild?.GetUser(shardedClient.CurrentUser.Id);
         result["nick"] = botMember?.Nickname;
 
         // The stored avatar URL is whatever was submitted when the profile was
-        // set and may have expired (Discord attachment links do), so the live
-        // guild avatar Discord serves is preferred when one is applied.
-        var liveAvatar = botMember?.GetGuildAvatarUrl(size: 256);
+        // set and may have expired (attachment links can), so the live
+        // guild avatar Fluxer serves is preferred when one is applied.
+        var liveAvatar = botMember?.GetAvatarUrl(256);
         if (!string.IsNullOrWhiteSpace(liveAvatar))
             result["avatar"] = liveAvatar;
 

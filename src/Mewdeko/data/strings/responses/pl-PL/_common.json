@@ -259,8 +259,6 @@
   "warnpl_none": "Brak ustawionych kar",
   "time": "W {0} jest teraz {1} - {2}",
   "type": "Typ",
-  "gvc_disabled": "Opcja Czatu Głosowego gry została wyłączona na tym serwerze.",
-  "gvc_enabled": "{0} jest teraz Grą w Czacie głosowym.",
   "not_in_voice": "Nie jesteś w kanale głosowym na tym serwerze",
   "item": "Przedmiot",
   "blocked_commands": "Zablokowane komendy.",

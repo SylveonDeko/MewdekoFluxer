@@ -1,11 +1,4 @@
 {
-  "boost_on": "",
-  "boost_off": "",
-  "boostmsg_cur": "Current boost message: {0}",
-  "boostmsg_enable": "Enable boost messages by typing {0}",
-  "boostmsg_new": "",
-  "boostdel_off": "",
-  "boostdel_on": "Boost messages will be deleted after {0} seconds.",
   "bandm": "Anda telah diban dari server {0}. \nAlasan: {1}",
   "banmsg_default": "",
   "byedel_off": "Penghapusan otomatis dari pesan 'bye' telah dimatikan.",

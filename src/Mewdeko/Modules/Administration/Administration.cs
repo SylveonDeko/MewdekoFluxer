@@ -14,19 +14,17 @@ namespace Mewdeko.Modules.Administration;
 /// </summary>
 /// <param name="serv">The service that runs reaction paginators</param>
 /// <param name="logger">The logger instance for structured logging.</param>
-/// <param name="guildSettings">Guild settings service for prefix lookups.</param>
 /// <param name="banPrune">The service resolving how many days of messages a ban purges.</param>
 public partial class Administration(
     InteractiveService serv,
     ILogger<Administration> logger,
-    GuildSettingsService guildSettings,
     BanPruneService banPrune)
     : MewdekoModuleBase<AdministrationService>
 {
     /// <summary>
     ///     Enumerates different variations of the term "channel".
     /// </summary>
-    public enum Channel
+    public enum ChannelWord
     {
         /// <summary>
         ///     Represents the term "channel".
@@ -152,7 +150,7 @@ public partial class Administration(
             {
                 try
                 {
-                    await ctx.Guild.AddBanAsync(i, hashPruneDays,
+                    await ctx.Guild.AddBanAsync(i.Id, hashPruneDays,
                         $"{ctx.User.Id} banning by hash {avatarHash}");
                     bannedUsers++;
                 }
@@ -267,7 +265,7 @@ public partial class Administration(
             try
             {
                 await ctx.Guild
-                    .AddBanAsync(i, rolePruneDays,
+                    .AddBanAsync(i.Id, rolePruneDays,
                         reason ?? Strings.BanInRoleDefaultReason(ctx.Guild.Id, ctx.User, ctx.User.Id))
                     .ConfigureAwait(false);
             }
@@ -388,10 +386,8 @@ public partial class Administration(
                     {
                         try
                         {
-                            await ctx.Guild.AddBanAsync(i, deleteCount, options: new RequestOptions
-                            {
-                                AuditLogReason = Strings.MassBanRequestedBy(ctx.Guild.Id, ctx.User)
-                            });
+                            await ctx.Guild.AddBanAsync(i.Id, deleteCount,
+                                Strings.MassBanRequestedBy(ctx.Guild.Id, ctx.User));
                         }
                         catch
                         {
@@ -429,18 +425,17 @@ public partial class Administration(
         try
         {
             await ctx.Guild.DownloadUsersAsync().ConfigureAwait(false);
-            IEnumerable<IUser> users;
+            IEnumerable<SocketGuildMember> users;
             if (option is not null && option.Equals("-accage", StringComparison.OrdinalIgnoreCase) && time1 is not null)
             {
                 users = ((SocketGuild)ctx.Guild).Users.Where(c =>
-                    c.JoinedAt != null
-                    && DateTimeOffset.Now.Subtract(c.JoinedAt.Value).TotalSeconds <= time.Time.TotalSeconds
+                    DateTimeOffset.Now.Subtract(c.JoinedAt).TotalSeconds <= time.Time.TotalSeconds
                     && DateTimeOffset.Now.Subtract(c.CreatedAt).TotalSeconds <= time1.Time.TotalSeconds);
             }
             else
             {
                 users = ((SocketGuild)ctx.Guild).Users.Where(c =>
-                    c.JoinedAt != null && DateTimeOffset.Now.Subtract(c.JoinedAt.Value).TotalSeconds <=
+                    DateTimeOffset.Now.Subtract(c.JoinedAt).TotalSeconds <=
                     time.Time.TotalSeconds);
             }
 
@@ -485,10 +480,8 @@ public partial class Administration(
             {
                 try
                 {
-                    await ctx.Guild.AddBanAsync(i, underPruneDays, options: new RequestOptions
-                    {
-                        AuditLogReason = Strings.BanunderStarting(ctx.Guild.Id, ctx.User)
-                    }).ConfigureAwait(false);
+                    await ctx.Guild.AddBanAsync(i.Id, underPruneDays,
+                        Strings.BanunderStarting(ctx.Guild.Id, ctx.User)).ConfigureAwait(false);
                     banned++;
                 }
                 catch
@@ -527,7 +520,7 @@ public partial class Administration(
     {
         await ctx.Guild.DownloadUsersAsync().ConfigureAwait(false);
         var users = ((SocketGuild)ctx.Guild).Users.Where(c =>
-            c.JoinedAt != null && DateTimeOffset.Now.Subtract(c.JoinedAt.Value).TotalSeconds <= time.Time.TotalSeconds);
+            DateTimeOffset.Now.Subtract(c.JoinedAt).TotalSeconds <= time.Time.TotalSeconds);
         var guildUsers = users as SocketGuildMember[] ?? users.ToArray();
         if (guildUsers.Length == 0)
         {
@@ -583,102 +576,6 @@ public partial class Administration(
             .WithDescription(Strings.KickunderKicked(ctx.Guild.Id, banned, errored))
             .WithOkColor();
         await message.ModifyAsync(x => x.Embed = eb.Build()).ConfigureAwait(false);
-    }
-
-
-    /// <summary>
-    ///     Prunes members from the server based on their activity or inactivity.
-    /// </summary>
-    /// <param name="time">Time duration in a custom format</param>
-    /// <param name="e">Optional parameter indicating whether to include users with specific roles</param>
-    /// <remarks>
-    ///     This command requires the caller to have GuildPermission.Administrator and the bot to have
-    ///     GuildPermission.ManageGuild.
-    /// </remarks>
-    /// <example>.prunemembers 30d</example>
-    /// <example>.prunemembers 30d yes</example>
-    [Cmd]
-    [Aliases]
-    [RequireContext(ContextType.Guild)]
-    [UserPerm(GuildPermission.Administrator)]
-    [BotPerm(GuildPermission.ManageGuild)]
-    public async Task PruneMembers(StoopidTime time, string e = "no")
-    {
-        try
-        {
-            await ConfirmAsync(Strings.CommandExpectedLatencyServerSize(ctx.Guild.Id));
-            if (e == "no")
-            {
-                var toprune = await ctx.Guild.PruneUsersAsync(time.Time.Days, true);
-                if (toprune == 0)
-                {
-                    await ErrorAsync(Strings.PruneNoMembersUpsell(ctx.Guild.Id,
-                        await guildSettings.GetPrefix(ctx.Guild))).ConfigureAwait(false);
-                    return;
-                }
-
-                var eb = new EmbedBuilder
-                {
-                    Description = $"Are you sure you want to prune {toprune} Members?", Color = Mewdeko.OkColor
-                };
-                if (!await PromptUserConfirmAsync(eb, ctx.User.Id).ConfigureAwait(false))
-                {
-                    await ConfirmAsync(Strings.PruneCanceledMemberUpsell(ctx.Guild.Id,
-                        await guildSettings.GetPrefix(ctx.Guild))).ConfigureAwait(false);
-                }
-                else
-                {
-                    var msg = await ConfirmAsync(Strings.PruningMembers(ctx.Guild.Id, toprune)).ConfigureAwait(false);
-                    await ctx.Guild.PruneUsersAsync(time.Time.Days).ConfigureAwait(false);
-                    var ebi = new EmbedBuilder
-                    {
-                        Description = Strings.PrunedMembers(ctx.Guild.Id, toprune), Color = Mewdeko.OkColor
-                    };
-                    await msg.ModifyAsync(x => x.Embed = ebi.Build()).ConfigureAwait(false);
-                }
-            }
-            else
-            {
-                ctx.Guild.GetRole(await Service.GetMemberRole(ctx.Guild.Id));
-                var toprune = await ctx.Guild.PruneUsersAsync(time.Time.Days, true,
-                    includeRoleIds:
-                    [
-                        await Service.GetMemberRole(ctx.Guild.Id)
-                    ]).ConfigureAwait(false);
-                if (toprune == 0)
-                {
-                    await ErrorAsync(Strings.PruneNoMembers(ctx.Guild.Id)).ConfigureAwait(false);
-                    return;
-                }
-
-                var eb = new EmbedBuilder
-                {
-                    Description = Strings.PruneConfirm(ctx.Guild.Id, toprune), Color = Mewdeko.OkColor
-                };
-                if (!await PromptUserConfirmAsync(eb, ctx.User.Id).ConfigureAwait(false))
-                {
-                    await ConfirmAsync(Strings.PruneCanceled(ctx.Guild.Id)).ConfigureAwait(false);
-                }
-                else
-                {
-                    var msg = await ConfirmAsync(Strings.PruningMembers(ctx.Guild.Id, toprune)).ConfigureAwait(false);
-                    await ctx.Guild.PruneUsersAsync(time.Time.Days,
-                        includeRoleIds:
-                        [
-                            await Service.GetMemberRole(ctx.Guild.Id)
-                        ]);
-                    var ebi = new EmbedBuilder
-                    {
-                        Description = Strings.PrunedMembers(ctx.Guild.Id, toprune), Color = Mewdeko.OkColor
-                    };
-                    await msg.ModifyAsync(x => x.Embed = ebi.Build()).ConfigureAwait(false);
-                }
-            }
-        }
-        catch (Exception exception)
-        {
-            logger.LogError("Error in prunemembers: \n{0}", exception);
-        }
     }
 
 
@@ -894,7 +791,7 @@ public partial class Administration(
     [UserPerm(GuildPermission.Administrator)]
     [BotPerm(GuildPermission.ManageMessages)]
     [Priority(0)]
-    public Task Delmsgoncmd(Channel _, State s, Channel ch)
+    public Task Delmsgoncmd(ChannelWord _, State s, Channel ch)
     {
         return Delmsgoncmd(_, s, ch.Id);
     }
@@ -918,7 +815,7 @@ public partial class Administration(
     [UserPerm(GuildPermission.Administrator)]
     [BotPerm(GuildPermission.ManageMessages)]
     [Priority(1)]
-    public async Task Delmsgoncmd(Channel _, State s, ulong? chId = null)
+    public async Task Delmsgoncmd(ChannelWord _, State s, ulong? chId = null)
     {
         var actualChId = chId ?? ctx.Channel.Id;
         await Service.SetDelMsgOnCmdState(ctx.Guild.Id, actualChId, s).ConfigureAwait(false);
@@ -1015,7 +912,7 @@ public partial class Administration(
     [BotPerm(GuildPermission.ManageChannels)]
     public async Task CreatVoiChanl([Remainder] string channelName)
     {
-        var ch = await ctx.Guild.CreateVoiceChannelAsync(channelName).ConfigureAwait(false);
+        var ch = await ctx.Guild.CreateVoiceChannelAsync(new CreateVoiceChannelRequest { Name = channelName }).ConfigureAwait(false);
         await ReplyConfirmAsync(Strings.Createvoich(ctx.Guild.Id, Format.Bold(ch.Name))).ConfigureAwait(false);
     }
 
@@ -1056,7 +953,7 @@ public partial class Administration(
     [BotPerm(GuildPermission.ManageChannels)]
     public async Task CreaTxtChanl([Remainder] string channelName)
     {
-        var txtCh = await ctx.Guild.CreateTextChannelAsync(channelName).ConfigureAwait(false);
+        var txtCh = await ctx.Guild.CreateTextChannelAsync(new CreateTextChannelRequest { Name = channelName }).ConfigureAwait(false);
         await ReplyConfirmAsync(Strings.Createtextchan(ctx.Guild.Id, Format.Bold(txtCh.Name))).ConfigureAwait(false);
     }
 
@@ -1076,9 +973,9 @@ public partial class Administration(
     [BotPerm(GuildPermission.ManageChannels)]
     public async Task SetTopic([Remainder] string? topic = null)
     {
-        var channel = (Channel)ctx.Channel;
+        var channel = ctx.Channel;
         topic ??= "";
-        await channel.ModifyAsync(c => c.Topic = topic).ConfigureAwait(false);
+        await channel.ModifyAsync(new UpdateChannelRequest { Topic = topic }).ConfigureAwait(false);
         await ReplyConfirmAsync(Strings.SetTopic(ctx.Guild.Id)).ConfigureAwait(false);
     }
 
@@ -1098,8 +995,8 @@ public partial class Administration(
     [BotPerm(GuildPermission.ManageChannels)]
     public async Task SetChanlName([Remainder] string name)
     {
-        var channel = (Channel)ctx.Channel;
-        await channel.ModifyAsync(c => c.Name = name).ConfigureAwait(false);
+        var channel = ctx.Channel;
+        await channel.ModifyAsync(new UpdateChannelRequest { Name = name }).ConfigureAwait(false);
         await ReplyConfirmAsync(Strings.SetChannelName(ctx.Guild.Id)).ConfigureAwait(false);
     }
 
@@ -1118,10 +1015,10 @@ public partial class Administration(
     [BotPerm(GuildPermission.ManageChannels)]
     public async Task NsfwToggle()
     {
-        var channel = (Channel)ctx.Channel;
+        var channel = ctx.Channel;
         var isEnabled = channel.IsNsfw;
 
-        await channel.ModifyAsync(c => c.IsNsfw = !isEnabled).ConfigureAwait(false);
+        await channel.ModifyAsync(new UpdateChannelRequest { IsNsfw = !isEnabled }).ConfigureAwait(false);
 
         if (isEnabled)
             await ReplyConfirmAsync(Strings.NsfwSetFalse(ctx.Guild.Id)).ConfigureAwait(false);
@@ -1145,7 +1042,7 @@ public partial class Administration(
     [Priority(1)]
     public async Task Edit(Channel channel, ulong messageId, [Remainder] string? text)
     {
-        var userPerms = ((SocketGuildMember)ctx.User).GetPermissions(channel);
+        var userPerms = ctx.Member!.GetPermissions(channel);
         var botPerms = ((SocketGuild)ctx.Guild).CurrentUser.GetPermissions(channel);
         if (!userPerms.Has(ChannelPermission.ManageMessages))
         {
@@ -1179,7 +1076,7 @@ public partial class Administration(
     [BotPerm(ChannelPermission.ManageMessages)]
     public Task Delete(ulong messageId, StoopidTime? time = null)
     {
-        return Delete((Channel)ctx.Channel, messageId, time);
+        return Delete(ctx.Channel, messageId, time);
     }
 
     /// <summary>
@@ -1208,7 +1105,7 @@ public partial class Administration(
     /// <param name="time">Time to delete, if any.</param>
     private async Task InternalMessageAction(Channel channel, ulong messageId, StoopidTime? time)
     {
-        var userPerms = ((SocketGuildMember)ctx.User).GetPermissions(channel);
+        var userPerms = ctx.Member!.GetPermissions(channel);
         var botPerms = ((SocketGuild)ctx.Guild).CurrentUser.GetPermissions(channel);
         if (!userPerms.Has(ChannelPermission.ManageMessages))
         {
@@ -1265,7 +1162,7 @@ public partial class Administration(
     [UserPerm(GuildPermission.ManageChannels)]
     public async Task RenameChannel(Channel channel, [Remainder] string name)
     {
-        await channel.ModifyAsync(x => x.Name = name).ConfigureAwait(false);
+        await channel.ModifyAsync(new UpdateChannelRequest { Name = name }).ConfigureAwait(false);
         await ConfirmAsync(Strings.ChannelRenamed(ctx.Guild.Id)).ConfigureAwait(false);
     }
 
@@ -1275,7 +1172,7 @@ public partial class Administration(
     /// <param name="avatarUrl">URL to the avatar image (optional if attachment is provided)</param>
     /// <remarks>
     ///     This command requires the caller to have GuildPermission.ManageGuild.
-    ///     The image will be downloaded and converted to base64 for the Discord API.
+    ///     The image will be downloaded and converted to base64 for the Fluxer API.
     ///     You can either provide a URL or attach an image to the message.
     /// </remarks>
     /// <example>.setguildavatar https://example.com/avatar.png</example>
@@ -1326,7 +1223,7 @@ public partial class Administration(
     /// <param name="bannerUrl">URL to the banner image (optional if attachment is provided)</param>
     /// <remarks>
     ///     This command requires the caller to have GuildPermission.ManageGuild.
-    ///     The image will be downloaded and converted to base64 for the Discord API.
+    ///     The image will be downloaded and converted to base64 for the Fluxer API.
     ///     You can either provide a URL or attach an image to the message.
     /// </remarks>
     /// <example>.setguildbanner https://example.com/banner.png</example>

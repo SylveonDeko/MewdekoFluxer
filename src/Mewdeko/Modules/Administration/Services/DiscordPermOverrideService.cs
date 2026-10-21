@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Mewdeko.Modules.Administration.Services;
 
 /// <summary>
-///     Service for managing Discord permission overrides.
+///     Service for managing permission overrides.
 /// </summary>
 public class DiscordPermOverrideService : INService, ILateBlocker
 {
@@ -40,7 +40,7 @@ public class DiscordPermOverrideService : INService, ILateBlocker
     /// <summary>
     ///     Tries to block a command based on the permission overrides.
     /// </summary>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="context">The command context.</param>
     /// <param name="moduleName">The name of the module.</param>
     /// <param name="command">The command to block.</param>
