@@ -7,7 +7,6 @@ using Mewdeko.Modules.Moderation.Common;
 using Mewdeko.Modules.Moderation.Services;
 using Mewdeko.Services.Settings;
 using Mewdeko.Services.Strings;
-using Newtonsoft.Json.Linq;
 
 namespace Mewdeko.Modules.Server_Management.Services;
 
@@ -193,10 +192,8 @@ public class RoleMonitorService : INService, IReadyExecutor
         if (await IsUserWhitelistedAsync(guild, user.Id))
             return;
 
-        var beforePermissions = ReadPermissions(entry.Raw.OldData["permissions"]);
-        var afterPermissions = ReadPermissions(entry.Raw.NewData["permissions"]);
-
-        if (beforePermissions is null || afterPermissions is null)
+        if (entry.OldData is not RoleChangeDataJson { Permissions: { } beforePermissions }
+            || entry.NewData is not RoleChangeDataJson { Permissions: { } afterPermissions })
             return;
 
         var addedPermissions = Enum.GetValues<GuildPermission>()
@@ -213,48 +210,10 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// <returns>The IDs of the roles that were added.</returns>
     private static List<ulong> GetAddedRoles(SocketAuditLog entry)
     {
-        var added = ReadIds(entry.Raw.NewData["$add"]);
-        if (added.Count > 0)
-            return added;
-
-        if (entry.Raw.OldData["roles"] is not { } oldRoles || entry.Raw.NewData["roles"] is not { } newRoles)
+        if (entry.OldData is not MemberChangeDataJson before || entry.NewData is not MemberChangeDataJson { RoleIds: { } after })
             return [];
 
-        var before = ReadIds(oldRoles).ToHashSet();
-        return ReadIds(newRoles).Where(x => !before.Contains(x)).ToList();
-    }
-
-    /// <summary>
-    ///     Reads role IDs from an audit log value, which is a list of IDs or of objects with an ID.
-    /// </summary>
-    /// <param name="token">The audit log value.</param>
-    /// <returns>The IDs found.</returns>
-    private static List<ulong> ReadIds(JToken? token)
-    {
-        var ids = new List<ulong>();
-        if (token is not JArray array)
-            return ids;
-
-        foreach (var item in array)
-        {
-            var value = item is JObject obj ? obj["id"] : item;
-            if (value is not null && ulong.TryParse(value.ToString(), out var id))
-                ids.Add(id);
-        }
-
-        return ids;
-    }
-
-    /// <summary>
-    ///     Reads a permission value from an audit log value.
-    /// </summary>
-    /// <param name="token">The audit log value.</param>
-    /// <returns>The permissions, or null when the entry carries none.</returns>
-    private static GuildPermissions? ReadPermissions(JToken? token)
-    {
-        return token is { Type: not JTokenType.Null } && ulong.TryParse(token.ToString(), out var raw)
-            ? new GuildPermissions((GuildPermission)raw)
-            : null;
+        return after.Where(x => before.RoleIds?.Contains(x) != true).ToList();
     }
 
     /// <summary>
