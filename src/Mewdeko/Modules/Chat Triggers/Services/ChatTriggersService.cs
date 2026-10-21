@@ -2296,7 +2296,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// </summary>
     /// <param name="guild">The guild the member left.</param>
     /// <param name="user">The member that left.</param>
-    private Task OnUserLeft(SocketGuild guild, User user)
+    private Task OnUserLeft(SocketGuild guild, User user, MemberSnapshot? member)
     {
         return FireEventTriggersAsync(guild.Id, CtEventType.MemberLeave, user);
     }

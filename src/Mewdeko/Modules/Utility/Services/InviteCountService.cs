@@ -675,7 +675,7 @@ public class InviteCountService : INService, IReadyExecutor
         return inviter != null && inviter.RoleIds.Any(blacklistedRoles.Contains);
     }
 
-    private async Task OnUserLeft(SocketGuild guild, IUser user)
+    private async Task OnUserLeft(SocketGuild guild, IUser user, MemberSnapshot? member)
     {
         var settings = await GetInviteCountSettingsAsync(guild.Id);
         if (!settings.IsEnabled)

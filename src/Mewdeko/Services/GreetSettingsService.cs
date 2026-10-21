@@ -128,7 +128,7 @@ public class GreetSettingsService : INService
         }
     }
 
-    private async Task UserLeft(SocketGuild guild, User user)
+    private async Task UserLeft(SocketGuild guild, User user, MemberSnapshot? member)
     {
         try
         {

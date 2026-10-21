@@ -16,12 +16,6 @@ public class RoleStatesService : INService
     private readonly ILogger<RoleStatesService> logger;
 
     /// <summary>
-    ///     The roles members had when last seen, kept because Fluxer drops a member from the guild before the leave event
-    ///     reaches the bot.
-    /// </summary>
-    private readonly ConcurrentDictionary<(ulong GuildId, ulong UserId), ulong[]> memberRoles = new();
-
-    /// <summary>
     ///     Initializes a new instance of the <see cref="RoleStatesService" /> class.
     /// </summary>
     /// <param name="dbFactory">The database service to interact with stored data.</param>
@@ -37,25 +31,6 @@ public class RoleStatesService : INService
         eventHandler.UserLeft.Subscribe("RoleStatesService", OnUserLeft);
         eventHandler.UserBanned.Subscribe("RoleStatesService", OnUserBanned);
         eventHandler.UserJoined.Subscribe("RoleStatesService", OnUserJoined);
-        eventHandler.GuildMemberUpdated.Subscribe("RoleStatesService", OnMemberUpdated);
-        eventHandler.GuildAvailable.Subscribe("RoleStatesService", OnGuildAvailable);
-    }
-
-    private Task OnMemberUpdated(MemberSnapshot? before, SocketGuildMember after)
-    {
-        memberRoles[(after.GuildId, after.Id)] = after.RoleIds.ToArray();
-        return Task.CompletedTask;
-    }
-
-    private async Task OnGuildAvailable(SocketGuild guild)
-    {
-        await using var db = await dbFactory.CreateConnectionAsync();
-        var enabled = await db.RoleStateSettings
-            .AnyAsync(x => x.GuildId == guild.Id && x.Enabled);
-        if (!enabled) return;
-
-        foreach (var member in guild.Members.Values)
-            memberRoles[(guild.Id, member.Id)] = member.RoleIds.ToArray();
     }
 
     private async Task OnUserBanned(User args, SocketGuild arsg2)
@@ -119,7 +94,7 @@ public class RoleStatesService : INService
     }
 
 
-    private async Task OnUserLeft(SocketGuild args, User args2)
+    private async Task OnUserLeft(SocketGuild args, User args2, MemberSnapshot? member)
     {
         await using var db = await dbFactory.CreateConnectionAsync();
 
@@ -140,9 +115,9 @@ public class RoleStatesService : INService
 
         if (deniedUsers.Contains(args2.Id)) return;
 
-        if (!memberRoles.TryRemove((args.Id, args2.Id), out var currentRoles)) return;
+        if (member is null) return;
 
-        var rolesToSave = currentRoles.Where(x => x != args.Id && args.GetRole(x) is not null);
+        var rolesToSave = member.RoleIds.Where(x => x != args.Id && args.GetRole(x) is not null);
         if (deniedRoles.Any())
         {
             rolesToSave = rolesToSave.Except(deniedRoles);

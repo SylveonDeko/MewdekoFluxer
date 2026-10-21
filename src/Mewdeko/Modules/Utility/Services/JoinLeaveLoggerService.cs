@@ -74,7 +74,7 @@ public class JoinLeaveLoggerService : INService, IDisposable
         return Task.CompletedTask;
     }
 
-    private Task LogUserLeft(SocketGuild guild, IUser user)
+    private Task LogUserLeft(SocketGuild guild, IUser user, MemberSnapshot? member)
     {
         pending.Writer.TryWrite(new JoinLeaveLog
         {

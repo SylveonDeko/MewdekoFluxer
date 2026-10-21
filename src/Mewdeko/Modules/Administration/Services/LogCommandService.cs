@@ -1150,7 +1150,8 @@ public class LogCommandService(
     /// </summary>
     /// <param name="guild">The guild the user left.</param>
     /// <param name="user">The user that left the guild.</param>
-    private async Task OnUserLeft(SocketGuild guild, User user)
+    /// <param name="member">The member as last seen before they left, if known.</param>
+    private async Task OnUserLeft(SocketGuild guild, User user, MemberSnapshot? member)
     {
         if (GuildLogSettings.TryGetValue(guild.Id, out var logSetting))
         {

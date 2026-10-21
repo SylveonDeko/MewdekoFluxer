@@ -66,7 +66,7 @@ public sealed class EventHandler : IDisposable
         ReactionRemoved = new BotEvent<Cacheable<Message>, Channel, SocketReaction>(this, nameof(ReactionRemoved));
         ReactionsCleared = new BotEvent<Cacheable<Message>, Channel>(this, nameof(ReactionsCleared));
         UserJoined = new BotEvent<SocketGuildMember>(this, nameof(UserJoined));
-        UserLeft = new BotEvent<SocketGuild, User>(this, nameof(UserLeft));
+        UserLeft = new BotEvent<SocketGuild, User, MemberSnapshot?>(this, nameof(UserLeft));
         GuildMemberUpdated = new BotEvent<MemberSnapshot?, SocketGuildMember>(this, nameof(GuildMemberUpdated));
         UserUpdated = new BotEvent<UserSnapshot, SocketGuildMember>(this, nameof(UserUpdated));
         UserBanned = new BotEvent<User, SocketGuild>(this, nameof(UserBanned));
@@ -148,7 +148,7 @@ public sealed class EventHandler : IDisposable
     public BotEvent<SocketGuildMember> UserJoined { get; }
 
     /// <summary>Fires when a member leaves or is removed from a guild.</summary>
-    public BotEvent<SocketGuild, User> UserLeft { get; }
+    public BotEvent<SocketGuild, User, MemberSnapshot?> UserLeft { get; }
 
     /// <summary>
     ///     Fires when a member's nickname, roles, avatar or timeout change, with their state before the change when it
@@ -442,7 +442,7 @@ public sealed class EventHandler : IDisposable
         var snapshot = snapshots.RemoveMember(guild.Id, member.Id);
         var user = member.Value?.User ?? snapshot?.User.ToUser() ?? await FetchUserAsync(member.Id);
         if (user is not null)
-            UserLeft.Raise((guild, user), guild);
+            UserLeft.Raise((guild, user, snapshot), guild);
     }
 
     private async Task OnUserBannedAsync(SocketGuild guild, Cacheable<SocketGuildMember> member)
