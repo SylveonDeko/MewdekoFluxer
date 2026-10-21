@@ -345,7 +345,7 @@ public class Program
             })).AllowAnonymous();
 
             foreach (var address in app.Urls) log.Information("API Listening on {Address}", address);
-            await app.RunAsync();
+            await RunUntilStoppedAsync(app.RunAsync());
         }
         else
         {
@@ -359,7 +359,24 @@ public class Program
                 .Build();
 
             log.Information("API is disabled. Starting bot only.");
-            await host.RunAsync();
+            await RunUntilStoppedAsync(host.RunAsync());
+        }
+    }
+
+    /// <summary>
+    ///     Runs the host until it stops. Lavalink4NET's cluster throws a cancellation while it is disposed during
+    ///     shutdown, which would otherwise end every normal stop as an unhandled exception.
+    /// </summary>
+    /// <param name="run">The host's run task.</param>
+    private static async Task RunUntilStoppedAsync(Task run)
+    {
+        try
+        {
+            await run;
+        }
+        catch (OperationCanceledException)
+        {
+            Log.Information("Shut down");
         }
     }
 
