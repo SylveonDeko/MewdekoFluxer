@@ -46,7 +46,7 @@ public class BotStatusModel
     public int ModulesCount { get; set; }
 
     /// <summary>
-    ///     The version of Discord.Net the bot is using
+    ///     The version of Fluxer.Net the bot is using
     /// </summary>
     public string DNetVersion { get; set; }
 

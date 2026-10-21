@@ -114,13 +114,13 @@ public class StatsService : IStatsService, IDisposable, IReadyExecutor
     }
 
     /// <summary>
-    ///     Gets the version of the Discord.Net library.
+    ///     Gets the name and version of the Fluxer.Net library.
     /// </summary>
     public string Library
     {
         get
         {
-            return $"Discord.Net {DllVersionChecker.GetDllVersion()}";
+            return $"Fluxer.Net {typeof(FluxerClient).Assembly.GetName().Version?.ToString(3)}";
         }
     }
 
