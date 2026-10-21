@@ -1,7 +1,7 @@
 {
   "autohentai_started": "Autohentai pokrenut. Ponovno objavljivanje svakih {0}s sa jednim od sledećih tagova:\n{1}",
   "autohentai_stopped": "Autohentai zaustavljen.",
-  "nsfw_api_fetch_error": "Nije moguće preuzeti nsfw subreddit. Molimo proverite konzolu ili prijavite problem na https://discord.gg/mewdeko",
+  "nsfw_api_fetch_error": "Nije moguće preuzeti nsfw subreddit. Molimo proverite konzolu ili prijavite problem na https://fluxer.gg/GQuFOiBV",
   "nsfw_autohentai_started": "Automatsko NSFW objavljivanje pokrenuto. Interval: {0}s | Tagovi: {1}",
   "nsfw_autohentai_stopped": "Automatsko NSFW objavljivanje je zaustavljeno",
   "nsfw_blacklist_title": "Zabranjeni NSFW Tagovi",

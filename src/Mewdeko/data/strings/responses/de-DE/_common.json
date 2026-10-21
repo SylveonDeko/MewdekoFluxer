@@ -845,7 +845,7 @@
   "perms": "Fehler. Wahrscheinlich habe ich keine ausreichenden Berechtigungen.",
   "perms_reset": "Berechtigungen für diesen Server wurden zurückgesetzt.",
   "ping_address_latency": "Adresse: {0}\nLatenz: {1}ms",
-  "ping_hardware_error": "Ping fehlgeschlagen aufgrund eines Hardware-Fehlers. Bitte melde dies unter https://discord.gg/mewdeko.",
+  "ping_hardware_error": "Ping fehlgeschlagen aufgrund eines Hardware-Fehlers. Bitte melde dies unter https://fluxer.gg/GQuFOiBV.",
   "ping_number": "Ping #{0}",
   "ping_response": "🏓",
   "ping_timeout": "Zeitüberschreitung beim Empfangen eines Pings, kann nicht fortfahren.",

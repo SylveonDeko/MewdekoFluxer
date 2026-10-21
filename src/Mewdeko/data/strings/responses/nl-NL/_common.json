@@ -1086,7 +1086,7 @@
   "panels_list_error": "An Fout occurred while listing panels.",
   "permissions_inherit": "I hebben set de following permissions voor de Gebruiker {0} in {1} naar inherit: \n**{2}",
   "ping_address_latency": "Address: {0}\nLatency: {1}ms",
-  "ping_hardware_error": "Ping Mislukt due naar een hardware Fout. Please report this at https://discord.gg/mewdeko.",
+  "ping_hardware_error": "Ping Mislukt due naar een hardware Fout. Please report this at https://fluxer.gg/GQuFOiBV.",
   "ping_response": "🏓",
   "platform": "Platform",
   "player_hand": "Player Hand",

@@ -1,7 +1,7 @@
 {
   "autohentai_started": "啟動 Autohentai。每 {0} 秒發送一張含有以下標籤的圖片:\n{1}",
   "autohentai_stopped": "Autohentai 指令效果停止。",
-  "nsfw_api_fetch_error": "Unable to fetch nsfw subreddit. Please check console or report the issue at https://discord.gg/mewdeko",
+  "nsfw_api_fetch_error": "Unable to fetch nsfw subreddit. Please check console or report the issue at https://fluxer.gg/GQuFOiBV",
   "nsfw_autohentai_started": "Auto NSFW posting started. Interval: {0}s | Tags: {1}",
   "nsfw_autohentai_stopped": "Auto NSFW posting has been stopped",
   "nsfw_blacklist_title": "Blacklisted NSFW Tags",

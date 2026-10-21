@@ -1,7 +1,7 @@
 {
   "autohentai_started": "بدأت Autohentai. إعادة نشر كل {0} ثانية مع إحدى العلامات التالية:\n{1}",
   "autohentai_stopped": "توقف Autohentai.",
-  "nsfw_api_fetch_error": "تعذر جلب subreddit nsfw. يرجى التحقق من وحدة التحكم أو الإبلاغ عن المشكلة في https://discord.gg/mewdeko",
+  "nsfw_api_fetch_error": "تعذر جلب subreddit nsfw. يرجى التحقق من وحدة التحكم أو الإبلاغ عن المشكلة في https://fluxer.gg/GQuFOiBV",
   "nsfw_autohentai_started": "بدأ نشر NSFW التلقائي. الفاصل الزمني: {0} ثانية | العلامات: {1}",
   "nsfw_autohentai_stopped": "تم إيقاف نشر NSFW التلقائي",
   "nsfw_blacklist_title": "علامات NSFW المحظورة",

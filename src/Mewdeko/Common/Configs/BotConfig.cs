@@ -31,7 +31,7 @@ public sealed class BotConfig
         LoadingEmote = "<a:HaneMeow:968564817784877066>";
         ErrorEmote = "<:HaneNo:914307917954576414>";
         SuccessEmote = "<:hane_wow:945005763829575680>";
-        SupportServer = "https://discord.gg/mewdeko";
+        SupportServer = "https://fluxer.gg/GQuFOiBV";
         RedirectUrl = "https://mewdeko.tech/auth.html";
         YoutubeSupport = true;
         QuarantineNotification = true;

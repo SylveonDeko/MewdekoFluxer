@@ -1,7 +1,7 @@
 {
   "autohentai_started": "Автохентай розпочато. Повторна публікація кожні {0} с з одним із наступних тегів:\n{1}",
   "autohentai_stopped": "Автохентай зупинено.",
-  "nsfw_api_fetch_error": "Не вдалося отримати nsfw сабреддіт. Будь ласка, перевірте консоль або повідомте про проблему на https://discord.gg/mewdeko",
+  "nsfw_api_fetch_error": "Не вдалося отримати nsfw сабреддіт. Будь ласка, перевірте консоль або повідомте про проблему на https://fluxer.gg/GQuFOiBV",
   "nsfw_autohentai_started": "Автоматична публікація NSFW розпочата. Інтервал: {0} с | Теги: {1}",
   "nsfw_autohentai_stopped": "Автоматичну публікацію NSFW зупинено",
   "nsfw_blacklist_title": "Заблоковані Теги NSFW",

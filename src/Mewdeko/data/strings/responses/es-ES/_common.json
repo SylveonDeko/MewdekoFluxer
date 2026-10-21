@@ -845,7 +845,7 @@
   "perms": "Error. Lo más probable es que no tenga permisos suficientes.",
   "perms_reset": "Los permisos para este servidor han sido restablecidos.",
   "ping_address_latency": "Dirección: {0}\nLatencia: {1}ms",
-  "ping_hardware_error": "El ping falló debido a un error de hardware. Por favor, repórtalo en https://discord.gg/mewdeko.",
+  "ping_hardware_error": "El ping falló debido a un error de hardware. Por favor, repórtalo en https://fluxer.gg/GQuFOiBV.",
   "ping_number": "Ping #{0}",
   "ping_response": "🏓",
   "ping_timeout": "Tiempo de espera agotado al intentar recibir un ping, no se puede continuar.",

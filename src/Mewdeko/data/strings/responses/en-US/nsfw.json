@@ -1,7 +1,7 @@
 {
   "autohentai_started": "Autohentai started. Reposting every {0}s with one of the following tags:\n{1}",
   "autohentai_stopped": "Autohentai stopped.",
-  "nsfw_api_fetch_error": "Unable to fetch nsfw subreddit. Please check console or report the issue at https://discord.gg/mewdeko",
+  "nsfw_api_fetch_error": "Unable to fetch nsfw subreddit. Please check console or report the issue at https://fluxer.gg/GQuFOiBV",
   "nsfw_auto_interval_too_short": "The interval must be at least 20 seconds.",
   "nsfw_auto_not_running": "There is no auto posting running in this channel.",
   "nsfw_autohentai_started": "Auto NSFW posting started. Interval: {0}s | Tags: {1}",

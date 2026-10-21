@@ -364,7 +364,7 @@ public class PermissionService : ILateBlocker, INService, IReadyExecutor
             PrimaryPermissionType.Server => "This Server",
             PrimaryPermissionType.Category => $"<#{id}>",
             _ =>
-                "An unexpected type input error occurred in `PermissionsService.cs#MentionPerm(PrimaryPermissionType, ulong)`. Please contact a developer at https://discord.gg/mewdeko with a screenshot of this message for more information."
+                "An unexpected type input error occurred in `PermissionsService.cs#MentionPerm(PrimaryPermissionType, ulong)`. Please contact a developer at https://fluxer.gg/GQuFOiBV with a screenshot of this message for more information."
         };
     }
 

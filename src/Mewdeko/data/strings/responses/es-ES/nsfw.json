@@ -1,7 +1,7 @@
 {
   "autohentai_started": "Autohentai iniciado. Republicando cada {0}s con una de las siguientes etiquetas:\n{1}",
   "autohentai_stopped": "Autohentai detenido.",
-  "nsfw_api_fetch_error": "No se puede obtener el subreddit nsfw. Por favor, revisa la consola o reporta el problema en https://discord.gg/mewdeko",
+  "nsfw_api_fetch_error": "No se puede obtener el subreddit nsfw. Por favor, revisa la consola o reporta el problema en https://fluxer.gg/GQuFOiBV",
   "nsfw_autohentai_started": "Publicación automática NSFW iniciada. Intervalo: {0}s | Etiquetas: {1}",
   "nsfw_autohentai_stopped": "La publicación automática NSFW ha sido detenida",
   "nsfw_blacklist_title": "Etiquetas NSFW en Lista Negra",

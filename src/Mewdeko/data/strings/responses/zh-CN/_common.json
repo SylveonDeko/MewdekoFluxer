@@ -845,7 +845,7 @@
   "perms": "错误。我可能没有足够的权限。",
   "perms_reset": "已重置此服务器的权限。",
   "ping_address_latency": "Address: {0}\nLatency: {1}ms",
-  "ping_hardware_error": "Ping failed due to a hardware error. Please report this at https://discord.gg/mewdeko.",
+  "ping_hardware_error": "Ping failed due to a hardware error. Please report this at https://fluxer.gg/GQuFOiBV.",
   "ping_number": "Ping #{0}",
   "ping_response": "🏓",
   "ping_timeout": "Timed out attempting to receive a ping cannot continue.",

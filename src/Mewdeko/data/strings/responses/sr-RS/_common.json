@@ -834,7 +834,7 @@
   "perms": "Greška. Najverovatnije nemam dovoljne dozvole.",
   "perms_reset": "Dozvole za ovaj server su resetovane.",
   "ping_address_latency": "Adresa: {0}\nLatencija: {1}ms",
-  "ping_hardware_error": "Ping neuspešan zbog hardverske greške. Molimo prijavite ovo na https://discord.gg/mewdeko.",
+  "ping_hardware_error": "Ping neuspešan zbog hardverske greške. Molimo prijavite ovo na https://fluxer.gg/GQuFOiBV.",
   "ping_number": "Ping #{0}",
   "ping_response": "🏓",
   "ping_timeout": "Isteklo vreme pokušaja prijema pinga, ne može se nastaviti.",

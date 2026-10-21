@@ -1016,7 +1016,7 @@
   "permissions_field": "`Permissions:` {0}\n",
   "permissions_inherit": "I have set the following permissions for the user {0} in {1} to inherit: \n**{2}",
   "ping_address_latency": "Address: {0}\nLatency: {1}ms",
-  "ping_hardware_error": "Ping failed due to a hardware error. Please report this at https://discord.gg/mewdeko.",
+  "ping_hardware_error": "Ping failed due to a hardware error. Please report this at https://fluxer.gg/GQuFOiBV.",
   "ping_number": "Ping #{0}",
   "ping_response": "🏓",
   "ping_timeout": "Timed out attempting to receive a ping cannot continue.",

@@ -1,7 +1,7 @@
 {
   "autohentai_started": "Autohentai gestartet. Wird alle {0}s mit einem der folgenden Tags regepostet:\n{1}",
   "autohentai_stopped": "Autohentai gestoppt.",
-  "nsfw_api_fetch_error": "NSFW-Subreddit konnte nicht abgerufen werden. Bitte überprüfe die Konsole oder melde das Problem unter https://discord.gg/mewdeko",
+  "nsfw_api_fetch_error": "NSFW-Subreddit konnte nicht abgerufen werden. Bitte überprüfe die Konsole oder melde das Problem unter https://fluxer.gg/GQuFOiBV",
   "nsfw_autohentai_started": "Auto-NSFW-Posting gestartet. Intervall: {0}s | Tags: {1}",
   "nsfw_autohentai_stopped": "Auto-NSFW-Posting wurde gestoppt",
   "nsfw_blacklist_title": "Gesperrte NSFW-Tags",
