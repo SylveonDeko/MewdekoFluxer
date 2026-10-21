@@ -22,11 +22,13 @@ public sealed record MigrationExportRequest(ulong DiscordUserId, ulong DiscordGu
 /// <param name="ChannelOverrides">Discord channel ids to Fluxer channel ids.</param>
 /// <param name="RoleOverrides">Discord role ids to Fluxer role ids.</param>
 /// <param name="UserId">The Fluxer user confirming the migration, for applying.</param>
+/// <param name="CopyExpressions">Whether applying first uploads the Discord server's emojis and stickers.</param>
 public sealed record MigrationPlanRequest(
     string Code,
     Dictionary<ulong, ulong>? ChannelOverrides,
     Dictionary<ulong, ulong>? RoleOverrides,
-    ulong UserId = 0);
+    ulong UserId = 0,
+    bool CopyExpressions = true);
 
 /// <summary>
 ///     Links a Fluxer account to a Discord account proved by Discord sign in.
@@ -56,6 +58,9 @@ public sealed record MigrationPreviewResponse(
     List<MigrationRolePreview> Roles,
     int EmojisMatched,
     int EmojisTotal,
+    int EmojisToCopy,
+    int StickersTotal,
+    int StickersToCopy,
     int Tables,
     int SettingRows,
     int MemberRows,

@@ -63,6 +63,7 @@ public class MigrationController(FluxerClient client, DiscordMigrationService se
             return Problem(problem);
 
         var channelNames = plan.Meta.Channels.ToDictionary(x => x.Id, x => x.Name);
+        var toCopy = MigrationExpressions.CountToCopy(plan);
         return Ok(new MigrationPreviewResponse(
             plan.Code,
             plan.Meta.DiscordGuildId,
@@ -78,6 +79,9 @@ public class MigrationController(FluxerClient client, DiscordMigrationService se
                 .ToList(),
             plan.Match.Emojis.Count,
             plan.Meta.Emojis.Count,
+            toCopy.Emojis,
+            plan.Meta.Stickers.Count,
+            toCopy.Stickers,
             plan.Tables.Count,
             plan.SettingRows,
             plan.MemberRows,
@@ -102,7 +106,7 @@ public class MigrationController(FluxerClient client, DiscordMigrationService se
         if (plan is null)
             return Problem(problem);
 
-        return Ok(await service.ApplyAsync(plan, userId));
+        return Ok(await service.ApplyAsync(plan, userId, request.CopyExpressions));
     }
 
     /// <summary>

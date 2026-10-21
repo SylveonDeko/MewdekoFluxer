@@ -36,6 +36,16 @@ public sealed record DiscordEmojiInfo(
     [property: JsonPropertyName("animated")] bool Animated);
 
 /// <summary>
+///     A sticker as it was on Discord when the server was exported.
+/// </summary>
+public sealed record DiscordStickerInfo(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("description")] string? Description,
+    [property: JsonPropertyName("tags")] List<string>? Tags,
+    [property: JsonPropertyName("format")] int Format);
+
+/// <summary>
 ///     The description of an exported Discord server: its layout and which tables were written.
 /// </summary>
 public sealed class MigrationMeta
@@ -71,6 +81,10 @@ public sealed class MigrationMeta
     /// <summary>Gets or sets the Discord custom emojis.</summary>
     [JsonPropertyName("emojis")]
     public List<DiscordEmojiInfo> Emojis { get; set; } = [];
+
+    /// <summary>Gets or sets the Discord stickers.</summary>
+    [JsonPropertyName("stickers")]
+    public List<DiscordStickerInfo> Stickers { get; set; } = [];
 
     /// <summary>Gets or sets the names of the exported tables.</summary>
     [JsonPropertyName("tables")]

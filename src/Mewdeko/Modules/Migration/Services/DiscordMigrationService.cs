@@ -70,8 +70,10 @@ public sealed class MigrationPlan
 /// <param name="Failed">Rows the database refused.</param>
 /// <param name="WaitingMembers">Members whose data is waiting for them to link.</param>
 /// <param name="Reposted">Panel and menu messages posted again in their channels.</param>
+/// <param name="Expressions">What copying emojis and stickers did, when they were copied.</param>
 public sealed record MigrationOutcome(int Written, int Held, int Dropped, int Failed, int WaitingMembers,
-    int Reposted = 0);
+    int Reposted = 0,
+    ExpressionOutcome? Expressions = null);
 
 /// <summary>
 ///     A Discord server that Mewdeko is in and the signed in user runs.
@@ -111,6 +113,7 @@ public sealed class DiscordMigrationService(
     IDataConnectionFactory dbFactory,
     IDataCache cache,
     MigrationRefresher refresher,
+    MigrationExpressions expressions,
     ILogger<DiscordMigrationService> logger) : INService
 {
     private const int SupportedVersion = 1;
@@ -184,17 +187,19 @@ public sealed class DiscordMigrationService(
     /// </summary>
     /// <param name="plan">The plan from <see cref="PrepareAsync" />.</param>
     /// <param name="invokerId">The Fluxer user who confirmed it, linked to the Discord user who exported.</param>
+    /// <param name="copyExpressions">Whether to upload the Discord server's emojis and stickers first.</param>
     /// <returns>What was written.</returns>
-    public async Task<MigrationOutcome> ApplyAsync(MigrationPlan plan, ulong invokerId)
+    public async Task<MigrationOutcome> ApplyAsync(MigrationPlan plan, ulong invokerId, bool copyExpressions = true)
     {
         await migrationLock.WaitAsync();
         try
         {
+            var copied = copyExpressions ? await expressions.CopyAsync(plan) : null;
             var outcome = await ApplyLockedAsync(plan, invokerId);
             await MigrationBundle.DeleteAsync(cache.Redis.GetDatabase(), plan.Code, plan.Meta);
             await refresher.RefreshGuildAsync(plan.GuildId);
             var reposted = await refresher.RepostPanelsAsync(plan.GuildId);
-            return outcome with { Reposted = reposted };
+            return outcome with { Reposted = reposted, Expressions = copied };
         }
         finally
         {
