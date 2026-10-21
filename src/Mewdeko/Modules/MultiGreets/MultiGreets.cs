@@ -321,7 +321,7 @@ public class MultiGreets(InteractiveService interactivity) : MewdekoModuleBase<M
             var webhook = await channel
                 .CreateWebhookAsync(name, $"data:{imgType};base64,{Convert.ToBase64String(imgData)}")
                 .ConfigureAwait(false);
-            await Service.ChangeMgWebhook(greet, $"{FluxerContext.Client.Config.RealApiBaseUrl}/webhooks/{webhook.Id}/{webhook.Token}")
+            await Service.ChangeMgWebhook(greet, webhook.GetUrl())
                 .ConfigureAwait(false);
             await ctx.Channel.SendConfirmAsync(
                 Strings.MultigreetWebhookSet(ctx.Guild.Id)
@@ -330,7 +330,7 @@ public class MultiGreets(InteractiveService interactivity) : MewdekoModuleBase<M
         else
         {
             var webhook = await channel.CreateWebhookAsync(name).ConfigureAwait(false);
-            await Service.ChangeMgWebhook(greet, $"{FluxerContext.Client.Config.RealApiBaseUrl}/webhooks/{webhook.Id}/{webhook.Token}")
+            await Service.ChangeMgWebhook(greet, webhook.GetUrl())
                 .ConfigureAwait(false);
             await ctx.Channel.SendConfirmAsync(
                 Strings.MultigreetWebhookSet(ctx.Guild.Id)

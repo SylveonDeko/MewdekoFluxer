@@ -1400,7 +1400,7 @@
   "watching": "Watching",
   "web_search_status": "Web Search",
   "webhook_created": "{0} Created webhook {1} in {2}. The url will be dmed to you.",
-  "webhook_created_dont_share": "***DO NOT SHARE THIS WITH ANYONE***\nUrl: https://discordapp.com/api/webhooks/{0}/{1}",
+  "webhook_created_dont_share": "***DO NOT SHARE THIS WITH ANYONE***\nUrl: {2}/webhooks/{0}/{1}",
   "webhook_created_simple": "{0} Created webhook {1} in {2}",
   "webhook_set": "Webhook set!",
   "welcome_back_afk": "Welcome back {0}! I noticed you typing so I disabled your AFK.",

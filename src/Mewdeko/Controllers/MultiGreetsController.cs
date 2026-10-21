@@ -236,7 +236,7 @@ public class MultiGreetController : Controller
         var webhook = await channel.CreateWebhookAsync(request.Name, avatar);
 
         await multiGreetService.ChangeMgWebhook(greet,
-            $"{FluxerContext.Client.Config.RealApiBaseUrl}/webhooks/{webhook.Id}/{webhook.Token}");
+            webhook.GetUrl());
 
         return Ok();
     }

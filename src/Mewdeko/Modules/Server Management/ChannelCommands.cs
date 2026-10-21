@@ -668,7 +668,7 @@ public partial class ServerManagement
                     .ConfigureAwait(false);
                 await ctx.User
                     .SendErrorAsync(
-                        Strings.WebhookCreatedDontShare(ctx.Guild.Id, wh.Id, wh.Token))
+                        Strings.WebhookCreatedDontShare(ctx.Guild.Id, wh.Id, wh.Token, ctx.Client.Config.RealApiBaseUrl))
                     .ConfigureAwait(false);
                 sr.Dispose();
             }
@@ -681,7 +681,7 @@ public partial class ServerManagement
                     .ConfigureAwait(false);
                 await ctx.User
                     .SendErrorAsync(
-                        Strings.WebhookCreatedDontShare(ctx.Guild.Id, wh.Id, wh.Token))
+                        Strings.WebhookCreatedDontShare(ctx.Guild.Id, wh.Id, wh.Token, ctx.Client.Config.RealApiBaseUrl))
                     .ConfigureAwait(false);
             }
         }

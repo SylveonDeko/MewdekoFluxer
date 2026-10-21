@@ -53,13 +53,13 @@ public partial class Administration
             {
                 var imageUrl = image ?? ctx.Message.Attachments?.FirstOrDefault()?.Url;
                 var webhook = await CreateWebhook(chan!, name!, imageUrl!).ConfigureAwait(false);
-                var txt = $"{ctx.Client.Config.RealApiBaseUrl}/webhooks/{webhook.Id}/{webhook.Token}";
+                var txt = webhook.GetUrl();
                 await Service.SetWebLeaveUrl(ctx.Guild, txt).ConfigureAwait(false);
             }
             else if (image == null && text == null)
             {
                 var webhook = await chan!.CreateWebhookAsync(name!).ConfigureAwait(false);
-                var txt = $"{ctx.Client.Config.RealApiBaseUrl}/webhooks/{webhook.Id}/{webhook.Token}";
+                var txt = webhook.GetUrl();
                 await Service.SetWebLeaveUrl(ctx.Guild, txt).ConfigureAwait(false);
             }
 

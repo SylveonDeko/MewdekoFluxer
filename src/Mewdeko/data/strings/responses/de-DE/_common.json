@@ -1391,7 +1391,7 @@
   "watching": "Schaut",
   "web_search_status": "Websuche",
   "webhook_created": "{0} Webhook {1} in {2} erstellt. Die URL wird dir per DM gesendet.",
-  "webhook_created_dont_share": "***TEILE DIES MIT NIEMANDEM***\nURL: https://discordapp.com/api/webhooks/{0}/{1}",
+  "webhook_created_dont_share": "***TEILE DIES MIT NIEMANDEM***\nURL: {2}/webhooks/{0}/{1}",
   "webhook_created_simple": "{0} Webhook {1} in {2} erstellt",
   "webhook_set": "Webhook gesetzt!",
   "welcome_back_afk": "Willkommen zurück {0}! Ich habe bemerkt, dass du tippst, also habe ich dein AFK deaktiviert.",

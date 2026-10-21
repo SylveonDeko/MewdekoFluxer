@@ -1391,7 +1391,7 @@
   "watching": "Viendo",
   "web_search_status": "Búsqueda Web",
   "webhook_created": "{0} Webhook {1} creado en {2}. La url se te enviará por MD.",
-  "webhook_created_dont_share": "***NO COMPARTAS ESTO CON NADIE***\nUrl: https://discordapp.com/api/webhooks/{0}/{1}",
+  "webhook_created_dont_share": "***NO COMPARTAS ESTO CON NADIE***\nUrl: {2}/webhooks/{0}/{1}",
   "webhook_created_simple": "{0} Webhook {1} creado en {2}",
   "webhook_set": "¡Webhook establecido!",
   "welcome_back_afk": "¡Bienvenido de nuevo {0}! Noté que estabas escribiendo, así que deshabilité tu AFK.",

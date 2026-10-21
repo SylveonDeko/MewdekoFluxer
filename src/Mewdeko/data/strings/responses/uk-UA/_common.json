@@ -1375,7 +1375,7 @@
   "watching": "Перегляд",
   "web_search_status": "Веб-Пошук",
   "webhook_created": "{0} Створено вебхук {1} у {2}. URL-адреса буде надіслана вам в ОП.",
-  "webhook_created_dont_share": "***НЕ ДІЛІТЬСЯ ЦИМ НІ З КИМ***\nUrl: https://discordapp.com/api/webhooks/{0}/{1}",
+  "webhook_created_dont_share": "***НЕ ДІЛІТЬСЯ ЦИМ НІ З КИМ***\nUrl: {2}/webhooks/{0}/{1}",
   "webhook_created_simple": "{0} Створено вебхук {1} у {2}",
   "webhook_set": "Вебхук встановлено!",
   "welcome_back_afk": "Ласкаво просимо назад {0}! Я помітив, що ви друкуєте, тому я вимкнув ваш AFK.",

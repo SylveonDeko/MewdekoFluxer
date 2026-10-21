@@ -251,14 +251,14 @@ public class RoleGreets(InteractiveService interactivity, HttpClient http) : Mew
             var webhook = await channel
                 .CreateWebhookAsync(name, $"data:{imgType};base64,{Convert.ToBase64String(imgData)}")
                 .ConfigureAwait(false);
-            await Service.ChangeMgWebhook(greet, $"{FluxerContext.Client.Config.RealApiBaseUrl}/webhooks/{webhook.Id}/{webhook.Token}")
+            await Service.ChangeMgWebhook(greet, webhook.GetUrl())
                 .ConfigureAwait(false);
             await ctx.Channel.SendConfirmAsync(Strings.WebhookSet(ctx.Guild.Id)).ConfigureAwait(false);
         }
         else
         {
             var webhook = await channel.CreateWebhookAsync(name).ConfigureAwait(false);
-            await Service.ChangeMgWebhook(greet, $"{FluxerContext.Client.Config.RealApiBaseUrl}/webhooks/{webhook.Id}/{webhook.Token}")
+            await Service.ChangeMgWebhook(greet, webhook.GetUrl())
                 .ConfigureAwait(false);
             await ctx.Channel.SendConfirmAsync(Strings.WebhookSet(ctx.Guild.Id)).ConfigureAwait(false);
         }

@@ -1409,7 +1409,7 @@
   "watching": "Watching",
   "web_search_status": "Web Search",
   "webhook_created": "{0} Gemaakt webhook {1} in {2}. de url zal be dmed naar je.",
-  "webhook_created_dont_share": "***DO NOT SHARE THIS met ANYONE***\nUrl: https://discordapp.com/api/webhooks/{0}/{1}",
+  "webhook_created_dont_share": "***DO NOT SHARE THIS met ANYONE***\nUrl: {2}/webhooks/{0}/{1}",
   "welcome_back_afk": "Welcome back {0}! I noticed je typing so I Uitgeschakeld je AFK.",
   "will": "zal",
   "will_not": "zal not",

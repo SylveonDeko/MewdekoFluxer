@@ -1377,7 +1377,7 @@
   "watching": "Gledanje",
   "web_search_status": "Veb Pretraga",
   "webhook_created": "{0} Kreirana veb-kuka {1} u {2}. URL će vam biti poslat u DM.",
-  "webhook_created_dont_share": "***NE DELITE OVO NI SA KIM***\nUrl: https://discordapp.com/api/webhooks/{0}/{1}",
+  "webhook_created_dont_share": "***NE DELITE OVO NI SA KIM***\nUrl: {2}/webhooks/{0}/{1}",
   "webhook_created_simple": "{0} Kreirana veb-kuka {1} u {2}",
   "webhook_set": "Veb-kuka postavljena!",
   "welcome_back_afk": "Dobrodošao/la nazad {0}! Primetio/la sam da kucate pa sam onemogućio/la vaš AFK.",

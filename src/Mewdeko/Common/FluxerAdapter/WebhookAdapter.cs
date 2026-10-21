@@ -42,4 +42,12 @@ public static class WebhookAdapter
                 allowedMentions: properties.AllowedMentions, attachments: properties.Attachments?.ToList());
         }
     }
+
+    extension(Webhook webhook)
+    {
+        /// <summary>
+        ///     Gets the address that sends messages through the webhook, in the form stored by the greet modules.
+        /// </summary>
+        public string GetUrl() => $"{FluxerContext.Client.Config.RealApiBaseUrl}/webhooks/{webhook.Id}/{webhook.Token}";
+    }
 }

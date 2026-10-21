@@ -645,7 +645,7 @@ public class EmbedsController(
             : await ResolvePersonaWebhookAsync(channel, webhooks, uploadedAvatarPersona);
 
         var webhookClient = new FluxerWebhookClient(
-            $"{FluxerContext.Client.Config.RealApiBaseUrl}/webhooks/{webhook.Id}/{webhook.Token}");
+            webhook.GetUrl());
 
         return await webhookClient.SendAsync(plainText, embeds: embeds, username: username,
             avatarUrl: avatarUrl, allowedMentions: allowedMentions);

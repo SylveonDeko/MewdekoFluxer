@@ -115,13 +115,13 @@ public partial class Utility
                 var webhook = await channel.CreateWebhookAsync(name,
                     $"data:{contentType};base64,{System.Convert.ToBase64String(imgData)}");
                 await Service.SetWebhook(ctx.Guild.Id,
-                    $"{FluxerContext.Client.Config.RealApiBaseUrl}/webhooks/{webhook.Id}/{webhook.Token}");
+                    webhook.GetUrl());
             }
             else
             {
                 var webhook = await channel.CreateWebhookAsync(name);
                 await Service.SetWebhook(ctx.Guild.Id,
-                    $"{FluxerContext.Client.Config.RealApiBaseUrl}/webhooks/{webhook.Id}/{webhook.Token}");
+                    webhook.GetUrl());
             }
 
             await ctx.Channel.SendConfirmAsync(Strings.AiWebhookSet(ctx.Guild.Id));
