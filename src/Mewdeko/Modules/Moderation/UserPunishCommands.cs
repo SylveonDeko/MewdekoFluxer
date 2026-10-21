@@ -896,20 +896,16 @@ public partial class Moderation : MewdekoModule
         public async Task Ban(IUser? user, [Remainder] string? msg = null)
         {
             if (user is null)
-            {
-                var pruneDays = await banPrune
-                    .GetPruneDaysAsync(ctx.Guild.Id, BanPruneAction.HackBan, ctx.Channel).ConfigureAwait(false);
-                await ctx.Guild.AddBanAsync(user, pruneDays, $"{ctx.User} | {msg}").ConfigureAwait(false);
+                return;
 
-                await ctx.Channel.EmbedAsync(new EmbedBuilder().WithOkColor()
-                        .WithTitle($"⛔️ {Strings.BannedUser(ctx.Guild.Id)}")
-                        .AddField(efb => efb.WithName("ID").WithValue(user.Id).WithIsInline(true)))
-                    .ConfigureAwait(false);
-            }
-            else
-            {
-                await Ban(user, msg).ConfigureAwait(false);
-            }
+            var pruneDays = await banPrune
+                .GetPruneDaysAsync(ctx.Guild.Id, BanPruneAction.HackBan, ctx.Channel).ConfigureAwait(false);
+            await ctx.Guild.AddBanAsync(user, pruneDays, $"{ctx.User} | {msg}").ConfigureAwait(false);
+
+            await ctx.Channel.EmbedAsync(new EmbedBuilder().WithOkColor()
+                    .WithTitle($"⛔️ {Strings.BannedUser(ctx.Guild.Id)}")
+                    .AddField(efb => efb.WithName("ID").WithValue(user.Id).WithIsInline(true)))
+                .ConfigureAwait(false);
         }
 
         /// <summary>
