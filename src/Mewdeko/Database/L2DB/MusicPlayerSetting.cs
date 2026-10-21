@@ -21,7 +21,7 @@ namespace DataModel
         public ulong? MusicChannelId { get; set; }
 
         [Column("Volume")]
-        public int Volume { get; set; }
+        public int Volume { get; set; } = 100;
 
         [Column("AutoDisconnect")]
         public int AutoDisconnect { get; set; }
@@ -42,25 +42,25 @@ namespace DataModel
         public ulong? TtsChannelId { get; set; }
 
         [Column("TtsVolume")]
-        public int TtsVolume { get; set; }
+        public int TtsVolume { get; set; } = 100;
 
         [Column("TtsDefaultVoice")]
         public string? TtsDefaultVoice { get; set; }
 
         [Column("TtsSpeed")]
-        public float TtsSpeed { get; set; }
+        public float TtsSpeed { get; set; } = 1.0f;
 
         [Column("TtsReplyContext")]
-        public bool TtsReplyContext { get; set; }
+        public bool TtsReplyContext { get; set; } = true;
 
         [Column("TtsAttachmentNarration")]
-        public bool TtsAttachmentNarration { get; set; }
+        public bool TtsAttachmentNarration { get; set; } = true;
 
         [Column("TtsMaxQueueSize")]
-        public int TtsMaxQueueSize { get; set; }
+        public int TtsMaxQueueSize { get; set; } = 10;
 
         [Column("TtsConsecutiveGrouping")]
-        public bool TtsConsecutiveGrouping { get; set; }
+        public bool TtsConsecutiveGrouping { get; set; } = true;
 
         [Column("TtsRoleId")]
         public ulong? TtsRoleId { get; set; }
