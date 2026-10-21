@@ -131,8 +131,8 @@ public class GuildDataRetentionService : INService, IReadyExecutor
     /// <inheritdoc />
     public Task OnReadyAsync()
     {
-        handler.Subscribe("LeftGuild", "GuildDataRetentionService", OnLeftGuild);
-        handler.Subscribe("JoinedGuild", "GuildDataRetentionService", OnJoinedGuild);
+        handler.LeftGuild.Subscribe("GuildDataRetentionService", OnLeftGuild);
+        handler.JoinedGuild.Subscribe("GuildDataRetentionService", OnJoinedGuild);
         _ = RunLoop();
         return Task.CompletedTask;
     }
@@ -552,7 +552,7 @@ public class GuildDataRetentionService : INService, IReadyExecutor
 
     private bool AllShardsConnected()
     {
-        return client.Shards.Count > 0 && client.Shards.All(s => s.ConnectionState == ConnectionState.Connected);
+        return client.Gateway.CurrentUser is not null;
     }
 
     /// <summary>

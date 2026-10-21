@@ -2736,8 +2736,6 @@ setxpmultiplier:
   - xpmult
 setzodiac:
   - setzodiac
-shardstats:
-  - shardstats
 ship:
   - ship
 shoot:

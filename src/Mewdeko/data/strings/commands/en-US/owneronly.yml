@@ -976,34 +976,6 @@ setstream_string_=_2:
       name: name
       optional: true
       type: string
-shardstats:
-  args:
-    - ''
-  desc: >-
-    Displays statistics for all shards of the bot, including their statuses,
-    guild counts, and user counts.
-  params: [ ]
-shardstats_noparams:
-  args:
-    - ''
-  desc: >-
-    Displays statistics for all shards of the bot, including their statuses,
-    guild counts, and user counts.
-  params: [ ]
-shardstats_noparams_1:
-  args:
-    - ''
-  desc: >-
-    Displays statistics for all shards of the bot, including their statuses,
-    guild counts, and user counts.
-  params: [ ]
-shardstats_noparams_2:
-  args:
-    - ''
-  desc: >-
-    Displays statistics for all shards of the bot, including their statuses,
-    guild counts, and user counts.
-  params: [ ]
 sqlexec:
   args:
     - text

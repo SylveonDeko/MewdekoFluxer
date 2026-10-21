@@ -378,7 +378,7 @@ public class InstanceManagementService : INService, IReadyExecutor
                 await Task.Delay(3000);
 
                 // Log out the Discord client gracefully
-                await client.StopAsync();
+                client.Gateway.Dispose();
 
                 logger.LogInformation("Discord client stopped. Exiting process.");
 

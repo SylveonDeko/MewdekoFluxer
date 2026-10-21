@@ -335,7 +335,7 @@ public class FeatureRequestService : INService
             if (await client.Rest.GetChannelAsync(channelId).ConfigureAwait(false) is not Channel channel)
                 return (null, 0, null, false);
 
-            return (channel.Name, channel.GuildId, client.GetGuild(channel.GuildId)?.Name, true);
+            return (channel.Name, channel.GuildId ?? 0, client.GetGuild(channel.GuildId ?? 0)?.Name, true);
         }
         catch (Exception ex)
         {
@@ -393,7 +393,7 @@ public class FeatureRequestService : INService
 
             if (record.ReportMessageId is not 0)
             {
-                await channel.ModifyMessageAsync(record.ReportMessageId, x => x.Embed = eb.Build())
+                await client.Rest.EditMessageAsync(channel.Id, record.ReportMessageId, embeds: [eb.Build()])
                     .ConfigureAwait(false);
                 return;
             }

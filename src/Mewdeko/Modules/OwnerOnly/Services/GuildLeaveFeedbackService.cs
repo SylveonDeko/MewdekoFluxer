@@ -107,8 +107,8 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
     /// <inheritdoc />
     public Task OnReadyAsync()
     {
-        handler.Subscribe("LeftGuild", "GuildLeaveFeedbackService", OnLeftGuild);
-        handler.Subscribe("MessageReceived", "GuildLeaveFeedbackService", OnMessageReceived);
+        handler.LeftGuild.Subscribe("GuildLeaveFeedbackService", OnLeftGuild);
+        handler.MessageReceived.Subscribe("GuildLeaveFeedbackService", OnMessageReceived);
         return Task.CompletedTask;
     }
 
@@ -145,7 +145,7 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
         if (recentlyPrompted)
             return;
 
-        var joinedAt = guild.CurrentUser?.JoinedAt?.UtcDateTime
+        var joinedAt = guild.CurrentUser?.JoinedAt.UtcDateTime
                        ?? await db.GuildConfigs
                            .Where(x => x.GuildId == guild.Id)
                            .Select(x => x.DateAdded)
@@ -155,7 +155,7 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
         {
             GuildId = guild.Id,
             GuildName = guild.Name ?? string.Empty,
-            MemberCount = guild.MemberCount,
+            MemberCount = guild.TotalMembers,
             OwnerId = ownerId,
             JoinedAt = joinedAt,
             DateAdded = DateTime.UtcNow
@@ -241,7 +241,7 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
             if (await client.Rest.GetChannelAsync(channelId).ConfigureAwait(false) is not Channel channel)
                 return (null, 0, null, false);
 
-            return (channel.Name, channel.GuildId, client.GetGuild(channel.GuildId)?.Name, true);
+            return (channel.Name, channel.GuildId ?? 0, client.GetGuild(channel.GuildId ?? 0)?.Name, true);
         }
         catch (Exception ex)
         {
@@ -487,7 +487,7 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
 
             if (record.ReportMessageId is not 0)
             {
-                await channel.ModifyMessageAsync(record.ReportMessageId, x => x.Embed = eb.Build())
+                await client.Rest.EditMessageAsync(channel.Id, record.ReportMessageId, embeds: [eb.Build()])
                     .ConfigureAwait(false);
                 return;
             }

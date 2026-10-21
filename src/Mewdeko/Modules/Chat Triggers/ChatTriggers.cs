@@ -76,13 +76,13 @@ public class ChatTriggers(
             }
         }
 
-        if (ctx.Message.Attachments.Count == 0)
+        if (ctx.Message.Attachments is not { Length: > 0 })
         {
             using var client = clientFactory.CreateClient();
             input = await client.GetStringAsync(input).ConfigureAwait(false);
         }
 
-        var succ = await Service.ImportCrsAsync(ctx.User as SocketGuildMember, input).ConfigureAwait(false);
+        var succ = await Service.ImportCrsAsync(ctx.Member, input).ConfigureAwait(false);
         if (!succ)
         {
             await ReplyErrorAsync(Strings.ExprImportInvalidData(ctx.Guild.Id)).ConfigureAwait(false);
@@ -580,7 +580,7 @@ public class ChatTriggers(
     [UserPerm(GuildPermission.Administrator)]
     public async Task CtrGrantToggle(int id, SocketRole role)
     {
-        var gUsr = ctx.User as SocketGuildMember;
+        var gUsr = ctx.Member;
 
         if (!role.CanManageRole(gUsr))
         {
@@ -623,7 +623,7 @@ public class ChatTriggers(
     [UserPerm(GuildPermission.Administrator)]
     public async Task CtrRemoveToggle(int id, SocketRole role)
     {
-        var gUsr = ctx.User as SocketGuildMember;
+        var gUsr = ctx.Member;
 
         if (!role.CanManageRole(gUsr))
         {
@@ -1020,7 +1020,7 @@ public class ChatTriggers(
         }
 
         var (matched, blocker) = await Service
-            .TestTriggerAsync(ct, (SocketGuild)ctx.Guild, (SocketGuildMember)ctx.User, ctx.Channel, sample)
+            .TestTriggerAsync(ct, (SocketGuild)ctx.Guild, ctx.Member!, ctx.Channel, sample)
             .ConfigureAwait(false);
 
         var eb = new EmbedBuilder()

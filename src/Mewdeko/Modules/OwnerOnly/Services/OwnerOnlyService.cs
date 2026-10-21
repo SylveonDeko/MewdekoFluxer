@@ -44,8 +44,8 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
 
     private int currentStatusNum;
 
-    private ImmutableDictionary<ulong, Channel> ownerChannels =
-        new Dictionary<ulong, Channel>().ToImmutableDictionary();
+    private ImmutableDictionary<ulong, DMChannel> ownerChannels =
+        new Dictionary<ulong, DMChannel>().ToImmutableDictionary();
 
     private string sourceDirectory;
     private int totalCommands;
@@ -121,7 +121,7 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
                 }
                 else
                 {
-                    await server.DeleteAsync().ConfigureAwait(false);
+                    await client.Rest.DeleteGuildAsync(server.Id, new DeleteGuildRequest()).ConfigureAwait(false);
                     logger.LogInformation("Deleted server {ServerName} [{ServerId}]", server.Name, server.Id);
                 }
             }
@@ -132,7 +132,7 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
         }, CommandFlags.FireAndForget);
 
         _ = CheckUpdateTimer();
-        handler.Subscribe("GuildMemberUpdated", "OwnerOnlyService", QuarantineCheck);
+        handler.GuildMemberUpdated.Subscribe("OwnerOnlyService", QuarantineCheck);
     }
 
     /// <summary>
@@ -149,7 +149,7 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
     public async Task LateExecute(FluxerClient discordShardedClient, SocketGuild guild, Message msg)
     {
         var bs = bss.Data;
-        if (msg.Channel is Channel && bss.Data.ForwardMessages && ownerChannels.Count > 0)
+        if (msg.Channel is DMChannel && bss.Data.ForwardMessages && ownerChannels.Count > 0)
         {
             var title = $"{strings.DmFrom(guild.Id)} [{msg.Author}]({msg.Author.Id})";
 
@@ -157,7 +157,7 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
 
             var toSend = msg.Content;
 
-            if (msg.Attachments.Count > 0)
+            if (msg.Attachments is { Length: > 0 })
             {
                 toSend +=
                     $"\n\n{Format.Code(attachamentsTxt)}:\n{string.Join("\n", msg.Attachments.Select(a => a.ProxyUrl))}";
@@ -165,9 +165,9 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
 
             if (bs.ForwardToAllOwners)
             {
-                var allOwnerChannels = ownerChannels.Values;
+                var allOwnerChannels = ownerChannels;
 
-                foreach (var ownerCh in allOwnerChannels.Where(ch => ch.Recipient.Id != msg.Author.Id))
+                foreach (var (ownerId, ownerCh) in allOwnerChannels.Where(ch => ch.Key != msg.Author.Id))
                 {
                     try
                     {
@@ -175,14 +175,14 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
                     }
                     catch
                     {
-                        logger.LogWarning("Can't contact owner with id {0}", ownerCh.Recipient.Id);
+                        logger.LogWarning("Can't contact owner with id {0}", ownerId);
                     }
                 }
             }
             else
             {
-                var firstOwnerChannel = ownerChannels.Values.First();
-                if (firstOwnerChannel.Recipient.Id != msg.Author.Id)
+                var (firstOwnerId, firstOwnerChannel) = ownerChannels.First();
+                if (firstOwnerId != msg.Author.Id)
                 {
                     try
                     {
@@ -235,14 +235,14 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
             }
         }
 
-        var channels = await Task.WhenAll(creds.OwnerIds.Select(id =>
+        var channels = await Task.WhenAll(creds.OwnerIds.ToArray().Select(async id =>
         {
             var user = client.GetUser(id);
-            return user == null ? Task.FromResult<Channel?>(null) : user.CreateDMChannelAsync();
+            return (Id: id, Channel: user == null ? null : await user.CreateDMChannelAsync().ConfigureAwait(false));
         })).ConfigureAwait(false);
 
-        ownerChannels = channels.Where(x => x is not null)
-            .ToDictionary(x => x.Recipient.Id, x => x)
+        ownerChannels = channels.Where(x => x.Channel is not null)
+            .ToDictionary(x => x.Id, x => x.Channel!)
             .ToImmutableDictionary();
 
         if (ownerChannels.Count == 0)
@@ -257,30 +257,24 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
         }
     }
 
-    private async Task QuarantineCheck(Cacheable<SocketGuildMember> args, SocketGuildMember arsg2)
+    private async Task QuarantineCheck(MemberSnapshot? before, SocketGuildMember after)
     {
-        if (!args.HasValue)
+        if (before is null)
             return;
 
-        if (args.Id != client.CurrentUser.Id)
+        if (after.Id != client.CurrentUser.Id)
             return;
-
-        var value = args.Value;
-
-        if (value.Roles is null)
-            return;
-
 
         if (!bss.Data.QuarantineNotification)
             return;
 
-        if (!Equals(value.Roles, arsg2.Roles))
+        if (!before.RoleIds.SetEquals(after.RoleIds))
         {
-            var quarantineRole = value.Guild.Roles.FirstOrDefault(x => x.Name == "Quarantine");
+            var quarantineRole = after.Guild.RoleList.FirstOrDefault(x => x.Name == "Quarantine");
             if (quarantineRole is null)
                 return;
 
-            if (value.Roles.All(x => x.Id != quarantineRole.Id) && arsg2.Roles.Any(x => x.Id == quarantineRole.Id))
+            if (!before.RoleIds.Contains(quarantineRole.Id) && after.RoleIds.Contains(quarantineRole.Id))
             {
                 if (bss.Data.ForwardToAllOwners)
                 {
@@ -289,8 +283,8 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
                         var user = await client.Rest.GetUserAsync(i);
                         if (user is null) continue;
                         var channel = await user.CreateDMChannelAsync();
-                        await channel.SendAsync(strings.QuarantineNotification(args.Value.Guild.Id,
-                            arsg2.Guild.Name, value.Guild.Id));
+                        await channel.SendAsync(strings.QuarantineNotification(after.Guild.Id,
+                            after.Guild.Name, after.Guild.Id));
                     }
                 }
                 else
@@ -299,8 +293,8 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
                     if (user is not null)
                     {
                         var channel = await user.CreateDMChannelAsync();
-                        await channel.SendAsync(strings.QuarantineNotification(args.Value.Guild.Id,
-                            arsg2.Guild.Name, value.Guild.Id));
+                        await channel.SendAsync(strings.QuarantineNotification(after.Guild.Id,
+                            after.Guild.Name, after.Guild.Id));
                     }
                 }
             }
@@ -698,13 +692,35 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
             return false;
 
         var imgData = await sr.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
-        var imgStream = imgData.ToStream();
-        await using var _ = imgStream.ConfigureAwait(false);
-        await client.CurrentUser.ModifyAsync(u => u.Avatar = new Image(imgStream)).ConfigureAwait(false);
+        var contentType = sr.Content.Headers.ContentType?.MediaType ?? "image/png";
+        await UpdateProfileAsync(null, $"data:{contentType};base64,{Convert.ToBase64String(imgData)}")
+            .ConfigureAwait(false);
 
         return true;
     }
 
+    /// <summary>
+    ///     Updates the bot's own profile, leaving everything that is not given as it is.
+    /// </summary>
+    /// <param name="username">The new username, or null to keep the current one.</param>
+    /// <param name="avatarDataUri">The new avatar as a base64 data URI, or null to keep the current one.</param>
+    public async Task UpdateProfileAsync(string? username, string? avatarDataUri)
+    {
+        var current = client.CurrentUser;
+        await client.Rest.UpdateCurrentUserAsync(new UserJson
+        {
+            Id = current.Id,
+            Username = username ?? current.Username,
+            Discriminator = current.Discriminator,
+            DisplayName = current.DisplayName,
+            AvatarHash = avatarDataUri ?? current.AvatarHash,
+            AvatarColor = current.AvatarColor,
+            Flags = current.Flags,
+            IsBot = current.IsBot,
+            IsSystem = current.IsSystem,
+            MentionPreference = current.MentionPreference
+        }).ConfigureAwait(false);
+    }
     /// <summary>
     ///     Clears all startup commands from the database.
     /// </summary>

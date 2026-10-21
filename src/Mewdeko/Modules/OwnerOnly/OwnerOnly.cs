@@ -165,7 +165,6 @@ public class OwnerOnly(
             await msg.ModifyAsync(x =>
             {
                 x.Embed = successEmbed;
-                x.Components = null;
             });
         }
         catch (Exception ex)
@@ -179,7 +178,6 @@ public class OwnerOnly(
             await msg.ModifyAsync(x =>
             {
                 x.Embed = errorEmbed;
-                x.Components = null;
             });
         }
     }
@@ -306,8 +304,7 @@ public class OwnerOnly(
 
         try
         {
-            var guilds = (await ctx.Client.GetGuildsAsync().ConfigureAwait(false))
-                .Cast<SocketGuild>();
+            var guilds = client.Guilds;
 
             var excludedTerms = new[]
             {
@@ -318,12 +315,12 @@ public class OwnerOnly(
             var servers = guilds
                 .Where(x => x.Id != excludedId &&
                             !excludedTerms.Any(term => x.Name.Contains(term, StringComparison.OrdinalIgnoreCase)))
-                .OrderByDescending(x => x.MemberCount)
+                .OrderByDescending(x => x.TotalMembers)
                 .Take(11)
                 .Select(x => new StatsService.MewdekoPartialGuild
                 {
-                    IconUrl = x.IconId.StartsWith("a_") ? x.IconUrl.Replace(".jpg", ".gif") : x.IconUrl,
-                    MemberCount = x.MemberCount,
+                    IconUrl = x.IconUrl,
+                    MemberCount = x.TotalMembers,
                     Name = x.Name
                 })
                 .ToList();
@@ -378,7 +375,7 @@ public class OwnerOnly(
                     Strings.ServerInfoOnline(ctx.Guild.Id,
                         i.Users.Count(x =>
                             x.Status is UserStatus.Online or UserStatus.DoNotDisturb or UserStatus.Idle)) + "\n" +
-                    Strings.ServerInfoOwner(ctx.Guild.Id, i.Owner, i.OwnerId) + "\n" +
+                    Strings.ServerInfoOwner(ctx.Guild.Id, i.GetUser(i.OwnerId)?.Username ?? i.OwnerId.ToString(), i.OwnerId) + "\n" +
                     Strings.ServerInfoCreated(ctx.Guild.Id, TimestampTag.FromDateTimeOffset(i.CreatedAt))
                 );
             }
@@ -442,7 +439,7 @@ public class OwnerOnly(
             .OrderByDescending(gc => gc.Count)
             .FirstOrDefaultAsync();
 
-        SocketGuild? guild = null;
+        Guild? guild = null;
         IUser? user = null;
 
         // Parallel fetch of guild and user details
@@ -777,7 +774,7 @@ public class OwnerOnly(
             cmdText.StartsWith($"{await guildSettings.GetPrefix(ctx.Guild)}restart", StringComparison.InvariantCulture))
             return;
 
-        var guser = (SocketGuildMember)ctx.User;
+        var guser = ctx.Member!;
         var cmd = new AutoCommand
         {
             CommandText = cmdText,
@@ -838,7 +835,7 @@ public class OwnerOnly(
         if (interval < 5)
             return;
 
-        var guser = (SocketGuildMember)ctx.User;
+        var guser = ctx.Member!;
         var cmd = new AutoCommand
         {
             CommandText = cmdText,
@@ -1228,7 +1225,7 @@ public class OwnerOnly(
     [Aliases]
     public async Task RetentionPurgeAll()
     {
-        if (client.Shards.Any(s => s.ConnectionState != ConnectionState.Connected))
+        if (client.Gateway.CurrentUser is null)
         {
             await ErrorAsync(Strings.RetentionScanSkipped(ctx.Guild.Id)).ConfigureAwait(false);
             return;
@@ -1260,7 +1257,7 @@ public class OwnerOnly(
     [Aliases]
     public async Task RetentionScan()
     {
-        if (client.Shards.Any(s => s.ConnectionState != ConnectionState.Connected))
+        if (client.Gateway.CurrentUser is null)
         {
             await ErrorAsync(Strings.RetentionScanSkipped(ctx.Guild.Id)).ConfigureAwait(false);
             return;
@@ -1391,9 +1388,9 @@ public class OwnerOnly(
 
         try
         {
-            await client.CurrentUser.ModifyAsync(u => u.Username = newName).ConfigureAwait(false);
+            await Service.UpdateProfileAsync(newName, null).ConfigureAwait(false);
         }
-        catch (RateLimitedException)
+        catch (FluxerApiException e) when (e.HttpCode == System.Net.HttpStatusCode.TooManyRequests)
         {
             logger.LogWarning("You've been ratelimited. Wait 2 hours to change your name");
         }
@@ -1455,7 +1452,7 @@ public class OwnerOnly(
             .WithDefault(Context)
             .Build();
 
-        await bot.SetGameAsync(game == null ? game : rep.Replace(game), type).ConfigureAwait(false);
+        await client.SetCustomStatusAsync(game == null ? game : rep.Replace(game)).ConfigureAwait(false);
 
         await ReplyConfirmAsync(Strings.SetGame(ctx.Guild.Id)).ConfigureAwait(false);
     }
@@ -1475,7 +1472,7 @@ public class OwnerOnly(
     {
         name ??= "";
 
-        await client.SetGameAsync(name, url, ActivityType.Streaming).ConfigureAwait(false);
+        await client.SetCustomStatusAsync(name).ConfigureAwait(false);
 
         await ReplyConfirmAsync(Strings.SetStream(ctx.Guild.Id)).ConfigureAwait(false);
     }
@@ -1543,7 +1540,10 @@ public class OwnerOnly(
             return;
         }
 
-        var channel = await potentialServer.GetTextChannelAsync(to).ConfigureAwait(false);
+        var channel = await client.GetChannelAsync(to).ConfigureAwait(false);
+        if (channel is not { IsTextChannel: true } || channel.GuildId != potentialServer.Id)
+            channel = null;
+
         if (channel is not null)
         {
             if (SmartEmbed.TryParse(rep.Replace(msg), ctx.Guild.Id, out var embed, out var plainText))
@@ -1562,7 +1562,7 @@ public class OwnerOnly(
             return;
         }
 
-        var user = await potentialServer.GetUserAsync(to).ConfigureAwait(false);
+        var user = await potentialServer.GetMemberAsync(to).ConfigureAwait(false);
         if (user is null)
         {
             await ctx.Channel.SendErrorAsync(Strings.ChannelNotFound(ctx.Guild.Id), botConfig);
@@ -1572,15 +1572,15 @@ public class OwnerOnly(
 
         if (SmartEmbed.TryParse(rep.Replace(msg), ctx.Guild?.Id, out var embed1, out var plainText1))
         {
-            await channel.SendAsync(plainText1, embeds: embed1)
+            await user.SendAsync(plainText1, embeds: embed1)
                 .ConfigureAwait(false);
-            await ctx.Channel.SendConfirmAsync(Strings.MessageSentGuild(ctx.Guild.Id, potentialServer, user.Mention));
+            await ctx.Channel.SendConfirmAsync(Strings.MessageSentGuild(ctx.Guild.Id, potentialServer, user.User.Mention));
 
             return;
         }
 
-        await channel.SendAsync(rep.Replace(msg)).ConfigureAwait(false);
-        await ctx.Channel.SendConfirmAsync(Strings.MessageSentUser(ctx.Guild.Id, user.Mention));
+        await user.SendAsync(rep.Replace(msg)).ConfigureAwait(false);
+        await ctx.Channel.SendConfirmAsync(Strings.MessageSentUser(ctx.Guild.Id, user.User.Mention));
     }
 
     /// <summary>
@@ -1621,7 +1621,7 @@ public class OwnerOnly(
         {
             SettableUserStatus.Online => UserStatus.Online,
             SettableUserStatus.Invisible => UserStatus.Invisible,
-            SettableUserStatus.Idle => UserStatus.AFK,
+            SettableUserStatus.Idle => UserStatus.Idle,
             SettableUserStatus.Dnd => UserStatus.DoNotDisturb,
             _ => UserStatus.Online
         };
@@ -1748,7 +1748,7 @@ public class OwnerOnly(
         var evaluationSource = "code block";
 
         // Check if there's at least one attachment
-        if (ctx.Message.Attachments.Count != 0)
+        if (ctx.Message.Attachments is { Length: > 0 })
         {
             var attachment = Context.Message.Attachments.First();
 
@@ -2054,7 +2054,7 @@ public sealed class EvaluationEnvironment
     {
         get
         {
-            return (SocketGuildMember)Ctx.User;
+            return Ctx.Member!;
         }
     }
 

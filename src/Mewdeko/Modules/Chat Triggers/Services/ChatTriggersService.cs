@@ -155,6 +155,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
 
     private readonly IDataConnectionFactory dbFactory;
     private readonly DiscordPermOverrideService discordPermOverride;
+    private readonly Mewdeko bot;
     private readonly EventHandler eventHandler;
 
     private readonly TypedKey<CTModel> gcrAddedKey = new("gcr.added");
@@ -247,6 +248,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
         this.configService = configService;
         this.creds = creds;
         this.strings = strings;
+        this.bot = bot;
         this.eventHandler = eventHandler;
         this.logger = logger;
         rng = new MewdekoRandom();
@@ -258,22 +260,21 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
         pubSub.Sub(crAdded, OnCrAdded);
 
         bot.JoinedGuild += OnJoinedGuild;
-        eventHandler.Subscribe("LeftGuild", "ChatTriggersService", OnLeftGuild);
+        eventHandler.LeftGuild.Subscribe("ChatTriggersService", OnLeftGuild);
 
         // Subscribe to reaction events for reaction triggers
-        eventHandler.Subscribe("ReactionAdded", "ChatTriggersService", OnReactionAdded);
-        eventHandler.Subscribe("ReactionRemoved", "ChatTriggersService", OnReactionRemoved);
+        eventHandler.ReactionAdded.Subscribe("ChatTriggersService", OnReactionAdded);
+        eventHandler.ReactionRemoved.Subscribe("ChatTriggersService", OnReactionRemoved);
 
         // Subscribe to the events other modules raise, so triggers can act as their notification layer
-        eventHandler.Subscribe("XpLevelChanged", "ChatTriggersService", OnXpLevelChanged);
-        eventHandler.Subscribe("UserJoined", "ChatTriggersService", OnUserJoined);
-        eventHandler.Subscribe("UserLeft", "ChatTriggersService", OnUserLeft);
-        eventHandler.Subscribe("UserVoiceStateUpdated", "ChatTriggersService", OnVoiceStateUpdated);
-        eventHandler.Subscribe("GuildMemberUpdated", "ChatTriggersService", OnGuildMemberUpdated);
+        eventHandler.XpLevelChanged.Subscribe("ChatTriggersService", OnXpLevelChanged);
+        eventHandler.UserJoined.Subscribe("ChatTriggersService", OnUserJoined);
+        eventHandler.UserLeft.Subscribe("ChatTriggersService", OnUserLeft);
+        eventHandler.UserVoiceStateUpdated.Subscribe("ChatTriggersService", OnVoiceStateUpdated);
 
         // The command pipeline drops bot messages before early behaviours run, so triggers that opted into bot and
         // webhook messages have to be driven from the raw message event instead
-        eventHandler.Subscribe("MessageReceived", "ChatTriggersService", OnMessageReceived);
+        eventHandler.MessageReceived.Subscribe("ChatTriggersService", OnMessageReceived);
     }
 
     /// <summary>
@@ -391,8 +392,8 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
                 // Check if there are any guild-specific permission overrides for the trigger
                 if (discordPermOverride.TryGetOverrides(guild.Id, ct.Trigger, out var guildPermission))
                 {
-                    var user = msg.Author as SocketGuildMember;
-                    if (!user.GuildPermissions.Has(guildPermission))
+                    var user = guild.GetUser(msg.Author.Id);
+                    if (user is null || !user.GuildPermissions.Has(guildPermission))
                     {
                         if (configService.Data.LogChatTriggerFires)
                         {
@@ -442,7 +443,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
             }
 
             // Grant or remove roles from users based on the trigger
-            if (ct.GuildId is null || msg?.Author is not SocketGuildMember guildUser) return true;
+            if (ct.GuildId is null || guild.GetUser(msg?.Author.Id ?? 0) is not { } guildUser) return true;
             {
                 var effectedUsers = (CtRoleGrantType)ct.RoleGrantType switch
                 {
@@ -465,7 +466,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
                         roles.AddRange(ct.GetGrantedRoles().Where(x => !user.RoleIds.Contains(x)));
                         // difference is caused by @everyone
                         if (baseRoles.Any(x => !roles.Contains(x)) || roles.Any(x => !baseRoles.Contains(x)))
-                            await user.ModifyAsync(x => x.RoleIds = new Optional<IEnumerable<ulong>>(roles))
+                            await user.ModifyAsync(x => x.RoleIds = roles)
                                 .ConfigureAwait(false);
                     }
                     catch
@@ -1996,8 +1997,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
         }
 
         if (ct.MinServerMembershipMinutes > 0 &&
-            (user.JoinedAt is null ||
-             DateTimeOffset.UtcNow - user.JoinedAt.Value < TimeSpan.FromMinutes(ct.MinServerMembershipMinutes)))
+            DateTimeOffset.UtcNow - user.JoinedAt < TimeSpan.FromMinutes(ct.MinServerMembershipMinutes))
         {
             return (true, strings.CtTestBlockedMembership(guild.Id, FormatMinutes(ct.MinServerMembershipMinutes)));
         }
@@ -2279,7 +2279,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
         var channel = args.ChannelId == 0 ? null : guild.GetTextChannel(args.ChannelId) as Channel;
 
         await FireEventTriggersAsync(args.GuildId,
-            args.IsLevelUp ? CtEventType.XpLevelUp : CtEventType.XpLevelDown, user, channel).ConfigureAwait(false);
+            args.IsLevelUp ? CtEventType.XpLevelUp : CtEventType.XpLevelDown, user.User, channel).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -2288,7 +2288,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// <param name="user">The member that joined.</param>
     private Task OnUserJoined(SocketGuildMember user)
     {
-        return FireEventTriggersAsync(user.Guild.Id, CtEventType.MemberJoin, user);
+        return FireEventTriggersAsync(user.Guild.Id, CtEventType.MemberJoin, user.User);
     }
 
     /// <summary>
@@ -2296,30 +2296,9 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// </summary>
     /// <param name="guild">The guild the member left.</param>
     /// <param name="user">The member that left.</param>
-    private Task OnUserLeft(SocketGuild guild, IUser user)
+    private Task OnUserLeft(SocketGuild guild, User user)
     {
         return FireEventTriggersAsync(guild.Id, CtEventType.MemberLeave, user);
-    }
-
-    /// <summary>
-    ///     Fires event triggers when a member starts or stops boosting the server.
-    /// </summary>
-    /// <param name="before">The member's previous state, which may not be cached.</param>
-    /// <param name="after">The member's new state.</param>
-    private async Task OnGuildMemberUpdated(Cacheable<SocketGuildMember> before, SocketGuildMember after)
-    {
-        // Without the previous state there is no way to tell a new boost from an existing one, so nothing fires
-        if (!before.HasValue)
-            return;
-
-        var wasBoosting = before.Value.PremiumSince.HasValue;
-        var isBoosting = after.PremiumSince.HasValue;
-
-        if (wasBoosting == isBoosting)
-            return;
-
-        await FireEventTriggersAsync(after.Guild.Id, isBoosting ? CtEventType.Boost : CtEventType.BoostEnd, after)
-            .ConfigureAwait(false);
     }
 
     /// <summary>
@@ -2328,15 +2307,15 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// <param name="user">The member whose voice state changed.</param>
     /// <param name="before">The previous voice state.</param>
     /// <param name="after">The new voice state.</param>
-    private async Task OnVoiceStateUpdated(SocketUser user, SocketVoiceState before, SocketVoiceState after)
+    private async Task OnVoiceStateUpdated(SocketGuildMember user, VoiceStateSnapshot before, VoiceStateSnapshot after)
     {
-        if (user is not SocketGuildMember guildUser || before.VoiceChannel?.Id == after.VoiceChannel?.Id)
+        if (before.ChannelId == after.ChannelId)
             return;
 
-        if (after.VoiceChannel is not null && before.VoiceChannel is null)
-            await FireEventTriggersAsync(guildUser.GuildId, CtEventType.VoiceJoin, user).ConfigureAwait(false);
-        else if (after.VoiceChannel is null && before.VoiceChannel is not null)
-            await FireEventTriggersAsync(guildUser.GuildId, CtEventType.VoiceLeave, user).ConfigureAwait(false);
+        if (after.ChannelId is not null && before.ChannelId is null)
+            await FireEventTriggersAsync(user.GuildId, CtEventType.VoiceJoin, user.User).ConfigureAwait(false);
+        else if (after.ChannelId is null && before.ChannelId is not null)
+            await FireEventTriggersAsync(user.GuildId, CtEventType.VoiceLeave, user.User).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -2385,10 +2364,10 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
 
         if (ct.MinServerMembershipMinutes > 0)
         {
-            if (user is not SocketGuildMember { JoinedAt: not null } guildUser)
+            if (client.GetGuild(guildId)?.GetUser(user.Id) is not { } guildUser)
                 return false;
 
-            if (DateTimeOffset.UtcNow - guildUser.JoinedAt.Value <
+            if (DateTimeOffset.UtcNow - guildUser.JoinedAt <
                 TimeSpan.FromMinutes(ct.MinServerMembershipMinutes))
             {
                 return false;
@@ -2806,7 +2785,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
         {
             try
             {
-                using var discordWebhookClient =
+                var discordWebhookClient =
                     new FluxerWebhookClient(webhookUrl); // Initialize a Discord webhook client
                 await discordWebhookClient
                     .SendAsync(strings.CrosspostTest(guildId)) // Send a test message
@@ -3131,7 +3110,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// <param name="reaction">The reaction that was added.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     private Task OnReactionAdded(Cacheable<Message> message,
-        Cacheable<Channel> channel, SocketReaction reaction)
+        Channel channel, SocketReaction reaction)
     {
         return HandleReactionAsync(message, channel, reaction, ChatTriggerType.Reactions);
     }
@@ -3143,7 +3122,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// <param name="channel">The channel the message is in.</param>
     /// <param name="reaction">The reaction that was removed.</param>
     private Task OnReactionRemoved(Cacheable<Message> message,
-        Cacheable<Channel> channel, SocketReaction reaction)
+        Channel channel, SocketReaction reaction)
     {
         return HandleReactionAsync(message, channel, reaction, ChatTriggerType.ReactionsRemoved);
     }
@@ -3156,20 +3135,16 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// <param name="reaction">The reaction that was added or removed.</param>
     /// <param name="triggerType">The trigger type the reaction corresponds to.</param>
     private async Task HandleReactionAsync(Cacheable<Message> message,
-        Cacheable<Channel> channel, SocketReaction reaction, ChatTriggerType triggerType)
+        Channel channel, SocketReaction reaction, ChatTriggerType triggerType)
     {
         if (!ready)
             return;
 
-        var cachedUser = reaction.User.IsSpecified ? reaction.User.Value : null;
+        var cachedUser = reaction.User;
         if (cachedUser?.IsBot == true)
             return;
 
-        var cachedChannel = channel.HasValue ? channel.Value as Channel : client.GetChannel(channel.Id) as Channel;
-        if (cachedChannel is null)
-            return;
-
-        var triggers = await GetChatTriggersFor(cachedChannel.GuildId).ConfigureAwait(false);
+        var triggers = await GetChatTriggersFor(channel.GuildId ?? 0).ConfigureAwait(false);
         var reactionTriggers = triggers.Where(ct =>
             !ct.IsDisabled &&
             ((ChatTriggerType)ct.ValidTriggerTypes).HasFlag(triggerType) &&
@@ -3179,13 +3154,12 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
             return;
 
         var msg = await message.GetOrDownloadAsync().ConfigureAwait(false);
-        var ch = await channel.GetOrDownloadAsync().ConfigureAwait(false);
+        var ch = channel;
 
-        if (msg is null || ch is not Channel guildChannel)
+        if (msg is null || ch.Guild is not { } guild)
             return;
 
-        var guild = guildChannel.Guild;
-        var user = cachedUser ?? await guild.GetUserAsync(reaction.UserId).ConfigureAwait(false);
+        var user = cachedUser ?? (await guild.GetUserAsync(reaction.UserId).ConfigureAwait(false))?.User;
 
         if (user is null || user.IsBot)
             return;
@@ -3253,22 +3227,17 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// <param name="trigger">The trigger to check against.</param>
     /// <param name="emote">The emote that was reacted with.</param>
     /// <returns>True if the reaction matches the trigger pattern.</returns>
-    private static bool IsReactionMatch(CTModel trigger, Emoji emote)
+    private static bool IsReactionMatch(CTModel trigger, IEmoji emote)
     {
         // For reaction triggers, the Trigger field contains the emoji/emote to match
         if (string.IsNullOrWhiteSpace(trigger.Trigger))
             return false;
 
         var triggerEmote = trigger.Trigger.Trim();
+        var emoji = Emoji.From(emote);
 
-        // Handle different emote types
-        return emote switch
-        {
-            Emoji emoji => triggerEmote.Equals(emoji.Name, StringComparison.OrdinalIgnoreCase),
-            Emoji customEmote => triggerEmote.Equals(customEmote.Name, StringComparison.OrdinalIgnoreCase) ||
-                                 triggerEmote.Equals(customEmote.ToString(), StringComparison.OrdinalIgnoreCase),
-            _ => false
-        };
+        return triggerEmote.Equals(emoji.Name, StringComparison.OrdinalIgnoreCase) ||
+               (emoji.IsCustom && triggerEmote.Equals(emoji.ToString(), StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
@@ -3430,16 +3399,15 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// </summary>
     public Task Unload()
     {
-        eventHandler.Unsubscribe("JoinedGuild", "ChatTriggersService", OnJoinedGuild);
-        eventHandler.Unsubscribe("LeftGuild", "ChatTriggersService", OnLeftGuild);
-        eventHandler.Unsubscribe("ReactionAdded", "ChatTriggersService", OnReactionAdded);
-        eventHandler.Unsubscribe("ReactionRemoved", "ChatTriggersService", OnReactionRemoved);
-        eventHandler.Unsubscribe("XpLevelChanged", "ChatTriggersService", OnXpLevelChanged);
-        eventHandler.Unsubscribe("UserJoined", "ChatTriggersService", OnUserJoined);
-        eventHandler.Unsubscribe("UserLeft", "ChatTriggersService", OnUserLeft);
-        eventHandler.Unsubscribe("UserVoiceStateUpdated", "ChatTriggersService", OnVoiceStateUpdated);
-        eventHandler.Unsubscribe("GuildMemberUpdated", "ChatTriggersService", OnGuildMemberUpdated);
-        eventHandler.Unsubscribe("MessageReceived", "ChatTriggersService", OnMessageReceived);
+        bot.JoinedGuild -= OnJoinedGuild;
+        eventHandler.LeftGuild.Unsubscribe("ChatTriggersService", OnLeftGuild);
+        eventHandler.ReactionAdded.Unsubscribe("ChatTriggersService", OnReactionAdded);
+        eventHandler.ReactionRemoved.Unsubscribe("ChatTriggersService", OnReactionRemoved);
+        eventHandler.XpLevelChanged.Unsubscribe("ChatTriggersService", OnXpLevelChanged);
+        eventHandler.UserJoined.Unsubscribe("ChatTriggersService", OnUserJoined);
+        eventHandler.UserLeft.Unsubscribe("ChatTriggersService", OnUserLeft);
+        eventHandler.UserVoiceStateUpdated.Unsubscribe("ChatTriggersService", OnVoiceStateUpdated);
+        eventHandler.MessageReceived.Unsubscribe("ChatTriggersService", OnMessageReceived);
         return Task.CompletedTask;
     }
 

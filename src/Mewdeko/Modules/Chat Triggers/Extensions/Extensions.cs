@@ -159,7 +159,7 @@ public static class Extensions
             }
         }
 
-        var canMentionEveryone = (ctx.Author as SocketGuildMember)?.GuildPermissions.MentionEveryone ?? true;
+        var canMentionEveryone = CanMentionEveryone(ctx);
         var textChannel = ctx.Channel as Channel;
         var guild = textChannel?.Guild as SocketGuild;
         var repliedMessage = await GetRepliedMessageAsync(ctx).ConfigureAwait(false);
@@ -300,7 +300,7 @@ public static class Extensions
                 }
             }
 
-            var canMentionEveryone = (ctx.Author as SocketGuildMember)?.GuildPermissions.MentionEveryone ?? true;
+            var canMentionEveryone = CanMentionEveryone(ctx);
             await using var dbContext = await dbProvider.CreateConnectionAsync();
             var repliedMessage = await GetRepliedMessageAsync(ctx).ConfigureAwait(false);
 
@@ -384,12 +384,12 @@ public static class Extensions
     ///     response driven by an event never replies. The reference is built as a soft reply: if the original message
     ///     is gone, Discord sends it as a normal message rather than failing.
     /// </remarks>
-    private static MessageReference? BuildReference(this ChatTrigger ct, Message ctx, Channel channel)
+    private static MessageReferenceRequest? BuildReference(this ChatTrigger ct, Message ctx, Channel channel)
     {
         if (!ct.ReplyToTrigger || ct.DmResponse || ctx.IsSynthetic || ctx.Channel?.Id != channel.Id)
             return null;
 
-        return new MessageReference(ctx.Id, channel.Id, failIfNotExists: false);
+        return new MessageReferenceRequest { MessageId = ctx.Id, ChannelId = channel.Id, GuildId = channel.GuildId, Type = MessageReferenceType.Default };
     }
 
     /// <summary>
@@ -418,9 +418,14 @@ public static class Extensions
 
     private static async Task<Message?> GetRepliedMessageAsync(Message ctx)
     {
-        return ctx.Reference?.MessageId.IsSpecified == true
-            ? await ctx.Channel.GetMessageAsync(ctx.Reference.MessageId.Value).ConfigureAwait(false)
+        return ctx.MessageReference is { } reference
+            ? await ctx.Channel.GetMessageAsync(reference.MessageId).ConfigureAwait(false)
             : null;
+    }
+
+    private static bool CanMentionEveryone(Message ctx)
+    {
+        return ctx.Channel.Guild?.GetUser(ctx.Author.Id)?.GuildPermissions.MentionEveryone ?? true;
     }
 
     /// <summary>
@@ -492,7 +497,7 @@ public static class Extensions
 
         try
         {
-            using var whClient = new FluxerWebhookClient(ct.CrosspostingWebhookUrl);
+            var whClient = new FluxerWebhookClient(ct.CrosspostingWebhookUrl);
             await whClient.SendAsync(plainText, embeds: embeds).ConfigureAwait(false);
         }
         catch (TaskCanceledException)

@@ -110,7 +110,7 @@ public class BotHellService : INService, IReadyExecutor
     /// <inheritdoc />
     public Task OnReadyAsync()
     {
-        handler.Subscribe("JoinedGuild", "BotHellService", OnJoinedGuild);
+        handler.JoinedGuild.Subscribe("BotHellService", OnJoinedGuild);
         return Task.CompletedTask;
     }
 
@@ -131,7 +131,7 @@ public class BotHellService : INService, IReadyExecutor
                 humans++;
         }
 
-        var total = Math.Max(guild.MemberCount, bots + humans);
+        var total = Math.Max(guild.TotalMembers, bots + humans);
         var percent = total == 0 ? 0 : (int)Math.Round(bots * 100.0 / total);
 
         var byCount = BotCountLimit > 0 && bots >= BotCountLimit;
@@ -216,7 +216,7 @@ public class BotHellService : INService, IReadyExecutor
             try
             {
                 if (guild.OwnerId == client.CurrentUser.Id)
-                    await guild.DeleteAsync().ConfigureAwait(false);
+                    await client.Rest.DeleteGuildAsync(guild.Id, new DeleteGuildRequest()).ConfigureAwait(false);
                 else
                     await guild.LeaveAsync().ConfigureAwait(false);
 
@@ -270,7 +270,7 @@ public class BotHellService : INService, IReadyExecutor
             if (await client.Rest.GetChannelAsync(channelId).ConfigureAwait(false) is not Channel channel)
                 return (null, 0, null, false);
 
-            return (channel.Name, channel.GuildId, client.GetGuild(channel.GuildId)?.Name, true);
+            return (channel.Name, channel.GuildId ?? 0, client.GetGuild(channel.GuildId ?? 0)?.Name, true);
         }
         catch (Exception ex)
         {
