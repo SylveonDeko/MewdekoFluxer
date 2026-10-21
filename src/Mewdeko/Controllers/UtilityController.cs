@@ -14,7 +14,7 @@ namespace Mewdeko.Controllers;
 
 /// <summary>
 ///     Controller for utility features that previously had no API surface:
-///     command aliases, quotes, auto publish, stream roles, NSFW tag blacklist,
+///     command aliases, quotes, auto publish, NSFW tag blacklist,
 ///     the AI assistant, and role monitoring.
 /// </summary>
 [ApiController]
@@ -25,7 +25,6 @@ public class UtilityController(
     IDataConnectionFactory dbFactory,
     CommandMapService commandMapService,
     AutoPublishService autoPublishService,
-    StreamRoleService streamRoleService,
     SearchImagesService searchImagesService,
     AiService aiService,
     RoleMonitorService roleMonitorService,
@@ -322,134 +321,6 @@ public class UtilityController(
     {
         var removed = await autoPublishService.RemoveWordFromBlacklist(channelId, word.Trim().ToLowerInvariant());
         return removed ? Ok() : NotFound("Word is not blacklisted");
-    }
-
-    #endregion
-
-    #region Stream role
-
-    /// <summary>
-    ///     Gets stream role settings
-    /// </summary>
-    [HttpGet("streamrole")]
-    public async Task<IActionResult> GetStreamRole(ulong guildId)
-    {
-        await using var db = await dbFactory.CreateConnectionAsync();
-        var settings = await db.StreamRoleSettings.FirstOrDefaultAsync(s => s.GuildId == guildId);
-        if (settings == null)
-        {
-            return Ok(new
-            {
-                enabled = false,
-                addRoleId = 0UL,
-                fromRoleId = 0UL,
-                keyword = (string?)null,
-                whitelist = new List<object>(),
-                blacklist = new List<object>()
-            });
-        }
-
-        var whitelist = await db.StreamRoleWhitelistedUsers
-            .Where(u => u.StreamRoleSettingsId == settings.Id)
-            .Select(u => new
-            {
-                u.UserId, u.Username
-            })
-            .ToListAsync();
-        var blacklist = await db.StreamRoleBlacklistedUsers
-            .Where(u => u.StreamRoleSettingsId == settings.Id)
-            .Select(u => new
-            {
-                u.UserId, u.Username
-            })
-            .ToListAsync();
-
-        return Ok(new
-        {
-            enabled = settings.Enabled,
-            addRoleId = settings.AddRoleId,
-            fromRoleId = settings.FromRoleId,
-            keyword = settings.Keyword,
-            whitelist,
-            blacklist
-        });
-    }
-
-    /// <summary>
-    ///     Enables the stream role: members with the from role who stream get the add role
-    /// </summary>
-    [HttpPost("streamrole")]
-    public async Task<IActionResult> SetStreamRole(ulong guildId, [FromBody] StreamRoleRequest request)
-    {
-        var guild = client.GetGuild(guildId);
-        var fromRole = guild?.GetRole(request.FromRoleId);
-        var addRole = guild?.GetRole(request.AddRoleId);
-        if (fromRole == null || addRole == null)
-            return NotFound("Role not found");
-
-        await streamRoleService.SetStreamRole(fromRole, addRole);
-        auditContext.RecordAfter(request);
-        return Ok();
-    }
-
-    /// <summary>
-    ///     Disables the stream role
-    /// </summary>
-    [HttpDelete("streamrole")]
-    public async Task<IActionResult> StopStreamRole(ulong guildId)
-    {
-        var guild = client.GetGuild(guildId);
-        if (guild == null)
-            return NotFound("Guild not found");
-        await streamRoleService.StopStreamRole(guild);
-        return Ok();
-    }
-
-    /// <summary>
-    ///     Sets the keyword a stream title must contain
-    /// </summary>
-    [HttpPost("streamrole/keyword")]
-    public async Task<IActionResult> SetStreamRoleKeyword(ulong guildId, [FromBody] WordRequest request)
-    {
-        var guild = client.GetGuild(guildId);
-        if (guild == null)
-            return NotFound("Guild not found");
-        var keyword = await streamRoleService.SetKeyword(guild, request.Word);
-        return Ok(new
-        {
-            keyword
-        });
-    }
-
-    /// <summary>
-    ///     Adds or removes a user from the stream role whitelist or blacklist
-    /// </summary>
-    [HttpPost("streamrole/{list}/{userId}")]
-    public async Task<IActionResult> AddStreamRoleListUser(ulong guildId, string list, ulong userId)
-    {
-        return await ApplyStreamRoleList(guildId, list, userId, AddRemove.Add);
-    }
-
-    /// <summary>
-    ///     Removes a user from the stream role whitelist or blacklist
-    /// </summary>
-    [HttpDelete("streamrole/{list}/{userId}")]
-    public async Task<IActionResult> RemoveStreamRoleListUser(ulong guildId, string list, ulong userId)
-    {
-        return await ApplyStreamRoleList(guildId, list, userId, AddRemove.Rem);
-    }
-
-    private async Task<IActionResult> ApplyStreamRoleList(ulong guildId, string list, ulong userId, AddRemove action)
-    {
-        if (!Enum.TryParse<StreamRoleListType>(list, true, out var listType))
-            return BadRequest("List must be whitelist or blacklist");
-        var guild = client.GetGuild(guildId);
-        if (guild == null)
-            return NotFound("Guild not found");
-        var user = guild.GetUser(userId)?.User ?? (IUser?)await client.Rest.GetUserAsync(userId);
-        var name = user?.Username ?? userId.ToString();
-        var success = await streamRoleService.ApplyListAction(listType, guild, action, userId, name);
-        return success ? Ok() : BadRequest("No change was made");
     }
 
     #endregion
@@ -806,22 +677,6 @@ public class WordRequest
     ///     The word
     /// </summary>
     public string? Word { get; set; }
-}
-
-/// <summary>
-///     Stream role configuration request
-/// </summary>
-public class StreamRoleRequest
-{
-    /// <summary>
-    ///     Members must have this role to be eligible
-    /// </summary>
-    public ulong FromRoleId { get; set; }
-
-    /// <summary>
-    ///     Role added while streaming
-    /// </summary>
-    public ulong AddRoleId { get; set; }
 }
 
 /// <summary>
