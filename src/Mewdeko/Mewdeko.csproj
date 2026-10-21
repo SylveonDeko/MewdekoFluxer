@@ -80,6 +80,10 @@
     <PackageReference Include="Google.Apis.YouTube.v3" Version="1.75.0.4176"/>
     <PackageReference Include="Google.Apis.Customsearch.v1" Version="1.49.0.2084"/>
     <PackageReference Include="LazyCache" Version="2.4.0"/>
+    <PackageReference Include="Lavalink4NET.Cluster" Version="4.2.2"/>
+    <PackageReference Include="Lavalink4NET.Integrations.ExtraFilters" Version="4.2.2"/>
+    <PackageReference Include="Lavalink4NET.Integrations.Lavasearch" Version="4.2.2"/>
+    <PackageReference Include="Lavalink4NET.Integrations.Lavasrc" Version="4.2.2"/>
     <PackageReference Include="MartineApiNet" Version="1.0.15"/>
     <PackageReference Include="MathNet.Numerics" Version="6.0.0-beta2"/>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.6.0"/>
@@ -117,10 +121,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="credentials.json"/>
-    <Compile Remove="Modules\Music\**"/>
-    <Compile Remove="Controllers\MusicController.cs"/>
-    <Compile Remove="Controllers\Common\Music\**"/>
-    <Compile Remove="Services\MusicEventManager.cs"/>
     <None Include="..\..\.editorconfig" Link=".editorconfig"/>
     <None Update="data\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -159,6 +159,7 @@
   <ItemGroup>
     <ProjectReference Include="..\MewdekoSourceGen\MewdekoSourceGen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
     <ProjectReference Include="..\..\..\Fluxer.Net\Fluxer.Net\Fluxer.Net.csproj"/>
+    <ProjectReference Include="..\..\..\Lavalink4NET.Fluxer\src\Lavalink4NET.Fluxer\Lavalink4NET.Fluxer.csproj"/>
 
     <AdditionalFiles Include="data\strings\responses\en-US\*.json"/>
   </ItemGroup>

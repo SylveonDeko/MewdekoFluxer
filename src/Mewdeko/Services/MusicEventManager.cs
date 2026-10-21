@@ -5,6 +5,7 @@ using System.Threading;
 using Lavalink4NET;
 using Lavalink4NET.Events.Players;
 using Lavalink4NET.Players;
+using Mewdeko.Modules.Music.Common;
 using Mewdeko.Modules.Music.CustomPlayer;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Http;

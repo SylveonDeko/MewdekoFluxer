@@ -1,6 +1,5 @@
 ﻿
 using Lavalink4NET;
-using Lavalink4NET.DiscordNet;
 using Lavalink4NET.Filters;
 using Lavalink4NET.Integrations.ExtraFilters;
 using Lavalink4NET.Player;
@@ -664,9 +663,7 @@ public partial class Music
                     Channel = ctx.Channel as Channel
                 };
 
-                var result = await service.Players
-                    .RetrieveAsync<MewdekoPlayer, MewdekoPlayerOptions>(Context, CreatePlayerAsync, options,
-                        retrieveOptions)
+                var result = await RetrievePlayerAsync(service, ctx, options, retrieveOptions)
                     .ConfigureAwait(false);
 
                 await result.Player.SetVolumeAsync(await result.Player.GetVolume() / 100f).ConfigureAwait(false);

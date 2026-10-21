@@ -1445,8 +1445,6 @@
   "lastfm_last_played_title": "▶️ Last Played: {0}",
   "lastfm_now_playing_track": "**[{0}]({1})**\nby {2}",
   "lastfm_now_playing_scrobbles": "**Scrobbles:** {0}",
-  "lastfm_spotify_status_title": "🎧 Now Playing on Spotify: {0}",
-  "lastfm_spotify_status_note": "-# Not linked to Last.fm, showing Discord status instead. Link your account from the dashboard's **/me** page, or use `{0}lastfmlink`.",
   "lastfm_nothing_playing": "{0} isn't listening to anything right now, and doesn't have a Last.fm account linked. Link yours from the dashboard's **/me** page, or use `{1}lastfmlink`.",
   "lastfm_recent_title": "Recent Tracks: {0}",
   "lastfm_recent_entry": "{0}. **[{1}]({2})** by {3}{4}",

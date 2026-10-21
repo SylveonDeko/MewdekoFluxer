@@ -615,7 +615,7 @@ lastfmstatus_noparams:
 fm:
   args:
     - '[@user]'
-  desc: 'Shows the current or last played track from Last.fm, falling back to Discord Spotify status if not linked.'
+  desc: 'Shows the current or last played track from Last.fm.'
   params:
     - desc: 'The user to check. Defaults to the command invoker.'
       name: user

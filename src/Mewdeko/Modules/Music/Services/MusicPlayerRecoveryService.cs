@@ -1,6 +1,7 @@
 using System.Threading;
 using Lavalink4NET;
 using Lavalink4NET.Players;
+using Mewdeko.Modules.Music.Common;
 using Mewdeko.Common.ModuleBehaviors;
 using Mewdeko.Modules.Music.CustomPlayer;
 using Mewdeko.Services.Strings;
@@ -160,11 +161,7 @@ public class MusicPlayerRecoveryService : INService, IReadyExecutor
             // Fallback to first text channel if needed
             if (messageChannel == null)
             {
-                messageChannel = guild.TextChannels
-                    .FirstOrDefault(c => c.Users.Any(u => u.Id == client.CurrentUser.Id));
-
-                if (messageChannel == null)
-                    messageChannel = guild.DefaultChannel ?? guild.TextChannels.FirstOrDefault();
+                messageChannel = guild.SystemChannel ?? guild.TextChannels.FirstOrDefault();
 
                 if (messageChannel == null)
                 {

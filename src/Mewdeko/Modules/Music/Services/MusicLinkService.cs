@@ -57,7 +57,7 @@ public partial class MusicLinkService : INService, IDisposable
     ///     Initializes a new instance of the <see cref="MusicLinkService" /> class and subscribes to
     ///     the message received event to watch configured channels for music links.
     /// </summary>
-    /// <param name="handler">The event handler service used to subscribe to Discord gateway events.</param>
+    /// <param name="handler">The event handler service used to subscribe to Fluxer gateway events.</param>
     /// <param name="dbFactory">The database connection factory.</param>
     /// <param name="httpFactory">The HTTP client factory used to query the song.link API.</param>
     /// <param name="audioService">
@@ -76,7 +76,7 @@ public partial class MusicLinkService : INService, IDisposable
         this.strings = strings;
         this.logger = logger;
 
-        handler.Subscribe("MessageReceived", "MusicLinkService", OnMessageReceived);
+        handler.MessageReceived.Subscribe("MusicLinkService", OnMessageReceived);
     }
 
     /// <summary>
@@ -84,7 +84,7 @@ public partial class MusicLinkService : INService, IDisposable
     /// </summary>
     public void Dispose()
     {
-        handler.Unsubscribe("MessageReceived", "MusicLinkService", OnMessageReceived);
+        handler.MessageReceived.Unsubscribe("MusicLinkService", OnMessageReceived);
     }
 
     /// <summary>
@@ -145,19 +145,20 @@ public partial class MusicLinkService : INService, IDisposable
 
     private async Task OnMessageReceived(SocketMessage message)
     {
-        if (message is not Message userMessage || message.Author.IsBot)
+        if (message.Author is not { IsBot: false } || message.Guild is not { } guild)
             return;
 
-        if (userMessage.Channel is not Channel channel)
-            return;
+        var channel = message.Channel;
+        var guildId = guild.Id;
+        var channelId = channel.Id;
 
-        var url = ExtractMusicLink(userMessage.Content);
+        var url = ExtractMusicLink(message.Content);
         if (url is null)
             return;
 
         await using var db = await dbFactory.CreateConnectionAsync();
         var enabled = await db.MusicLinkChannels
-            .AnyAsync(x => x.GuildId == channel.Guild.Id && x.ChannelId == channel.Id);
+            .AnyAsync(x => x.GuildId == guildId && x.ChannelId == channelId);
 
         if (!enabled)
             return;
@@ -168,12 +169,11 @@ public partial class MusicLinkService : INService, IDisposable
             if (links is null)
                 return;
 
-            var embed = await BuildEmbedAsync(links, channel.Guild.Id).ConfigureAwait(false);
+            var embed = await BuildEmbedAsync(links, guildId).ConfigureAwait(false);
             if (embed is null)
                 return;
 
-            await channel.SendAsync(embed: embed,
-                    messageReference: new MessageReference(userMessage.Id), allowedMentions: AllowedMentions.None)
+            await message.ReplyWithAsync(embed: embed, allowedMentions: AllowedMentions.None)
                 .ConfigureAwait(false);
         }
         catch (Exception ex)

@@ -25,8 +25,6 @@ namespace Mewdeko.Modules.Music.CustomPlayer;
 /// </summary>
 public sealed class MewdekoPlayer : LavalinkPlayer
 {
-    private const ulong SourceGuildId = 843489716674494475;
-
     private readonly GeneratedBotStrings Strings;
     private readonly IAudioService audioService;
     private readonly IDataCache cache;
@@ -35,18 +33,9 @@ public sealed class MewdekoPlayer : LavalinkPlayer
     private readonly BotConfig config;
     private readonly IBotCredentials creds;
     private readonly IDataConnectionFactory dbFactory;
-    private readonly HttpClient httpClient;
     private readonly ILogger<MewdekoPlayer> logger;
-    private readonly Random random = new();
-
-    private readonly string[] soundIds =
-    [
-        "1356473693294825603", "1356473638899159050", "1356473603775922256"
-    ];
-
     private readonly PlayerStateTracker stateTracker;
     private readonly TtsService? ttsService;
-    private bool isAprilFoolsJokeRunning;
     private DateTime? trackStartTime;
 
     /// <summary>
@@ -55,7 +44,6 @@ public sealed class MewdekoPlayer : LavalinkPlayer
     /// <param name="properties">The player properties.</param>
     public MewdekoPlayer(IPlayerProperties<MewdekoPlayer, MewdekoPlayerOptions> properties) : base(properties)
     {
-        httpClient = properties.ServiceProvider.GetRequiredService<HttpClient>();
         config = properties.ServiceProvider.GetRequiredService<BotConfig>();
         audioService = properties.ServiceProvider.GetRequiredService<IAudioService>();
         creds = properties.ServiceProvider.GetRequiredService<IBotCredentials>();
@@ -201,45 +189,6 @@ public sealed class MewdekoPlayer : LavalinkPlayer
         await TrySendAsync(musicChannel, c => c.SendAsync(embed: nowPlayingEmbed,
             allowedMentions: AllowedMentions.None));
 
-        if (DateTime.Now.Month == 4 && DateTime.Now.Day == 1 && !isAprilFoolsJokeRunning)
-        {
-            if (random.Next(100) < 30)
-            {
-                isAprilFoolsJokeRunning = true;
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        var guild = client.GetGuild(GuildId);
-                        var chan = guild.GetVoiceChannel(VoiceChannelId);
-
-                        if (chan != null)
-                        {
-                            await Task.Delay(random.Next(30000, 120000), cancellationToken);
-
-                            await PlaySoundboardEffect(VoiceChannelId, soundIds[0]);
-
-                            await Task.Delay(random.Next(15000, 45000), cancellationToken);
-
-                            await PlaySoundboardEffect(VoiceChannelId, soundIds[1]);
-
-                            await Task.Delay(random.Next(20000, 60000), cancellationToken);
-
-                            await PlaySoundboardEffect(VoiceChannelId, soundIds[2]);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"April Fools prank error: {ex.Message}");
-                    }
-                    finally
-                    {
-                        isAprilFoolsJokeRunning = false;
-                    }
-                }, cancellationToken);
-            }
-        }
-
         if (currentTrack?.Index == queue.Count)
         {
             var success = await AutoPlay();
@@ -277,14 +226,14 @@ public sealed class MewdekoPlayer : LavalinkPlayer
         if (target is null)
             return false;
 
-        if (target is not Channel guildChannel)
+        if (target.GuildId is not { } guildId)
             return true;
 
-        var botUser = client.GetGuild(guildChannel.GuildId)?.CurrentUser;
+        var botUser = client.GetGuild(guildId)?.CurrentUser;
         if (botUser is null)
             return false;
 
-        var perms = botUser.GetPermissions(guildChannel);
+        var perms = botUser.GetPermissions(target);
         return perms is { ViewChannel: true, SendMessages: true };
     }
 
@@ -305,8 +254,7 @@ public sealed class MewdekoPlayer : LavalinkPlayer
         {
             return await send(target);
         }
-        catch (FluxerApiException ex) when (ex.DiscordCode is DiscordErrorCode.MissingPermissions
-                                           or DiscordErrorCode.InsufficientPermissions)
+        catch (FluxerApiException ex) when (ex.ErrorCode == FluxerErrorCodes.MissingPermissions)
         {
             logger.LogInformation(
                 "Cannot post music messages in channel {ChannelId} of guild {GuildId}, clearing music channel",
@@ -1044,39 +992,5 @@ public sealed class MewdekoPlayer : LavalinkPlayer
             new ClientCredentialsRequest(creds.SpotifyClientId, creds.SpotifyClientSecret);
         var response = await new OAuthClient(spotifyClientConfig).RequestToken(request).ConfigureAwait(false);
         return new SpotifyClient(spotifyClientConfig.WithToken(response.AccessToken));
-    }
-
-    private async Task PlaySoundboardEffect(ulong channelId, string soundId)
-    {
-        try
-        {
-            var playSoundUrl = $"https://discord.com/api/v10/channels/{channelId}/send-soundboard-sound";
-
-            var playSoundRequest = new HttpRequestMessage(HttpMethod.Post, playSoundUrl);
-            playSoundRequest.Headers.Add("Authorization", $"Bot {creds.Token}");
-
-            var payload = new
-            {
-                sound_id = soundId, source_guild_id = SourceGuildId.ToString()
-            };
-
-            var jsonContent = JsonSerializer.Serialize(payload);
-            playSoundRequest.Content = new StringContent(
-                jsonContent,
-                Encoding.UTF8,
-                "application/json");
-
-            var response = await httpClient.SendAsync(playSoundRequest);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"Failed to play soundboard effect: {response.StatusCode}, Error: {errorContent}");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error playing soundboard effect: {ex.Message}");
-        }
     }
 }

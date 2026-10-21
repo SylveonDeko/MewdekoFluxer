@@ -2,6 +2,11 @@
 using System.Net.Http;
 using System.Text;
 using System.Text.Json.Serialization;
+using Lavalink4NET;
+using Lavalink4NET.Cluster.Extensions;
+using Lavalink4NET.Cluster.LoadBalancing.Strategies;
+using Lavalink4NET.Cluster.Nodes;
+using Lavalink4NET.Fluxer;
 using MartineApiNet;
 using Mewdeko.AuthHandlers;
 using Mewdeko.Common.Configs;
@@ -110,6 +115,20 @@ public class Program
 
         const int serverCount = 0;
         Cache = new RedisCache(credentials, 1);
+
+        if (credentials.LavalinkNodes.Length == 0)
+        {
+            log.Error("No Lavalink nodes are configured! Set LavalinkUrl or LavalinkNodes in the configuration");
+            Helpers.ReadErrorAndExit(5);
+        }
+
+        foreach (var node in credentials.LavalinkNodes.Where(node =>
+                     !Uri.TryCreate(node.Url, UriKind.Absolute, out _)))
+        {
+            log.Error("The Lavalink URL for {Label} ({Url}) is invalid! Please check the configuration",
+                node.Label, node.Url);
+            Helpers.ReadErrorAndExit(5);
+        }
 
         if (credentials.IsApiEnabled)
         {
@@ -423,6 +442,24 @@ public class Program
             // Disable size tracking for better performance
             options.TrackLinkedCacheEntries = false;
         });
+        services.AddLavalinkCluster<FluxerClientWrapper>()
+            .ConfigureLavalinkCluster(x =>
+            {
+                x.ReadyTimeout = TimeSpan.FromMinutes(5);
+                x.Nodes =
+                [
+                    .. credentials.LavalinkNodes.Select(node => new LavalinkClusterNodeOptions
+                    {
+                        BaseAddress = new Uri(node.Url),
+                        Passphrase = node.Password,
+                        Label = node.Label,
+                        ReadyTimeout = TimeSpan.FromMinutes(5),
+                        ResumptionOptions = new LavalinkSessionResumptionOptions(TimeSpan.FromMinutes(2))
+                    })
+                ];
+            });
+        services.AddFluxerAudio(o => o.Nodes = [.. credentials.LavalinkNodes.Select(n => new FluxerAudioNode(new Uri(n.Url), n.Password))]);
+        services.Replace(ServiceDescriptor.Singleton<INodeBalancingStrategy, RoundRobinBalancingStrategy>());
         services.AddSingleton<ISearchImagesService, SearchImagesService>();
         services.AddSingleton<ToneTagService>();
         services.AddTransient<GuildSettingsService>();

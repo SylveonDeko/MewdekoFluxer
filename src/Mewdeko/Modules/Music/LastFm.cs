@@ -12,7 +12,7 @@ public partial class Music
     ///     Gets the linked Last.fm username for a user, sending an appropriate error if they
     ///     don't have one linked.
     /// </summary>
-    private async Task<string?> GetLinkedUsernameOrErrorAsync(IUser target)
+    private async Task<string?> GetLinkedUsernameOrErrorAsync(SocketGuildMember target)
     {
         var lastFmUser = await lastFmStats.GetLinkedUserAsync(target.Id);
         if (lastFmUser is not null)
@@ -50,7 +50,7 @@ public partial class Music
 
     /// <summary>
     ///     Shows the current or most recently played track for the given user, from their linked
-    ///     Last.fm account. Falls back to their Discord Spotify status if they don't have an
+    ///     Last.fm account. Replies with an error if they do not have an
     ///     account linked or have no scrobble history.
     /// </summary>
     /// <param name="user">The user to check. Defaults to the command invoker.</param>
@@ -59,7 +59,7 @@ public partial class Music
     [RequireContext(ContextType.Guild)]
     public async Task Fm(SocketGuildMember? user = null)
     {
-        user ??= (SocketGuildMember)ctx.User;
+        user ??= ctx.Member!;
 
         var lastFmUser = await lastFmStats.GetLinkedUserAsync(user.Id);
         if (lastFmUser is not null)
@@ -97,23 +97,6 @@ public partial class Music
         }
 
         var prefix = await guildSettingsService.GetPrefix(ctx.Guild);
-        var spotify = user.Activities?.OfType<SpotifyGame>().FirstOrDefault();
-        if (spotify is not null)
-        {
-            var spotifyEmbed = new EmbedBuilder()
-                .WithOkColor()
-                .WithTitle(Strings.LastfmSpotifyStatusTitle(ctx.Guild.Id, user.DisplayName))
-                .WithDescription(
-                    $"{Strings.LastfmNowPlayingTrack(ctx.Guild.Id, spotify.TrackTitle, spotify.TrackUrl ?? "", string.Join(", ", spotify.Artists))}\n\n" +
-                    Strings.LastfmSpotifyStatusNote(ctx.Guild.Id, prefix));
-
-            if (!string.IsNullOrEmpty(spotify.AlbumArtUrl))
-                spotifyEmbed.WithThumbnailUrl(spotify.AlbumArtUrl);
-
-            await ctx.Channel.SendAsync(embed: spotifyEmbed.Build(), allowedMentions: AllowedMentions.None)
-                .ConfigureAwait(false);
-            return;
-        }
 
         await ReplyErrorAsync(Strings.LastfmNothingPlaying(ctx.Guild.Id, user.Mention, prefix)).ConfigureAwait(false);
     }
@@ -127,7 +110,7 @@ public partial class Music
     [RequireContext(ContextType.Guild)]
     public async Task FmRecent(SocketGuildMember? user = null)
     {
-        user ??= (SocketGuildMember)ctx.User;
+        user ??= ctx.Member!;
         var username = await GetLinkedUsernameOrErrorAsync(user);
         if (username is null)
             return;
@@ -181,7 +164,7 @@ public partial class Music
     [RequireContext(ContextType.Guild)]
     public async Task FmTopArtists(string? period = null, SocketGuildMember? user = null)
     {
-        user ??= (SocketGuildMember)ctx.User;
+        user ??= ctx.Member!;
         var username = await GetLinkedUsernameOrErrorAsync(user);
         if (username is null)
             return;
@@ -213,7 +196,7 @@ public partial class Music
     [RequireContext(ContextType.Guild)]
     public async Task FmTopAlbums(string? period = null, SocketGuildMember? user = null)
     {
-        user ??= (SocketGuildMember)ctx.User;
+        user ??= ctx.Member!;
         var username = await GetLinkedUsernameOrErrorAsync(user);
         if (username is null)
             return;
@@ -245,7 +228,7 @@ public partial class Music
     [RequireContext(ContextType.Guild)]
     public async Task FmTopTracks(string? period = null, SocketGuildMember? user = null)
     {
-        user ??= (SocketGuildMember)ctx.User;
+        user ??= ctx.Member!;
         var username = await GetLinkedUsernameOrErrorAsync(user);
         if (username is null)
             return;
@@ -302,7 +285,7 @@ public partial class Music
     [RequireContext(ContextType.Guild)]
     public async Task FmArtist([Remainder] string? artist = null)
     {
-        var username = await GetLinkedUsernameOrErrorAsync(ctx.User);
+        var username = await GetLinkedUsernameOrErrorAsync(ctx.Member!);
         if (username is null)
             return;
 
@@ -341,7 +324,7 @@ public partial class Music
     [RequireContext(ContextType.Guild)]
     public async Task FmAlbum([Remainder] string? query = null)
     {
-        var username = await GetLinkedUsernameOrErrorAsync(ctx.User);
+        var username = await GetLinkedUsernameOrErrorAsync(ctx.Member!);
         if (username is null)
             return;
 
@@ -398,7 +381,7 @@ public partial class Music
     [RequireContext(ContextType.Guild)]
     public async Task FmWhoKnows([Remainder] string? artist = null)
     {
-        var username = await GetLinkedUsernameOrErrorAsync(ctx.User);
+        var username = await GetLinkedUsernameOrErrorAsync(ctx.Member!);
         if (username is null)
             return;
 
@@ -534,7 +517,7 @@ public partial class Music
     [RequireContext(ContextType.Guild)]
     public async Task FmCrowns([Remainder] string? artist = null)
     {
-        var username = await GetLinkedUsernameOrErrorAsync(ctx.User);
+        var username = await GetLinkedUsernameOrErrorAsync(ctx.Member!);
         if (username is null)
             return;
 
@@ -583,7 +566,7 @@ public partial class Music
     [RequireContext(ContextType.Guild)]
     public async Task FmTaste(SocketGuildMember user)
     {
-        var usernameA = await GetLinkedUsernameOrErrorAsync(ctx.User);
+        var usernameA = await GetLinkedUsernameOrErrorAsync(ctx.Member!);
         if (usernameA is null)
             return;
 
@@ -613,7 +596,7 @@ public partial class Music
 
         var eb = new EmbedBuilder()
             .WithOkColor()
-            .WithTitle(Strings.LastfmTasteTitle(ctx.Guild.Id, ((SocketGuildMember)ctx.User).DisplayName, user.DisplayName))
+            .WithTitle(Strings.LastfmTasteTitle(ctx.Guild.Id, (ctx.Member!).DisplayName, user.DisplayName))
             .WithDescription(
                 $"{Strings.LastfmTasteResult(ctx.Guild.Id, shared.Count, shared.Count == 1 ? "" : "s", user.DisplayName, sampleSize, overlap.ToString("P0"))}\n\n" +
                 Strings.LastfmTasteArtists(ctx.Guild.Id, string.Join(", ", shared.Take(15))));
@@ -641,7 +624,7 @@ public partial class Music
             return;
         }
 
-        user ??= (SocketGuildMember)ctx.User;
+        user ??= ctx.Member!;
         var username = await GetLinkedUsernameOrErrorAsync(user);
         if (username is null)
             return;

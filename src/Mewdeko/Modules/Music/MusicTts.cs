@@ -2,7 +2,6 @@ using System.Net.Http;
 using System.Text.Json;
 using DataModel;
 using Lavalink4NET;
-using Lavalink4NET.DiscordNet;
 using Lavalink4NET.Players;
 using LinqToDB;
 using LinqToDB.Async;
@@ -159,7 +158,7 @@ public partial class Music
         [UserPerm(GuildPermission.ManageGuild)]
         public async Task TtsAutoJoin()
         {
-            var vc = (ctx.User as SocketGuildMember)?.VoiceChannel;
+            var vc = (ctx.Member)?.VoiceChannel;
             if (vc is null)
             {
                 await ReplyErrorAsync(Strings.MusicNotInChannel(ctx.Guild.Id));
@@ -713,9 +712,7 @@ public partial class Music
                     Channel = ctx.Channel as Channel
                 };
 
-                var result = await service.Players
-                    .RetrieveAsync<MewdekoPlayer, MewdekoPlayerOptions>(Context, CreatePlayerAsync, options,
-                        retrieveOptions)
+                var result = await RetrievePlayerAsync(service, ctx, options, retrieveOptions)
                     .ConfigureAwait(false);
 
                 await result.Player.SetVolumeAsync(await result.Player.GetVolume() / 100f).ConfigureAwait(false);

@@ -86,8 +86,8 @@ public class TtsService : INService, IReadyExecutor
         this.pubSub = pubSub;
         this.logger = logger;
 
-        eventHandler.Subscribe("MessageReceived", "TtsService", HandleMessage);
-        eventHandler.Subscribe("UserVoiceStateUpdated", "TtsService", HandleVoiceStateUpdated);
+        eventHandler.MessageReceived.Subscribe("TtsService", HandleMessage);
+        eventHandler.UserVoiceStateUpdated.Subscribe("TtsService", HandleVoiceStateUpdated);
     }
 
     /// <summary>
@@ -140,7 +140,7 @@ public class TtsService : INService, IReadyExecutor
             tcs.TrySetResult();
     }
 
-    private async Task HandleVoiceStateUpdated(SocketUser user, SocketVoiceState before, SocketVoiceState after)
+    private async Task HandleVoiceStateUpdated(SocketGuildMember user, VoiceStateSnapshot before, VoiceStateSnapshot after)
     {
         if (user.IsBot)
             return;
@@ -326,16 +326,12 @@ public class TtsService : INService, IReadyExecutor
 
     private async Task HandleMessage(SocketMessage msg)
     {
-        if (msg is not SocketMessage userMsg)
+        if (msg.Author is not { IsBot: false } || msg.WebhookId is not null || msg.Guild is not { } guild)
             return;
 
-        if (msg.Author.IsBot || msg.Author.IsWebhook)
-            return;
-
-        if (userMsg.Channel is not Channel guildChannel)
-            return;
-
-        var guildId = guildChannel.Guild.Id;
+        var userMsg = msg;
+        var guildChannel = msg.Channel;
+        var guildId = guild.Id;
 
         var player = await audioService.Players.GetPlayerAsync<MewdekoPlayer>(guildId);
         if (player is null)
@@ -356,7 +352,7 @@ public class TtsService : INService, IReadyExecutor
 
         if (settings?.TtsRoleId is not null)
         {
-            var guildUser = msg.Author as SocketGuildMember;
+            var guildUser = msg.Member;
             if (guildUser is not null && !guildUser.RoleIds.Contains(settings.TtsRoleId.Value)
                                       && !guildUser.GuildPermissions.Administrator)
                 return;
@@ -365,7 +361,7 @@ public class TtsService : INService, IReadyExecutor
         if (await player.IsTtsUserBlockedAsync(msg.Author.Id))
             return;
 
-        var authorAsGuildUser = msg.Author as SocketGuildMember;
+        var authorAsGuildUser = msg.Member;
         if (authorAsGuildUser?.VoiceChannel is null || authorAsGuildUser.VoiceChannel.Id != player.VoiceChannelId)
             return;
 
@@ -373,7 +369,7 @@ public class TtsService : INService, IReadyExecutor
 
         if (!string.IsNullOrWhiteSpace(content))
         {
-            var prefix = await guildSettingsService.GetPrefix(guildChannel.Guild);
+            var prefix = await guildSettingsService.GetPrefix(guild);
             if (content.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
                 || content.StartsWith('/')
                 || content.StartsWith('!'))
@@ -395,10 +391,11 @@ public class TtsService : INService, IReadyExecutor
         var ttsAttachmentNarration = settings?.TtsAttachmentNarration ?? true;
         var ttsConsecutiveGrouping = settings?.TtsConsecutiveGrouping ?? true;
 
-        if (ttsReplyContext && userMsg.ReferencedMessage is not null)
+        if (ttsReplyContext && userMsg.MessageReference is { } reference
+            && FluxerContext.Snapshots.GetMessage(reference.MessageId) is { } referenced)
         {
-            var replyAuthor = userMsg.ReferencedMessage.Author as SocketGuildMember;
-            var replyName = replyAuthor?.DisplayName ?? userMsg.ReferencedMessage.Author?.Username ?? "someone";
+            var replyName = (referenced.Author is { } replyUser ? guild.GetUser(replyUser.Id)?.DisplayName : null)
+                            ?? referenced.Author?.Username ?? "someone";
             parts.Add($"replying to {replyName}");
         }
 
@@ -411,11 +408,11 @@ public class TtsService : INService, IReadyExecutor
                 parts.Add(sanitized);
         }
 
-        if (ttsAttachmentNarration && userMsg.Attachments.Count > 0)
+        if (ttsAttachmentNarration && userMsg.Attachments is { Length: > 0 })
         {
-            var attachmentDesc = userMsg.Attachments.Count == 1
-                ? DescribeAttachment(userMsg.Attachments.First())
-                : $"sent {userMsg.Attachments.Count} attachments";
+            var attachmentDesc = userMsg.Attachments.Length == 1
+                ? DescribeAttachment(userMsg.Attachments[0])
+                : $"sent {userMsg.Attachments.Length} attachments";
             parts.Add(attachmentDesc);
         }
 

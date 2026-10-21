@@ -2,7 +2,6 @@
 using System.Threading;
 using DataModel;
 using Lavalink4NET;
-using Lavalink4NET.DiscordNet;
 using Lavalink4NET.Players;
 using Lavalink4NET.Rest.Entities.Tracks;
 using Lavalink4NET.Tracks;
@@ -14,6 +13,7 @@ using Mewdeko.Modules.Music.Common;
 using Mewdeko.Modules.Music.CustomPlayer;
 using Mewdeko.Modules.Music.Services;
 using Mewdeko.Services.Analytics;
+using Microsoft.Extensions.Options;
 using SpotifyAPI.Web;
 using Swan;
 
@@ -45,7 +45,7 @@ public partial class Music(
     [RequireContext(ContextType.Guild)]
     public async Task Join()
     {
-        var user = ctx.User as SocketGuildMember;
+        var user = ctx.Member;
         if (user.VoiceChannel is null)
         {
             await ReplyErrorAsync(Strings.MusicNotInChannel(ctx.Guild.Id)).ConfigureAwait(false);
@@ -70,7 +70,7 @@ public partial class Music(
     [RequireContext(ContextType.Guild)]
     public async Task Leave()
     {
-        var user = ctx.User as SocketGuildMember;
+        var user = ctx.Member;
         if (user.VoiceChannel is null)
         {
             await ReplyErrorAsync(Strings.MusicNotInChannel(ctx.Guild.Id)).ConfigureAwait(false);
@@ -108,7 +108,7 @@ public partial class Music(
     [RequireContext(ContextType.Guild)]
     public async Task ClearQueue()
     {
-        var user = ctx.User as SocketGuildMember;
+        var user = ctx.Member;
         if (user.VoiceChannel is null)
         {
             await ReplyErrorAsync(Strings.MusicNotInChannel(ctx.Guild.Id)).ConfigureAwait(false);
@@ -138,7 +138,7 @@ public partial class Music(
     [RequireContext(ContextType.Guild)]
     public async Task Play([Remainder] int queueNumber)
     {
-        var user = ctx.User as SocketGuildMember;
+        var user = ctx.Member;
         if (user.VoiceChannel is null)
         {
             await ReplyErrorAsync(Strings.MusicNotInChannel(ctx.Guild.Id)).ConfigureAwait(false);
@@ -184,7 +184,7 @@ public partial class Music(
     [RequireContext(ContextType.Guild)]
     public async Task Play([Remainder] string query)
     {
-        var user = ctx.User as SocketGuildMember;
+        var user = ctx.Member;
         if (user.VoiceChannel is null)
         {
             await ReplyErrorAsync(Strings.MusicNotInChannel(ctx.Guild.Id)).ConfigureAwait(false);
@@ -233,7 +233,7 @@ public partial class Music(
     [RequireContext(ContextType.Guild)]
     public async Task Pause()
     {
-        var user = ctx.User as SocketGuildMember;
+        var user = ctx.Member;
         if (user.VoiceChannel is null)
         {
             await ReplyErrorAsync(Strings.MusicNotInChannel(ctx.Guild.Id)).ConfigureAwait(false);
@@ -269,7 +269,7 @@ public partial class Music(
     [RequireContext(ContextType.Guild)]
     public async Task NowPlaying()
     {
-        var user = ctx.User as SocketGuildMember;
+        var user = ctx.Member;
         if (user.VoiceChannel is null)
         {
             await ReplyErrorAsync(Strings.MusicNotInChannel(ctx.Guild.Id)).ConfigureAwait(false);
@@ -315,7 +315,7 @@ public partial class Music(
     [RequireContext(ContextType.Guild)]
     public async Task SongRemove(int queueNumber)
     {
-        var user = ctx.User as SocketGuildMember;
+        var user = ctx.Member;
         if (user.VoiceChannel is null)
         {
             await ReplyErrorAsync(Strings.MusicNotInChannel(ctx.Guild.Id)).ConfigureAwait(false);
@@ -379,7 +379,7 @@ public partial class Music(
     [RequireContext(ContextType.Guild)]
     public async Task MoveSong(int from, int to)
     {
-        var user = ctx.User as SocketGuildMember;
+        var user = ctx.Member;
         if (user.VoiceChannel is null)
         {
             await ReplyErrorAsync(Strings.MusicNotInChannel(ctx.Guild.Id)).ConfigureAwait(false);
@@ -443,7 +443,7 @@ public partial class Music(
     [RequireContext(ContextType.Guild)]
     public async Task Volume(int volume)
     {
-        var user = ctx.User as SocketGuildMember;
+        var user = ctx.Member;
         if (user.VoiceChannel is null)
         {
             await ReplyErrorAsync(Strings.MusicNotInChannel(ctx.Guild.Id)).ConfigureAwait(false);
@@ -477,7 +477,7 @@ public partial class Music(
     [RequireContext(ContextType.Guild)]
     public async Task Seek([Remainder] string timeSpan)
     {
-        var user = ctx.User as SocketGuildMember;
+        var user = ctx.Member;
         if (user.VoiceChannel is null)
         {
             await ReplyErrorAsync(Strings.MusicNotInChannel(ctx.Guild.Id)).ConfigureAwait(false);
@@ -526,7 +526,7 @@ public partial class Music(
     [RequireContext(ContextType.Guild)]
     public async Task VoteSkip()
     {
-        var user = ctx.User as SocketGuildMember;
+        var user = ctx.Member;
         if (user.VoiceChannel is null)
         {
             await ReplyErrorAsync(Strings.MusicNotInChannel(ctx.Guild.Id)).ConfigureAwait(false);
@@ -547,14 +547,14 @@ public partial class Music(
         }
 
         // Check if user has DJ role for instant skip
-        if (await HasDjRole(ctx.Guild, ctx.User as SocketGuildMember))
+        if (await HasDjRole(ctx.Guild, ctx.Member))
         {
             await player.SeekAsync(player.CurrentItem.Track.Duration).ConfigureAwait(false);
             await ReplyConfirmAsync(Strings.MusicSkipDj(ctx.Guild.Id)).ConfigureAwait(false);
             return;
         }
 
-        var voiceChannel = (ctx.User as SocketGuildMember)?.VoiceChannel;
+        var voiceChannel = (ctx.Member)?.VoiceChannel;
         if (voiceChannel == null)
         {
             await ReplyErrorAsync(Strings.MusicNotInChannel(ctx.Guild.Id)).ConfigureAwait(false);
@@ -565,7 +565,7 @@ public partial class Music(
         if (votes.Add(ctx.User.Id))
             await cache.SetVoteSkip(ctx.Guild.Id, votes);
 
-        var usersInVoice = (await voiceChannel.GetUsersAsync().FlattenAsync()).Count(x => !x.IsBot);
+        var usersInVoice = voiceChannel.ConnectedUsers.Count(x => !x.IsBot);
         var votesNeeded = (int)Math.Ceiling(usersInVoice * 0.7);
 
         if (votes.Count >= votesNeeded)
@@ -630,7 +630,7 @@ public partial class Music(
     [RequireContext(ContextType.Guild)]
     public async Task SavePlaylist([Remainder] string name)
     {
-        var user = ctx.User as SocketGuildMember;
+        var user = ctx.Member;
         if (user.VoiceChannel is null)
         {
             await ReplyErrorAsync(Strings.MusicNotInChannel(ctx.Guild.Id)).ConfigureAwait(false);
@@ -679,7 +679,7 @@ public partial class Music(
     [RequireContext(ContextType.Guild)]
     public async Task LoadPlaylist(string name, bool clear = false)
     {
-        var user = ctx.User as SocketGuildMember;
+        var user = ctx.Member;
         if (user.VoiceChannel is null)
         {
             await ReplyErrorAsync(Strings.MusicNotInChannel(ctx.Guild.Id)).ConfigureAwait(false);
@@ -800,7 +800,7 @@ public partial class Music(
     [RequireContext(ContextType.Guild)]
     public async Task Search([Remainder] string query)
     {
-        var user = ctx.User as SocketGuildMember;
+        var user = ctx.Member;
         if (user.VoiceChannel is null)
         {
             await ReplyErrorAsync(Strings.MusicNotInChannel(ctx.Guild.Id)).ConfigureAwait(false);
@@ -837,7 +837,7 @@ public partial class Music(
     [RequireContext(ContextType.Guild)]
     public async Task Shuffle()
     {
-        var user = ctx.User as SocketGuildMember;
+        var user = ctx.Member;
         if (user.VoiceChannel is null)
         {
             await ReplyErrorAsync(Strings.MusicNotInChannel(ctx.Guild.Id)).ConfigureAwait(false);
@@ -895,7 +895,7 @@ public partial class Music(
     [RequireContext(ContextType.Guild)]
     public async Task Skip()
     {
-        var user = ctx.User as SocketGuildMember;
+        var user = ctx.Member;
         if (user.VoiceChannel is null)
         {
             await ReplyErrorAsync(Strings.MusicNotInChannel(ctx.Guild.Id)).ConfigureAwait(false);
@@ -926,7 +926,7 @@ public partial class Music(
     [RequireContext(ContextType.Guild)]
     public async Task Queue()
     {
-        var user = ctx.User as SocketGuildMember;
+        var user = ctx.Member;
         if (user.VoiceChannel is null)
         {
             await ReplyErrorAsync(Strings.MusicNotInChannel(ctx.Guild.Id)).ConfigureAwait(false);
@@ -1140,7 +1140,7 @@ public partial class Music(
     [RequireContext(ContextType.Guild)]
     public async Task Loop(PlayerRepeatType repeatType)
     {
-        var user = ctx.User as SocketGuildMember;
+        var user = ctx.Member;
         if (user.VoiceChannel is null)
         {
             await ReplyErrorAsync(Strings.MusicNotInChannel(ctx.Guild.Id)).ConfigureAwait(false);
@@ -1166,7 +1166,7 @@ public partial class Music(
     [RequireContext(ContextType.Guild)]
     public async Task LastFmLink()
     {
-        var user = ctx.User as SocketGuildMember;
+        var user = ctx.Member;
         if (user.VoiceChannel is null)
         {
             await ReplyErrorAsync(Strings.MusicNotInChannel(ctx.Guild.Id)).ConfigureAwait(false);
@@ -1364,7 +1364,7 @@ public partial class Music(
             {
                 await prompt.DeleteAsync().ConfigureAwait(false);
             }
-            catch (Discord.Net.FluxerApiException)
+            catch (FluxerApiException)
             {
             }
 
@@ -1637,6 +1637,14 @@ public partial class Music(
         return tracks;
     }
 
+    internal static ValueTask<PlayerResult<MewdekoPlayer>> RetrievePlayerAsync(IAudioService service,
+        CommandContext ctx, MewdekoPlayerOptions options, PlayerRetrieveOptions retrieveOptions)
+    {
+        return service.Players.RetrieveAsync<MewdekoPlayer, MewdekoPlayerOptions>(ctx.Guild.Id,
+            ctx.Member?.VoiceChannel?.Id, CreatePlayerAsync, new OptionsWrapper<MewdekoPlayerOptions>(options),
+            retrieveOptions);
+    }
+
     private async ValueTask<(MewdekoPlayer, string?)> GetPlayerAsync(bool connectToVoiceChannel = true)
     {
         try
@@ -1652,9 +1660,7 @@ public partial class Music(
                 Channel = ctx.Channel as Channel
             };
 
-            var result = await service.Players
-                .RetrieveAsync<MewdekoPlayer, MewdekoPlayerOptions>(Context, CreatePlayerAsync, options,
-                    retrieveOptions)
+            var result = await RetrievePlayerAsync(service, ctx, options, retrieveOptions)
                 .ConfigureAwait(false);
 
             if (result.IsSuccess && result.Player is not null)

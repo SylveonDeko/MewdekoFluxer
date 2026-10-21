@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Text.Json;
 using DataModel;
 using Figgle.Fonts;
+using Lavalink4NET;
 using Mewdeko.Common.ModuleBehaviors;
 using Mewdeko.Common.TypeReaders;
 using Mewdeko.Services.Impl;
@@ -228,12 +229,22 @@ public class Mewdeko : IDisposable
     {
         var sw = Stopwatch.StartNew();
 
+        var audioService = Services.GetRequiredService<IAudioService>();
+
         await LoginAsync().ConfigureAwait(false);
 
         logger.LogInformation("Loading Services...");
         try
         {
             LoadTypeReaders(typeof(Mewdeko).Assembly);
+            try
+            {
+                await audioService.StartAsync();
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "Unable to start audio service: {Message}", e.Message);
+            }
 
             var dbProvider = Services.GetRequiredService<IDataConnectionFactory>();
             await using var dbContext = await dbProvider.CreateConnectionAsync();
