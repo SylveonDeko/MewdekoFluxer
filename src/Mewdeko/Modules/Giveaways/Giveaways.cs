@@ -335,7 +335,7 @@ public partial class Giveaways(
         string banner = null;
         SocketRole pingRole = null;
         ulong messageCount = 0;
-        var host = ctx.User;
+        IUser host = ctx.User;
         TimeSpan time;
         string prize = null;
         string requiredRoles = null;

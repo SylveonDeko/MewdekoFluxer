@@ -55,7 +55,7 @@ public partial class FormsService : INService, IReadyExecutor, IUnloadableServic
         this.strings = strings;
         this.collector = collector;
         this.httpFactory = httpFactory;
-        eventHandler.Subscribe("ReactionAdded", "FormsService", OnReviewReactionAddedAsync);
+        eventHandler.ReactionAdded.Subscribe("FormsService", OnReviewReactionAddedAsync);
     }
 
     #region Discord Integration
@@ -855,9 +855,6 @@ public partial class FormsService : INService, IReadyExecutor, IUnloadableServic
             case ConditionalType.ServerTenure:
                 return await EvaluateServerTenureConditionAsync(question, userId, guildId);
 
-            case ConditionalType.BoostStatus:
-                return await EvaluateBoostStatusConditionAsync(question, userId, guildId);
-
             case ConditionalType.Permission:
                 return await EvaluatePermissionConditionAsync(question, userId, guildId);
 
@@ -1011,13 +1008,7 @@ public partial class FormsService : INService, IReadyExecutor, IUnloadableServic
         // Check days in server
         if (question.ConditionalDaysInServer.HasValue)
         {
-            if (!guildUser.JoinedAt.HasValue)
-            {
-                logger.LogWarning("User {UserId} has no join date in guild {GuildId}", userId, guildId);
-                return false;
-            }
-
-            var daysInServer = (now - guildUser.JoinedAt.Value.UtcDateTime).TotalDays;
+            var daysInServer = (now - guildUser.JoinedAt.UtcDateTime).TotalDays;
             if (daysInServer < question.ConditionalDaysInServer.Value)
             {
                 passesConditions = false;
@@ -1029,59 +1020,6 @@ public partial class FormsService : INService, IReadyExecutor, IUnloadableServic
         {
             var accountAgeDays = (now - guildUser.CreatedAt.UtcDateTime).TotalDays;
             if (accountAgeDays < question.ConditionalAccountAgeDays.Value)
-            {
-                passesConditions = false;
-            }
-        }
-
-        return passesConditions;
-    }
-
-    /// <summary>
-    ///     Evaluates boost status conditional logic.
-    /// </summary>
-    private async Task<bool> EvaluateBoostStatusConditionAsync(FormQuestion question, ulong userId, ulong guildId)
-    {
-        var guild = client.GetGuild(guildId);
-        if (guild == null)
-        {
-            logger.LogWarning("Guild {GuildId} not found for boost condition evaluation", guildId);
-            return false;
-        }
-
-        var guildUser = guild.GetUser(userId);
-        if (guildUser == null)
-        {
-            logger.LogWarning("User {UserId} not found in guild {GuildId} for boost condition evaluation",
-                userId, guildId);
-            return false;
-        }
-
-        var passesConditions = true;
-
-        // Check boost status
-        if (question.ConditionalRequiresBoost.HasValue && question.ConditionalRequiresBoost.Value)
-        {
-            var isBoosting = guildUser.PremiumSince.HasValue;
-            if (!isBoosting)
-            {
-                passesConditions = false;
-            }
-        }
-
-        // Check Nitro status
-        if (question.ConditionalRequiresNitro.HasValue && question.ConditionalRequiresNitro.Value && passesConditions)
-        {
-            // Note: Discord.Net does not expose PremiumType (Nitro tier) on SocketGuildMember
-            // We can only check if they're boosting, not their actual Nitro subscription
-            // As a heuristic, we'll check if they have any Nitro-exclusive features:
-            // - Custom avatar in this guild (requires Nitro)
-            // - Has boosted before (implies Nitro at some point)
-
-            var hasNitroFeatures = guildUser.GetDisplayAvatarUrl() != guildUser.GetDefaultAvatarUrl()
-                                   || guildUser.PremiumSince.HasValue;
-
-            if (!hasNitroFeatures)
             {
                 passesConditions = false;
             }
@@ -1224,14 +1162,6 @@ public partial class FormsService : INService, IReadyExecutor, IUnloadableServic
                     ConditionalDaysInServer = condition.DaysThreshold
                 };
                 return await EvaluateServerTenureConditionAsync(tenureQuestion, userId, guildId);
-
-            case ConditionalType.BoostStatus:
-                var boostQuestion = new FormQuestion
-                {
-                    ConditionalRequiresBoost = condition.RequiresBoost,
-                    ConditionalRequiresNitro = condition.RequiresNitro
-                };
-                return await EvaluateBoostStatusConditionAsync(boostQuestion, userId, guildId);
 
             case ConditionalType.Permission:
                 if (!condition.PermissionFlags.HasValue)
@@ -1724,7 +1654,7 @@ public partial class FormsService : INService, IReadyExecutor, IUnloadableServic
             var formName = form.Name.Length > 50 ? form.Name[..47] + "..." : form.Name;
             var auditReason = $"Ban appeal approved by <@{reviewerId}> (Form #{form.Id}: {formName})";
 
-            await guild.RemoveBanAsync(userId, new RequestOptions
+            await guild.UnbanUserAsync(userId, new RequestOptions
             {
                 AuditLogReason = auditReason
             });
@@ -1770,11 +1700,12 @@ public partial class FormsService : INService, IReadyExecutor, IUnloadableServic
             var maxAge = form.InviteMaxAge ?? 86400; // 24 hours default
             var maxUses = form.InviteMaxUses ?? 1; // 1 use default
 
-            var invite = await channel.CreateInviteAsync(
-                maxAge,
-                maxUses,
-                isUnique: true
-            );
+            var invite = await client.Rest.CreateInviteAsync(channel.Id, new CreateInviteRequest
+            {
+                MaxAge = maxAge,
+                MaxUses = maxUses,
+                Unique = true
+            });
 
             // Pre-assign roles using RoleStates if configured
             if (!string.IsNullOrWhiteSpace(form.AutoApproveRoleIds))
@@ -1788,7 +1719,7 @@ public partial class FormsService : INService, IReadyExecutor, IUnloadableServic
                     if (roleIds.Any())
                     {
                         // Get user object for RoleStates
-                        var user = await client.GetUserAsync(userId, CacheMode.AllowDownload, RequestOptions.Default);
+                        var user = await client.GetUserAsync(userId);
                         if (user != null)
                         {
                             // Use RoleStates service to pre-assign roles

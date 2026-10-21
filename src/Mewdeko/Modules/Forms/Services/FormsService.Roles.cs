@@ -153,13 +153,15 @@ public partial class FormsService
 
             if (toAdd.Count > 0)
             {
-                await member.AddRolesAsync(toAdd, options);
+                foreach (var role in toAdd)
+                    await member.AddRoleAsync(role, options);
                 changed = true;
             }
 
             if (toRemove.Count > 0)
             {
-                await member.RemoveRolesAsync(toRemove, options);
+                foreach (var role in toRemove)
+                    await member.RemoveRoleAsync(role, options);
                 changed = true;
             }
         }
@@ -196,12 +198,12 @@ public partial class FormsService
                 continue;
             }
 
-            if (role.IsEveryone)
+            if (role.Id == guild.Id)
                 continue;
 
-            if (role.Position >= highest || role.IsManaged)
+            if (role.Position >= highest)
             {
-                logger.LogWarning("Role {RoleName} in guild {GuildId} is above the bot or externally managed",
+                logger.LogWarning("Role {RoleName} in guild {GuildId} is above the bot",
                     role.Name, guild.Id);
                 continue;
             }

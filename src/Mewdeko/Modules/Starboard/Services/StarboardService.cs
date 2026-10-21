@@ -45,10 +45,10 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
         this.strings = strings;
         this.logger = logger;
         this.collector = collector;
-        eventHandler.Subscribe("ReactionAdded", "StarboardService", OnReactionAddedAsync);
-        eventHandler.Subscribe("MessageDeleted", "StarboardService", OnMessageDeletedAsync);
-        eventHandler.Subscribe("ReactionRemoved", "StarboardService", OnReactionRemoveAsync);
-        eventHandler.Subscribe("ReactionsCleared", "StarboardService", OnAllReactionsClearedAsync);
+        eventHandler.ReactionAdded.Subscribe("StarboardService", OnReactionAddedAsync);
+        eventHandler.MessageDeleted.Subscribe("StarboardService", OnMessageDeletedAsync);
+        eventHandler.ReactionRemoved.Subscribe("StarboardService", OnReactionRemoveAsync);
+        eventHandler.ReactionsCleared.Subscribe("StarboardService", OnAllReactionsClearedAsync);
     }
 
     /// <inheritdoc />
@@ -69,10 +69,10 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     /// </summary>
     public Task Unload()
     {
-        eventHandler.Unsubscribe("ReactionAdded", "StarboardService", OnReactionAddedAsync);
-        eventHandler.Unsubscribe("MessageDeleted", "StarboardService", OnMessageDeletedAsync);
-        eventHandler.Unsubscribe("ReactionRemoved", "StarboardService", OnReactionRemoveAsync);
-        eventHandler.Unsubscribe("ReactionsCleared", "StarboardService", OnAllReactionsClearedAsync);
+        eventHandler.ReactionAdded.Unsubscribe("StarboardService", OnReactionAddedAsync);
+        eventHandler.MessageDeleted.Unsubscribe("StarboardService", OnMessageDeletedAsync);
+        eventHandler.ReactionRemoved.Unsubscribe("StarboardService", OnReactionRemoveAsync);
+        eventHandler.ReactionsCleared.Unsubscribe("StarboardService", OnAllReactionsClearedAsync);
         return Task.CompletedTask;
     }
 
@@ -283,12 +283,12 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
         if (original != null)
         {
             content = string.IsNullOrWhiteSpace(original.Content)
-                ? original.Embeds.Select(e => e.Description).FirstOrDefault(d => !string.IsNullOrWhiteSpace(d))
+                ? (original.Embeds ?? []).Select(e => e.Description).FirstOrDefault(d => !string.IsNullOrWhiteSpace(d))
                 : original.Content;
 
             var member = guild.GetUser(original.Author.Id);
             authorName = member?.DisplayName ?? original.Author.GlobalName ?? original.Author.Username;
-            authorAvatarUrl = member?.GetGuildAvatarUrl() ?? original.Author.GetDisplayAvatarUrl();
+            authorAvatarUrl = member?.GetDisplayAvatarUrl() ?? original.Author.GetAvatarOrDefaultUrl(160);
             imageUrl = FindImageUrl(original);
         }
         else
@@ -340,7 +340,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
         {
             return await channel.GetMessageAsync(messageId);
         }
-        catch (Discord.Net.FluxerApiException)
+        catch (FluxerApiException)
         {
             return null;
         }
@@ -355,8 +355,8 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
         if (repost == null)
             return 0;
 
-        var sources = repost.Embeds
-            .SelectMany(e => new[] { e.Url, e.Description }.Concat(e.Fields.Select(f => f.Value)))
+        var sources = (repost.Embeds ?? [])
+            .SelectMany(e => new[] { e.Url, e.Description }.Concat((e.Fields ?? []).Select(f => f.Value)))
             .Append(repost.Content);
 
         foreach (var source in sources)
@@ -380,18 +380,18 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     /// </summary>
     private static string? FindImageUrl(Message message)
     {
-        var attachment = message.Attachments.FirstOrDefault(a =>
+        var attachment = (message.Attachments ?? []).FirstOrDefault(a =>
             a.ContentType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) == true
             || IsImageExtension(Path.GetExtension(a.Filename).ToLowerInvariant()));
         if (attachment != null)
             return attachment.ProxyUrl ?? attachment.Url;
 
-        foreach (var embed in message.Embeds)
+        foreach (var embed in message.Embeds ?? [])
         {
-            if (embed.Image.HasValue)
-                return embed.Image.Value.Url;
-            if (embed.Thumbnail.HasValue)
-                return embed.Thumbnail.Value.Url;
+            if (embed.Image != null)
+                return embed.Image.Url;
+            if (embed.Thumbnail != null)
+                return embed.Thumbnail.Url;
         }
 
         return null;
@@ -403,12 +403,12 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     private static (string? Content, string AuthorName, string? AuthorAvatarUrl, string? ImageUrl)
         ParseRepost(Message repost)
     {
-        var embed = repost.Embeds.FirstOrDefault();
+        var embed = repost.Embeds?.FirstOrDefault();
         if (embed == null)
             return (repost.Content, "Unknown User", null, null);
 
-        var embedImage = embed.Image.HasValue ? embed.Image.Value.Url :
-            embed.Thumbnail.HasValue ? embed.Thumbnail.Value.Url : null;
+        var embedImage = embed.Image != null ? embed.Image.Url :
+            embed.Thumbnail != null ? embed.Thumbnail.Url : null;
         return (embed.Description, embed.Author?.Name ?? "Unknown User", embed.Author?.IconUrl, embedImage);
     }
 
@@ -833,7 +833,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
         if (!string.IsNullOrWhiteSpace(content))
             embed.WithDescription(content);
 
-        var image = message.Attachments.FirstOrDefault(a => IsImageExtension(Path.GetExtension(a.Filename).ToLowerInvariant()));
+        var image = (message.Attachments ?? []).FirstOrDefault(a => IsImageExtension(Path.GetExtension(a.Filename).ToLowerInvariant()));
         if (image != null)
             embed.WithImageUrl(image.ProxyUrl);
 
@@ -1000,31 +1000,29 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     private static async Task<int> CountStarsAsync(Message message, Emoji emote, bool allowBots,
         int? listWhenAtLeast = null)
     {
-        if (!message.Reactions.TryGetValue(emote, out var meta) || meta.ReactionCount <= 0)
+        var meta = message.Reactions?.FirstOrDefault(r => r.Emoji.Matches(emote));
+        if (meta == null || meta.Count <= 0)
             return 0;
 
-        var raw = meta.ReactionCount;
+        var raw = meta.Count;
         if (allowBots)
             return raw;
 
         if (listWhenAtLeast is { } floor && raw < floor)
-            return meta.IsMe ? raw - 1 : raw;
+            return meta.Me == true ? raw - 1 : raw;
 
-        var users = await message.GetReactionUsersAsync(emote, raw).FlattenAsync();
+        var users = await message.GetReactionsForEmojiAsync(emote);
         return users.Count(u => !u.IsBot);
     }
 
     private async Task OnReactionAddedAsync(Cacheable<Message> message,
-        Cacheable<Channel> channel,
+        Channel channel,
         SocketReaction reaction)
     {
-        if (!reaction.User.IsSpecified
-            || reaction.User.Value.IsBot
-            || !channel.HasValue
-            || channel.Value is not Channel textChannel)
+        if (reaction.User is not { IsBot: false } || channel.Guild is not { } guild)
             return;
 
-        var guildStarboards = GetStarboards(textChannel.GuildId);
+        var guildStarboards = GetStarboards(guild.Id);
         if (!guildStarboards.Any())
             return;
 
@@ -1035,16 +1033,13 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     }
 
     private async Task OnReactionRemoveAsync(Cacheable<Message> message,
-        Cacheable<Channel> channel,
+        Channel channel,
         SocketReaction reaction)
     {
-        if (!reaction.User.IsSpecified
-            || reaction.User.Value.IsBot
-            || !channel.HasValue
-            || channel.Value is not Channel textChannel)
+        if (reaction.User is not { IsBot: false } || channel.Guild is not { } guild)
             return;
 
-        var guildStarboards = GetStarboards(textChannel.GuildId);
+        var guildStarboards = GetStarboards(guild.Id);
         if (!guildStarboards.Any())
             return;
 
@@ -1055,19 +1050,19 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     }
 
     private async Task HandleReactionChange(Cacheable<Message> message,
-        Cacheable<Channel> channel,
+        Channel channel,
         SocketReaction reaction,
         DataModel.Starboard starboard,
         bool isAdd)
     {
-        var textChannel = channel.Value as Channel;
+        var textChannel = channel;
 
         // Check if the reaction matches any of the starboard's emotes
         var starboardEmotes = ParseEmotes(starboard.Emote);
         var matchingEmote = starboardEmotes.FirstOrDefault(e =>
         {
             var emote = e.ToIEmote();
-            return emote.Name != null && Equals(reaction.Emoji, emote);
+            return emote.Name != null && emote.Matches(reaction.Emoji);
         });
 
         if (matchingEmote == null)
@@ -1116,11 +1111,11 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
             if (!starboard.AllowBots)
                 return;
 
-            content = newMessage.Embeds.Count > 0
+            content = newMessage.Embeds?.Any() == true
                 ? newMessage.Embeds.Select(x => x.Description).FirstOrDefault()
                 : newMessage.Content;
-            imageurl = newMessage.Attachments.Count > 0
-                ? newMessage.Attachments.FirstOrDefault().ProxyUrl
+            imageurl = newMessage.Attachments?.Length > 0
+                ? newMessage.Attachments.First().ProxyUrl
                 : newMessage.Embeds?.Select(x => x.Image).FirstOrDefault()?.ProxyUrl;
         }
         else
@@ -1138,9 +1133,9 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
 
         // Track stats and individual reactions
         await TrackStarboardStats(newMessage, starboard.Id, matchingEmote, matchingCount, textChannel.Id);
-        if (isAdd && reaction.User.IsSpecified)
+        if (isAdd)
         {
-            await TrackStarboardReaction(newMessage.Id, starboard.Id, reaction.User.Value.Id, matchingEmote);
+            await TrackStarboardReaction(newMessage.Id, starboard.Id, reaction.UserId, matchingEmote);
         }
 
         // Calculate total stars across all emotes for this starboard
@@ -1150,7 +1145,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
             var emote = emoteString.ToIEmote();
             try
             {
-                totalStars += emote.Equals(reactionEmote)
+                totalStars += emote.Matches(reactionEmote)
                     ? matchingCount
                     : await CountStarsAsync(newMessage, emote, starboard.AllowBots, starboard.Threshold);
             }
@@ -1211,7 +1206,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
         }
 
         var (stars, embed) = await CreateStarboardPostAsync(newMessage, content, starboardEmotes,
-            starboard.AllowBots, textChannel.GuildId);
+            starboard.AllowBots, textChannel.Guild.Id);
 
         if (existingPost != null)
         {
@@ -1229,13 +1224,13 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
         await AddStarboardPost(newMessage.Id, sent.Id, starboard.Id, totalStars);
     }
 
-    private async Task OnMessageDeletedAsync(Cacheable<Message> arg1, Cacheable<Channel> arg2)
+    private async Task OnMessageDeletedAsync(Cacheable<Message> arg1, Channel arg2)
     {
-        if (!arg1.HasValue || !arg2.HasValue)
+        if (!arg1.HasValue)
             return;
 
         var msg = arg1.Value;
-        var chan = arg2.Value;
+        var chan = arg2;
         if (chan is not Channel channel)
             return;
 
@@ -1270,9 +1265,9 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     }
 
     private async Task OnAllReactionsClearedAsync(Cacheable<Message> arg1,
-        Cacheable<Channel> arg2)
+        Channel arg2)
     {
-        if (!arg2.HasValue || arg2.Value is not Channel channel)
+        if (arg2 is not { } channel)
             return;
 
         Message msg;

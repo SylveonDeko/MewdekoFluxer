@@ -232,7 +232,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [RequireContext(ContextType.Guild)]
     public async Task TicketClaim()
     {
-        var success = await Service.ClaimTicket(ctx.Guild, ctx.Channel.Id, ctx.User as SocketGuildMember);
+        var success = await Service.ClaimTicket(ctx.Guild, ctx.Channel.Id, ctx.Member);
         if (success)
             await ctx.Channel.SendConfirmAsync(Strings.TicketClaimed(ctx.Guild.Id, ctx.User.Mention));
         else
@@ -247,7 +247,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [RequireContext(ContextType.Guild)]
     public async Task TicketUnclaim()
     {
-        var success = await Service.UnclaimTicket(ctx.Guild, ctx.Channel.Id, ctx.User as SocketGuildMember);
+        var success = await Service.UnclaimTicket(ctx.Guild, ctx.Channel.Id, ctx.Member);
         if (success)
             await ctx.Channel.SendConfirmAsync(Strings.TicketUnclaimed(ctx.Guild.Id));
         else
@@ -373,7 +373,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [UserPerm(GuildPermission.ManageMessages)]
     public async Task TicketCreateCase(string title, [Remainder] string description)
     {
-        var ticketCase = await Service.CreateCaseAsync(ctx.Guild, title, description, ctx.User as SocketGuildMember);
+        var ticketCase = await Service.CreateCaseAsync(ctx.Guild, title, description, ctx.Member);
         await ctx.Channel.SendConfirmAsync(Strings.TicketCaseCreated(ctx.Guild.Id, ticketCase.Id));
     }
 
@@ -642,7 +642,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [RequireContext(ContextType.Guild)]
     public async Task TicketPriority(string priority)
     {
-        var success = await Service.SetTicketPriority(ctx.Guild, ctx.Channel.Id, priority, ctx.User as SocketGuildMember);
+        var success = await Service.SetTicketPriority(ctx.Guild, ctx.Channel.Id, priority, ctx.Member);
         if (success)
             await ctx.Channel.SendConfirmAsync(Strings.TicketPrioritySet(ctx.Guild.Id, priority));
         else
@@ -735,7 +735,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [RequireContext(ContextType.Guild)]
     public async Task TicketAddTags(params string[] tags)
     {
-        var success = await Service.AddTicketTags(ctx.Guild, ctx.Channel.Id, tags, ctx.User as SocketGuildMember);
+        var success = await Service.AddTicketTags(ctx.Guild, ctx.Channel.Id, tags, ctx.Member);
         if (success)
             await ctx.Channel.SendConfirmAsync(Strings.TicketTagsAdded(ctx.Guild.Id));
         else
@@ -750,7 +750,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [RequireContext(ContextType.Guild)]
     public async Task TicketRemoveTags(params string[] tags)
     {
-        var success = await Service.RemoveTicketTags(ctx.Guild, ctx.Channel.Id, tags, ctx.User as SocketGuildMember);
+        var success = await Service.RemoveTicketTags(ctx.Guild, ctx.Channel.Id, tags, ctx.Member);
         if (success)
             await ctx.Channel.SendConfirmAsync(Strings.TicketTagsRemoved(ctx.Guild.Id));
         else
@@ -946,7 +946,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [RequireContext(ContextType.Guild)]
     public async Task TicketUserStats(SocketGuildMember? user = null)
     {
-        user ??= ctx.User as SocketGuildMember;
+        user ??= ctx.Member;
         var stats = await Service.GetUserStatistics(ctx.Guild.Id, user.Id);
 
         var eb = new EmbedBuilder()
@@ -1136,7 +1136,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [RequireContext(ContextType.Guild)]
     public async Task TicketNote([Remainder] string content)
     {
-        var success = await Service.AddNote(ctx.Channel.Id, ctx.User as SocketGuildMember, content);
+        var success = await Service.AddNote(ctx.Channel.Id, ctx.Member, content);
         if (success)
             await ctx.Channel.SendConfirmAsync(Strings.NoteAdded(ctx.Guild.Id));
         else

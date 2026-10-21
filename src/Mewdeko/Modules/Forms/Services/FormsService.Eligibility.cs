@@ -129,11 +129,11 @@ public partial class FormsService
         SocketGuild guild,
         IReadOnlyList<SubmissionRecord> history)
     {
-        IBan? ban;
+        GuildBan? ban;
 
         try
         {
-            ban = await guild.GetBanAsync(userId);
+            ban = (await guild.GetBansAsync()).FirstOrDefault(b => b.User.Id == userId);
         }
         catch (Exception ex)
         {
@@ -146,24 +146,16 @@ public partial class FormsService
 
         if (form.AppealDelayDays is > 0)
         {
-            // Discord does not record when a ban was placed, so the audit log is the only source
-            // for it. When it has aged out there is nothing to measure the delay against, and the
-            // appeal is allowed rather than blocked on a date nobody can produce.
-            var bannedAt = await FindBanDateAsync(guild, userId);
+            var appealableAt = ban.BannedAt.UtcDateTime.AddDays(form.AppealDelayDays.Value);
 
-            if (bannedAt is { } placedAt)
+            if (appealableAt > DateTime.UtcNow)
             {
-                var appealableAt = placedAt.AddDays(form.AppealDelayDays.Value);
+                return Eligibility.NotYet(
+                    $"You must wait {form.AppealDelayDays.Value} days after your ban before appealing",
+                    appealableAt);
 
-                if (appealableAt > DateTime.UtcNow)
-                {
-                    return Eligibility.NotYet(
-                        $"You must wait {form.AppealDelayDays.Value} days after your ban before appealing",
-                        appealableAt);
-                }
             }
         }
-
         if (history.Any(h => h.Status is ResponseStatus.Pending or ResponseStatus.UnderReview))
             return Eligibility.No("You already have an appeal awaiting review");
 
@@ -192,27 +184,6 @@ public partial class FormsService
         }
 
         return Eligibility.Allowed;
-    }
-
-    /// <summary>
-    ///     Finds when a ban was placed, by looking for it in the guild's audit log.
-    /// </summary>
-    /// <returns>When the ban was placed, or null when it is no longer in the log.</returns>
-    private async Task<DateTime?> FindBanDateAsync(SocketGuild guild, ulong userId)
-    {
-        try
-        {
-            var entries = await guild.GetAuditLogsAsync(actionType: ActionType.Ban);
-
-            var entry = entries.FirstOrDefault(e => e.Data is BanAuditLogData data && data.Target.Id == userId);
-
-            return entry?.CreatedAt.UtcDateTime;
-        }
-        catch (Exception ex)
-        {
-            logger.LogDebug(ex, "Could not read audit log for guild {GuildId}", guild.Id);
-            return null;
-        }
     }
 
     /// <summary>

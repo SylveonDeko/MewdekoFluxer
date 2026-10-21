@@ -152,7 +152,7 @@ public partial class Suggestions : MewdekoModuleBase<SuggestionsService>
             return;
         }
 
-        await Service.SendSuggestion(ctx.Guild, ctx.User as SocketGuildMember, ctx.Client as FluxerClient,
+        await Service.SendSuggestion(ctx.Guild, ctx.Member, ctx.Client as FluxerClient,
             suggestion, ctx.Channel as Channel).ConfigureAwait(false);
     }
 

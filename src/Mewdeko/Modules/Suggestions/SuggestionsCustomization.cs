@@ -431,7 +431,7 @@ public partial class Suggestions
             }
 
             if (_ != null && !_.Contains("disable") &&
-                ctx.Message.Tags.Where(t => t.Type == TagType.Emoji).Select(x => (Emoji)x.Value).Count() > 5)
+                _.Split(' ', StringSplitOptions.RemoveEmptyEntries).Count(x => Emoji.TryParse(x, out var _e)) > 5)
             {
                 await ctx.Channel.SendErrorAsync(Strings.MaxEmotesLimit(ctx.Guild.Id), Config)
                     .ConfigureAwait(false);
@@ -439,14 +439,18 @@ public partial class Suggestions
             }
 
             if (!_.Contains("disable") &&
-                !ctx.Message.Tags.Any(t => t.Type == TagType.Emoji))
+                !_.Split(' ', StringSplitOptions.RemoveEmptyEntries).Any(x => Emoji.TryParse(x, out var _e)))
             {
                 await ctx.Channel.SendErrorAsync(Strings.EmotesRequiredSpecific(ctx.Guild.Id), Config)
                     .ConfigureAwait(false);
                 return;
             }
 
-            var emotes = ctx.Message.Tags.Where(t => t.Type == TagType.Emoji).Select(x => (Emoji)x.Value);
+            var emotes = _.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => Emoji.TryParse(x, out var parsed) ? parsed : null)
+                .Where(x => x != null)
+                .Select(x => x!)
+                .ToList();
             foreach (var emoji in emotes)
             {
                 try

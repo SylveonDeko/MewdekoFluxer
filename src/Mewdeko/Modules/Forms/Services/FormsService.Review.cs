@@ -2,6 +2,7 @@ using DataModel;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Database.Enums;
+using Mewdeko.Modules.Giveaways;
 
 namespace Mewdeko.Modules.Forms.Services;
 
@@ -45,7 +46,7 @@ public partial class FormsService
     /// </summary>
     public Task Unload()
     {
-        eventHandler.Unsubscribe("ReactionAdded", "FormsService", OnReviewReactionAddedAsync);
+        eventHandler.ReactionAdded.Unsubscribe("FormsService", OnReviewReactionAddedAsync);
         return Task.CompletedTask;
     }
 
@@ -69,10 +70,10 @@ public partial class FormsService
     }
 
     private async Task OnReviewReactionAddedAsync(Cacheable<Message> cachedMessage,
-        Cacheable<Channel> cachedChannel, SocketReaction reaction)
+        Channel channel, SocketReaction reaction)
     {
         if (!reviewMessages.ContainsKey(cachedMessage.Id) || reaction.UserId == client.CurrentUser.Id ||
-            reaction.User.IsSpecified && reaction.User.Value.IsBot)
+            reaction.User?.IsBot == true)
             return;
 
         try
@@ -100,7 +101,7 @@ public partial class FormsService
 
             if (!CanReview(form, reviewer))
             {
-                await message.RemoveReactionAsync(reaction.Emoji, reaction.UserId);
+                await message.RemoveReactionAsync(Emoji.From(reaction.Emoji), reaction.UserId);
                 await NotifyReviewerAsync(message.Channel, reviewer,
                     strings.FormsReviewNeedRole(form.GuildId, form.ReviewerRoleId is { } roleId and > 0
                         ? $"<@&{roleId}>"
@@ -110,7 +111,7 @@ public partial class FormsService
 
             if ((ResponseStatus)workflow.Status is ResponseStatus.Approved or ResponseStatus.Rejected)
             {
-                await message.RemoveReactionAsync(reaction.Emoji, reaction.UserId);
+                await message.RemoveReactionAsync(Emoji.From(reaction.Emoji), reaction.UserId);
                 await NotifyReviewerAsync(message.Channel, reviewer,
                     strings.FormsReviewDecided(form.GuildId, response!.Id,
                         ((ResponseStatus)workflow.Status).ToString().ToLowerInvariant()));
@@ -120,7 +121,7 @@ public partial class FormsService
             if (approving)
                 await ApproveFromReactionAsync(form, response!.Id, message, reviewer);
             else
-                await RejectFromReactionAsync(form, response!.Id, message, reviewer, reaction.Emoji);
+                await RejectFromReactionAsync(form, response!.Id, message, reviewer, Emoji.From(reaction.Emoji));
         }
         catch (Exception ex)
         {
@@ -185,14 +186,14 @@ public partial class FormsService
     private async Task<string?> WaitForReplyAsync(ulong channelId, ulong userId, TimeSpan timeout)
     {
         var reply = new TaskCompletionSource<string>();
-        eventHandler.Subscribe("MessageReceived", "FormsService", OnMessage);
+        eventHandler.MessageReceived.Subscribe("FormsService", OnMessage);
         try
         {
             return await Task.WhenAny(reply.Task, Task.Delay(timeout)) == reply.Task ? await reply.Task : null;
         }
         finally
         {
-            eventHandler.Unsubscribe("MessageReceived", "FormsService", OnMessage);
+            eventHandler.MessageReceived.Unsubscribe("FormsService", OnMessage);
         }
 
         Task OnMessage(SocketMessage arg)

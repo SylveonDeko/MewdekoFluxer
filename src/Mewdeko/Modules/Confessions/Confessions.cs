@@ -26,7 +26,7 @@ public class Confessions(GuildSettingsService guildSettings, IBotCredentials cre
         var gc = await guildSettings.GetGuildConfig(serverId);
         var attachment = ctx.Message.Attachments.FirstOrDefault()?.Url;
         var user = ctx.User as SocketUser;
-        if (user!.MutualGuilds.Select(x => x.Id).Contains(serverId))
+        if (FluxerContext.Client.Guilds.Where(x => x.Members.ContainsKey(user.Id)).Select(x => x.Id).Contains(serverId))
         {
             if (gc.ConfessionChannel is 0)
             {
@@ -195,7 +195,7 @@ public class Confessions(GuildSettingsService guildSettings, IBotCredentials cre
         try
         {
             var invites = await reportedGuild.GetInvitesAsync().ConfigureAwait(false);
-            eb.AddField(Strings.ConfessionsServerInvite(guildId), invites.FirstOrDefault().Url);
+            eb.AddField(Strings.ConfessionsServerInvite(guildId), $"{FluxerContext.Client.Config.InviteUrl}/{invites.First().Code}");
         }
         catch
         {

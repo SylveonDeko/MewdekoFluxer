@@ -155,7 +155,7 @@ public class GiveawayService : INService, IDisposable
         if (giveaway.Emote != null)
             emote = giveaway.Emote.ToIEmote();
         var hostUser = await guild.GetUserAsync(giveaway.UserId);
-        var eb = CreateGiveawayEmbed(guild, giveaway, emote, gconfig, hostUser);
+        var eb = CreateGiveawayEmbed(guild, giveaway, emote, gconfig, hostUser?.User);
 
         // Send giveaway message
         var msg = await channel.SendAsync(
@@ -251,7 +251,7 @@ public class GiveawayService : INService, IDisposable
             MessageCountReq = messageCount
         };
 
-        var eb = CreateGiveawayEmbed(guild, giveawayData, emote, gconfig, hostuser);
+        var eb = CreateGiveawayEmbed(guild, giveawayData, emote, gconfig, hostuser?.User);
 
         // Add custom banner if provided
         if (!string.IsNullOrEmpty(banner) && Uri.IsWellFormedUriString(banner, UriKind.Absolute))
@@ -369,7 +369,7 @@ public class GiveawayService : INService, IDisposable
             }
 
             // Collect participants - either from reactions or from database
-            HashSet<IUser> participants = new();
+            HashSet<User> participants = new();
 
             if (giveaway.UseButton || giveaway.UseCaptcha)
             {
@@ -383,7 +383,7 @@ public class GiveawayService : INService, IDisposable
                 {
                     var user = await guild.GetUserAsync(userId);
                     if (user != null)
-                        participants.Add(user);
+                        participants.Add(user.User);
                 }
             }
             else
@@ -522,13 +522,13 @@ public class GiveawayService : INService, IDisposable
 
     #region Private Helper Methods
 
-    private async Task<HashSet<IUser>> GetAllReactionUsers(Message message, Emoji emote)
+    private async Task<HashSet<User>> GetAllReactionUsers(Message message, Emoji emote)
     {
-        HashSet<IUser> users = new();
+        HashSet<User> users = new();
 
         try
         {
-            var reactUsers = await message.GetReactionUsersAsync(emote, 1000).FlattenAsync();
+            var reactUsers = await message.GetReactionsForEmojiAsync(emote);
 
             foreach (var user in reactUsers)
             {
@@ -577,7 +577,7 @@ public class GiveawayService : INService, IDisposable
         }
 
         // Let chat triggers listening for a giveaway win respond
-        await triggerEvents.PublishAsync(guild.Id, CtEventType.GiveawayWon, winner, channel).ConfigureAwait(false);
+        await triggerEvents.PublishAsync(guild.Id, CtEventType.GiveawayWon, winner.User, channel).ConfigureAwait(false);
 
         // Update giveaway message
         var winnerEmbed = message.Embeds.FirstOrDefault().ToEmbedBuilder()

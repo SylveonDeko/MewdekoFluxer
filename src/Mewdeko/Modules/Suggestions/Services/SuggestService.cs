@@ -90,39 +90,39 @@ public class SuggestionsService : INService
         adminserv = aserv;
         this.client = client;
         this.eventHandler = eventHandler;
-        eventHandler.Subscribe("MessageReceived", "SuggestService", MessageRecieved);
-        eventHandler.Subscribe("ReactionAdded", "SuggestService", UpdateCountOnReact);
-        eventHandler.Subscribe("ReactionRemoved", "SuggestService", UpdateCountOnRemoveReact);
+        eventHandler.MessageReceived.Subscribe("SuggestService", MessageRecieved);
+        eventHandler.ReactionAdded.Subscribe("SuggestService", UpdateCountOnReact);
+        eventHandler.ReactionRemoved.Subscribe("SuggestService", UpdateCountOnRemoveReact);
         this.dbFactory = dbFactory;
     }
 
     private Task UpdateCountOnReact(Cacheable<Message> message,
-        Cacheable<Channel> channel, SocketReaction reaction)
+        Channel channel, SocketReaction reaction)
     {
         return RefreshVoteCountAsync(message, channel, reaction, true);
     }
 
     private Task UpdateCountOnRemoveReact(Cacheable<Message> message,
-        Cacheable<Channel> channel, SocketReaction reaction)
+        Channel channel, SocketReaction reaction)
     {
         return RefreshVoteCountAsync(message, channel, reaction, false);
     }
 
     private async Task RefreshVoteCountAsync(Cacheable<Message> cached,
-        Cacheable<Channel> cachedChannel, SocketReaction reaction, bool added)
+        Channel channel, SocketReaction reaction, bool added)
     {
-        if (await cachedChannel.GetOrDownloadAsync().ConfigureAwait(false) is not Channel channel)
+        if (channel.Guild is not { } guild)
             return;
-        if (channel.Id != await GetSuggestionChannel(channel.Guild.Id))
+        if (channel.Id != await GetSuggestionChannel(guild.Id))
             return;
 
-        var index = (await GetVoteEmotes(channel.GuildId)).FindIndex(e => Equals(e, reaction.Emoji));
+        var index = (await GetVoteEmotes(guild.Id)).FindIndex(e => e.Matches(reaction.Emoji));
         if (index < 0)
             return;
 
         await using var dbContext = await dbFactory.CreateConnectionAsync();
         var suggestion = await dbContext.Suggestions
-            .FirstOrDefaultAsync(x => x.GuildId == channel.GuildId && x.MessageId == cached.Id);
+            .FirstOrDefaultAsync(x => x.GuildId == guild.Id && x.MessageId == cached.Id);
         if (suggestion is null)
             return;
 
@@ -130,7 +130,7 @@ public class SuggestionsService : INService
         if (message is null)
             return;
 
-        var count = (await message.GetReactionUsersAsync(reaction.Emoji, 500).FlattenAsync().ConfigureAwait(false))
+        var count = (await message.GetReactionsForEmojiAsync(Emoji.From(reaction.Emoji)).ConfigureAwait(false))
             .Count(x => !x.IsBot);
         switch (index)
         {
@@ -153,7 +153,7 @@ public class SuggestionsService : INService
 
         await dbContext.UpdateAsync(suggestion);
         if (added)
-            collector.Feature("suggestion_vote", channel.GuildId);
+            collector.Feature("suggestion_vote", guild.Id);
     }
 
     /// <summary>
@@ -194,7 +194,7 @@ public class SuggestionsService : INService
                 return;
             }
 
-            var guser = msg.Author as SocketGuildMember;
+            var guser = msg.Member;
             var pc = await perms.GetCacheFor(guild.Id);
             var test = pc.Permissions.CheckPermissions(msg as Message, "suggest", "Suggestions".ToLowerInvariant(),
                 out _);
@@ -224,7 +224,7 @@ public class SuggestionsService : INService
 
                 try
                 {
-                    await guser.SendErrorAsync(
+                    await guser.User.SendErrorAsync(
                             $"Cannot send this suggestion as its over the max length `({await GetMaxLength(guild.Id)})` of this server!")
                         .ConfigureAwait(false);
                     spamCheck.Remove(chan.Id);
@@ -251,7 +251,7 @@ public class SuggestionsService : INService
 
                 try
                 {
-                    await guser.SendErrorAsync(
+                    await guser.User.SendErrorAsync(
                             $"Cannot send this suggestion as its under the minimum length `({await GetMaxLength(guild.Id)})` of this server!")
                         .ConfigureAwait(false);
                     spamCheck.Remove(chan.Id);
@@ -264,7 +264,7 @@ public class SuggestionsService : INService
                 return;
             }
 
-            await SendSuggestion(chan.Guild, msg.Author as SocketGuildMember, client, msg.Content, msg.Channel as Channel)
+            await SendSuggestion(chan.Guild, msg.Member, client, msg.Content, msg.Channel as Channel)
                 .ConfigureAwait(false);
             spamCheck.Remove(chan.Id);
             try
@@ -1114,7 +1114,7 @@ public class SuggestionsService : INService
         var threadChannel = await guild.GetThreadChannelAsync(await GetThreadByMessage(suggest.MessageId));
         if (threadChannel != null)
         {
-            await threadChannel.ModifyAsync(x => x.Archived = true);
+            await threadChannel.ModifyAsync(new UpdateThreadRequest { IsArchived = true });
         }
     }
 
@@ -1228,17 +1228,21 @@ public class SuggestionsService : INService
         try
         {
             var name = strings.SuggestionThreadName(guild.Id, number);
-            Channel thread;
+            ThreadChannel thread;
             if (threadType == 1)
             {
-                thread = await channel.CreateThreadAsync(name, ThreadType.PublicThread,
-                    ThreadArchiveDuration.OneWeek, message).ConfigureAwait(false);
+                thread = await message.CreateThreadAsync(new CreatePublicThreadRequest
+                {
+                    Name = name, ArchiveDuration = (int)ThreadArchiveDuration.OneWeek
+                }).ConfigureAwait(false);
             }
             else
             {
-                thread = await channel.CreateThreadAsync(name, ThreadType.PrivateThread,
-                    ThreadArchiveDuration.OneWeek, invitable: false).ConfigureAwait(false);
-                await thread.AddUserAsync(user).ConfigureAwait(false);
+                thread = await channel.CreatePrivateThreadAsync(new CreatePrivateThreadRequest
+                {
+                    Name = name, ArchiveDuration = (int)ThreadArchiveDuration.OneWeek
+                }).ConfigureAwait(false);
+                await thread.AddMemberAsync(user).ConfigureAwait(false);
             }
 
             await AddThreadChannel(message.Id, thread.Id).ConfigureAwait(false);
@@ -1377,9 +1381,9 @@ public class SuggestionsService : INService
     /// </summary>
     public Task Unload()
     {
-        eventHandler.Unsubscribe("MessageReceived", "SuggestService", MessageRecieved);
-        eventHandler.Unsubscribe("ReactionAdded", "SuggestService", UpdateCountOnReact);
-        eventHandler.Unsubscribe("ReactionRemoved", "SuggestService", UpdateCountOnRemoveReact);
+        eventHandler.MessageReceived.Unsubscribe("SuggestService", MessageRecieved);
+        eventHandler.ReactionAdded.Unsubscribe("SuggestService", UpdateCountOnReact);
+        eventHandler.ReactionRemoved.Unsubscribe("SuggestService", UpdateCountOnRemoveReact);
         return Task.CompletedTask;
     }
 }

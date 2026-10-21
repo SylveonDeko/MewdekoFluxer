@@ -153,7 +153,7 @@ public partial class FormsService
             {
                 Title = embed.Title,
                 Description = embed.Description,
-                Color = embed.Color?.RawValue,
+                Color = (uint?)embed.Color,
                 Timestamp = embed.Timestamp,
                 Footer = embed.Footer is { } footer
                     ? new WebhookEmbedFooter
@@ -163,7 +163,7 @@ public partial class FormsService
                     : null,
                 Fields = embed.Fields.Select(f => new WebhookEmbedField
                     {
-                        Name = f.Name, Value = f.Value, Inline = f.Inline
+                        Name = f.Name, Value = f.Value, Inline = f.IsInline
                     })
                     .ToArray()
             };

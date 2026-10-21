@@ -73,8 +73,8 @@ public class TicketService : INService
         this.chatLogService = chatLogService;
         this.credentials = credentials;
 
-        eventHandler.Subscribe("MessageDeleted", "TicketService", HandleMessageDeleted);
-        eventHandler.Subscribe("ReactionAdded", "TicketService", HandleReactionAdded);
+        eventHandler.MessageDeleted.Subscribe("TicketService", HandleMessageDeleted);
+        eventHandler.ReactionAdded.Subscribe("TicketService", HandleReactionAdded);
     }
 
     /// <summary>
@@ -82,8 +82,8 @@ public class TicketService : INService
     /// </summary>
     public Task Unload()
     {
-        eventHandler.Unsubscribe("MessageDeleted", "TicketService", HandleMessageDeleted);
-        eventHandler.Unsubscribe("ReactionAdded", "TicketService", HandleReactionAdded);
+        eventHandler.MessageDeleted.Unsubscribe("TicketService", HandleMessageDeleted);
+        eventHandler.ReactionAdded.Unsubscribe("TicketService", HandleReactionAdded);
         return Task.CompletedTask;
     }
 
@@ -107,7 +107,7 @@ public class TicketService : INService
 
         if (string.IsNullOrWhiteSpace(embedJson))
         {
-            finalJson = GetDefaultPanelJson(channel.GuildId, title, description);
+            finalJson = GetDefaultPanelJson(channel.GuildId.GetValueOrDefault(), title, description);
         }
         else
         {
@@ -413,14 +413,14 @@ public class TicketService : INService
 
                         if (archiveCategoryId.HasValue)
                         {
-                            var guild = await client.Rest.GetGuildAsync(item.Ticket.GuildId);
+                            var guild = client.GetGuild(item.Ticket.GuildId);
                             if (guild != null)
                             {
                                 var channel = await guild.GetTextChannelAsync(item.Ticket.ChannelId);
                                 if (channel != null)
                                 {
-                                    await channel.ModifyAsync(props =>
-                                        props.CategoryId = archiveCategoryId.Value);
+                                    await channel.ModifyAsync(new UpdateChannelRequest
+                                        { ParentId = archiveCategoryId.Value });
                                 }
                             }
                         }
@@ -885,11 +885,11 @@ public class TicketService : INService
             // Overwrites go in with the create call so the channel is never briefly visible to everyone and the
             // bot cannot lock itself out of a channel whose category denies it View Channel.
             var overwrites = await BuildTicketOverwritesAsync(guild, creator, button, option);
-            channel = await guild.CreateTextChannelAsync(channelName, props =>
+            channel = await guild.CreateTextChannelAsync(new CreateTextChannelRequest
             {
-                if (category != null)
-                    props.CategoryId = category.Id;
-                props.PermissionOverwrites = overwrites;
+                Name = channelName,
+                ParentCategoryId = category?.Id,
+                PermissionOverwrites = overwrites.ToArray()
             });
         }
         catch (Exception ex)
@@ -1045,7 +1045,7 @@ public class TicketService : INService
             .WithOverride("%ticket.channel%", () => channel.Mention)
             .WithOverride("%ticket.user%", () => creator.ToString())
             .WithOverride("%ticket.user.mention%", () => creator.Mention)
-            .WithOverride("%ticket.user.avatar%", () => creator.GetAvatarUrl())
+            .WithOverride("%ticket.user.avatar%", () => creator.GetAvatarUrl(160))
             .WithOverride("%ticket.user.id%", () => creator.Id.ToString())
             .WithOverride("%ticket.created%", () => ticket.CreatedAt.ToString("g"));
 
@@ -1243,7 +1243,7 @@ public class TicketService : INService
                     var category = await guild.GetCategoryChannelAsync(archiveCategoryId.Value);
                     if (category != null)
                     {
-                        await channel.ModifyAsync(c => c.CategoryId = category.Id);
+                        await channel.ModifyAsync(new UpdateChannelRequest { ParentId = category.Id });
                     }
                 }
 
@@ -1308,7 +1308,7 @@ public class TicketService : INService
                     var newName = channel.Name.StartsWith("closed-")
                         ? channel.Name.Replace("closed-", "archived-")
                         : $"archived-{channel.Name}";
-                    await channel.ModifyAsync(c => c.Name = newName);
+                    await channel.ModifyAsync(new UpdateChannelRequest { Name = newName });
                 }
                 catch (Exception ex)
                 {
@@ -1321,11 +1321,10 @@ public class TicketService : INService
             try
             {
                 await channel.AddPermissionOverwriteAsync(guild.EveryoneRole,
-                    new OverwritePermissions(
+                    OverwritePermissions.InheritAll.Modify(
                         viewChannel: PermValue.Allow,
                         sendMessages: PermValue.Deny,
-                        addReactions: PermValue.Deny,
-                        useSlashCommands: PermValue.Deny
+                        addReactions: PermValue.Deny
                     ));
             }
             catch (Exception ex)
@@ -1541,19 +1540,16 @@ public class TicketService : INService
     }
 
     private async Task HandleReactionAdded(Cacheable<Message> message,
-        Cacheable<Channel> channel, SocketReaction reaction)
+        Channel textChannel, SocketReaction reaction)
     {
         try
         {
-            if (reaction.UserId == client.CurrentUser.Id || reaction.User.IsSpecified && reaction.User.Value.IsBot)
-                return;
-
-            if (await channel.GetOrDownloadAsync() is not Channel textChannel)
+            if (reaction.UserId == client.CurrentUser.Id || reaction.User?.IsBot == true)
                 return;
 
             await using var ctx = await dbFactory.CreateConnectionAsync();
             var panel = await ctx.TicketPanels.FirstOrDefaultAsync(p => p.MessageId == message.Id);
-            var key = EmoteKey(reaction.Emoji);
+            var key = EmoteKey(Emoji.From(reaction.Emoji));
             if (panel == null)
             {
                 if (key != ClaimEmoji && key != CloseEmoji)
@@ -1563,9 +1559,7 @@ public class TicketService : INService
                     return;
             }
 
-            var member = reaction.User.IsSpecified && reaction.User.Value is SocketGuildMember cached
-                ? cached
-                : await textChannel.Guild.GetUserAsync(reaction.UserId);
+            var member = reaction.Member ?? await textChannel.Guild.GetUserAsync(reaction.UserId);
             if (member == null || member.IsBot || await message.GetOrDownloadAsync() is not { } userMessage)
                 return;
 
@@ -1577,7 +1571,7 @@ public class TicketService : INService
 
             try
             {
-                await userMessage.RemoveReactionAsync(reaction.Emoji, member);
+                await userMessage.RemoveReactionAsync(Emoji.From(reaction.Emoji), member.Id);
             }
             catch (Exception ex)
             {
@@ -1598,12 +1592,12 @@ public class TicketService : INService
         SocketReaction reaction, string key)
     {
         if (message.Author.Id != client.CurrentUser.Id ||
-            !message.Reactions.TryGetValue(reaction.Emoji, out var metadata) || !metadata.IsMe)
+            message.Reactions?.FirstOrDefault(r => r.Emoji.Matches(reaction.Emoji)) is not { Me: true })
             return;
 
         try
         {
-            await message.RemoveReactionAsync(reaction.Emoji, member);
+            await message.RemoveReactionAsync(Emoji.From(reaction.Emoji), member.Id);
         }
         catch (Exception ex)
         {
@@ -1629,7 +1623,7 @@ public class TicketService : INService
 
         try
         {
-            var ticket = await CreateTicketAsync(guild, member, entry.Button, entry.Option);
+            var ticket = await CreateTicketAsync(guild, member.User, entry.Button, entry.Option);
             await SendTemporaryAsync(panelChannel, member,
                 ticket != null
                     ? strings.TicketOpened(guild.Id, $"<#{ticket.ChannelId}>")
@@ -1651,7 +1645,7 @@ public class TicketService : INService
         }
     }
 
-    private async Task SendTemporaryAsync(Channel channel, IUser user, string text, bool isError)
+    private async Task SendTemporaryAsync(Channel channel, SocketGuildMember user, string text, bool isError)
     {
         try
         {
@@ -1694,19 +1688,19 @@ public class TicketService : INService
     ///     Builds the permission overwrites for a new ticket channel: everyone denied, the bot and the creator
     ///     allowed, support roles with full access and viewer roles read only.
     /// </summary>
-    private static async Task<List<PermissionOverwrite>> BuildTicketOverwritesAsync(SocketGuild guild, IUser creator,
-        PanelButton button = null, SelectMenuOption option = null)
+    private static async Task<List<ChannelOverwriteRequest>> BuildTicketOverwritesAsync(SocketGuild guild,
+        IUser creator, PanelButton button = null, SelectMenuOption option = null)
     {
         var supportRoles = button?.SupportRoles ?? option?.SupportRoles ?? [];
         var viewerRoles = button?.ViewerRoles ?? option?.ViewerRoles ?? [];
         var bot = await guild.GetCurrentUserAsync();
 
-        var overwrites = new List<PermissionOverwrite>
+        var overwrites = new List<ChannelOverwriteRequest>
         {
-            new(guild.EveryoneRole.Id, PermissionTarget.Role,
-                new OverwritePermissions(viewChannel: PermValue.Deny)),
-            new(bot.Id, PermissionTarget.User,
-                new OverwritePermissions(
+            ToOverwrite(guild.Id, OverwriteRequestType.Role,
+                OverwritePermissions.InheritAll.Modify(viewChannel: PermValue.Deny)),
+            ToOverwrite(bot.Id, OverwriteRequestType.Member,
+                OverwritePermissions.InheritAll.Modify(
                     viewChannel: PermValue.Allow,
                     sendMessages: PermValue.Allow,
                     readMessageHistory: PermValue.Allow,
@@ -1715,8 +1709,8 @@ public class TicketService : INService
                     manageRoles: PermValue.Allow,
                     attachFiles: PermValue.Allow,
                     embedLinks: PermValue.Allow)),
-            new(creator.Id, PermissionTarget.User,
-                new OverwritePermissions(
+            ToOverwrite(creator.Id, OverwriteRequestType.Member,
+                OverwritePermissions.InheritAll.Modify(
                     viewChannel: PermValue.Allow,
                     sendMessages: PermValue.Allow,
                     readMessageHistory: PermValue.Allow,
@@ -1729,8 +1723,8 @@ public class TicketService : INService
             if (guild.GetRole(roleId) == null)
                 continue;
 
-            overwrites.Add(new PermissionOverwrite(roleId, PermissionTarget.Role,
-                new OverwritePermissions(
+            overwrites.Add(ToOverwrite(roleId, OverwriteRequestType.Role,
+                OverwritePermissions.InheritAll.Modify(
                     viewChannel: PermValue.Allow,
                     sendMessages: PermValue.Allow,
                     readMessageHistory: PermValue.Allow,
@@ -1744,14 +1738,23 @@ public class TicketService : INService
             if (guild.GetRole(roleId) == null || supportRoles.Contains(roleId))
                 continue;
 
-            overwrites.Add(new PermissionOverwrite(roleId, PermissionTarget.Role,
-                new OverwritePermissions(
+            overwrites.Add(ToOverwrite(roleId, OverwriteRequestType.Role,
+                OverwritePermissions.InheritAll.Modify(
                     viewChannel: PermValue.Allow,
                     readMessageHistory: PermValue.Allow,
                     sendMessages: PermValue.Deny)));
         }
 
         return overwrites;
+    }
+
+    private static ChannelOverwriteRequest ToOverwrite(ulong id, OverwriteRequestType type,
+        OverwritePermissions permissions)
+    {
+        return new ChannelOverwriteRequest
+        {
+            Id = id, Type = type, Allow = (ulong)permissions.AllowValue, Deny = (ulong)permissions.DenyValue
+        };
     }
 
     /// <summary>
@@ -1910,9 +1913,9 @@ public class TicketService : INService
     /// <param name="message">The deleted message.</param>
     /// <param name="channel">The channel where the message was deleted.</param>
     private async Task HandleMessageDeleted(Cacheable<Message> message,
-        Cacheable<Channel> channel)
+        Channel channel)
     {
-        if (!message.HasValue || !channel.HasValue)
+        if (!message.HasValue)
             return;
 
         await using var ctx = await dbFactory.CreateConnectionAsync();
@@ -1923,7 +1926,7 @@ public class TicketService : INService
         {
             try
             {
-                var targetChannel = channel.Value as Channel;
+                var targetChannel = channel;
                 if (targetChannel == null)
                 {
                     logger.LogWarning("Cannot recreate panel {PanelId} - channel is not a text channel", panel.Id);
@@ -1956,7 +1959,7 @@ public class TicketService : INService
                         {
                             var errorEmbed = new EmbedBuilder()
                                 .WithTitle(strings.PanelRecreationFailedTitle(guild.Id))
-                                .WithDescription(strings.PanelRecreationFailedDesc(guild.Id, channel.Value.Id))
+                                .WithDescription(strings.PanelRecreationFailedDesc(guild.Id, channel.Id))
                                 .AddField("Panel ID", panel.Id)
                                 .AddField("Error", ex.Message)
                                 .WithColor(Color.Red)
@@ -2628,7 +2631,7 @@ public class TicketService : INService
             return Task.CompletedTask;
         };
 
-        eventHandler.Subscribe("MessageReceived", "TicketService", handler);
+        eventHandler.MessageReceived.Subscribe("TicketService", handler);
         try
         {
             var finished = await Task.WhenAny(answer.Task, Task.Delay(QuestionTimeout)).ConfigureAwait(false);
@@ -2636,7 +2639,7 @@ public class TicketService : INService
         }
         finally
         {
-            eventHandler.Unsubscribe("MessageReceived", "TicketService", handler);
+            eventHandler.MessageReceived.Unsubscribe("TicketService", handler);
         }
     }
 
@@ -2945,11 +2948,22 @@ public class TicketService : INService
 
     private async Task<string> GenerateTranscriptAsync(Channel channel, Ticket ticket)
     {
-        var messages = await channel.GetMessagesAsync(5000).FlattenAsync();
-        var messagesList = messages.Reverse().ToList();
+        var messages = new List<Message>();
+        ulong? before = null;
+        while (messages.Count < 5000)
+        {
+            var page = (await channel.GetMessagesAsync(100, before)).ToList();
+            if (page.Count == 0)
+                break;
+
+            messages.AddRange(page);
+            before = page.Min(m => m.Id);
+        }
+
+        var messagesList = messages.OrderBy(m => m.Id).ToList();
 
         // Get all roles in the guild once
-        var guildRoles = channel.Guild.Roles.ToDictionary(r => r.Id, r => r);
+        var guildRoles = channel.Guild.RoleList.ToDictionary(r => r.Id, r => r);
 
         // Create a cache for user colors to avoid recalculating for the same user
         var userColorCache = new Dictionary<ulong, string>();
@@ -2966,7 +2980,7 @@ public class TicketService : INService
                 .OrderByDescending(role => role.Position)
                 .FirstOrDefault();
 
-            var colorHex = highestRole?.Colors.PrimaryColor.RawValue is uint color ? $"#{color:X6}" : "#7289da";
+            var colorHex = highestRole?.Color is > 0 and var color ? $"#{color:X6}" : "#7289da";
             userColorCache[user.Id] = colorHex;
             return colorHex;
         }
@@ -2976,13 +2990,13 @@ public class TicketService : INService
 
         foreach (var msg in messagesList)
         {
-            var guildUser = msg.Author as SocketGuildMember;
+            var guildUser = channel.Guild.GetUser(msg.Author.Id);
             var colorHex = guildUser != null ? GetUserColor(guildUser) : "#7289da";
 
             html.AppendLine($"""
                              <div class='message'>
                                          <div class='message-info'>
-                                             <img class='avatar' src='{msg.Author.GetAvatarUrl() ?? msg.Author.GetDefaultAvatarUrl()}' />
+                                             <img class='avatar' src='{msg.Author.GetAvatarOrDefaultUrl(160)}' />
                                              <span class='username' style='color: {colorHex}'>{msg.Author.Username}</span>
                                              <span class='timestamp'>{msg.Timestamp.ToString("f")}</span>
                                          </div>
@@ -3069,7 +3083,7 @@ public class TicketService : INService
             // Let chat triggers listening for a ticket being closed respond
             var opener = await guild.GetUserAsync(ticket.CreatorId).ConfigureAwait(false);
             if (opener is not null)
-                await triggerEvents.PublishAsync(guild.Id, CtEventType.TicketClosed, opener).ConfigureAwait(false);
+                await triggerEvents.PublishAsync(guild.Id, CtEventType.TicketClosed, opener.User).ConfigureAwait(false);
 
             collector.Feature("ticket_close", guild.Id);
             return true;
@@ -3122,7 +3136,7 @@ public class TicketService : INService
                 try
                 {
                     var newName = $"closed-{channel.Name}";
-                    await channel.ModifyAsync(c => c.Name = newName);
+                    await channel.ModifyAsync(new UpdateChannelRequest { Name = newName });
                 }
                 catch (Exception ex)
                 {
@@ -3153,29 +3167,23 @@ public class TicketService : INService
                 try
                 {
                     await channel.AddPermissionOverwriteAsync(guild.EveryoneRole,
-                        new OverwritePermissions(
+                        OverwritePermissions.InheritAll.Modify(
                             viewChannel: deleteOnClose ? PermValue.Inherit : PermValue.Deny,
                             sendMessages: PermValue.Deny,
                             sendMessagesInThreads: PermValue.Deny,
-                            createPublicThreads: PermValue.Deny,
-                            createPrivateThreads: PermValue.Deny,
-                            addReactions: PermValue.Deny,
-                            useSlashCommands: PermValue.Deny
+                            addReactions: PermValue.Deny
                         ));
 
-                    foreach (var overwrite in channel.PermissionOverwrites.Where(o => o.TargetType == PermissionTarget.User))
+                    foreach (var overwrite in (channel.PermissionOverwrites ?? []).Where(o => o.Type == PermissionOverwriteType.Member))
                     {
-                        var member = await guild.GetUserAsync(overwrite.TargetId);
+                        var member = await guild.GetUserAsync(overwrite.Id);
                         if (member == null) continue;
-                        var existing = overwrite.Permissions;
+                        var existing = OverwritePermissions.From(overwrite);
                         await channel.AddPermissionOverwriteAsync(member,
                             existing.Modify(
                                 sendMessages: PermValue.Deny,
                                 sendMessagesInThreads: PermValue.Deny,
-                                createPublicThreads: PermValue.Deny,
-                                createPrivateThreads: PermValue.Deny,
-                                addReactions: PermValue.Deny,
-                                useSlashCommands: PermValue.Deny));
+                                addReactions: PermValue.Deny));
                     }
 
                     // Keep staff access
@@ -3186,7 +3194,7 @@ public class TicketService : INService
                         if (role != null)
                         {
                             await channel.AddPermissionOverwriteAsync(role,
-                                new OverwritePermissions(
+                                OverwritePermissions.InheritAll.Modify(
                                     viewChannel: PermValue.Allow,
                                     sendMessages: PermValue.Allow,
                                     readMessageHistory: PermValue.Allow
@@ -3217,7 +3225,7 @@ public class TicketService : INService
                     {
                         try
                         {
-                            await channel.ModifyAsync(c => c.CategoryId = archiveCategoryId.Value);
+                            await channel.ModifyAsync(new UpdateChannelRequest { ParentId = archiveCategoryId.Value });
                         }
                         catch (Exception ex)
                         {
@@ -3348,8 +3356,19 @@ public class TicketService : INService
             if (transcriptChannel == null) return;
 
             // Fetch messages from the ticket channel
-            var messages = await channel.GetMessagesAsync(5000).FlattenAsync();
-            var messagesList = messages.Reverse().ToList();
+            var messages = new List<Message>();
+            ulong? before = null;
+            while (messages.Count < 5000)
+            {
+                var page = (await channel.GetMessagesAsync(100, before)).ToList();
+                if (page.Count == 0)
+                    break;
+    
+                messages.AddRange(page);
+                before = page.Min(m => m.Id);
+            }
+
+            var messagesList = messages.OrderBy(m => m.Id).ToList();
 
             // Convert Discord messages to ChatLogMessageDto format
             var chatLogMessages = messagesList.Select(msg => new ChatLogMessageDto
@@ -3360,29 +3379,29 @@ public class TicketService : INService
                 {
                     Id = msg.Author.Id.ToString(),
                     Username = msg.Author.Username,
-                    AvatarUrl = msg.Author.GetAvatarUrl() ?? msg.Author.GetDefaultAvatarUrl()
+                    AvatarUrl = msg.Author.GetAvatarOrDefaultUrl(160)
                 },
                 Timestamp = msg.Timestamp.UtcDateTime.ToString("O"),
-                Attachments = msg.Attachments.Select(att => new ChatLogAttachmentDto
+                Attachments = (msg.Attachments ?? []).Select(att => new ChatLogAttachmentDto
                 {
-                    Url = att.Url, ProxyUrl = att.ProxyUrl ?? att.Url, Filename = att.Filename, FileSize = att.Size
+                    Url = att.Url, ProxyUrl = att.ProxyUrl ?? att.Url, Filename = att.Filename, FileSize = (int)att.Size
                 }).ToList(),
-                Embeds = msg.Embeds.Select(embed => new ChatLogEmbedDto
+                Embeds = (msg.Embeds ?? []).Select(embed => new ChatLogEmbedDto
                 {
-                    Type = embed.Type.ToString(),
+                    Type = embed.RawType,
                     Title = embed.Title,
                     Description = embed.Description,
                     Url = embed.Url,
                     Thumbnail = embed.Thumbnail?.Url,
-                    Author = embed.Author.HasValue
+                    Author = embed.Author != null
                         ? new ChatLogEmbedAuthorDto
                         {
-                            Name = embed.Author.Value.Name, IconUrl = embed.Author.Value.IconUrl
+                            Name = embed.Author.Name, IconUrl = embed.Author.IconUrl
                         }
                         : null,
-                    Fields = embed.Fields.Select(field => new ChatLogEmbedFieldDto
+                    Fields = (embed.Fields ?? []).Select(field => new ChatLogEmbedFieldDto
                     {
-                        Name = field.Name, Value = field.Value, Inline = field.Inline
+                        Name = field.Name, Value = field.Value, Inline = field.IsInline
                     }).ToList()
                 }).ToList()
             }).ToList();
@@ -4138,7 +4157,7 @@ public class TicketService : INService
                 Level = level,
                 PingStaff = pingStaff,
                 ResponseTime = responseTime,
-                Color = color
+                Color = (int)color
             };
 
             await ctx.InsertWithInt32IdentityAsync(priority);
@@ -4288,7 +4307,7 @@ public class TicketService : INService
                 TagId = id,
                 Name = name,
                 Description = description,
-                Color = color
+                Color = (int)color
             };
 
             await ctx.InsertWithInt32IdentityAsync(tag);
@@ -4719,7 +4738,7 @@ public class TicketService : INService
         {
             try
             {
-                await channel.ModifyAsync(c => c.CategoryId = targetCategoryId);
+                await channel.ModifyAsync(new UpdateChannelRequest { ParentId = targetCategoryId });
 
                 // Update the ticket's last activity if it exists
                 var ticket = guildTickets.FirstOrDefault(t => t.ChannelId == channel.Id);
@@ -4767,7 +4786,7 @@ public class TicketService : INService
                 var channel = await guild.GetTextChannelAsync(ticket.ChannelId);
                 if (channel == null) continue;
 
-                var permissions = new OverwritePermissions(
+                var permissions = OverwritePermissions.InheritAll.Modify(
                     viewChannel: PermValue.Allow,
                     readMessageHistory: PermValue.Allow,
                     sendMessages: viewOnly ? PermValue.Deny : PermValue.Allow,

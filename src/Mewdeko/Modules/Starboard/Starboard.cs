@@ -458,7 +458,7 @@ public class Starboard(GuildSettingsService guildSettings, InteractiveService in
         var eb = new EmbedBuilder()
             .WithOkColor()
             .WithTitle(Strings.StarboardUserStatistics(ctx.Guild.Id, user.Username))
-            .WithThumbnailUrl(user.GetAvatarUrl())
+            .WithThumbnailUrl(user.GetAvatarUrl(160))
             .AddField(Strings.MessagesStarred(ctx.Guild.Id), stats.MessagesStarred, true)
             .AddField(Strings.StarsReceived(ctx.Guild.Id), stats.StarsReceived, true)
             .AddField(Strings.StarsGiven(ctx.Guild.Id), stats.StarsGiven, true);
