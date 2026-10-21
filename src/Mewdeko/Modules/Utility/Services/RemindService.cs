@@ -19,6 +19,7 @@ public partial class RemindService : INService
     private readonly ILogger<RemindService> logger;
 
     private readonly Regex regex = MyRegex();
+    private readonly ConcurrentDictionary<int, ulong> reminderServers = new();
     private readonly ConcurrentDictionary<int, Timer> reminderTimers;
     private readonly GeneratedBotStrings strings;
     private readonly GuildTimezoneService tz;
@@ -79,7 +80,29 @@ public partial class RemindService : INService
         var timer = new Timer(async _ => await ExecuteReminderAsync(reminder), null, timeToGo,
             Timeout.InfiniteTimeSpan);
         reminderTimers[reminder.Id] = timer;
+        reminderServers[reminder.Id] = reminder.ServerId;
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    ///     Stops the timers of a guild's reminders and schedules them again from the database, without scheduling any
+    ///     reminder twice.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild whose reminders should be rescheduled.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        foreach (var id in reminderServers.Where(x => x.Value == guildId).Select(x => x.Key).ToList())
+        {
+            reminderServers.TryRemove(id, out _);
+            if (reminderTimers.TryRemove(id, out var old))
+                await old.DisposeAsync();
+        }
+
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var reminders = await db.Reminders.Where(x => x.ServerId == guildId).ToListAsync();
+        foreach (var reminder in reminders)
+            await ScheduleReminder(reminder);
     }
 
     private async Task<List<Reminder>> GetRemindersAsync()
@@ -161,6 +184,7 @@ public partial class RemindService : INService
     /// <param name="reminder">The reminder to be removed.</param>
     private async Task RemoveReminder(Reminder reminder)
     {
+        reminderServers.TryRemove(reminder.Id, out _);
         if (reminderTimers.TryRemove(reminder.Id, out var timer))
         {
             await timer.DisposeAsync();

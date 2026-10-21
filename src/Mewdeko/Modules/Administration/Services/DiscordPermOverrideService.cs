@@ -73,6 +73,23 @@ public class DiscordPermOverrideService : INService, ILateBlocker
     }
 
     /// <summary>
+    ///     Drops the cached permission overrides of a guild and reloads them from the database.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var rows = await db.DiscordPermOverrides.Where(x => x.GuildId == guildId).ToListAsync().ConfigureAwait(false);
+
+        foreach (var key in overrides.Keys.Where(k => k.Item1 == guildId).ToList())
+            overrides.TryRemove(key, out _);
+
+        foreach (var row in rows)
+            overrides[(guildId, row.Command)] = row;
+    }
+
+    /// <summary>
     ///     Tries to get the permission overrides for a specific command in a guild.
     /// </summary>
     /// <param name="guildId">The ID of the guild.</param>

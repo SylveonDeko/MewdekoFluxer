@@ -542,6 +542,30 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
     }
 
     /// <summary>
+    ///     Stops the interval timers of a guild's auto commands and schedules them again from the database.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild whose auto commands should be rescheduled.</param>
+    /// <remarks>Startup commands (interval of 0) are not executed again.</remarks>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        if (autoCommands.TryRemove(guildId, out var old))
+        {
+            foreach (var timer in old.Values)
+                timer.Change(Timeout.Infinite, Timeout.Infinite);
+        }
+
+        await using var dbContext = await dbFactory.CreateConnectionAsync();
+        var commands = await dbContext.AutoCommands
+            .Where(x => x.GuildId == guildId && x.Interval >= 5)
+            .ToListAsync();
+
+        if (commands.Count == 0)
+            return;
+
+        autoCommands[guildId] = commands.ToDictionary(x => x.Id, TimerFromAutoCommand).ToConcurrent();
+    }
+
+    /// <summary>
     ///     Adds a new auto command to the database and schedules it if necessary.
     /// </summary>
     /// <param name="cmd">The auto command to be added.</param>

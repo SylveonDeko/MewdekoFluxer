@@ -80,6 +80,27 @@ public class CountingService : INService, IReadyExecutor
     }
 
     /// <summary>
+    ///     Drops the cached counting channels and configs of a guild so they load again from the database.
+    /// </summary>
+    /// <param name="guildId">The guild identifier.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+
+        var channelIds = await db.CountingChannels
+            .Where(x => x.GuildId == guildId)
+            .Select(x => x.ChannelId)
+            .ToListAsync();
+
+        foreach (var channelId in channelIds)
+        {
+            cache.Remove(string.Format(COUNTING_CHANNEL_CACHE_KEY, channelId));
+            cache.Remove(string.Format(COUNTING_CONFIG_CACHE_KEY, channelId));
+        }
+    }
+
+    /// <summary>
     /// Gets counting channel configuration, with caching.
     /// </summary>
     public async Task<CountingChannel?> GetCountingChannelAsync(ulong channelId)

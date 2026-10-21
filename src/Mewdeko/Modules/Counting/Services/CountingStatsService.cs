@@ -391,6 +391,35 @@ public class CountingStatsService : INService
     }
 
     /// <summary>
+    ///     Drops the cached leaderboards and user statistics of every counting channel in a guild.
+    /// </summary>
+    /// <param name="guildId">The guild identifier.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+
+        var channelIds = await db.CountingChannels
+            .Where(x => x.GuildId == guildId)
+            .Select(x => x.ChannelId)
+            .ToListAsync();
+
+        var users = await db.CountingStats
+            .Where(x => channelIds.Contains(x.ChannelId))
+            .Select(x => new
+            {
+                x.ChannelId, x.UserId
+            })
+            .ToListAsync();
+
+        foreach (var channelId in channelIds)
+            await ClearChannelCacheAsync(channelId);
+
+        foreach (var user in users)
+            cache.Remove(string.Format(USER_STATS_CACHE_KEY, user.ChannelId, user.UserId));
+    }
+
+    /// <summary>
     ///     Clears all cache entries for a specific channel.
     /// </summary>
     public Task ClearChannelCacheAsync(ulong channelId)

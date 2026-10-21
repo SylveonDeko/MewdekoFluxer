@@ -1166,6 +1166,18 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
         }
     }
 
+    /// <summary>
+    ///     Drops the cached stat channels and stat channel settings of a guild so they load again from the database.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public Task ReloadGuildAsync(ulong guildId)
+    {
+        InvalidateCache(guildId);
+        cache.Remove(string.Format(SettingsCacheKey, guildId));
+        return Task.CompletedTask;
+    }
+
     private void InvalidateCache(ulong guildId)
     {
         cache.Remove(string.Format(CacheKey, guildId));

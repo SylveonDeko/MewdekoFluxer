@@ -163,6 +163,19 @@ public class RepCommandRequirementsService : INService, ILateBlocker
     }
 
     /// <summary>
+    ///     Drops the cached command requirements of a guild so they load again from the database.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    public Task ReloadGuildAsync(ulong guildId)
+    {
+        foreach (var key in commandRequirementsCache.Keys.Where(k => k.guildId == guildId).ToList())
+            commandRequirementsCache.TryRemove(key, out _);
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
     ///     Removes a command requirement.
     /// </summary>
     /// <param name="guildId">The guild ID.</param>

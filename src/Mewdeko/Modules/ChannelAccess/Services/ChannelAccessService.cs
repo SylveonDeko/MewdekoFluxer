@@ -84,6 +84,23 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
             TimeSpan.FromMinutes(1));
     }
 
+    /// <summary>
+    ///     Tracks the panel messages of a guild's channel access configs.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var panelIds = await db.ChannelAccessConfigs
+            .Where(x => x.GuildId == guildId && x.PanelMessageId != null)
+            .Select(x => x.PanelMessageId!.Value)
+            .ToListAsync();
+
+        foreach (var id in panelIds)
+            trackedMessages.TryAdd(id, 0);
+    }
+
     #region Helpers
 
     private async Task LogAsync(ChannelAccessConfig config, string message)

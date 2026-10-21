@@ -385,6 +385,35 @@ public class AfkService : INService, IReadyExecutor, IDisposable
         return await guildSettings.GetGuildConfig(guildId);
     }
 
+    /// <summary>
+    ///     Drops the cached AFK entries and timers of a guild and loads them again from the database, scheduling timed
+    ///     AFKs that are still in the future.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        foreach (var key in afkTimers.Keys.Where(k => k.GuildId == guildId).ToList())
+        {
+            await cache.RemoveAsync($"{key.GuildId}:{key.UserId}");
+            if (afkTimers.TryRemove(key, out var timer))
+                await timer.DisposeAsync();
+        }
+
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var userIds = await db.Afks
+            .Where(a => a.GuildId == guildId)
+            .Select(a => a.UserId)
+            .Distinct()
+            .ToListAsync().ConfigureAwait(false);
+
+        foreach (var userId in userIds)
+            await cache.RemoveAsync($"{guildId}:{userId}");
+
+        guildDataLoaded.TryRemove(guildId, out _);
+        await EnsureGuildAfksLoaded(guildId);
+    }
+
     private async Task EnsureGuildAfksLoaded(ulong guildId)
     {
         if (guildDataLoaded.ContainsKey(guildId))

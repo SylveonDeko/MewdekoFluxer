@@ -108,6 +108,17 @@ public class WordOfTheDayService : INService, IDisposable
     }
 
     /// <summary>
+    ///     Drops a guild's cached configuration so it loads again from the database.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public Task ReloadGuildAsync(ulong guildId)
+    {
+        configCache.TryRemove(guildId, out _);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
     ///     Applies an update to a guild's configuration and persists it.
     /// </summary>
     /// <param name="guildId">The guild ID.</param>

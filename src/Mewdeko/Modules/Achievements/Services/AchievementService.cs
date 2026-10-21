@@ -189,6 +189,40 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    ///     Drops a server's cached settings, catalog, card designs and member unlock states and loads the settings
+    ///     again from the database.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <returns>A task that completes when the settings are loaded.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        await writeLock.WaitAsync();
+        try
+        {
+            await using var db = await dbFactory.CreateConnectionAsync();
+            var row = await db.AchievementSettings.FirstOrDefaultAsync(x => x.GuildId == guildId);
+            switch (row)
+            {
+                case null:
+                    settingsCache.TryRemove(guildId, out _);
+                    break;
+                default:
+                    settingsCache[guildId] = Parse(row);
+                    break;
+            }
+
+            catalogCache.TryRemove(guildId, out _);
+            cardCache.TryRemove(guildId, out _);
+            foreach (var key in unlockCache.Keys.Where(k => k.GuildId == guildId).ToList())
+                unlockCache.TryRemove(key, out _);
+        }
+        finally
+        {
+            writeLock.Release();
+        }
+    }
+
     #region Settings
 
     /// <summary>

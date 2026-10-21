@@ -229,7 +229,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     ///     Initializes the anti-raid, anti-spam, and anti-alt settings for a guild.
     /// </summary>
     /// <param name="guildId">The ID of the guild to initialize the settings for.</param>
-    private async Task Initialize(ulong guildId)
+    public async Task Initialize(ulong guildId)
     {
         await using var db = await dbFactory.CreateConnectionAsync();
 

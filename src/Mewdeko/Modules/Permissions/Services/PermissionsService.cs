@@ -298,6 +298,17 @@ public class PermissionService : ILateBlocker, INService, IReadyExecutor
     }
 
     /// <summary>
+    ///     Drops the cached permissions of a guild and reloads them from the database.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild.</param>
+    /// <remarks>Default permissions are inserted only when the database holds no rows for the guild.</remarks>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        Cache.TryRemove(guildId, out _);
+        await GetCacheFor(guildId);
+    }
+
+    /// <summary>
     ///     Updates the in-memory cache with the latest permissions from the database for a guild.
     /// </summary>
     /// <param name="guildId">The ID of the guild.</param>

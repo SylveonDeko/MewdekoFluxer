@@ -467,6 +467,17 @@ public class HighlightsService : INService, IReadyExecutor, IUnloadableService
         ).ConfigureAwait(false);
     }
 
+    /// <summary>
+    ///     Drops the cached highlights and highlight settings of a guild so they load again from the database.
+    /// </summary>
+    /// <param name="guildId">The guild identifier.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        await cache.RemoveAsync($"highlights_{guildId}");
+        await cache.RemoveAsync($"highlightSettings_{guildId}");
+    }
+
     private async Task<List<Highlight?>> GetForGuild(ulong guildId)
     {
         return await cache.GetOrSetAsync($"highlights_{guildId}", async _ =>

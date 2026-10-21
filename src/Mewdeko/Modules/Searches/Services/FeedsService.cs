@@ -319,6 +319,38 @@ public class FeedsService : INService
     }
 
     /// <summary>
+    ///     Replaces the cached feed subscriptions of a guild with the ones in the database.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var guildFeeds = await db.FeedSubs.Where(x => x.GuildId == guildId).ToListAsync();
+
+        foreach (var set in subs.Values)
+        {
+            lock (set)
+            {
+                set.RemoveWhere(x => x.GuildId == guildId);
+            }
+        }
+
+        foreach (var feed in guildFeeds)
+        {
+            subs.AddOrUpdate(feed.Url.ToLower(), [feed], (_, old) =>
+            {
+                lock (old)
+                {
+                    old.Add(feed);
+                }
+
+                return old;
+            });
+        }
+    }
+
+    /// <summary>
     ///     Adds a new RSS feed subscription to a guild.
     /// </summary>
     /// <param name="guildId">The ID of the guild.</param>

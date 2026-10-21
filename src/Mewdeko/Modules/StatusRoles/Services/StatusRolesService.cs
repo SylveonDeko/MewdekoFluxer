@@ -62,6 +62,26 @@ public class StatusRolesService : INService
         logger.LogInformation("StatusRoles cached");
     }
 
+    /// <summary>
+    ///     Drops the cached status roles of a guild and reloads them from the database.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        await using var dbContext = await dbFactory.CreateConnectionAsync();
+        var fresh = await dbContext.StatusRoles.Where(x => x.GuildId == guildId).ToListAsync();
+
+        guildStatusRoles.TryRemove(guildId, out _);
+        if (fresh.Count > 0)
+            guildStatusRoles[guildId] = fresh.ToHashSet();
+
+        var statusRoles = await GetStatusRolesAsync();
+        statusRoles.RemoveAll(x => x.GuildId == guildId);
+        statusRoles.AddRange(fresh);
+        await cache.SetAsync("statusRoles", statusRoles);
+    }
+
     private async Task<List<StatusRole>> GetStatusRolesAsync()
     {
         var statusRoles = await cache.GetOrDefaultAsync<List<StatusRole>>("statusRoles");

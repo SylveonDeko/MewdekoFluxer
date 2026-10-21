@@ -114,6 +114,16 @@ public class XpRewardManager : INService
         }
     }
 
+    /// <summary>
+    ///     Drops the cached role and currency rewards of a guild so they load again from the database.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        await cacheManager.GetRedisDatabase().KeyDeleteAsync([RoleRewardsKey(guildId), CurrencyRewardsKey(guildId)]);
+    }
+
     private static readonly TimeSpan RewardCacheTtl = TimeSpan.FromHours(1);
 
     private static string RoleRewardsKey(ulong guildId)

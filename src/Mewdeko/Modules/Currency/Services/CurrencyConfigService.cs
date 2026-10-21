@@ -61,6 +61,17 @@ public class CurrencyConfigService : INService
     }
 
     /// <summary>
+    ///     Drops a guild's cached economy configuration and loads it again from the database.
+    /// </summary>
+    /// <param name="guildId">The guild to reload.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        cache.TryRemove(guildId, out _);
+        await GetConfigAsync(guildId);
+    }
+
+    /// <summary>
     ///     Applies a change to a guild's economy configuration and persists it.
     /// </summary>
     /// <param name="guildId">The guild to update.</param>

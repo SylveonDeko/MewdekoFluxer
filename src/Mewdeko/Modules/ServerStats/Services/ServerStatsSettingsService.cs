@@ -64,6 +64,35 @@ public class ServerStatsSettingsService : INService, IReadyExecutor
         }
     }
 
+    /// <summary>
+    ///     Drops a guild's cached stats settings, exclusions and activity filters and reloads them from the database.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+
+        settings.TryRemove(guildId, out _);
+        excludedChannels.TryRemove(guildId, out _);
+        excludedRoles.TryRemove(guildId, out _);
+        excludedUsers.TryRemove(guildId, out _);
+        activityFilters.TryRemove(guildId, out _);
+
+        var row = await db.ServerStatsSettings.FirstOrDefaultAsync(x => x.GuildId == guildId);
+        if (row != null)
+            settings[guildId] = row;
+
+        foreach (var exclusion in await db.ServerStatsExclusions.Where(x => x.GuildId == guildId).ToListAsync())
+            Bucket((StatsExclusionKind)exclusion.Kind).GetOrAdd(guildId, _ => []).Add(exclusion.TargetId);
+
+        foreach (var filter in await db.ActivityFilters.Where(x => x.GuildId == guildId).ToListAsync())
+        {
+            activityFilters.GetOrAdd(guildId, _ => new HashSet<string>(StringComparer.OrdinalIgnoreCase))
+                .Add(filter.Name);
+        }
+    }
+
     private ConcurrentDictionary<ulong, HashSet<ulong>> Bucket(StatsExclusionKind kind)
     {
         return kind switch

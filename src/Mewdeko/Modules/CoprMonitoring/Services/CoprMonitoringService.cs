@@ -154,6 +154,33 @@ public class CoprMonitoringService : INService, IReadyExecutor, IDisposable
     }
 
     /// <summary>
+    ///     Replaces a guild's cached COPR monitors with the ones in the database.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var guildMonitors = await db.CoprMonitors.Where(x => x.GuildId == guildId).ToListAsync();
+
+        lock (monitorsLock)
+        {
+            foreach (var list in monitors.Values)
+                list.RemoveAll(x => x.GuildId == guildId);
+
+            foreach (var monitor in guildMonitors)
+            {
+                var key = (monitor.CoprOwner, monitor.CoprProject);
+
+                if (!monitors.ContainsKey(key))
+                    monitors[key] = new List<CoprMonitor>();
+
+                monitors[key].Add(monitor);
+            }
+        }
+    }
+
+    /// <summary>
     ///     Adds a new COPR monitor to the database and in-memory cache.
     /// </summary>
     /// <param name="guildId">The ID of the guild.</param>

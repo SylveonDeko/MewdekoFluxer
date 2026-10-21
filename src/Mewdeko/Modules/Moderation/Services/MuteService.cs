@@ -535,6 +535,41 @@ public class MuteService : INService, IReadyExecutor, IDisposable
     }
 
     /// <summary>
+    ///     Reloads the mute role name and the sticky muted users of a guild from the database.
+    /// </summary>
+    /// <param name="guildId">The id of the guild to reload</param>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        var config = await guildSettings.GetGuildConfig(guildId, true);
+        switch (string.IsNullOrWhiteSpace(config?.MuteRoleName))
+        {
+            case true:
+                GuildMuteRoles.TryRemove(guildId, out _);
+                break;
+            default:
+                GuildMuteRoles[guildId] = config.MuteRoleName;
+                break;
+        }
+
+        await using var dbContext = await dbFactory.CreateConnectionAsync();
+        var mutedIds = await dbContext.MutedUserIds
+            .Where(x => x.GuildId == guildId)
+            .Select(x => x.UserId)
+            .Distinct()
+            .ToListAsync();
+
+        switch (mutedIds.Count)
+        {
+            case 0:
+                MutedUsers.TryRemove(guildId, out _);
+                break;
+            default:
+                MutedUsers[guildId] = new ConcurrentHashSet<ulong>(mutedIds);
+                break;
+        }
+    }
+
+    /// <summary>
     ///     Sets the mute role for a guild.
     /// </summary>
     /// <param name="guildId">The id of the guild to set the role in</param>

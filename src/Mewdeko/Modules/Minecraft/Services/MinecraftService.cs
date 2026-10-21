@@ -1363,6 +1363,26 @@ public class MinecraftService(
     }
 
     /// <summary>
+    ///     Drops the caches of a guild's Minecraft servers and restarts the watch timers of the ones being watched.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var servers = await db.MinecraftServers.Where(s => s.GuildId == guildId).ToListAsync();
+
+        InvalidateCache(guildId);
+        foreach (var server in servers)
+        {
+            InvalidateCache(guildId, server.Id);
+            StopWatchTimer(server.Id);
+            if (server.WatchChannelId != null)
+                StartWatchTimer(server);
+        }
+    }
+
+    /// <summary>
     ///     Invalidates all caches for a guild's Minecraft servers.
     /// </summary>
     public void InvalidateCache(ulong guildId, int serverId = 0)

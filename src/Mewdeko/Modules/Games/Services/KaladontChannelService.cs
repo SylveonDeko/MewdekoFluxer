@@ -82,6 +82,30 @@ public class KaladontChannelService : INService, IReadyExecutor
     }
 
     /// <summary>
+    ///     Stops the persistent games of a guild's Kaladont channels and starts them again from the database.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var channels = await db.GetTable<KaladontChannel>()
+            .Where(x => x.GuildId == guildId)
+            .ToListAsync();
+
+        foreach (var channel in channels)
+        {
+            if (persistentGames.TryRemove(channel.ChannelId, out var oldGame))
+                oldGame.Dispose();
+
+            cache.Remove(string.Format(CHANNEL_CACHE_KEY, channel.ChannelId));
+
+            if (channel.IsActive)
+                await StartPersistentGame(channel);
+        }
+    }
+
+    /// <summary>
     ///     Sets up a new persistent Kaladont channel. If already set up, replaces the configuration.
     /// </summary>
     public async Task<(bool Success, string StartingWord)> SetupChannel(ulong guildId, ulong channelId, string language,

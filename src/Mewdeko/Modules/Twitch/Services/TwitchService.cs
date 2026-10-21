@@ -142,6 +142,23 @@ public class TwitchService : INService, IReadyExecutor
     }
 
     /// <summary>
+    ///     Drops the cached Twitch channel mapping and snapshot of a guild and reloads them from the database.
+    /// </summary>
+    /// <param name="guildId">The Discord guild ID.</param>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        foreach (var channel in channelToGuild.Where(x => x.Value == guildId).Select(x => x.Key).ToList())
+            channelToGuild.TryRemove(channel, out _);
+
+        await using var conn = await dbFactory.CreateConnectionAsync();
+        var config = await conn.TwitchGuildConfigs.FirstOrDefaultAsync(c => c.GuildId == guildId);
+        if (config is { Enabled: true })
+            channelToGuild[config.TwitchChannel] = guildId;
+
+        InvalidateChannelSnapshot(guildId);
+    }
+
+    /// <summary>
     ///     Enables a Twitch channel for the given guild and persists the config to the database.
     /// </summary>
     /// <param name="guildId">The Discord guild ID that owns this config.</param>

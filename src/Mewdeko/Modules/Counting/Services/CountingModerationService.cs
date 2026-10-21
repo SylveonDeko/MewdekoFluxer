@@ -95,6 +95,37 @@ public class CountingModerationService : INService
     }
 
     /// <summary>
+    ///     Drops the cached moderation defaults, channel moderation configs and user bans of a guild.
+    /// </summary>
+    /// <param name="guildId">The guild identifier.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+
+        var channelIds = await db.CountingChannels
+            .Where(x => x.GuildId == guildId)
+            .Select(x => x.ChannelId)
+            .ToListAsync();
+
+        var bans = await db.CountingUserBans
+            .Where(x => channelIds.Contains(x.ChannelId))
+            .Select(x => new
+            {
+                x.ChannelId, x.UserId
+            })
+            .ToListAsync();
+
+        cache.Remove(string.Format(DefaultConfigCacheKey, guildId));
+
+        foreach (var channelId in channelIds)
+            cache.Remove(string.Format(ModerationConfigCacheKey, channelId));
+
+        foreach (var ban in bans)
+            cache.Remove(string.Format(UserBanCacheKey, ban.ChannelId, ban.UserId));
+    }
+
+    /// <summary>
     /// Checks if a user is banned from counting in a specific channel.
     /// </summary>
     public async Task<bool> IsUserBannedAsync(ulong channelId, ulong userId)

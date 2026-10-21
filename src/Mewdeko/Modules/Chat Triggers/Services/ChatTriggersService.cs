@@ -1577,6 +1577,33 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
 
 
     /// <summary>
+    ///     Reloads the chat triggers of a single guild from the database on this instance.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        await using var dbContext = await dbFactory.CreateConnectionAsync();
+        var triggers = await dbContext.ChatTriggers
+            .Where(x => x.GuildId == guildId)
+            .ToArrayAsync().ConfigureAwait(false);
+
+        switch (triggers.Length)
+        {
+            case 0:
+                newGuildReactions.TryRemove(guildId, out _);
+                break;
+            default:
+                newGuildReactions[guildId] = triggers.Select(x =>
+                {
+                    x.Trigger = x.Trigger?.Replace(MentionPh, client.CurrentUser.Mention) ?? "";
+                    return x;
+                }).ToArray();
+                break;
+        }
+    }
+
+    /// <summary>
     ///     Triggers the reloading of chat triggers.
     /// </summary>
     /// <returns>A task representing the asynchronous operation.</returns>

@@ -213,6 +213,20 @@ public class InviteCountService : INService, IReadyExecutor
         return settings;
     }
 
+    /// <summary>
+    ///     Drops the cached invite count settings of a guild, loads them again from the database and refreshes the
+    ///     tracked invites when tracking is enabled.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        inviteCountSettings.TryRemove(guildId, out _);
+        var settings = await GetInviteCountSettingsAsync(guildId);
+        if (settings.IsEnabled && client.GetGuild(guildId) is { } guild)
+            _ = UpdateGuildInvites(guild);
+    }
+
     private async Task<InviteCountSetting> UpdateInviteCountSettingsAsync(ulong guildId,
         Action<InviteCountSetting> updateAction)
     {

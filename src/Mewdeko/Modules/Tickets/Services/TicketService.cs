@@ -1494,6 +1494,24 @@ public class TicketService : INService
     }
 
     /// <summary>
+    ///     Sends a panel's message again in its channel when the old message is gone, and saves the new message id.
+    /// </summary>
+    /// <param name="panel">The panel to send.</param>
+    /// <returns>Whether the panel was sent.</returns>
+    public async Task<bool> RepostPanelAsync(TicketPanel panel)
+    {
+        var guild = client.GetGuild(panel.GuildId);
+        if (guild is null || await guild.GetChannelAsync(panel.ChannelId) is not Channel { IsTextable: true } channel)
+            return false;
+
+        var message = await PostPanelAsync(panel, channel);
+        await using var ctx = await dbFactory.CreateConnectionAsync();
+        await ctx.TicketPanels.Where(x => x.Id == panel.Id).Set(x => x.MessageId, message.Id).UpdateAsync();
+        panel.MessageId = message.Id;
+        return true;
+    }
+
+    /// <summary>
     ///     Rewrites a panel's message and reactions to match its current buttons and select menu options.
     /// </summary>
     /// <param name="panel">The panel whose message to refresh.</param>

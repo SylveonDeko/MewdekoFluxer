@@ -377,6 +377,51 @@ public class MessageCountService : INService, IDisposable
     }
 
     /// <summary>
+    ///     Aligns the in-memory message count state of a guild with the database without changing the stored toggle, and
+    ///     replaces the cached counts with the stored ones.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild to reload message counting for</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+
+        var guildConfig = await db.GuildConfigs
+            .Where(x => x.GuildId == guildId)
+            .Select(x => new
+            {
+                x.UseMessageCount, x.MinMessageLength
+            })
+            .FirstOrDefaultAsync();
+
+        var stored = await db.MessageCounts
+            .LoadWithAsTable(x => x.MessageTimestamps)
+            .Where(x => x.GuildId == guildId)
+            .ToListAsync();
+
+        foreach (var count in stored)
+            cache.Remove($"msgcount:{count.GuildId}:{count.ChannelId}:{count.UserId}");
+
+        switch (guildConfig is { UseMessageCount: true })
+        {
+            case true:
+                countGuilds.Add(guildId);
+                minCounts[guildId] = guildConfig.MinMessageLength;
+                foreach (var count in stored)
+                {
+                    var key = $"msgcount:{count.GuildId}:{count.ChannelId}:{count.UserId}";
+                    cache.Set(key, count, TimeSpan.FromMinutes(CacheMinutes));
+                }
+
+                break;
+            default:
+                countGuilds.Remove(guildId);
+                minCounts.TryRemove(guildId, out _);
+                break;
+        }
+    }
+
+    /// <summary>
     ///     Toggles message counting for a guild. If enabled, starts tracking messages.
     ///     If disabled, optionally cleans up existing message data.
     /// </summary>

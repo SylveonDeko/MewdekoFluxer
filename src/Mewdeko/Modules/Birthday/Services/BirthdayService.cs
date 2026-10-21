@@ -81,6 +81,17 @@ public class BirthdayService : INService, IDisposable
     #region Helper Methods
 
     /// <summary>
+    ///     Drops the cached birthday configuration of a guild so it loads again from the database.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public Task ReloadGuildAsync(ulong guildId)
+    {
+        InvalidateConfigCache(guildId);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
     ///     Invalidates the cached configuration for a guild.
     /// </summary>
     /// <param name="guildId">The guild ID to invalidate cache for.</param>

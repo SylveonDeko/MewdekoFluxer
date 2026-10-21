@@ -65,6 +65,24 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     }
 
     /// <summary>
+    ///     Replaces a guild's cached starboard configurations with the ones in the database and drops cached posts
+    ///     that belonged to configurations that no longer exist.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        await using var dbContext = await dbFactory.CreateConnectionAsync();
+        var fresh = await dbContext.Starboards.Where(x => x.GuildId == guildId).ToListAsync();
+        var freshIds = fresh.Select(x => x.Id).ToHashSet();
+        var staleIds = starboardConfigs.Where(x => x.GuildId == guildId && !freshIds.Contains(x.Id))
+            .Select(x => x.Id).ToHashSet();
+
+        starboardConfigs = starboardConfigs.Where(x => x.GuildId != guildId).Concat(fresh).ToList();
+        starboardPosts = starboardPosts.Where(x => !staleIds.Contains(x.StarboardConfigId)).ToList();
+    }
+
+    /// <summary>
     ///     Unloads the service and unsubscribes from events.
     /// </summary>
     public Task Unload()

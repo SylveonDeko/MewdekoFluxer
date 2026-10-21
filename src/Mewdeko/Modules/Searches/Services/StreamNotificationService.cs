@@ -333,9 +333,33 @@ public class StreamNotificationService : IReadyExecutor, INService
                string.Equals(twitchConfig.TwitchChannel, key.Name, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    ///     Drops the tracked streams and offline notification flag of a guild and reloads them from the database.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        foreach (var guildMap in shardTrackedStreams.Values)
+        {
+            if (!guildMap.TryRemove(guildId, out var old))
+                continue;
+
+            foreach (var followedStream in old.ToList())
+                await UntrackStream(followedStream);
+        }
+
+        OfflineNotificationServers.RemoveAll(x => x == guildId);
+        await LoadGuildAsync(guildId);
+    }
+
     private async Task ClientOnJoinedGuild(SocketGuild guild)
     {
-        var guildId = guild.Id;
+        await LoadGuildAsync(guild.Id);
+    }
+
+    private async Task LoadGuildAsync(ulong guildId)
+    {
         await using var db = await dbFactory.CreateConnectionAsync();
 
         // Get guild config for notification setting

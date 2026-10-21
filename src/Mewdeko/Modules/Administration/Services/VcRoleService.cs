@@ -143,6 +143,22 @@ public class VcRoleService : INService, IReadyExecutor
     }
 
     /// <summary>
+    ///     Drops the cached voice channel roles of a guild and reloads them from the database.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        VcRoles.TryRemove(guildId, out _);
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var conf = await db.GetTable<VcRole>().Where(x => x.GuildId == guildId).ToListAsync()
+            .ConfigureAwait(false);
+        if (conf.Count == 0)
+            return;
+        await InitializeVcRole(conf);
+    }
+
+    /// <summary>
     ///     Event handler for when the bot leaves a guild. Removes voice channel roles for the guild.
     /// </summary>
     /// <param name="arg">The guild.</param>

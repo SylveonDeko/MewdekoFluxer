@@ -2053,6 +2053,42 @@ public class LogCommandService(
     }
 
     /// <summary>
+    ///     Drops the cached log settings and ignored channels of a guild and reloads them from the database.
+    /// </summary>
+    /// <param name="guildId">The guild identifier.</param>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+
+        var settings = await db.LoggingV2.FirstOrDefaultAsync(x => x.GuildId == guildId).ConfigureAwait(false);
+        switch (settings)
+        {
+            case null:
+                GuildLogSettings?.TryRemove(guildId, out _);
+                break;
+            default:
+                GuildLogSettings ??= new ConcurrentDictionary<ulong, LoggingV2>();
+                GuildLogSettings[guildId] = settings;
+                break;
+        }
+
+        var ignored = await db.GetTable<LogIgnoredChannel>()
+            .Where(x => x.GuildId == guildId)
+            .Select(x => x.ChannelId)
+            .ToListAsync().ConfigureAwait(false);
+
+        switch (ignored.Count)
+        {
+            case 0:
+                ignoredChannelsCache.TryRemove(guildId, out _);
+                break;
+            default:
+                ignoredChannelsCache[guildId] = ignored.ToHashSet();
+                break;
+        }
+    }
+
+    /// <summary>
     ///     Updates the ignored channels for a guild and fires events
     /// </summary>
     /// <param name="guildId">The guild identifier.</param>

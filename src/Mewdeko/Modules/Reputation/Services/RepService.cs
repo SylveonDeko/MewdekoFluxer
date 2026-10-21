@@ -102,6 +102,33 @@ public class RepService : INService, IReadyExecutor, IUnloadableService
     }
 
     /// <summary>
+    ///     Drops the cached reputation configuration of a guild and reloads it from the database.
+    /// </summary>
+    /// <param name="guildId">The guild identifier.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+
+        configCache.TryRemove(guildId, out _);
+        var config = await db.RepConfigs.FirstOrDefaultAsync(x => x.GuildId == guildId);
+        if (config != null)
+            configCache[guildId] = config;
+
+        foreach (var key in channelConfigCache.Keys.Where(k => k.Item1 == guildId).ToList())
+            channelConfigCache.TryRemove(key, out _);
+
+        var channelConfigs = await db.RepChannelConfigs.Where(x => x.GuildId == guildId).ToListAsync();
+        foreach (var channelConfig in channelConfigs)
+            channelConfigCache[(guildId, channelConfig.ChannelId)] = channelConfig;
+
+        reactionConfigCache.TryRemove(guildId, out _);
+        var reactionConfigs = await db.RepReactionConfigs.Where(x => x.GuildId == guildId).ToListAsync();
+        if (reactionConfigs.Count > 0)
+            reactionConfigCache[guildId] = reactionConfigs;
+    }
+
+    /// <summary>
     ///     Unloads the service and clears caches.
     /// </summary>
     /// <returns>A task that represents the asynchronous operation.</returns>

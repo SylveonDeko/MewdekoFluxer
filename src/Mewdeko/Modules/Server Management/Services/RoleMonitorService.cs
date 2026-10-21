@@ -60,64 +60,91 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// </summary>
     public async Task OnReadyAsync()
     {
+        foreach (var guild in client.Guilds)
+        {
+            await LoadGuildAsync(guild.Id);
+        }
+    }
+
+    /// <summary>
+    ///     Drops the Redis keys and cached settings of a guild and reloads them from the database.
+    /// </summary>
+    /// <param name="guildId">The guild identifier.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        var redisDb = dataCache.Redis.GetDatabase();
+        StackExchange.Redis.RedisKey[] keys =
+        [
+            $"guild:{guildId}:default_punishment",
+            $"guild:{guildId}:blacklisted_roles",
+            $"guild:{guildId}:blacklisted_permissions",
+            $"guild:{guildId}:whitelisted_users",
+            $"guild:{guildId}:whitelisted_roles"
+        ];
+
+        await redisDb.KeyDeleteAsync(keys);
+        guildSettingsCache.TryRemove(guildId, out _);
+        await LoadGuildAsync(guildId);
+    }
+
+    /// <summary>
+    ///     Loads the role monitoring settings of a guild into Redis and the in-memory cache.
+    /// </summary>
+    /// <param name="guildId">The guild identifier.</param>
+    private async Task LoadGuildAsync(ulong guildId)
+    {
         var redisDb = dataCache.Redis.GetDatabase();
 
         await using var context = await dbFactory.CreateConnectionAsync();
 
-        var guilds = client.Guilds;
+        var roleSettings = await context.RoleMonitoringSettings.FirstOrDefaultAsync(s => s.GuildId == guildId);
+        var defaultPunishment = (ValueType)roleSettings?.DefaultPunishmentAction ?? PunishmentAction.None;
 
-        foreach (var guild in guilds)
+        await redisDb.StringSetAsync($"guild:{guildId}:default_punishment", ((int)defaultPunishment).ToString());
+
+        var blacklistedRoles = await context.BlacklistedRoles.Where(r => r.GuildId == guildId).ToListAsync();
+        var blacklistedRoleIds = new Dictionary<ulong, PunishmentAction?>();
+        foreach (var role in blacklistedRoles)
         {
-            var guildId = guild.Id;
-
-            var roleSettings = await context.RoleMonitoringSettings.FirstOrDefaultAsync(s => s.GuildId == guildId);
-            var defaultPunishment = (ValueType)roleSettings?.DefaultPunishmentAction ?? PunishmentAction.None;
-
-            await redisDb.StringSetAsync($"guild:{guildId}:default_punishment", ((int)defaultPunishment).ToString());
-
-            var blacklistedRoles = await context.BlacklistedRoles.Where(r => r.GuildId == guildId).ToListAsync();
-            var blacklistedRoleIds = new Dictionary<ulong, PunishmentAction?>();
-            foreach (var role in blacklistedRoles)
-            {
-                var punishment = role.PunishmentAction ?? defaultPunishment;
-                await redisDb.HashSetAsync($"guild:{guildId}:blacklisted_roles", role.RoleId.ToString(),
-                    ((int)punishment).ToString());
-                blacklistedRoleIds[role.RoleId] = (PunishmentAction?)punishment;
-            }
-
-            var blacklistedPermissions =
-                await context.BlacklistedPermissions.Where(p => p.GuildId == guildId).ToListAsync();
-            var blacklistedPermsDict = new Dictionary<GuildPermission, PunishmentAction?>();
-            foreach (var perm in blacklistedPermissions)
-            {
-                var punishment = perm.PunishmentAction ?? defaultPunishment;
-                await redisDb.HashSetAsync($"guild:{guildId}:blacklisted_permissions",
-                    ((int)perm.Permission).ToString(), ((int)punishment).ToString());
-                blacklistedPermsDict[(GuildPermission)perm.Permission] = (PunishmentAction?)punishment;
-            }
-
-            var whitelistedUsers = await context.WhitelistedUsers.Where(u => u.GuildId == guildId).ToListAsync();
-            foreach (var user in whitelistedUsers)
-            {
-                await redisDb.SetAddAsync($"guild:{guildId}:whitelisted_users", user.UserId);
-            }
-
-            var whitelistedRoles = await context.WhitelistedRoles.Where(r => r.GuildId == guildId).ToListAsync();
-            foreach (var role in whitelistedRoles)
-            {
-                await redisDb.SetAddAsync($"guild:{guildId}:whitelisted_roles", role.RoleId);
-            }
-
-            var guildSettings = new GuildSettings
-            {
-                GuildId = guildId,
-                DefaultPunishmentAction = (PunishmentAction?)defaultPunishment,
-                BlacklistedRoleIds = blacklistedRoleIds,
-                BlacklistedPermissions = blacklistedPermsDict
-            };
-
-            guildSettingsCache[guildId] = guildSettings;
+            var punishment = role.PunishmentAction ?? defaultPunishment;
+            await redisDb.HashSetAsync($"guild:{guildId}:blacklisted_roles", role.RoleId.ToString(),
+                ((int)punishment).ToString());
+            blacklistedRoleIds[role.RoleId] = (PunishmentAction?)punishment;
         }
+
+        var blacklistedPermissions =
+            await context.BlacklistedPermissions.Where(p => p.GuildId == guildId).ToListAsync();
+        var blacklistedPermsDict = new Dictionary<GuildPermission, PunishmentAction?>();
+        foreach (var perm in blacklistedPermissions)
+        {
+            var punishment = perm.PunishmentAction ?? defaultPunishment;
+            await redisDb.HashSetAsync($"guild:{guildId}:blacklisted_permissions",
+                ((int)perm.Permission).ToString(), ((int)punishment).ToString());
+            blacklistedPermsDict[(GuildPermission)perm.Permission] = (PunishmentAction?)punishment;
+        }
+
+        var whitelistedUsers = await context.WhitelistedUsers.Where(u => u.GuildId == guildId).ToListAsync();
+        foreach (var user in whitelistedUsers)
+        {
+            await redisDb.SetAddAsync($"guild:{guildId}:whitelisted_users", user.UserId);
+        }
+
+        var whitelistedRoles = await context.WhitelistedRoles.Where(r => r.GuildId == guildId).ToListAsync();
+        foreach (var role in whitelistedRoles)
+        {
+            await redisDb.SetAddAsync($"guild:{guildId}:whitelisted_roles", role.RoleId);
+        }
+
+        var guildSettings = new GuildSettings
+        {
+            GuildId = guildId,
+            DefaultPunishmentAction = (PunishmentAction?)defaultPunishment,
+            BlacklistedRoleIds = blacklistedRoleIds,
+            BlacklistedPermissions = blacklistedPermsDict
+        };
+
+        guildSettingsCache[guildId] = guildSettings;
     }
 
     /// <summary>

@@ -174,6 +174,30 @@ public class MessageRepeaterService : INService, IReadyExecutor, IDisposable
         }
     }
 
+    /// <summary>
+    ///     Stops the repeaters of a guild and rebuilds them from the database.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild whose repeaters should be rebuilt.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        var guild = client.GetGuild(guildId);
+        switch (guild)
+        {
+            case null:
+                if (Repeaters.TryRemove(guildId, out var repeaters))
+                {
+                    foreach (var runner in repeaters.Values)
+                        runner.Stop();
+                }
+
+                break;
+            default:
+                await InitializeGuildRepeaters(guild);
+                break;
+        }
+    }
+
     private async Task InitializeGuildRepeaters(SocketGuild guild)
     {
         try

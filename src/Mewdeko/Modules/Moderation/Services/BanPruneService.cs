@@ -245,6 +245,17 @@ public class BanPruneService : INService
         yield return (BanPruneScope.Guild, 0UL);
     }
 
+    /// <summary>
+    ///     Drops the cached ban prune settings of a guild so they load again from the database.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public Task ReloadGuildAsync(ulong guildId)
+    {
+        Invalidate(guildId);
+        return Task.CompletedTask;
+    }
+
     private void Invalidate(ulong guildId)
     {
         cache.Remove(CacheKey(guildId));

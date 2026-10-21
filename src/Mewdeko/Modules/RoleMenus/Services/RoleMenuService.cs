@@ -324,6 +324,29 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     }
 
     /// <summary>
+    ///     Drops a guild's cached menus and message index entries and reloads them from the database.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <returns>A task that completes when the cache is refilled.</returns>
+    public async Task ReloadGuildAsync(ulong guildId)
+    {
+        foreach (var menu in menus.Values.Where(m => m.GuildId == guildId).ToList())
+        {
+            menus.TryRemove(menu.Id, out _);
+            if (menu.MessageId is { } messageId)
+                messageIndex.TryRemove(messageId, out _);
+        }
+
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var all = await db.RoleMenus.LoadWith(x => x.Options).Where(x => x.GuildId == guildId).ToListAsync();
+        foreach (var menu in all)
+        {
+            SortOptions(menu);
+            CacheMenu(menu);
+        }
+    }
+
+    /// <summary>
     ///     Unsubscribes from the cleanup events.
     /// </summary>
     /// <returns>A completed task.</returns>
@@ -1456,6 +1479,26 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
         if (string.IsNullOrWhiteSpace(emoji))
             return null;
         return emoji.TryToIEmote(out var emote) ? emote : null;
+    }
+
+    /// <summary>
+    ///     Posts a menu's message again in its channel when it has none, and saves the new message id.
+    /// </summary>
+    /// <param name="menu">The menu, with its options.</param>
+    /// <returns>Whether the menu was posted.</returns>
+    public async Task<bool> RepostAsync(RoleMenu menu)
+    {
+        var guild = client.GetGuild(menu.GuildId);
+        if (guild?.GetTextChannel(menu.ChannelId) is not { } channel)
+            return false;
+
+        SortOptions(menu);
+        var message = await PostAsync(guild, channel, menu);
+        await using var db = await dbFactory.CreateConnectionAsync();
+        await db.RoleMenus.Where(x => x.Id == menu.Id).Set(x => x.MessageId, message.Id).UpdateAsync();
+        menu.MessageId = message.Id;
+        CacheMenu(menu);
+        return true;
     }
 
     /// <summary>
