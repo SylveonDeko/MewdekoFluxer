@@ -54,7 +54,6 @@ public class HelpService : INService, IReadyExecutor
             ["RoleMenus"] = "serversetup",
             ["PollCommands"] = "serversetup",
             ["Giveaways"] = "serversetup",
-            ["ImportCommands"] = "serversetup",
             ["TwitchCommands"] = "serversetup",
             ["Games"] = "fun",
             ["Counting"] = "fun",

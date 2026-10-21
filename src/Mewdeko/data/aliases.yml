@@ -4311,14 +4311,6 @@ twitchraidtargetremove:
   - twitchraidtargetremove
 twitchraidtargetlist:
   - twitchraidtargetlist
-importxp:
-  - importxp
-importcurrency:
-  - importcurrency
-importmee6settings:
-  - importmee6settings
-importundo:
-  - importundo
 birthdayconfigreset:
   - birthdayconfigreset
   - bdaycfgreset

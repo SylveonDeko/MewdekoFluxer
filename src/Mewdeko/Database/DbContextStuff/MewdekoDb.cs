@@ -569,17 +569,6 @@ public class MewdekoDb : DataConnection
     }
 
     /// <summary>
-    ///     Gets the table of data imported from other bots.
-    /// </summary>
-    public ITable<DataImport> DataImports
-    {
-        get
-        {
-            return this.GetTable<DataImport>();
-        }
-    }
-
-    /// <summary>
     ///     Gets the anti-image-hash settings table.
     /// </summary>
     public ITable<AntiImageHashSetting> AntiImageHashSettings
