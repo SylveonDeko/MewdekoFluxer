@@ -230,9 +230,11 @@ public class HelpService : INService, IReadyExecutor
             foreach (var category in categories)
             {
                 var modules = GetModulesInCategory(category);
-                var lines = await Task.WhenAll(modules.Select(async m =>
-                    $"> {await CheckEnabled(guild?.Id, channel, user, m.Name)} {Format.Bold(m.Name)}"));
-                embed.AddField(GetCategoryName(category, guildId), string.Join("\n", lines), true);
+                var entries = await Task.WhenAll(modules.Select(async m =>
+                    await IsModuleEnabled(guild?.Id, channel, user, m.Name)
+                        ? Format.Bold(m.Name)
+                        : Format.Strikethrough(m.Name)));
+                embed.AddField(GetCategoryName(category, guildId), string.Join(" · ", entries));
             }
         }
         else
@@ -529,13 +531,14 @@ public class HelpService : INService, IReadyExecutor
             .ToList();
     }
 
-    private async Task<string> CheckEnabled(ulong? guildId, Channel channel, IUser user, string moduleName)
+    private async Task<bool> IsModuleEnabled(ulong? guildId, Channel channel, IUser user, string moduleName)
     {
+        if (perms.BlockedModules.Contains(moduleName.ToLower()))
+            return false;
         if (!guildId.HasValue)
-            return "✅";
+            return true;
         var pc = await nPerms.GetCacheFor(guildId.Value);
-        if (perms.BlockedModules.Contains(moduleName.ToLower())) return "🌐❌";
-        return !pc.Permissions.CheckSlashPermissions(moduleName, "none", user, channel, out _) ? "❌" : "✅";
+        return pc.Permissions.CheckSlashPermissions(moduleName, "none", user, channel, out _);
     }
 
     private string? GetModuleDescription(string module, SocketGuild? guild)
