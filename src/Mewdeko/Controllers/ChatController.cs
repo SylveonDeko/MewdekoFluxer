@@ -42,7 +42,7 @@ public class ChatController(
         var oldestMessage = messagesResult.OrderBy(m => m.Timestamp).FirstOrDefault();
         while (messagesResult.Count < 5000 && oldestMessage != null && afterDate < oldestMessage.Timestamp)
         {
-            var olderMessagesAsync = await channel.GetMessagesAsync(oldestMessage, Direction.Before).FlattenAsync();
+            var olderMessagesAsync = await channel.GetMessagesAsync(beforeId: oldestMessage.Id).FlattenAsync();
             var olderFiltered = olderMessagesAsync.Where(m => m.Timestamp >= afterDate).ToList();
 
             if (olderFiltered.Count == 0) break;
@@ -62,24 +62,24 @@ public class ChatController(
             {
                 Id = m.Author.Id.ToString(),
                 m.Author.Username,
-                AvatarUrl = m.Author.GetAvatarUrl() ?? m.Author.GetDefaultAvatarUrl()
+                AvatarUrl = m.Author.GetAvatarOrDefaultUrl()
             },
             Timestamp = m.Timestamp.ToString("o"),
-            Attachments = m.Attachments.Select(a => new
+            Attachments = (m.Attachments ?? []).Select(a => new
             {
                 a.Url, a.ProxyUrl, a.Filename, FileSize = a.Size
             }),
-            Embeds = m.Embeds.Select(e => new
+            Embeds = (m.Embeds ?? []).Select(e => new
             {
-                Type = e.Type.ToString(),
+                Type = e.RawType,
                 e.Title,
                 e.Description,
                 e.Url,
                 Thumbnail = e.Thumbnail?.Url,
-                Author = e.Author.HasValue
+                Author = e.Author != null
                     ? new
                     {
-                        e.Author.Value.Name, e.Author.Value.IconUrl
+                        e.Author.Name, e.Author.IconUrl
                     }
                     : null
             })

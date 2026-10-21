@@ -201,7 +201,7 @@ public class WordOfTheDayController : Controller
         return failure switch
         {
             "channel" => BadRequest("No valid channel is configured."),
-            "send" => StatusCode(500, "Discord rejected the message. Check the message template and channel permissions."),
+            "send" => StatusCode(500, "Fluxer rejected the message. Check the message template and channel permissions."),
             _ => StatusCode(503, "No word could be found with the current filters.")
         };
     }

@@ -340,14 +340,14 @@ public class RoleMenusController : Controller
                     Id = c.Id,
                     Name = c.Name,
                     CategoryName = c.Category?.Name,
-                    Position = c.Position,
+                    Position = c.Position ?? 0,
                     CanPost = problem is null,
                     Problem = problem
                 };
             })
             .ToList();
 
-        var roles = guild.Roles
+        var roles = guild.Roles.Values
             .Where(r => r.Id != guild.Id)
             .OrderByDescending(r => r.Position)
             .Select(r =>
@@ -357,7 +357,7 @@ public class RoleMenusController : Controller
                 {
                     Id = r.Id,
                     Name = r.Name,
-                    Color = r.Colors.PrimaryColor.RawValue,
+                    Color = (uint)r.Color,
                     Position = r.Position,
                     Assignable = problem == RoleMenuRoleProblem.None,
                     Problem = RoleMenuService.RoleProblemText(problem, botCanManageRoles)
@@ -366,15 +366,14 @@ public class RoleMenusController : Controller
             .ToList();
 
         var emojis = guild.Emotes
-            .Where(e => e.IsAvailable != false)
             .OrderBy(e => e.Name)
             .Select(e => new RoleMenuEmojiLookup
             {
                 Id = e.Id,
                 Name = e.Name,
-                Animated = e.Animated,
+                Animated = e.IsAnimated,
                 Formatted = e.ToString(),
-                Url = e.Url
+                Url = e.GetEmojiUrl() ?? string.Empty
             })
             .ToList();
 
@@ -415,7 +414,7 @@ public class RoleMenusController : Controller
             ChannelId = m.ChannelId,
             ChannelName = guild.GetChannel(m.ChannelId)?.Name,
             MessageId = m.MessageId,
-            JumpUrl = $"https://discord.com/channels/{guildId}/{m.ChannelId}/{m.MessageId}",
+            JumpUrl = $"{FluxerContext.WebUrl}/channels/{guildId}/{m.ChannelId}/{m.MessageId}",
             Exclusive = m.Exclusive,
             Pairs = (m.ReactionRoles ?? []).Select(r =>
             {
@@ -555,7 +554,7 @@ public class RoleMenusController : Controller
                         Id = o.Id,
                         RoleId = o.RoleId,
                         RoleName = role?.Name,
-                        RoleColor = role?.Colors.PrimaryColor.RawValue ?? 0,
+                        RoleColor = (uint)(role?.Color ?? 0),
                         Label = o.Label,
                         Emoji = o.Emoji,
                         Description = o.Description,
@@ -611,7 +610,7 @@ public class RoleMenusController : Controller
             RoleMenuError.TextTooLong => BadRequest($"The {detail} is too long."),
             RoleMenuError.InvalidRequiredRole => BadRequest("The required role was not found."),
             RoleMenuError.InvalidOrder => BadRequest("The order has to list every option exactly once."),
-            RoleMenuError.PostFailed => StatusCode(502, $"Discord rejected the message: {detail}"),
+            RoleMenuError.PostFailed => StatusCode(502, $"Fluxer rejected the message: {detail}"),
             RoleMenuError.ImportSourceNotFound => NotFound("That older setup was not found."),
             RoleMenuError.ImportNoRoles => BadRequest("None of the roles in that setup exist anymore."),
             _ => StatusCode(500, "Failed to save the role menu.")

@@ -1,6 +1,7 @@
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using DataModel;
 using Mewdeko.Modules.Minecraft.Common;
@@ -13,7 +14,7 @@ namespace Mewdeko.Modules.Minecraft.Services;
 ///     Manages WebSocket connections from companion Minecraft plugins,
 ///     routing events between MC servers and Discord channels.
 /// </summary>
-public class MinecraftBridgeService : INService
+public partial class MinecraftBridgeService : INService
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -42,18 +43,16 @@ public class MinecraftBridgeService : INService
         this.strings = strings;
         this.logger = logger;
 
-        eventHandler.Subscribe("MessageReceived", "MinecraftBridgeService", OnDiscordMessageReceived);
+        eventHandler.MessageReceived.Subscribe("MinecraftBridgeService", OnMessageReceived);
     }
 
-    private async Task OnDiscordMessageReceived(SocketMessage socketMessage)
+    private async Task OnMessageReceived(SocketMessage msg)
     {
-        if (socketMessage is not SocketMessage { Author.IsBot: false } msg)
+        if (msg.Author is not { IsBot: false } author || msg.Guild is not { } guild)
             return;
 
-        if (msg.Channel is not Channel textChannel)
-            return;
-
-        var guildId = textChannel.Guild.Id;
+        var textChannel = msg.Channel;
+        var guildId = guild.Id;
         var channelId = textChannel.Id;
 
         foreach (var conn in connections.Values)
@@ -76,11 +75,35 @@ public class MinecraftBridgeService : INService
                 catch { }
             }
 
-            var displayName = (msg.Author as SocketGuildMember)?.DisplayName ??
-                              msg.Author.GlobalName ?? msg.Author.Username;
-            await SendChatToServerAsync(conn.ServerId, displayName, msg.CleanContent, textChannel.Name, templates);
+            var displayName = msg.Member?.DisplayName ?? author.GlobalName ?? author.Username;
+            await SendChatToServerAsync(conn.ServerId, displayName, CleanContent(msg, guild), textChannel.Name, templates);
         }
     }
+
+    /// <summary>
+    ///     Replaces user, role and channel mentions in a message with their plain names.
+    /// </summary>
+    /// <param name="message">The message to clean.</param>
+    /// <param name="guild">The guild the message was sent in.</param>
+    /// <returns>The message text with mentions resolved.</returns>
+    private static string CleanContent(SocketMessage message, SocketGuild guild)
+    {
+        return MentionRegex().Replace(message.Content ?? string.Empty, match =>
+        {
+            if (!ulong.TryParse(match.Groups["id"].Value, out var id))
+                return match.Value;
+
+            return match.Groups["kind"].Value switch
+            {
+                "@" or "@!" => $"@{guild.GetUser(id)?.DisplayName ?? message.MentionedUsers.FirstOrDefault(u => u.Id == id)?.Username ?? "unknown-user"}",
+                "@&" => $"@{guild.Roles.GetValueOrDefault(id)?.Name ?? "deleted-role"}",
+                _ => $"#{guild.GetChannel(id)?.Name ?? "deleted-channel"}"
+            };
+        });
+    }
+
+    [GeneratedRegex(@"<(?<kind>@!?|@&|#)(?<id>\d+)>")]
+    private static partial Regex MentionRegex();
 
     /// <summary>
     ///     Handles an incoming WebSocket connection from a companion plugin.

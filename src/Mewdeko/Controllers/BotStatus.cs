@@ -29,9 +29,8 @@ public class BotStatus(FluxerClient client, StatsService statsService, CommandSe
     public async Task<IActionResult> GetStatus()
     {
         var creds = new BotCredentials();
-        var clients = client.Shards;
         var rest = client.Rest;
-        var curUser = await rest.GetUserAsync(client.CurrentUser.Id);
+        var curUser = await rest.GetCurrentUserAsync();
         var toReturn = new BotStatusModel
         {
             BotName = client.CurrentUser.GlobalName ?? client.CurrentUser.Username,
@@ -43,7 +42,7 @@ public class BotStatus(FluxerClient client, StatsService statsService, CommandSe
             ModulesCount = commandService.Modules.Count(x => !x.IsSubmodule),
             DNetVersion = statsService.Library,
             BotStatus = client.Status.ToString(),
-            UserCount = clients.Select(x => x.Guilds.Sum(g => g.Users.Count)).Sum(),
+            UserCount = client.Guilds.Sum(g => g.Users.Count),
             CommitHash = GetCommitHash(),
             BotId = client.CurrentUser.Id,
             InstanceUrl = $"http://{creds.InstanceApiHost}:{creds.ApiPort}"

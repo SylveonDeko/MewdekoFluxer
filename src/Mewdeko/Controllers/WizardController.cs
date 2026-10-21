@@ -386,10 +386,10 @@ public class WizardController : Controller
             // Generate invite URL if permissions are missing
             if (!hasAllRequired)
             {
-                // Use the standard permission set that Mewdeko normally requests
-                const ulong standardPermissions = 66186303;
+                var standardPermissions = criticalPermissions.Concat(recommendedPermissions)
+                    .Aggregate(0UL, (bits, permission) => bits | (ulong)permission);
                 response.SuggestedInviteUrl =
-                    $"https://discord.com/oauth2/authorize?client_id={client.CurrentUser.Id}&permissions={standardPermissions}&scope=bot%20applications.commands&guild_id={guildId}";
+                    $"{Fluxer.Net.OAuth.FluxerOAuthDefaults.AuthorizationEndpoint}?client_id={client.CurrentUser.Id}&permissions={standardPermissions}&scope=bot&guild_id={guildId}";
             }
 
             return Ok(response);

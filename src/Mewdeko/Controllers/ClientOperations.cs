@@ -35,7 +35,7 @@ public class ClientOperations(FluxerClient client, DashboardAccessService dashbo
             return NotFound();
 
 
-        return Ok(guild.Roles.Select(x => new NeededRoleInfo
+        return Ok(guild.Roles.Values.Select(x => new NeededRoleInfo
         {
             Id = x.Id, Name = x.Name
         }));
@@ -78,44 +78,34 @@ public class ClientOperations(FluxerClient client, DashboardAccessService dashbo
 
         var channels = channelType switch
         {
-            ChannelType.Text => guild.Channels
-                .Where(x => x is Channel)
-                .Select(c => new NeededRoleInfo
-                {
-                    Id = c.Id, Name = c.Name
-                }),
-            ChannelType.Voice => guild.Channels
-                .Where(x => x is Channel)
-                .Select(c => new NeededRoleInfo
-                {
-                    Id = c.Id, Name = c.Name
-                }),
-            ChannelType.Forum => guild.Channels
-                .Where(x => x is Channel)
-                .Select(c => new NeededRoleInfo
-                {
-                    Id = c.Id, Name = c.Name
-                }),
-            ChannelType.Category => guild.Channels
-                .Where(x => x is Channel)
-                .Select(c => new NeededRoleInfo
-                {
-                    Id = c.Id, Name = c.Name
-                }),
-            ChannelType.Announcement => guild.Channels
-                .Where(x => x is Channel)
-                .Select(c => new NeededRoleInfo
-                {
-                    Id = c.Id, Name = c.Name
-                }),
-            _ => guild.Channels
-                .Select(c => new NeededRoleInfo
-                {
-                    Id = c.Id, Name = c.Name
-                })
+            ChannelType.Text => ToRoleInfo(guild, Fluxer.Net.ChannelType.GuildText),
+            ChannelType.Voice => ToRoleInfo(guild, Fluxer.Net.ChannelType.GuildVoice),
+            ChannelType.Forum => ToRoleInfo(guild, Fluxer.Net.ChannelType.GuildForum),
+            ChannelType.Category => ToRoleInfo(guild, Fluxer.Net.ChannelType.GuildCategory),
+            ChannelType.Announcement => ToRoleInfo(guild, Fluxer.Net.ChannelType.GuildNews),
+            _ => guild.Channels.Values.Select(c => new NeededRoleInfo
+            {
+                Id = c.Id, Name = c.Name
+            })
         };
 
         return Ok(channels);
+    }
+
+    /// <summary>
+    ///     Gets the id and name of every cached channel of one type.
+    /// </summary>
+    /// <param name="guild">The guild to read channels from</param>
+    /// <param name="type">The channel type to keep</param>
+    /// <returns>The matching channels</returns>
+    private static IEnumerable<NeededRoleInfo> ToRoleInfo(SocketGuild guild, Fluxer.Net.ChannelType type)
+    {
+        return guild.Channels.Values
+            .Where(c => c.Type == type)
+            .Select(c => new NeededRoleInfo
+            {
+                Id = c.Id, Name = c.Name
+            });
     }
 
     /// <summary>
@@ -133,7 +123,7 @@ public class ClientOperations(FluxerClient client, DashboardAccessService dashbo
 
         return Ok(JsonSerializer.Serialize(guild.Users.Select(x => new
         {
-            UserId = x.Id, x.Username, AvatarUrl = x.GetAvatarUrl()
+            UserId = x.Id, x.Username, AvatarUrl = x.GetDisplayAvatarUrl()
         }), Options));
     }
 
@@ -153,7 +143,7 @@ public class ClientOperations(FluxerClient client, DashboardAccessService dashbo
             Id = user.Id.ToString(),
             user.Username,
             DisplayName = user.Nickname ?? user.Username,
-            AvatarUrl = user.GetAvatarUrl() ?? user.GetDefaultAvatarUrl(),
+            AvatarUrl = user.GetDisplayAvatarUrl(),
             user.IsBot
         });
 
@@ -196,59 +186,18 @@ public class ClientOperations(FluxerClient client, DashboardAccessService dashbo
         if (guild == null)
             return NotFound();
 
-        var channels = guild.Channels
-            .Where(x => x is not Channel)
-            .Select(x => x switch
+        var channels = guild.Channels.Values
+            .Where(x => x.ThreadMetadata == null)
+            .Select(x => x.Type switch
             {
-                Channel category => new GuildChannelLiteInfo
+                Fluxer.Net.ChannelType.GuildCategory => new GuildChannelLiteInfo
                 {
-                    Id = category.Id, Name = category.Name, Type = "category", Position = category.Position
+                    Id = x.Id, Name = x.Name, Type = "category", Position = x.Position ?? 0
                 },
-                SocketStageChannel stage => new GuildChannelLiteInfo
-                {
-                    Id = stage.Id,
-                    Name = stage.Name,
-                    Type = "stage",
-                    CategoryId = stage.CategoryId,
-                    CategoryName = stage.Category?.Name,
-                    Position = stage.Position
-                },
-                Channel voice => new GuildChannelLiteInfo
-                {
-                    Id = voice.Id,
-                    Name = voice.Name,
-                    Type = "voice",
-                    CategoryId = voice.CategoryId,
-                    CategoryName = voice.Category?.Name,
-                    Position = voice.Position
-                },
-                Channel news => new GuildChannelLiteInfo
-                {
-                    Id = news.Id,
-                    Name = news.Name,
-                    Type = "announcement",
-                    CategoryId = news.CategoryId,
-                    CategoryName = news.Category?.Name,
-                    Position = news.Position
-                },
-                Channel forum => new GuildChannelLiteInfo
-                {
-                    Id = forum.Id,
-                    Name = forum.Name,
-                    Type = "forum",
-                    CategoryId = forum.CategoryId,
-                    CategoryName = forum.Category?.Name,
-                    Position = forum.Position
-                },
-                Channel text => new GuildChannelLiteInfo
-                {
-                    Id = text.Id,
-                    Name = text.Name,
-                    Type = "text",
-                    CategoryId = text.CategoryId,
-                    CategoryName = text.Category?.Name,
-                    Position = text.Position
-                },
+                Fluxer.Net.ChannelType.GuildVoice => ToLiteInfo(x, "voice"),
+                Fluxer.Net.ChannelType.GuildNews => ToLiteInfo(x, "announcement"),
+                Fluxer.Net.ChannelType.GuildForum => ToLiteInfo(x, "forum"),
+                Fluxer.Net.ChannelType.GuildText => ToLiteInfo(x, "text"),
                 _ => null
             })
             .Where(x => x != null)
@@ -256,6 +205,25 @@ public class ClientOperations(FluxerClient client, DashboardAccessService dashbo
             .ThenBy(x => x!.Position);
 
         return Ok(channels);
+    }
+
+    /// <summary>
+    ///     Maps a channel to its typed picker entry.
+    /// </summary>
+    /// <param name="channel">The channel to map</param>
+    /// <param name="type">The type label the dashboard expects</param>
+    /// <returns>The picker entry</returns>
+    private static GuildChannelLiteInfo ToLiteInfo(Channel channel, string type)
+    {
+        return new GuildChannelLiteInfo
+        {
+            Id = channel.Id,
+            Name = channel.Name,
+            Type = type,
+            CategoryId = channel.CategoryId,
+            CategoryName = channel.Category?.Name,
+            Position = channel.Position ?? 0
+        };
     }
 
     /// <summary>
@@ -277,7 +245,7 @@ public class ClientOperations(FluxerClient client, DashboardAccessService dashbo
             return NotFound();
         var partial = new
         {
-            UserId = user.Id, user.Username, AvatarUrl = user.GetAvatarUrl()
+            UserId = user.Id, user.Username, AvatarUrl = user.GetDisplayAvatarUrl()
         };
         return Ok(partial);
     }
@@ -310,18 +278,11 @@ public class ClientOperations(FluxerClient client, DashboardAccessService dashbo
             {
                 id = guild.Id,
                 name = guild.Name,
-                icon = guild.IconId,
+                icon = guild.IconHash,
                 owner = guild.OwnerId == userId,
                 permissions = (int)guildUser.GuildPermissions.RawValue,
-                features = Enum.GetValues(typeof(GuildFeature)).Cast<GuildFeature>()
-                    .Where(feature => guild.Features.Value.HasFlag(feature)),
-                banner = guild.BannerUrl != null
-                    ? $"{guild.BannerUrl}?size=1024"
-                    : guild.SplashId != null
-                        ? $"https://cdn.discordapp.com/splashes/{guild.Id}/{guild.SplashId}.png?size=1024"
-                        : guild.DiscoverySplashId != null
-                            ? $"https://cdn.discordapp.com/discovery-splashes/{guild.Id}/{guild.DiscoverySplashId}.png?size=1024"
-                            : null,
+                features = guild.Features.Raw,
+                banner = guild.BannerUrl ?? guild.GetInviteSplashUrl(),
                 hasAdminAccess,
                 hasRestrictedAccess
             });
@@ -346,12 +307,11 @@ public class ClientOperations(FluxerClient client, DashboardAccessService dashbo
         {
             hasGuild = guild != null,
             guildName = guild?.Name,
-            memberCount = guild?.MemberCount,
+            memberCount = guild?.TotalMembers,
             iconUrl = guild?.IconUrl,
-            // Add more public info that might be useful for leaderboards
             createdAt = guild?.CreatedAt,
-            description = guild?.Description,
-            features = guild?.Features
+            description = (string?)null,
+            features = guild?.Features.Raw
         });
     }
 
@@ -381,35 +341,22 @@ public class ClientOperations(FluxerClient client, DashboardAccessService dashbo
 
         var forumChannels = new List<ForumChannelInfo>();
 
-        foreach (var forum in guild.Channels.OfType<Channel>())
+        foreach (var forum in guild.Channels.Values.Where(c => c.Type == Fluxer.Net.ChannelType.GuildForum))
         {
             try
             {
-                var activeThreads = await forum.GetActiveThreadsAsync();
+                var activeThreads = ForumThreads(guild, forum, false);
 
                 var forumInfo = new ForumChannelInfo
                 {
                     Id = forum.Id,
                     Name = forum.Name,
                     Topic = forum.Topic,
-                    RequiresTags = forum.Tags.Any(t => t.IsModerated),
+                    RequiresTags = (forum.ForumTags ?? []).Any(t => t.IsModerated),
                     MaxActiveThreads = null,
-                    DefaultAutoArchiveDuration = (int)forum.DefaultAutoArchiveDuration,
-                    Tags = forum.Tags.Select(tag => new ForumTagInfo
-                    {
-                        Id = tag.Id, Name = tag.Name, Emoji = tag.Emoji?.ToString(), IsModerated = tag.IsModerated
-                    }).ToList(),
-                    ActiveThreads = activeThreads.Select(thread => new ThreadInfo
-                    {
-                        Id = thread.Id,
-                        Name = thread.Name,
-                        AppliedTags = thread.AppliedTags?.ToList() ?? new List<ulong>(),
-                        CreatorId = thread.OwnerId,
-                        CreatedAt = thread.CreatedAt.UtcDateTime,
-                        MessageCount = thread.MessageCount,
-                        IsArchived = thread.IsArchived,
-                        IsLocked = thread.IsLocked
-                    }).ToList(),
+                    DefaultAutoArchiveDuration = (int?)forum.DefaultAutoArchiveDuration,
+                    Tags = ToTagInfos(forum),
+                    ActiveThreads = activeThreads.Select(ToThreadInfo).ToList(),
                     TotalThreadCount = activeThreads.Count
                 };
 
@@ -423,10 +370,7 @@ public class ClientOperations(FluxerClient client, DashboardAccessService dashbo
                     Id = forum.Id,
                     Name = forum.Name,
                     Topic = forum.Topic,
-                    Tags = forum.Tags.Select(tag => new ForumTagInfo
-                    {
-                        Id = tag.Id, Name = tag.Name, Emoji = tag.Emoji?.ToString(), IsModerated = tag.IsModerated
-                    }).ToList()
+                    Tags = ToTagInfos(forum)
                 });
             }
         }
@@ -447,37 +391,24 @@ public class ClientOperations(FluxerClient client, DashboardAccessService dashbo
         if (guild == null)
             return NotFound("Guild not found");
 
-        var forum = guild.GetChannel(forumId) as Channel;
+        var forum = guild.GetChannel(forumId);
         if (forum == null)
             return NotFound("Forum channel not found");
 
         try
         {
-            var activeThreads = await forum.GetActiveThreadsAsync();
+            var activeThreads = ForumThreads(guild, forum, false);
 
             var forumInfo = new ForumChannelInfo
             {
                 Id = forum.Id,
                 Name = forum.Name,
                 Topic = forum.Topic,
-                RequiresTags = forum.Tags.Any(t => t.IsModerated),
+                RequiresTags = (forum.ForumTags ?? []).Any(t => t.IsModerated),
                 MaxActiveThreads = null,
-                DefaultAutoArchiveDuration = (int)forum.DefaultAutoArchiveDuration,
-                Tags = forum.Tags.Select(tag => new ForumTagInfo
-                {
-                    Id = tag.Id, Name = tag.Name, Emoji = tag.Emoji?.ToString(), IsModerated = tag.IsModerated
-                }).ToList(),
-                ActiveThreads = activeThreads.Select(thread => new ThreadInfo
-                {
-                    Id = thread.Id,
-                    Name = thread.Name,
-                    AppliedTags = thread.AppliedTags?.ToList() ?? new List<ulong>(),
-                    CreatorId = thread.OwnerId,
-                    CreatedAt = thread.CreatedAt.UtcDateTime,
-                    MessageCount = thread.MessageCount,
-                    IsArchived = thread.IsArchived,
-                    IsLocked = thread.IsLocked
-                }).ToList(),
+                DefaultAutoArchiveDuration = (int?)forum.DefaultAutoArchiveDuration,
+                Tags = ToTagInfos(forum),
+                ActiveThreads = activeThreads.Select(ToThreadInfo).ToList(),
                 TotalThreadCount = activeThreads.Count
             };
 
@@ -490,10 +421,7 @@ public class ClientOperations(FluxerClient client, DashboardAccessService dashbo
                 Id = forum.Id,
                 Name = forum.Name,
                 Topic = forum.Topic,
-                Tags = forum.Tags.Select(tag => new ForumTagInfo
-                {
-                    Id = tag.Id, Name = tag.Name, Emoji = tag.Emoji?.ToString(), IsModerated = tag.IsModerated
-                }).ToList()
+                Tags = ToTagInfos(forum)
             };
 
             return Ok(basicInfo);
@@ -515,39 +443,19 @@ public class ClientOperations(FluxerClient client, DashboardAccessService dashbo
         if (guild == null)
             return NotFound("Guild not found");
 
-        var forum = guild.GetChannel(forumId) as Channel;
+        var forum = guild.GetChannel(forumId);
         if (forum == null)
             return NotFound("Forum channel not found");
 
         try
         {
-            var activeThreads = await forum.GetActiveThreadsAsync();
-            var threads = activeThreads.Select(thread => new ThreadInfo
-            {
-                Id = thread.Id,
-                Name = thread.Name,
-                AppliedTags = thread.AppliedTags?.ToList() ?? new List<ulong>(),
-                CreatorId = thread.OwnerId,
-                CreatedAt = thread.CreatedAt.UtcDateTime,
-                MessageCount = thread.MessageCount,
-                IsArchived = thread.IsArchived,
-                IsLocked = thread.IsLocked
-            });
+            var activeThreads = ForumThreads(guild, forum, false);
+            var threads = activeThreads.Select(ToThreadInfo);
 
             if (includeArchived)
             {
-                var archivedThreads = await forum.GetPublicArchivedThreadsAsync();
-                var allThreads = threads.Concat(archivedThreads.Select(thread => new ThreadInfo
-                {
-                    Id = thread.Id,
-                    Name = thread.Name,
-                    AppliedTags = thread.AppliedTags?.ToList() ?? new List<ulong>(),
-                    CreatorId = thread.OwnerId,
-                    CreatedAt = thread.CreatedAt.UtcDateTime,
-                    MessageCount = thread.MessageCount,
-                    IsArchived = thread.IsArchived,
-                    IsLocked = thread.IsLocked
-                }));
+                var archivedThreads = ForumThreads(guild, forum, true);
+                var allThreads = threads.Concat(archivedThreads.Select(ToThreadInfo));
 
                 return Ok(allThreads);
             }
@@ -584,16 +492,15 @@ public class ClientOperations(FluxerClient client, DashboardAccessService dashbo
         foreach (var guild in mutualGuilds)
         {
             var emojis = guild.Emotes
-                .Where(e => e.IsAvailable != false) // Filter out unavailable emojis
                 .Select(e => new EmojiInfo
                 {
                     Id = e.Id,
                     Name = e.Name,
-                    Animated = e.Animated,
-                    IsAvailable = e.IsAvailable,
-                    RoleIds = e.RoleIds?.ToList() ?? new List<ulong>(),
-                    RequireColons = e.RequireColons,
-                    Url = e.Url
+                    Animated = e.IsAnimated,
+                    IsAvailable = true,
+                    RoleIds = [],
+                    RequireColons = true,
+                    Url = e.GetEmojiUrl() ?? string.Empty
                 })
                 .ToList();
 
@@ -612,5 +519,52 @@ public class ClientOperations(FluxerClient client, DashboardAccessService dashbo
         }
 
         return Ok(result);
+    }
+
+    /// <summary>
+    ///     Gets the cached threads of a forum channel.
+    /// </summary>
+    /// <param name="guild">The guild that holds the forum</param>
+    /// <param name="forum">The forum channel</param>
+    /// <param name="archived">Whether to return archived threads instead of active ones</param>
+    /// <returns>The matching threads</returns>
+    private static List<Channel> ForumThreads(SocketGuild guild, Channel forum, bool archived)
+    {
+        return guild.ThreadChannels
+            .Where(thread => thread.ParentId == forum.Id && (thread.ThreadMetadata?.IsArchived ?? false) == archived)
+            .ToList();
+    }
+
+    /// <summary>
+    ///     Maps a forum's tags to their response model.
+    /// </summary>
+    /// <param name="forum">The forum channel</param>
+    /// <returns>The forum's tags</returns>
+    private static List<ForumTagInfo> ToTagInfos(Channel forum)
+    {
+        return (forum.ForumTags ?? []).Select(tag => new ForumTagInfo
+        {
+            Id = tag.Id, Name = tag.Name, Emoji = tag.EmojiName, IsModerated = tag.IsModerated
+        }).ToList();
+    }
+
+    /// <summary>
+    ///     Maps a thread to its response model.
+    /// </summary>
+    /// <param name="thread">The thread channel</param>
+    /// <returns>The thread information</returns>
+    private static ThreadInfo ToThreadInfo(Channel thread)
+    {
+        return new ThreadInfo
+        {
+            Id = thread.Id,
+            Name = thread.Name,
+            AppliedTags = thread.AppliedTags?.ToList() ?? new List<ulong>(),
+            CreatorId = thread.OwnerId ?? 0,
+            CreatedAt = thread.ThreadMetadata?.CreatedAt.UtcDateTime ?? thread.CreatedAt.UtcDateTime,
+            MessageCount = 0,
+            IsArchived = thread.ThreadMetadata?.IsArchived ?? false,
+            IsLocked = thread.ThreadMetadata?.IsLocked ?? false
+        };
     }
 }

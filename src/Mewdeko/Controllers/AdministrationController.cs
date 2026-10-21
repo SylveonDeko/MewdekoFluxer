@@ -1042,10 +1042,7 @@ public class AdministrationController(
             // Add reaction to message
             try
             {
-                await userMessage.AddReactionAsync(emote, new RequestOptions
-                {
-                    RetryMode = RetryMode.Retry502 | RetryMode.RetryRatelimit
-                });
+                await userMessage.AddReactionAsync(emote);
                 await Task.Delay(500); // Rate limit protection
             }
             catch (FluxerApiException ex)
@@ -1333,17 +1330,13 @@ public class AdministrationController(
     ///     Prune users
     /// </summary>
     [HttpPost("prune")]
-    public async Task<IActionResult> PruneUsers(ulong guildId, [FromBody] PruneRequest request)
+    public IActionResult PruneUsers(ulong guildId, [FromBody] PruneRequest request)
     {
         var guild = client.GetGuild(guildId);
         if (guild == null)
             return NotFound("Guild not found");
 
-        var pruned = await guild.PruneUsersAsync(request.Days);
-        return Ok(new
-        {
-            pruned
-        });
+        return BadRequest("Pruning members is not supported on Fluxer.");
     }
 
     /// <summary>
@@ -1357,7 +1350,7 @@ public class AdministrationController(
         if (channel == null)
             return NotFound("Channel not found");
 
-        var messages = await channel.GetMessagesAsync(request.MessageId, Direction.After).FlattenAsync();
+        var messages = await channel.GetMessagesAsync(afterId: request.MessageId).FlattenAsync();
         var deleted = 0;
 
         foreach (var message in messages)
@@ -1521,11 +1514,11 @@ public class AdministrationController(
                             CommandName = cmd.Aliases.Any() ? cmd.Aliases[0] : cmd.Name,
                             Description = cmd.Summary ?? "No description available",
                             Example = cmd.Remarks?.Split('\n').ToList() ?? [],
-                            GuildUserPermissions = userPerm?.UserPermissionAttribute.GuildPermission?.ToString() ?? "",
+                            GuildUserPermissions = PermissionAttributeReader.GuildPermissionOf(userPerm?.UserPermissionAttribute)?.ToString() ?? "",
                             ChannelUserPermissions =
-                                userPerm?.UserPermissionAttribute.ChannelPermission?.ToString() ?? "",
-                            GuildBotPermissions = botPerm?.GuildPermission?.ToString() ?? "",
-                            ChannelBotPermissions = botPerm?.ChannelPermission?.ToString() ?? "",
+                                PermissionAttributeReader.ChannelPermissionOf(userPerm?.UserPermissionAttribute)?.ToString() ?? "",
+                            GuildBotPermissions = PermissionAttributeReader.GuildPermissionOf(botPerm)?.ToString() ?? "",
+                            ChannelBotPermissions = PermissionAttributeReader.ChannelPermissionOf(botPerm)?.ToString() ?? "",
                             IsDragon = isDragon != null
                         };
                     })

@@ -184,7 +184,7 @@ public class ChatTriggersController(
             return BadRequest();
 
         var channel = request.ChannelId == 0
-            ? guild.DefaultChannel
+            ? guild.SystemChannel ?? guild.TextChannels.OrderBy(c => c.Position).FirstOrDefault()
             : guild.GetTextChannel(request.ChannelId);
 
         if (channel is null)

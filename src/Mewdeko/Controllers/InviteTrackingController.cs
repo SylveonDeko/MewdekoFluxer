@@ -281,7 +281,7 @@ public class InviteTrackingController : Controller
                 ? null
                 : new
                 {
-                    inviter.Id, inviter.Username, inviter.Discriminator, AvatarUrl = inviter.GetAvatarUrl()
+                    inviter.Id, inviter.Username, inviter.Discriminator, AvatarUrl = inviter.GetAvatarUrl(160)
                 },
             record.InviteCode,
             JoinType = ((InviteJoinType)record.JoinType).ToString(),
@@ -340,7 +340,7 @@ public class InviteTrackingController : Controller
         var invitedUsers = await inviteService.GetInvitedUsers(userId, guild);
         return Ok(invitedUsers.Select(user => new
         {
-            user.Id, user.Username, user.Discriminator, AvatarUrl = user.GetAvatarUrl()
+            user.Id, user.Username, user.Discriminator, AvatarUrl = user.GetAvatarUrl(160)
         }));
     }
 
@@ -433,11 +433,11 @@ public class InviteTrackingController : Controller
             return new
             {
                 invite.Code,
-                invite.Url,
-                invite.ChannelId,
+                Url = $"{FluxerContext.Client.Config.InviteUrl}/{invite.Code}",
+                ChannelId = invite.Channel?.Id,
                 InviterId = invite.Inviter?.Id,
                 InviterName = invite.Inviter?.Username,
-                Uses = invite.Uses ?? 0,
+                invite.Uses,
                 invite.MaxUses,
                 invite.MaxAge,
                 invite.IsTemporary,

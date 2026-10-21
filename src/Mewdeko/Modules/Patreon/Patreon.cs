@@ -340,7 +340,7 @@ public class Patreon(IBotCredentials creds, PatreonApiClient patreonApiClient, I
                     "5. Your supporters will be synced automatically")
                 .WithFooter(Strings.PatreonSetupFooter(ctx.Guild.Id));
 
-            await ReplyAsync(embed: embed.Build()).ConfigureAwait(false);
+            await ReplyAsync(embeds: [embed.Build()]).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

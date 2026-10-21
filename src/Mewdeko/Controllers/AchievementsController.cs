@@ -94,12 +94,12 @@ public class AchievementsController : Controller
                 {
                     var def = catalog.ByKey[r.AchievementKey];
                     var member = guild.GetUser(r.UserId);
-                    IUser? user = member ?? client.GetUser(r.UserId);
+                    IUser? user = member?.User ?? client.GetUser(r.UserId);
                     return new AchievementRecentUnlockResponse
                     {
                         UserId = r.UserId,
                         Username = member?.DisplayName ?? user?.Username ?? r.UserId.ToString(),
-                        AvatarUrl = member?.GetDisplayAvatarUrl() ?? user?.GetAvatarUrl(),
+                        AvatarUrl = member?.GetDisplayAvatarUrl() ?? user?.GetAvatarUrl(160),
                         Key = def.Key,
                         Name = def.Name,
                         Icon = catalog.IconFor(def).Stored,
@@ -204,9 +204,9 @@ public class AchievementsController : Controller
 
         var bot = guild.CurrentUser;
         var channels = guild.Channels
-            .Where(c => c is Channel and not Channel || c is Channel)
-            .OrderBy(c => (c as INestedChannel)?.CategoryId is { } categoryId ? guild.GetCategoryChannel(categoryId)?.Position ?? -1 : -1)
-            .ThenBy(c => c is Channel ? 1 : 0)
+            .Values
+            .OrderBy(c => c.CategoryId is { } categoryId ? guild.GetCategoryChannel(categoryId)?.Position ?? -1 : -1)
+            .ThenBy(c => c.Type == ChannelType.GuildText ? 1 : 0)
             .ThenBy(c => c.Position)
             .Select(c =>
             {
@@ -215,37 +215,36 @@ public class AchievementsController : Controller
                 {
                     Id = c.Id,
                     Name = c.Name,
-                    CategoryName = (c as INestedChannel)?.CategoryId is { } categoryId
+                    CategoryName = c.CategoryId is { } categoryId
                         ? guild.GetCategoryChannel(categoryId)?.Name
                         : null,
-                    Type = c is Channel ? 2 : 0,
-                    CanSend = c is Channel && perms.ViewChannel && perms.SendMessages && perms.EmbedLinks
+                    Type = c.Type == ChannelType.GuildVoice ? 2 : 0,
+                    CanSend = c.Type == ChannelType.GuildText && perms.ViewChannel && perms.SendMessages && perms.EmbedLinks
                 };
             })
             .ToList();
 
-        var roles = guild.Roles
+        var roles = guild.Roles.Values
             .Where(r => r.Id != guild.Id)
             .OrderByDescending(r => r.Position)
             .Select(r => new AchievementRoleLookup
             {
                 Id = r.Id,
                 Name = r.Name,
-                Color = r.Colors.PrimaryColor.RawValue,
+                Color = (uint)r.Color,
                 Position = r.Position,
                 Assignable = AchievementService.CanAssign(guild, r.Id)
             })
             .ToList();
 
         var emojis = guild.Emotes
-            .Where(e => e.IsAvailable != false)
             .OrderBy(e => e.Name)
             .Select(e => new AchievementEmojiLookup
             {
                 Id = e.Id,
                 Name = e.Name,
                 Formatted = e.ToString(),
-                Url = e.Url
+                Url = e.GetEmojiUrl() ?? string.Empty
             })
             .ToList();
 

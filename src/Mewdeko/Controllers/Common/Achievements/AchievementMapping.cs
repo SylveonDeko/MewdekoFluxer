@@ -178,15 +178,15 @@ public static class AchievementMapping
         DateTime? lastUnlockAt, int rank, FluxerClient client)
     {
         var member = guild.GetUser(userId);
-        IUser? user = member ?? client.GetUser(userId);
+        IUser? user = member?.User ?? client.GetUser(userId);
         var tier = AchievementCatalog.GetTier(points);
         return new AchievementMemberResponse
         {
             UserId = userId,
             Username = user?.Username ?? userId.ToString(),
-            GlobalName = user?.GlobalName,
-            DisplayName = member?.DisplayName ?? user?.GlobalName ?? user?.Username ?? userId.ToString(),
-            AvatarUrl = member?.GetDisplayAvatarUrl() ?? user?.GetAvatarUrl() ?? user?.GetDefaultAvatarUrl(),
+            GlobalName = user?.DisplayName,
+            DisplayName = member?.DisplayName ?? user?.DisplayName ?? user?.Username ?? userId.ToString(),
+            AvatarUrl = member?.GetDisplayAvatarUrl() ?? user?.GetAvatarOrDefaultUrl(160),
             Points = points,
             Unlocked = unlocked,
             Tier = tier.Name,

@@ -155,7 +155,7 @@ public class RoleStatesController : Controller
         if (guild == null)
             return NotFound("Guild not found");
 
-        var user = guild.Users.FirstOrDefault(x => x.Id == userId);
+        var user = guild.Users.FirstOrDefault(x => x.Id == userId)?.User;
         if (user == null)
             return NotFound("User not found");
 

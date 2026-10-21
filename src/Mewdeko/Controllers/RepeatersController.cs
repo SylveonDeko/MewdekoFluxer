@@ -175,7 +175,7 @@ public class RepeatersController : Controller
             if (request.TriggerMode == StickyTriggerMode.Immediate)
             {
                 var channel = guild.GetChannel(request.ChannelId);
-                if (channel is Channel && !request.ThreadOnlyMode)
+                if (channel is { Type: ChannelType.GuildForum } && !request.ThreadOnlyMode)
                 {
                     return BadRequest(
                         "Immediate mode on forum channels requires Thread-Only Mode to be enabled, as bots cannot post directly to forum channels.");

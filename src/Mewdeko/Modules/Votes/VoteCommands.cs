@@ -292,7 +292,7 @@ public class Vote(InteractiveService interactivity) : MewdekoModuleBase<VoteServ
         {
             var user = (await ctx.Guild.GetUsersAsync()).FirstOrDefault(x => x.Id == i.UserId);
             if (user is null) continue;
-            var item = voteList.FirstOrDefault(x => x.User == user);
+            var item = voteList.FirstOrDefault(x => x.User.Id == user.Id);
             if (item is not null)
             {
                 voteList.Remove(item);
@@ -303,7 +303,7 @@ public class Vote(InteractiveService interactivity) : MewdekoModuleBase<VoteServ
             {
                 voteList.Add(new CustomVoteThingy
                 {
-                    User = user, VoteCount = 1
+                    User = user.User, VoteCount = 1
                 });
             }
         }

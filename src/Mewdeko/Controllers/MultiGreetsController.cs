@@ -221,28 +221,22 @@ public class MultiGreetController : Controller
         if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 80)
             return BadRequest("Webhook name must be between 1 and 80 characters");
 
-        Stream? avatar = null;
+        string? avatar = null;
         if (!string.IsNullOrWhiteSpace(request.AvatarUrl))
         {
             if (!Uri.TryCreate(request.AvatarUrl.Trim(), UriKind.Absolute, out var avatarUri) ||
                 avatarUri.Scheme is not ("http" or "https"))
                 return BadRequest("Avatar URL must be an absolute http or https link");
 
-            avatar = await GetAvatarStream(avatarUri);
+            avatar = await GetAvatarDataUri(avatarUri);
             if (avatar == null)
                 return BadRequest("Could not download the avatar from that URL");
         }
 
-        IWebhook webhook;
-        await using (avatar)
-        {
-            webhook = avatar != null
-                ? await channel.CreateWebhookAsync(request.Name, avatar)
-                : await channel.CreateWebhookAsync(request.Name);
-        }
+        var webhook = await channel.CreateWebhookAsync(request.Name, avatar);
 
         await multiGreetService.ChangeMgWebhook(greet,
-            $"https://discord.com/api/webhooks/{webhook.Id}/{webhook.Token}");
+            $"{FluxerContext.Client.Config.RealApiBaseUrl}/webhooks/{webhook.Id}/{webhook.Token}");
 
         return Ok();
     }
@@ -306,7 +300,7 @@ public class MultiGreetController : Controller
     /// <summary>
     ///     Downloads a webhook avatar, or returns null when the URL does not answer with a reasonably sized image.
     /// </summary>
-    private static async Task<Stream?> GetAvatarStream(Uri url)
+    private static async Task<string?> GetAvatarDataUri(Uri url)
     {
         const int maxBytes = 8 * 1024 * 1024;
 
@@ -322,7 +316,11 @@ public class MultiGreetController : Controller
                 return null;
 
             var imgData = await response.Content.ReadAsByteArrayAsync();
-            return imgData.Length is 0 or > maxBytes ? null : imgData.ToStream();
+            if (imgData.Length is 0 or > maxBytes)
+                return null;
+
+            var mediaType = response.Content.Headers.ContentType?.MediaType ?? "image/png";
+            return $"data:{mediaType};base64,{Convert.ToBase64String(imgData)}";
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException)
         {

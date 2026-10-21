@@ -693,7 +693,7 @@ public class MeController(
                 id = u.Id,
                 username = u.Username,
                 displayName = u.DisplayName,
-                joinedAt = u.JoinedAt?.ToString() ?? "Unknown"
+                joinedAt = u.JoinedAt.ToString()
             }).ToList()
         });
     }

@@ -51,27 +51,13 @@ public class GuildController : ControllerBase
             {
                 Id = guild.Id,
                 Name = guild.Name,
-                Icon = guild.IconId,
-                IconUrl =
-                    guild.IconId != null
-                        ? $"https://cdn.discordapp.com/icons/{guild.Id}/{guild.IconId}.{(guild.IconId.StartsWith("a_") ? "gif" : "png")}"
-                        : null,
-                Banner = guild.BannerId,
-                BannerUrl =
-                    guild.BannerId != null
-                        ? $"https://cdn.discordapp.com/banners/{guild.Id}/{guild.BannerId}.{(guild.BannerId.StartsWith("a_") ? "gif" : "png")}?size=1024"
-                        : null,
-                SplashUrl =
-                    guild.SplashId != null
-                        ? $"https://cdn.discordapp.com/splashes/{guild.Id}/{guild.SplashId}.png?size=1024"
-                        : null,
-                DiscoverySplashUrl =
-                    guild.DiscoverySplashId != null
-                        ? $"https://cdn.discordapp.com/discovery-splashes/{guild.Id}/{guild.DiscoverySplashId}.png?size=1024"
-                        : null,
-                Description = guild.Description,
-                MemberCount = guild.MemberCount,
-                PremiumTier = (int)guild.PremiumTier,
+                Icon = guild.IconHash,
+                IconUrl = guild.GetIconUrl(),
+                Banner = guild.BannerHash,
+                BannerUrl = guild.GetBannerUrl(),
+                SplashUrl = guild.GetInviteSplashUrl(),
+                MemberCount = guild.TotalMembers,
+                PremiumTier = 0,
                 OwnerId = guild.OwnerId,
                 CreatedAt = guild.CreatedAt
             };
@@ -157,7 +143,7 @@ public class GuildController : ControllerBase
         catch (HttpRequestException ex)
         {
             logger.LogError(ex, "HTTP error setting bot guild profile for {GuildId}", guildId);
-            return StatusCode(502, "Failed to communicate with Discord API");
+            return StatusCode(502, "Failed to communicate with the Fluxer API");
         }
         catch (Exception ex)
         {
@@ -200,7 +186,7 @@ public class GuildController : ControllerBase
         catch (HttpRequestException ex)
         {
             logger.LogError(ex, "HTTP error resetting bot guild profile for {GuildId}", guildId);
-            return StatusCode(502, "Failed to communicate with Discord API");
+            return StatusCode(502, "Failed to communicate with the Fluxer API");
         }
         catch (Exception ex)
         {

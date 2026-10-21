@@ -155,12 +155,13 @@ public class Switch : MewdekoModuleBase<SwitchService>
     [Aliases]
     public async Task AnalyseLog()
     {
-        var attachments = ctx.Message.Attachments;
-        var author = ctx.User;
+        var attachments = ctx.Message.Attachments ?? [];
+        User author = ctx.User;
 
-        if (attachments.Count == 0 && ctx.Message.ReferencedMessage is { } referenced)
+        if (attachments.Length == 0 && ctx.Message.MessageReference is { } reference &&
+            await ctx.Channel.GetMessageAsync(reference.MessageId).ConfigureAwait(false) is { } referenced)
         {
-            attachments = referenced.Attachments;
+            attachments = referenced.Attachments ?? [];
             author = referenced.Author;
         }
 

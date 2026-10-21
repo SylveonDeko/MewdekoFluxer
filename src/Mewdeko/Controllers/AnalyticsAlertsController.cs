@@ -201,7 +201,7 @@ public class AnalyticsAlertsController(
             ? Ok(new AlertSendResponse(true))
             : BadRequest(new
             {
-                error = "No digest webhook is configured or Discord rejected it."
+                error = "No digest webhook is configured or Fluxer rejected it."
             });
     }
 

@@ -1181,11 +1181,7 @@ public class MinecraftService(
         {
             try
             {
-                await channel.ModifyMessageAsync(server.WatchMessageId.Value, m =>
-                {
-                    m.Embed = embed;
-                    m.Content = plainText ?? Optional<string>.Unspecified;
-                });
+                await channel.EditMessageAsync(server.WatchMessageId.Value, plainText, [embed]);
                 return;
             }
             catch (FluxerApiException ex) when (ex.HttpCode == HttpStatusCode.NotFound
@@ -1245,7 +1241,10 @@ public class MinecraftService(
                 return;
             }
 
-            await channel.ModifyAsync(c => c.Topic = topic);
+            await channel.ModifyAsync(new UpdateChannelRequest
+            {
+                Topic = topic
+            });
 
             var now = DateTime.UtcNow;
             server.LastTopicUpdate = now;

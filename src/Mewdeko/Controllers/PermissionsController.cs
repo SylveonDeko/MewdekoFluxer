@@ -263,11 +263,11 @@ public class PermissionsController(
                             CommandName = cmd.Aliases.Any() ? cmd.Aliases[0] : cmd.Name,
                             Description = cmd.Summary ?? "No description available",
                             Example = cmd.Remarks?.Split('\n').ToList() ?? [],
-                            GuildUserPermissions = userPerm?.UserPermissionAttribute.GuildPermission?.ToString() ?? "",
+                            GuildUserPermissions = PermissionAttributeReader.GuildPermissionOf(userPerm?.UserPermissionAttribute)?.ToString() ?? "",
                             ChannelUserPermissions =
-                                userPerm?.UserPermissionAttribute.ChannelPermission?.ToString() ?? "",
-                            GuildBotPermissions = botPerm?.GuildPermission?.ToString() ?? "",
-                            ChannelBotPermissions = botPerm?.ChannelPermission?.ToString() ?? "",
+                                PermissionAttributeReader.ChannelPermissionOf(userPerm?.UserPermissionAttribute)?.ToString() ?? "",
+                            GuildBotPermissions = PermissionAttributeReader.GuildPermissionOf(botPerm)?.ToString() ?? "",
+                            ChannelBotPermissions = PermissionAttributeReader.ChannelPermissionOf(botPerm)?.ToString() ?? "",
                             IsDragon = isDragon != null
                         };
                     })

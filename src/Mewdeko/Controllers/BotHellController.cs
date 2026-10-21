@@ -151,7 +151,7 @@ public class BotHellController(BotHellService service, FluxerClient client, BotC
             ByCount = verdict.ByCount,
             ByPercent = verdict.ByPercent,
             Complete = verdict.Complete,
-            JoinedAt = guild?.CurrentUser?.JoinedAt?.UtcDateTime
+            JoinedAt = guild?.CurrentUser?.JoinedAt.UtcDateTime
         };
     }
 }

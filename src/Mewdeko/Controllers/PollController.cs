@@ -76,7 +76,7 @@ public class PollController : Controller
             {
                 var channel = guild.GetTextChannel(poll.ChannelId);
                 var creator =
-                    await client.GetUserAsync(poll.CreatorId, CacheMode.AllowDownload, RequestOptions.Default);
+                    await client.GetUserAsync(poll.CreatorId);
                 var stats = await pollService.GetPollStatsAsync(poll.Id);
 
                 var response = await MapToPollResponse(poll, channel?.Name, creator?.Username, stats);
@@ -109,7 +109,7 @@ public class PollController : Controller
 
             var guild = client.GetGuild(guildId);
             var channel = guild?.GetTextChannel(poll.ChannelId);
-            var creator = await client.GetUserAsync(poll.CreatorId, CacheMode.AllowDownload, RequestOptions.Default);
+            var creator = await client.GetUserAsync(poll.CreatorId);
             var stats = await pollService.GetPollStatsAsync(poll.Id);
 
             var response = await MapToPollResponse(poll, channel?.Name, creator?.Username, stats);
@@ -215,7 +215,7 @@ public class PollController : Controller
             auditContext.RecordAfter(poll);
             var guild2 = client.GetGuild(guildId);
             var channel = guild2?.GetTextChannel(poll.ChannelId);
-            var creator = await client.GetUserAsync(poll.CreatorId, CacheMode.AllowDownload, RequestOptions.Default);
+            var creator = await client.GetUserAsync(poll.CreatorId);
             var stats = await pollService.GetPollStatsAsync(poll.Id);
 
             var response = await MapToPollResponse(poll, channel?.Name, creator?.Username, stats);

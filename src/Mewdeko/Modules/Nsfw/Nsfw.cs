@@ -872,7 +872,7 @@ public class Nsfw(
 
             var fileSize = sr.Content.Headers.ContentLength ?? -1;
 
-            var maxUploadSize = ctx.Guild?.MaxUploadLimit ?? 26214400;
+            const ulong maxUploadSize = 26214400;
 
             if (fileSize > (long)maxUploadSize)
             {

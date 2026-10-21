@@ -1668,10 +1668,10 @@ public class FormsController : Controller
         if (guild == null)
             return names;
 
-        foreach (var role in guild.Roles)
+        foreach (var role in guild.Roles.Values)
             names[role.Id] = role.Name;
 
-        foreach (var channel in guild.Channels)
+        foreach (var channel in guild.Channels.Values)
             names[channel.Id] = channel.Name;
 
         return names;

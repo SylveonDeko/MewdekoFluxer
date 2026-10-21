@@ -815,10 +815,10 @@ public class WordOfTheDayService : INService, IDisposable
                || !string.IsNullOrWhiteSpace(embed.Description)
                || !string.IsNullOrWhiteSpace(embed.Url)
                || embed.Fields.Length > 0
-               || embed.Image.HasValue
-               || embed.Thumbnail.HasValue
-               || embed.Author.HasValue
-               || embed.Footer.HasValue;
+               || embed.Image != null
+               || embed.Thumbnail != null
+               || embed.Author != null
+               || embed.Footer != null;
     }
 
     /// <summary>
@@ -954,8 +954,10 @@ public class WordOfTheDayService : INService, IDisposable
         try
         {
             var name = BuildThreadName(guild, channel, config, entry, localDate);
-            var thread = await channel.CreateThreadAsync(name, ThreadType.PublicThread,
-                ArchiveDuration(config.ThreadAutoArchiveMinutes), message);
+            var thread = await channel.CreateMessageThreadAsync(message, new CreatePublicThreadRequest
+            {
+                Name = name, ArchiveDuration = (int)ArchiveDuration(config.ThreadAutoArchiveMinutes)
+            });
             var prompt = strings.WotdThreadStarter(guild.Id, entry.Word);
             await thread.SendAsync(prompt, allowedMentions: AllowedMentions.None);
         }

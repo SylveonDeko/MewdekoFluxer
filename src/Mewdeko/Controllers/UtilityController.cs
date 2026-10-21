@@ -247,7 +247,7 @@ public class UtilityController(
     public async Task<IActionResult> AddAutoPublish(ulong guildId, ulong channelId)
     {
         var guild = client.GetGuild(guildId);
-        if (guild?.GetChannel(channelId) is not Channel channel)
+        if (guild?.GetChannel(channelId) is not { Type: ChannelType.GuildNews } channel)
             return BadRequest("Channel must be an announcement channel");
         if (!await autoPublishService.PermCheck(channel))
             return BadRequest("The bot needs Manage Messages in that channel");
@@ -446,7 +446,7 @@ public class UtilityController(
         var guild = client.GetGuild(guildId);
         if (guild == null)
             return NotFound("Guild not found");
-        var user = guild.GetUser(userId) ?? (IUser?)await client.Rest.GetUserAsync(userId);
+        var user = guild.GetUser(userId)?.User ?? (IUser?)await client.Rest.GetUserAsync(userId);
         var name = user?.Username ?? userId.ToString();
         var success = await streamRoleService.ApplyListAction(listType, guild, action, userId, name);
         return success ? Ok() : BadRequest("No change was made");

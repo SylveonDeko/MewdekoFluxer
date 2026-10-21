@@ -431,8 +431,7 @@ public class EmbedsController(
 
         var bot = guild.CurrentUser;
 
-        var channels = guild.Channels
-            .OfType<Channel>()
+        var channels = guild.TextChannels
             .Concat(guild.ThreadChannels)
             .DistinctBy(channel => channel.Id)
             .Select(channel => BuildChannelResponse(guild, user, bot, channel))
@@ -472,7 +471,7 @@ public class EmbedsController(
         if (user == null)
             return Forbid();
 
-        var channel = guild.GetChannel(request.ChannelId) as Channel
+        var channel = guild.GetChannel(request.ChannelId)
                       ?? guild.ThreadChannels.FirstOrDefault(thread => thread.Id == request.ChannelId);
         if (channel == null)
             return NotFound("Channel not found");
@@ -480,7 +479,7 @@ public class EmbedsController(
         var bot = guild.CurrentUser;
         var userPerms = user.GetPermissions(channel);
         var botPerms = bot.GetPermissions(channel);
-        var isThread = channel is Channel;
+        var isThread = channel.ThreadMetadata != null;
 
         // Anything that isn't a recognised embed payload is sent as plain message content, matching how
         // the rest of the bot treats embed strings.
@@ -546,13 +545,17 @@ public class EmbedsController(
         catch (WebhookLimitReachedException)
         {
             return BadRequest(
-                "That channel already holds Discord's maximum of 15 webhooks, so this persona's avatar " +
+                "That channel already holds the maximum number of webhooks, so this persona's avatar " +
                 "could not be set up there. Delete an unused webhook, or give the persona an avatar URL " +
                 "instead of an uploaded image.");
         }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
         catch (FluxerApiException ex)
         {
-            return BadRequest($"Discord rejected the message: {ex.Reason ?? ex.Message}");
+            return BadRequest($"Fluxer rejected the message: {ex.Reason ?? ex.Message}");
         }
 
         var response = new SendEmbedResponse
@@ -560,7 +563,7 @@ public class EmbedsController(
             MessageId = messageId,
             ChannelId = channel.Id,
             ChannelName = channel.Name,
-            MessageLink = $"https://discord.com/channels/{guildId}/{channel.Id}/{messageId}",
+            MessageLink = $"{channel.GetJumpUrl()}/{messageId}",
             SentViaWebhook = request.UseWebhook,
             WebhookUsername = request.UseWebhook ? webhookUsername : null,
             PersonaName = persona?.Name,
@@ -610,8 +613,8 @@ public class EmbedsController(
     /// <summary>
     ///     Sends the message through the builder's webhook on the target channel, creating it if it does not
     ///     exist yet. Both the display name and the avatar are per-message overrides, so a single webhook
-    ///     serves every persona and the webhook itself is never modified. Threads have no webhooks of their
-    ///     own, so the parent channel's webhook is used with the thread as the target.
+    ///     serves every persona and the webhook itself is never modified. Threads cannot be
+    ///     posted into through a webhook.
     /// </summary>
     /// <param name="channel">The channel or thread to post in.</param>
     /// <param name="plainText">The message content, or null for an embed only message.</param>
@@ -629,38 +632,31 @@ public class EmbedsController(
         string? avatarUrl,
         EmbedWebhookPersona? uploadedAvatarPersona)
     {
-        ulong? threadId = null;
-        Channel webhookChannel = channel;
+        if (channel.ThreadMetadata != null)
+            throw new InvalidOperationException("Webhooks cannot post into threads.");
 
-        if (channel is Channel thread)
-        {
-            threadId = thread.Id;
-            webhookChannel = thread.ParentChannel ??
-                             throw new InvalidOperationException("The thread's parent channel could not be resolved.");
-        }
-
-        if (webhookChannel is not IIntegrationChannel integrationChannel)
+        if (!channel.IsTextChannel)
             throw new InvalidOperationException("That channel does not support webhooks.");
 
-        var webhooks = await integrationChannel.GetWebhooksAsync();
+        var webhooks = (await channel.GetWebhooksAsync()).ToList();
 
         var webhook = uploadedAvatarPersona == null
-            ? await ResolveSharedWebhookAsync(integrationChannel, webhooks)
-            : await ResolvePersonaWebhookAsync(integrationChannel, webhooks, uploadedAvatarPersona);
+            ? await ResolveSharedWebhookAsync(channel, webhooks)
+            : await ResolvePersonaWebhookAsync(channel, webhooks, uploadedAvatarPersona);
 
-        using var webhookClient = new FluxerWebhookClient(webhook);
+        var webhookClient = new FluxerWebhookClient(
+            $"{FluxerContext.Client.Config.RealApiBaseUrl}/webhooks/{webhook.Id}/{webhook.Token}");
 
         return await webhookClient.SendAsync(plainText, embeds: embeds, username: username,
-            avatarUrl: avatarUrl, allowedMentions: allowedMentions,
-            threadId: threadId);
+            avatarUrl: avatarUrl, allowedMentions: allowedMentions);
     }
 
     /// <summary>
     ///     The channel's general-purpose builder webhook, which is never modified. Personas whose avatar is
     ///     a URL, and one-off sends, ride on this one using per-message name and avatar overrides.
     /// </summary>
-    private static async Task<IWebhook> ResolveSharedWebhookAsync(
-        Channel channel, IReadOnlyCollection<IWebhook> webhooks)
+    private static async Task<Webhook> ResolveSharedWebhookAsync(
+        Channel channel, IReadOnlyCollection<Webhook> webhooks)
     {
         return webhooks.FirstOrDefault(hook => hook.Name == WebhookName && hook.Token != null)
                ?? await channel.CreateWebhookAsync(WebhookName);
@@ -675,8 +671,8 @@ public class EmbedsController(
     ///     The name carries the persona's ID and avatar version rather than its display name, so renaming a
     ///     persona costs nothing and replacing its avatar refreshes the webhook exactly once.
     /// </summary>
-    private static async Task<IWebhook> ResolvePersonaWebhookAsync(
-        Channel channel, IReadOnlyCollection<IWebhook> webhooks, EmbedWebhookPersona persona)
+    private static async Task<Webhook> ResolvePersonaWebhookAsync(
+        Channel channel, IReadOnlyCollection<Webhook> webhooks, EmbedWebhookPersona persona)
     {
         var targetName = PersonaWebhookName(persona);
 
@@ -706,22 +702,36 @@ public class EmbedsController(
     ///     Uploads an avatar onto a webhook, optionally renaming it at the same time so its stored name keeps
     ///     tracking the persona's current avatar version.
     /// </summary>
-    private static async Task ApplyAvatarAsync(IWebhook webhook, byte[]? avatarBytes, string? newName)
+    private static async Task ApplyAvatarAsync(Webhook webhook, byte[]? avatarBytes, string? newName)
     {
         if (avatarBytes == null || avatarBytes.Length == 0)
         {
             if (newName != null)
-                await webhook.ModifyAsync(properties => properties.Name = newName);
+                await FluxerContext.Client.Rest.UpdateWebhookAsync(webhook.Id, new
+                {
+                    name = newName
+                });
             return;
         }
 
-        using var avatarStream = new MemoryStream(avatarBytes);
-        await webhook.ModifyAsync(properties =>
+        var mediaType = avatarBytes switch
         {
-            properties.Image = new Image(avatarStream);
-            if (newName != null)
-                properties.Name = newName;
-        });
+            [0xFF, 0xD8, ..] => "image/jpeg",
+            [0x47, 0x49, 0x46, ..] => "image/gif",
+            _ => "image/png"
+        };
+        var avatar = $"data:{mediaType};base64,{Convert.ToBase64String(avatarBytes)}";
+
+        if (newName != null)
+            await FluxerContext.Client.Rest.UpdateWebhookAsync(webhook.Id, new
+            {
+                name = newName, avatar
+            });
+        else
+            await FluxerContext.Client.Rest.UpdateWebhookAsync(webhook.Id, new
+            {
+                avatar
+            });
     }
 
     /// <summary>
@@ -813,7 +823,7 @@ public class EmbedsController(
             return null;
 
         var botPerms = bot.GetPermissions(channel);
-        var isThread = channel is Channel;
+        var isThread = channel.ThreadMetadata != null;
         var canSend = isThread ? userPerms.SendMessagesInThreads : userPerms.SendMessages;
         var botCanSend = isThread ? botPerms.SendMessagesInThreads : botPerms.SendMessages;
 
@@ -838,9 +848,9 @@ public class EmbedsController(
             Name = channel.Name,
             CategoryId = isThread ? null : categoryId,
             CategoryName = isThread ? "Threads" : categoryName,
-            Position = channel.Position,
+            Position = channel.Position ?? 0,
             IsThread = isThread,
-            IsAnnouncement = channel is Channel,
+            IsAnnouncement = channel.Type == ChannelType.GuildNews,
             CanSend = canSend,
             CanEmbed = userPerms.EmbedLinks,
             CanMentionEveryone = userPerms.MentionEveryone,

@@ -364,7 +364,7 @@ public class BirthdayController : Controller
                 return NotFound("User not found in guild.");
 
             await using var db = await dbFactory.CreateConnectionAsync();
-            var user = await db.GetOrCreateUser(guildUser);
+            var user = await db.GetOrCreateUser(guildUser.User);
 
             if (!user.Birthday.HasValue)
                 return NotFound("User has no birthday set.");
@@ -497,7 +497,7 @@ public class BirthdayController : Controller
 
             await using var db = await dbFactory.CreateConnectionAsync();
 
-            var totalUsers = guild.MemberCount;
+            var totalUsers = guild.TotalMembers;
 
             var usersWithBirthdays = await db.DiscordUsers
                 .Where(x => x.Birthday.HasValue && guildUserIds.Contains(x.UserId))

@@ -63,7 +63,7 @@ public abstract class TwitchModuleBase
     /// <param name="data">Optional format arguments.</param>
     protected Task ReplyLocalizedAsync(string key, params object[] data)
     {
-        return TwitchSvc.SendAsync(Context.TwitchChannel, $"@{Context.DisplayName} {GetText(key, data)}");
+        return TwitchSvc.SendMessageAsync(Context.TwitchChannel, $"@{Context.DisplayName} {GetText(key, data)}");
     }
 
     /// <summary>
@@ -73,7 +73,7 @@ public abstract class TwitchModuleBase
     /// <param name="message">The already-resolved message to send.</param>
     protected Task ReplyAsync(string message)
     {
-        return TwitchSvc.SendAsync(Context.TwitchChannel, GetText("twitch_reply", Context.DisplayName, message));
+        return TwitchSvc.SendMessageAsync(Context.TwitchChannel, GetText("twitch_reply", Context.DisplayName, message));
     }
 
     /// <summary>
@@ -82,7 +82,7 @@ public abstract class TwitchModuleBase
     /// <param name="message">The already-resolved message to send.</param>
     protected Task SayAsync(string message)
     {
-        return TwitchSvc.SendAsync(Context.TwitchChannel, message);
+        return TwitchSvc.SendMessageAsync(Context.TwitchChannel, message);
     }
 }
 
