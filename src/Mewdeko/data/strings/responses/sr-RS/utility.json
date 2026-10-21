@@ -69,7 +69,6 @@
   "invite_filter_server_on": "Filtriranje poziva omogućeno na ovom serveru.",
   "invite_filter_unexpected": "Neočekivana greška prilikom filtriranja poziva u kanalu {0}",
   "invite_leaderboard_title": "Rang Lista Poziva",
-  "invite_link_text": "[Mewdeko](https://discord.com/oauth2/authorize?client_id=752236274261426212&scope=bot&permissions=66186303)\n[Mewdeko Nightly](https://discord.com/oauth2/authorize?client_id=964590728397344868&scope=bot&permissions=66186303)",
   "invite_settings": "Praćenje poziva je {0}, uklanjanje pri odlasku je {1}, minimalni uzrast naloga je {2}.",
   "invite_tracking_disabled": "Praćenje poziva je onemogućeno.",
   "invite_tracking_enabled": "Praćenje poziva je omogućeno.",

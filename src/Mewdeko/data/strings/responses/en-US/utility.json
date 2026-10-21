@@ -69,7 +69,6 @@
   "invite_filter_server_on": "Invite filtering enabled on this server.",
   "invite_filter_unexpected": "Unexpected error while filtering invite in channel {0}",
   "invite_leaderboard_title": "Invite Leaderboard",
-  "invite_link_text": "[Mewdeko](https://discord.com/oauth2/authorize?client_id=752236274261426212&scope=bot&permissions=66186303)\n[Mewdeko Nightly](https://discord.com/oauth2/authorize?client_id=964590728397344868&scope=bot&permissions=66186303)",
   "invite_settings": "Invite tracking is {0}, remove on leave is {1}, minimum account age is {2}.",
   "invite_tracking_disabled": "Invite tracking has been disabled.",
   "invite_tracking_enabled": "Invite tracking has been enabled.",

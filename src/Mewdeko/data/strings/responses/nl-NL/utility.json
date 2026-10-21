@@ -37,7 +37,6 @@
   "invite_filter_error": "Mislukt naar filter invite in Kanaal {0}. Possible Toestemming issue",
   "invite_filter_unexpected": "Unexpected Fout while filtering invite in Kanaal {0}",
   "invite_leaderboard_title": "Invite Leaderboard",
-  "invite_link_text": "[Mewdeko](https://discord.com/oauth2/authorize?client_id=752236274261426212&scope=bot&permissions=66186303)\n[Mewdeko Nightly](https://discord.com/oauth2/authorize?client_id=964590728397344868&scope=bot&permissions=66186303)",
   "invite_settings": "Invite tracking is {0}, remove op leave is {1}, minimum account age is {2}.",
   "invite_tracking_disabled": "Invite tracking heeft been Uitgeschakeld.",
   "invite_tracking_enabled": "Invite tracking heeft been Ingeschakeld.",

@@ -69,7 +69,6 @@
   "invite_filter_server_on": "Filtro de invitaciones habilitado en este servidor.",
   "invite_filter_unexpected": "Error inesperado al filtrar la invitación en el canal {0}",
   "invite_leaderboard_title": "Clasificación de Invitaciones",
-  "invite_link_text": "[Mewdeko](https://discord.com/oauth2/authorize?client_id=752236274261426212&scope=bot&permissions=66186303)\n[Mewdeko Nightly](https://discord.com/oauth2/authorize?client_id=964590728397344868&scope=bot&permissions=66186303)",
   "invite_settings": "El seguimiento de invitaciones está {0}, eliminar al salir es {1}, la edad mínima de la cuenta es {2}.",
   "invite_tracking_disabled": "El seguimiento de invitaciones ha sido deshabilitado.",
   "invite_tracking_enabled": "El seguimiento de invitaciones ha sido habilitado.",
