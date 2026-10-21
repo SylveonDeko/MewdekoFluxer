@@ -487,7 +487,7 @@ public class PollCommands : MewdekoModuleBase<PollService>
 
     private async Task PostAsync(string question, List<PollOptionData> options, PollType type, PollSettings settings)
     {
-        if (ctx.Channel is not Channel channel)
+        if (ctx.Channel is not Channel { IsTextable: true, GuildId: not null } channel)
             return;
 
         var problem = await pollMessages.GetPostProblemAsync(channel, settings, options);

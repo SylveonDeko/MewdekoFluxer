@@ -266,7 +266,7 @@ public class MessageRepeaterService : INService, IReadyExecutor, IDisposable
                 return;
 
             // For forum channels, check tag conditions
-            if (thread.ParentChannel is Channel forumChannel)
+            if (thread.ParentChannel is { Type: ChannelType.GuildForum } forumChannel)
             {
                 var threadTags = thread.AppliedTags?.ToArray() ?? [];
 
@@ -1072,7 +1072,7 @@ public class MessageRepeaterService : INService, IReadyExecutor, IDisposable
                 .ToList();
 
             // Check for thread stickies if this is a thread message
-            if (message.Channel is Channel threadChannel)
+            if (message.Channel is { ThreadMetadata: not null } threadChannel)
             {
                 var threadRepeaters = guildRepeaters.Values
                     .Where(r => r.Repeater.IsEnabled &&
@@ -1140,7 +1140,7 @@ public class MessageRepeaterService : INService, IReadyExecutor, IDisposable
     private bool ShouldManageThreadSticky(GuildRepeater repeater, Channel thread)
     {
         // Check if this thread belongs to the repeater's target channel
-        if (thread.ParentChannel is Channel forumChannel)
+        if (thread.ParentChannel is { Type: ChannelType.GuildForum } forumChannel)
         {
             // For forum threads, check if parent forum matches and tags are valid
             if (repeater.ChannelId != forumChannel.Id)

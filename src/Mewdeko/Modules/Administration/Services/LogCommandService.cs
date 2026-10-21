@@ -1340,7 +1340,7 @@ public class LogCommandService(
     /// <param name="args">The channel that was created.</param>
     private async Task OnChannelCreated(Channel args)
     {
-        if (args is not Channel channel) return;
+        if (args is not Channel { GuildId: not null } channel) return;
 
         // Check if channel is ignored
         if (IsChannelIgnored(channel.Guild.Id, channel.Id))
@@ -1380,7 +1380,7 @@ public class LogCommandService(
     /// <param name="args">The channel that was destroyed.</param>
     private async Task OnChannelDestroyed(Channel args)
     {
-        if (args is not Channel channel) return;
+        if (args is not Channel { GuildId: not null } channel) return;
 
         // Check if channel is ignored
         if (IsChannelIgnored(channel.Guild.Id, channel.Id))
@@ -1421,7 +1421,7 @@ public class LogCommandService(
     /// <param name="arsg2">The channel after the update.</param>
     private async Task OnChannelUpdated(Channel args, Channel arsg2)
     {
-        if (args is not Channel channel || arsg2 is not Channel channel2) return;
+        if (args is not Channel { GuildId: not null } channel || arsg2 is not Channel { GuildId: not null } channel2) return;
         if (channel.Id != channel2.Id) return; // Should be the same channel
 
         // Check if channel is ignored

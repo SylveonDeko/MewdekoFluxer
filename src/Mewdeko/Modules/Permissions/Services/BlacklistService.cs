@@ -179,7 +179,7 @@ public sealed class BlacklistService : IEarlyBehavior, INService
     private async Task CheckBlacklist(SocketGuild arg)
     {
         var channels = await arg.GetTextChannelsAsync();
-        var channel = channels.FirstOrDefault(x => x is not Channel);
+        var channel = channels.FirstOrDefault(x => x is not { Type: ChannelType.GuildVoice });
         if (arg.Name.ToLower().Contains("nigger"))
         {
             await Blacklist(BlacklistType.Server, arg.Id, "Inappropriate Name");

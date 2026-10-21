@@ -418,9 +418,8 @@ public partial class Administration
 
             var channelMentions = ignoredChannels
                 .Select(channelId => ctx.Guild.GetChannelAsync(channelId).GetAwaiter().GetResult())
-                .Where(ch => ch != null)
-                .OfType<Channel>()
-                .Select(ch => ch.Mention)
+                .Where(ch => ch is { IsTextable: true, GuildId: not null })
+                .Select(ch => ch!.Mention)
                 .ToList();
 
             if (!channelMentions.Any())

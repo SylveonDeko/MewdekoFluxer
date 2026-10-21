@@ -238,7 +238,7 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
 
         try
         {
-            if (await client.Rest.GetChannelAsync(channelId).ConfigureAwait(false) is not Channel channel)
+            if (await client.Rest.GetChannelAsync(channelId).ConfigureAwait(false) is not Channel { IsTextable: true } channel)
                 return (null, 0, null, false);
 
             return (channel.Name, channel.GuildId ?? 0, client.GetGuild(channel.GuildId ?? 0)?.Name, true);
@@ -343,7 +343,7 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
 
     private Task OnMessageReceived(SocketMessage message)
     {
-        if (message.Author.IsBot || message.Channel is not Channel || string.IsNullOrWhiteSpace(message.Content))
+        if (message.Author.IsBot || message.Channel is not { Type: ChannelType.DM } || string.IsNullOrWhiteSpace(message.Content))
             return Task.CompletedTask;
 
         _ = Task.Run(async () =>
@@ -467,7 +467,7 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
 
         try
         {
-            if (await client.Rest.GetChannelAsync(channelId).ConfigureAwait(false) is not Channel channel)
+            if (await client.Rest.GetChannelAsync(channelId).ConfigureAwait(false) is not Channel { IsTextable: true } channel)
                 return;
 
             var eb = new EmbedBuilder()

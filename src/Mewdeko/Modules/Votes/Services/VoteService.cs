@@ -66,7 +66,7 @@ public class VoteService : INService
             if (potentialVoteConfig.VotesChannel is 0)
                 return;
 
-            if (guild.GetTextChannel(potentialVoteConfig.VotesChannel) is not Channel channel)
+            if (guild.GetTextChannel(potentialVoteConfig.VotesChannel) is not Channel { IsTextable: true } channel)
                 return;
 
             // Count votes using LinqToDB
@@ -112,7 +112,7 @@ public class VoteService : INService
         }
         else
         {
-            if (guild.GetTextChannel(potentialVoteConfig.VotesChannel) is not Channel channel)
+            if (guild.GetTextChannel(potentialVoteConfig.VotesChannel) is not Channel { IsTextable: true } channel)
                 return;
 
             if (potentialVoteConfig.VotesChannel is 0)

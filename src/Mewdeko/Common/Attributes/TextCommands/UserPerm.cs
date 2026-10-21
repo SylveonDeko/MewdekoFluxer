@@ -49,7 +49,7 @@ public class UserPermAttribute : PreconditionAttribute
         if (command.Module.Name.Equals("chattriggers", StringComparison.CurrentCultureIgnoreCase))
         {
             var creds = services.GetService<IBotCredentials>();
-            if (context.Channel is Channel)
+            if (context.Channel is { Type: ChannelType.DM })
             {
                 return !creds.IsOwner(context.User)
                     ? PreconditionResult.FromError("You must be a bot owner to add global Chat Triggers!")

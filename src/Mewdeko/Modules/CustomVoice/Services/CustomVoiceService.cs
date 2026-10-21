@@ -1522,7 +1522,7 @@ public class CustomVoiceService : INService, IUnloadableService
     /// </summary>
     private async Task OnChannelDestroyed(Channel channel)
     {
-        if (channel is not Channel voiceChannel)
+        if (channel is not { Type: ChannelType.GuildVoice } voiceChannel)
             return;
 
         var guild = (voiceChannel as Channel)?.Guild;

@@ -101,7 +101,7 @@ public sealed partial class AchievementService
     {
         if (message is not SocketMessage userMessage ||
             message.Member is not { } user ||
-            message.Channel is not Channel channel ||
+            message.Channel is not Channel { GuildId: not null } channel ||
             !CanEarn(user, channel.Id))
             return Task.CompletedTask;
 

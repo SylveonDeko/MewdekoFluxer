@@ -37,7 +37,7 @@ public class AutoPublishService : INService
     /// <param name="args">The message event arguments.</param>
     private async Task AutoPublish(SocketMessage args)
     {
-        if (args.Channel is not Channel channel || args is not Message msg)
+        if (args.Channel is not Channel { Type: ChannelType.GuildNews } channel || args is not Message msg)
             return;
 
         var currentUser = await channel.GetUserAsync(client.CurrentUser.Id);

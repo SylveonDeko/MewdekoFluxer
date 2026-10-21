@@ -115,7 +115,7 @@ public sealed partial class AchievementService
     private static bool CanAnnounceWhereItHappened(SocketGuildMember user, Channel channel,
         AchievementGuildSettings settings)
     {
-        var thread = channel as Channel;
+        var thread = channel is { ThreadMetadata: not null } ? channel : null;
         var parent = thread?.ParentChannel;
         if (settings.QuietChannels.Contains(channel.Id) || parent is not null && settings.QuietChannels.Contains(parent.Id))
             return false;
@@ -164,7 +164,7 @@ public sealed partial class AchievementService
             sent = await SendAsync(channel, image, mention ? user.Mention : null, [embed], allowed);
         }
 
-        if (settings.Row.DeleteAfter > 0 && channel is not Channel)
+        if (settings.Row.DeleteAfter > 0 && channel is not { Type: ChannelType.DM })
             sent.DeleteAfter(settings.Row.DeleteAfter);
     }
 

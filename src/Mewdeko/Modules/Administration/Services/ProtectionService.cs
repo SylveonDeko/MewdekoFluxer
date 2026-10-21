@@ -568,7 +568,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
             })
             return Task.CompletedTask;
 
-        if (msg.Channel is not Channel channel)
+        if (msg.Channel is not Channel { IsTextable: true, GuildId: not null } channel)
             return Task.CompletedTask;
 
         if (!antiSpamGuilds.TryGetValue(channel.Guild.Id, out var spamStats))
@@ -852,7 +852,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
         if (arg is not SocketMessage msg || msg.Member is { GuildPermissions.Administrator: true })
             return Task.CompletedTask;
 
-        if (msg.Channel is not Channel channel)
+        if (msg.Channel is not Channel { IsTextable: true, GuildId: not null } channel)
             return Task.CompletedTask;
 
         if (!antiMassMentionGuilds.TryGetValue(channel.Guild.Id, out var massMentionStats))
@@ -1470,7 +1470,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
         if (arg is not SocketMessage msg || msg.Author.IsBot || msg.Member is not { } guildUser)
             return Task.CompletedTask;
 
-        if (msg.Channel is not Channel channel)
+        if (msg.Channel is not Channel { IsTextable: true, GuildId: not null } channel)
             return Task.CompletedTask;
 
         if (!antiMassPostGuilds.TryGetValue(channel.Guild.Id, out var massPostStats))
@@ -1623,7 +1623,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     private Task HandleAntiPostChannel(Message arg)
     {
         if (arg is not SocketMessage msg || msg.Author.IsBot || msg.Member is not { } guildUser ||
-            msg.Channel is not Channel channel ||
+            msg.Channel is not Channel { IsTextable: true, GuildId: not null } channel ||
             !antiPostChannelGuilds.TryGetValue(channel.Guild.Id, out var postChannelStats))
             return Task.CompletedTask;
 
@@ -1822,7 +1822,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
             return;
 
         var guild = client.GetGuild(guildId);
-        if (guild?.GetChannel(channelId) is not Channel textChannel)
+        if (guild?.GetChannel(channelId) is not Channel { IsTextable: true } textChannel)
             return;
 
         var violations = stats.RecentViolations.ToArray();
@@ -2120,7 +2120,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     private Task HandleAntiImageHash(Message arg)
     {
         if (arg is not SocketMessage msg || msg.Member is not { } guildUser ||
-            msg.Channel is not Channel channel ||
+            msg.Channel is not Channel { IsTextable: true, GuildId: not null } channel ||
             !antiImageHashGuilds.TryGetValue(channel.Guild.Id, out var stats))
             return Task.CompletedTask;
 

@@ -1026,7 +1026,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
             return (null, null);
 
         // Check if the message channel is a text channel
-        if (umsg.Channel is not Channel channel)
+        if (umsg.Channel is not Channel { IsTextable: true, GuildId: not null } channel)
             return (null, null);
 
         // Trim and convert message content to lowercase for comparison
@@ -2089,7 +2089,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
         if (!msg.Author.IsBot || msg.Author.Id == client.CurrentUser?.Id)
             return;
 
-        if (msg.Channel is not Channel channel)
+        if (msg.Channel is not Channel { IsTextable: true, GuildId: not null } channel)
             return;
 
         try

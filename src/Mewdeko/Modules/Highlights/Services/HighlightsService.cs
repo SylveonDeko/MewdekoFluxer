@@ -179,7 +179,7 @@ public class HighlightsService : INService, IReadyExecutor, IUnloadableService
 
     private async Task<bool> ExecuteHighlights(SocketMessage message)
     {
-        if (message.Channel is not Channel channel)
+        if (message.Channel is not Channel { IsTextable: true, GuildId: not null } channel)
             return true;
 
         if (string.IsNullOrWhiteSpace(message.Content))

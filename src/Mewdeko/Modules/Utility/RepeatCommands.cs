@@ -391,7 +391,7 @@ public partial class Utility
                 return;
 
             // Validate channel type - must be text channel or forum channel
-            if (channel is not (Channel or Channel))
+            if (channel is not ({ IsTextable: true } or { Type: ChannelType.GuildForum }))
             {
                 await ReplyErrorAsync(Strings.StickyInvalidChannelType(ctx.Guild.Id)).ConfigureAwait(false);
                 return;

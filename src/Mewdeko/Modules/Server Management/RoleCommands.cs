@@ -74,10 +74,10 @@ public partial class ServerManagement
             }
 
             var msg = await ctx.Channel.SendConfirmAsync(
-                    Strings.SyncingRolePerms(ctx.Guild.Id, config.Data.LoadingEmote, role.Mention, (await ctx.Guild.GetTextChannelsAsync().ConfigureAwait(false)).Count(x => x is not Channel), (await ctx.Guild.GetTextChannelsAsync().ConfigureAwait(false)).Count(x => x is not Channel)))
+                    Strings.SyncingRolePerms(ctx.Guild.Id, config.Data.LoadingEmote, role.Mention, (await ctx.Guild.GetTextChannelsAsync().ConfigureAwait(false)).Count(x => x.ThreadMetadata == null), (await ctx.Guild.GetTextChannelsAsync().ConfigureAwait(false)).Count(x => x.ThreadMetadata == null)))
                 .ConfigureAwait(false);
             foreach (var i in (await ctx.Guild.GetChannelsAsync().ConfigureAwait(false)).Where(x =>
-                         x is not (Channel or Channel)))
+                         x is { ThreadMetadata: null, Type: not ChannelType.GuildVoice }))
             {
                 if (perms != null)
                     await i.AddPermissionOverwriteAsync(role, (OverwritePermissions)perms).ConfigureAwait(false);
@@ -95,7 +95,7 @@ public partial class ServerManagement
                 Description =
                     Strings.SuccessfullySyncedPermsChannelsCategories(ctx.Guild.Id, role.Mention,
                         (await ctx.Guild.GetTextChannelsAsync().ConfigureAwait(false)).Count(x =>
-                            x is not Channel),
+                            x.ThreadMetadata == null),
                         (await ctx.Guild.GetCategoriesAsync().ConfigureAwait(false)).Count)
             };
             await msg.ModifyAsync(x => x.Embed = eb.Build()).ConfigureAwait(false);
@@ -122,10 +122,10 @@ public partial class ServerManagement
             }
 
             var msg = await ctx.Channel.SendConfirmAsync(
-                    Strings.SyncingRolePermsChannels(ctx.Guild.Id, config.Data.LoadingEmote, role.Mention, (await ctx.Guild.GetTextChannelsAsync().ConfigureAwait(false)).Count(x => x is not Channel)))
+                    Strings.SyncingRolePermsChannels(ctx.Guild.Id, config.Data.LoadingEmote, role.Mention, (await ctx.Guild.GetTextChannelsAsync().ConfigureAwait(false)).Count(x => x.ThreadMetadata == null)))
                 .ConfigureAwait(false);
             foreach (var i in (await ctx.Guild.GetTextChannelsAsync().ConfigureAwait(false)).Where(x =>
-                         x is not Channel))
+                         x.ThreadMetadata == null))
             {
                 if (perms != null)
                     await i.AddPermissionOverwriteAsync(role, (OverwritePermissions)perms).ConfigureAwait(false);
@@ -137,7 +137,7 @@ public partial class ServerManagement
                 Description =
                     Strings.SuccessfullySyncedPermsChannels(ctx.Guild.Id, role.Mention,
                         (await ctx.Guild.GetTextChannelsAsync().ConfigureAwait(false)).Count(x =>
-                            x is not Channel))
+                            x.ThreadMetadata == null))
             };
             await msg.ModifyAsync(x => x.Embed = eb.Build()).ConfigureAwait(false);
         }

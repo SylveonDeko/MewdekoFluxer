@@ -332,7 +332,7 @@ public class FeatureRequestService : INService
 
         try
         {
-            if (await client.Rest.GetChannelAsync(channelId).ConfigureAwait(false) is not Channel channel)
+            if (await client.Rest.GetChannelAsync(channelId).ConfigureAwait(false) is not Channel { IsTextable: true } channel)
                 return (null, 0, null, false);
 
             return (channel.Name, channel.GuildId ?? 0, client.GetGuild(channel.GuildId ?? 0)?.Name, true);
@@ -372,7 +372,7 @@ public class FeatureRequestService : INService
             if (record is null)
                 return;
 
-            if (await client.Rest.GetChannelAsync(channelId).ConfigureAwait(false) is not Channel channel)
+            if (await client.Rest.GetChannelAsync(channelId).ConfigureAwait(false) is not Channel { IsTextable: true } channel)
                 return;
 
             var eb = new EmbedBuilder()

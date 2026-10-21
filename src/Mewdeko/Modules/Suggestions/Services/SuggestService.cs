@@ -179,7 +179,7 @@ public class SuggestionsService : INService
 
     private async Task MessageRecieved(SocketMessage msg)
     {
-        if (msg.Channel is not Channel chan)
+        if (msg.Channel is not Channel { IsTextable: true, GuildId: not null } chan)
             return;
         if (spamCheck.Contains(chan.Id))
             return;
@@ -1222,7 +1222,7 @@ public class SuggestionsService : INService
     private async Task CreateSuggestionThread(SocketGuild guild, SocketGuildMember user, Message message, ulong number)
     {
         var threadType = await GetThreadType(guild);
-        if (threadType is not (1 or 2) || message.Channel is not Channel channel)
+        if (threadType is not (1 or 2) || message.Channel is not Channel { IsTextable: true, GuildId: not null } channel)
             return;
 
         try

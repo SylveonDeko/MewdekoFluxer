@@ -1231,7 +1231,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
 
         var msg = arg1.Value;
         var chan = arg2;
-        if (chan is not Channel channel)
+        if (chan is not Channel { IsTextable: true } channel)
             return;
 
         var permissions = (await channel.Guild.GetUserAsync(client.CurrentUser.Id)).GetPermissions(channel);

@@ -245,7 +245,7 @@ public class KaladontChannelService : INService, IReadyExecutor
         // Notify channel
         try
         {
-            if (client.GetChannel(channelId) is Channel textChannel)
+            if (client.GetChannel(channelId) is Channel { IsTextable: true, GuildId: not null } textChannel)
             {
                 var embed = new EmbedBuilder()
                     .WithOkColor()
@@ -264,7 +264,7 @@ public class KaladontChannelService : INService, IReadyExecutor
 
     private async Task MessageReceived(SocketMessage msg)
     {
-        if (msg.Author.IsBot || msg.Channel is not Channel textChannel)
+        if (msg.Author.IsBot || msg.Channel is not Channel { IsTextable: true, GuildId: not null } textChannel)
             return;
 
         // Check if this is a persistent Kaladont channel

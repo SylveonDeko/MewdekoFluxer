@@ -22,7 +22,7 @@ public partial class Utility
         [UserPerm(GuildPermission.Administrator)]
         public async Task AddAutoPublish(Channel channel)
         {
-            if (channel is not Channel chan)
+            if (channel is not { Type: ChannelType.GuildNews } chan)
             {
                 await ReplyErrorAsync(Strings.AutopublishChannelNotNews(ctx.Guild.Id));
                 return;
@@ -59,7 +59,7 @@ public partial class Utility
                 return;
             }
 
-            if (channel is not Channel chan)
+            if (channel is not { Type: ChannelType.GuildNews } chan)
             {
                 await ReplyErrorAsync(Strings.AutopublishChannelNotNews(ctx.Guild.Id));
                 return;
@@ -96,7 +96,7 @@ public partial class Utility
                 return;
             }
 
-            if (channel is not Channel chan)
+            if (channel is not { Type: ChannelType.GuildNews } chan)
             {
                 await ReplyErrorAsync(Strings.AutopublishChannelNotNews(ctx.Guild.Id));
                 return;
@@ -184,7 +184,7 @@ public partial class Utility
         [UserPerm(GuildPermission.Administrator)]
         public async Task RemoveAutoPublish(Channel channel)
         {
-            if (channel is not Channel)
+            if (channel is not { Type: ChannelType.GuildNews })
             {
                 await ReplyErrorAsync(Strings.AutopublishChannelNotNews(ctx.Guild.Id));
                 return;

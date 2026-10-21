@@ -515,7 +515,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
         out Channel? channel)
     {
         channel = guild.GetTextChannel(channelId);
-        if (channel is null or Channel or Channel)
+        if (channel is null or { ThreadMetadata: not null } or { Type: ChannelType.GuildVoice })
         {
             channel = null;
             return (RoleMenuError.InvalidChannel, null);
@@ -532,7 +532,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <returns>True when the channel type is allowed.</returns>
     public static bool IsMenuChannel(Channel channel)
     {
-        return channel is not Channel and not Channel;
+        return channel is not ({ ThreadMetadata: not null } or { Type: ChannelType.GuildVoice });
     }
 
     /// <summary>

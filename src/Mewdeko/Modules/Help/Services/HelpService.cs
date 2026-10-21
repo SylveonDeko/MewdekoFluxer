@@ -549,7 +549,7 @@ public class HelpService : INService, IReadyExecutor
     {
         if (msg.Content == $"<@{client.CurrentUser.Id}>" || msg.Content == $"<@!{client.CurrentUser.Id}>")
         {
-            if (msg.Channel is Channel chan)
+            if (msg.Channel is Channel { IsTextable: true, GuildId: not null } chan)
             {
                 var prefix = await guildSettings.GetPrefix(chan.Guild);
                 var eb = new EmbedBuilder();

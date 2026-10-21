@@ -132,7 +132,7 @@ public class CommandHandler : INService
         if (guildId != null)
         {
             var guild = client.GetGuild(guildId.Value);
-            if (guild?.GetChannel(channelId) is not Channel channel)
+            if (guild?.GetChannel(channelId) is not Channel { IsTextable: true } channel)
             {
                 logger.LogWarning("Channel for external execution not found");
                 return;
@@ -297,7 +297,7 @@ public class CommandHandler : INService
             if (info is null)
             {
                 var serv = Services.GetRequiredService<HelpService>();
-                if (channel is Channel)
+                if (channel is { Type: ChannelType.DM })
                     await serv.BadCommand(client, null, usrMsg);
                 return;
             }
@@ -452,7 +452,7 @@ public class CommandHandler : INService
 
         if (bss.Data.CommandLogChannel > 0)
         {
-            if (await client.Rest.GetChannelAsync(bss.Data.CommandLogChannel) is Channel logChannel)
+            if (await client.Rest.GetChannelAsync(bss.Data.CommandLogChannel) is Channel { IsTextable: true } logChannel)
                 await logChannel.SendAsync(embed: embed.Build()).ConfigureAwait(false);
         }
 
@@ -462,7 +462,7 @@ public class CommandHandler : INService
         var gc = await gss.GetGuildConfig(guildId);
         if (gc.CommandLogChannel != 0)
         {
-            if (await client.Rest.GetChannelAsync(gc.CommandLogChannel) is Channel commandLogChannel)
+            if (await client.Rest.GetChannelAsync(gc.CommandLogChannel) is Channel { IsTextable: true } commandLogChannel)
                 await commandLogChannel.SendAsync(embed: embed.Build()).ConfigureAwait(false);
         }
     }

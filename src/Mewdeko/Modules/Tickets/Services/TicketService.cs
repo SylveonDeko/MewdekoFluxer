@@ -696,7 +696,7 @@ public class TicketService : INService
         ticket.LastActivityAt = DateTime.UtcNow;
         await ctx.UpdateAsync(ticket);
 
-        if (await moderator.Guild.GetChannelAsync(ticket.ChannelId) is Channel channel)
+        if (await moderator.Guild.GetChannelAsync(ticket.ChannelId) is Channel { IsTextable: true } channel)
         {
             var embed = new EmbedBuilder()
                 .WithTitle(strings.TicketUnclaimed(moderator.Guild.Id))
@@ -1232,7 +1232,7 @@ public class TicketService : INService
 
         SocketGuild guild = client.GetGuild(ticket.GuildId);
 
-        if (await guild.GetChannelAsync(ticket.ChannelId) is Channel channel)
+        if (await guild.GetChannelAsync(ticket.ChannelId) is Channel { IsTextable: true } channel)
         {
             try
             {
@@ -1506,7 +1506,7 @@ public class TicketService : INService
             if (guild == null)
                 return false;
 
-            if (await guild.GetChannelAsync(panel.ChannelId) is not Channel channel)
+            if (await guild.GetChannelAsync(panel.ChannelId) is not Channel { IsTextable: true } channel)
                 return false;
 
             if (await channel.GetMessageAsync(panel.MessageId) is not Message message)
@@ -2139,7 +2139,7 @@ public class TicketService : INService
 
         SocketGuild guild = client.GetGuild(ticket.GuildId);
 
-        if (await guild.GetChannelAsync(ticket.ChannelId) is Channel channel)
+        if (await guild.GetChannelAsync(ticket.ChannelId) is Channel { IsTextable: true } channel)
         {
             var embed = new EmbedBuilder()
                 .WithTitle(strings.TicketPriorityUpdated(guild.Id))

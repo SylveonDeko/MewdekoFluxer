@@ -254,7 +254,7 @@ public class TriviaGame
 
             var umsg = imsg as SocketMessage;
 
-            if (umsg?.Channel is not Channel textChannel || textChannel.Guild != Guild)
+            if (umsg?.Channel is not Channel { IsTextable: true, GuildId: not null } textChannel || textChannel.Guild != Guild)
                 return;
 
             if (umsg.Member is not { } guildUser)

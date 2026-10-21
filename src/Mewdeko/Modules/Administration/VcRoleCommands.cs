@@ -46,7 +46,7 @@ public partial class Administration
         [RequireContext(ContextType.Guild)]
         public async Task VcRole(Channel vchan, [Remainder] SocketRole? role = null)
         {
-            if (vchan is Channel chan)
+            if (vchan is { Type: ChannelType.GuildVoice } chan)
             {
                 if (role == null)
                 {

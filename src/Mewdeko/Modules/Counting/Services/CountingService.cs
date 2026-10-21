@@ -926,7 +926,7 @@ public class CountingService : INService, IReadyExecutor
     {
         try
         {
-            if (message.Channel is not Channel textChannel)
+            if (message.Channel is not Channel { IsTextable: true, GuildId: not null } textChannel)
                 return new BotBlockResult
                 {
                     IsBlocked = false
@@ -1041,7 +1041,7 @@ public class CountingService : INService, IReadyExecutor
             if (config == null) return;
 
             // Check if bot has permission to react
-            if (message.Channel is not Channel textChannel || !await CanBotReactInChannel(textChannel))
+            if (message.Channel is not Channel { IsTextable: true, GuildId: not null } textChannel || !await CanBotReactInChannel(textChannel))
             {
                 logger.LogWarning("Bot lacks permission to add reactions in channel {ChannelId}", message.Channel.Id);
                 return;
@@ -1161,7 +1161,7 @@ public class CountingService : INService, IReadyExecutor
                 {
                     try
                     {
-                        if (client.GetChannel(channelId) is Channel textChannel)
+                        if (client.GetChannel(channelId) is Channel { IsTextable: true, GuildId: not null } textChannel)
                         {
                             var nextNumber = countingChannel.CurrentNumber + countingChannel.Increment;
                             var embed = new EmbedBuilder()

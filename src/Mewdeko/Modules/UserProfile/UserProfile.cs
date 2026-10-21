@@ -295,7 +295,7 @@ public class UserProfile(IDataConnectionFactory dbFactory, BotCredentials creds)
         }
 
         var channel = await ctx.Client.GetChannelAsync(creds.PronounAbuseReportChannelId).ConfigureAwait(false);
-        if (channel is not Channel reportChannel)
+        if (channel is not Channel { IsTextable: true } reportChannel)
         {
             await ReplyErrorAsync(Strings.PronounsReportNothing(ctx.Guild.Id)).ConfigureAwait(false);
             return;

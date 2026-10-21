@@ -615,7 +615,7 @@ public sealed partial class AchievementService
     private static List<ulong> PostableChannels(SocketGuild guild, SocketGuildMember member, AchievementGuildSettings settings)
     {
         return guild.TextChannels
-            .Where(c => c is not Channel && !settings.ExcludedChannels.Contains(c.Id))
+            .Where(c => c.ThreadMetadata == null && !settings.ExcludedChannels.Contains(c.Id))
             .Where(c =>
             {
                 var perms = member.GetPermissions(c);
