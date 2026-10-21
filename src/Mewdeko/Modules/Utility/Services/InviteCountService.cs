@@ -838,7 +838,7 @@ public class InviteCountService : INService, IReadyExecutor
             .WithAuthor(user.ToString(), user.RealAvatarUrl().ToString())
             .WithDescription(description)
             .AddField(strings.InviteLogAccountCreated(guild.Id),
-                TimestampTag.FromDateTimeOffset(user.CreatedAt, TimestampTagStyle.Relative).ToString(), true)
+                TimestampTag.FromDateTimeOffset(user.CreatedAt, TimestampTagStyles.Relative).ToString(), true)
             .AddField(strings.InviteLogJoinType(guild.Id), result.JoinType.ToString(), true)
             .WithCurrentTimestamp();
 

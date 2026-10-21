@@ -85,7 +85,7 @@ public static class StatRoleEmbeds
             .AddField(strings.StatRoleInterval(guildId), $"{role.IntervalMinutes}m", true)
             .AddField(strings.StatRoleLastRun(guildId),
                 role.LastRunAt.HasValue
-                    ? TimestampTag.FromDateTime(role.LastRunAt.Value, TimestampTagStyle.Relative).ToString()
+                    ? TimestampTag.FromDateTime(role.LastRunAt.Value, TimestampTagStyles.Relative).ToString()
                     : "-", true)
             .AddField(strings.StatRoleFlags(guildId),
                 $"permanent: {role.Permanent}, invert: {role.Invert}, bots: {role.ApplyToBots}" +

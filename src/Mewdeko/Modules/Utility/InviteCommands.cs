@@ -324,7 +324,7 @@ public partial class Utility
                     true);
             if (record.DateAdded.HasValue)
                 eb.AddField(Strings.InviteJoinedField(ctx.Guild.Id),
-                    TimestampTag.FromDateTime(record.DateAdded.Value, TimestampTagStyle.Relative).ToString(), true);
+                    TimestampTag.FromDateTime(record.DateAdded.Value, TimestampTagStyles.Relative).ToString(), true);
 
             await ctx.Channel.SendAsync(embed: eb.Build());
         }
@@ -402,7 +402,7 @@ public partial class Utility
         private static string FormatRecord(InvitedBy record)
         {
             var when = record.DateAdded.HasValue
-                ? TimestampTag.FromDateTime(record.DateAdded.Value, TimestampTagStyle.ShortDate).ToString()
+                ? TimestampTag.FromDateTime(record.DateAdded.Value, TimestampTagStyles.ShortDate).ToString()
                 : "?";
             var flags = new List<string>();
             if (record.IsFake) flags.Add($"fake: {(InviteFakeReason)record.FakeReason}");

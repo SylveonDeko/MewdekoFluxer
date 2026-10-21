@@ -206,7 +206,7 @@ public class Afk(InteractiveService serv) : MewdekoModuleBase<AfkService>
 
         await Service.AfkSet(ctx.Guild.Id, ctx.User.Id, message, true, DateTime.UtcNow + time.Time);
         await ConfirmAsync(Strings.AfkTimedSet(ctx.Guild.Id,
-            TimestampTag.FromDateTimeOffset(DateTimeOffset.UtcNow + time.Time, TimestampTagStyle.Relative), message));
+            TimestampTag.FromDateTimeOffset(DateTimeOffset.UtcNow + time.Time, TimestampTagStyles.Relative), message));
     }
 
     /// <summary>

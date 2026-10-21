@@ -1080,7 +1080,7 @@ public class ChatTriggers(
         var lines = recent.Select(x =>
         {
             var when = x.DateAdded.HasValue
-                ? TimestampTag.FromDateTime(x.DateAdded.Value, TimestampTagStyle.Relative).ToString()
+                ? TimestampTag.FromDateTime(x.DateAdded.Value, TimestampTagStyles.Relative).ToString()
                 : "-";
             return $"<@{x.UserId}> in <#{x.ChannelId}> {when}";
         }).ToList();

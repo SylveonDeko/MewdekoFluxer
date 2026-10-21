@@ -126,7 +126,7 @@ public class FeedsService : INService
                             .WithOverride("%categories%", () => string.Join(", ", feedItem.Categories))
                             .WithOverride("%timestamp%",
                                 () => TimestampTag.FromDateTime(feedItem.PublishingDate.Value,
-                                    TimestampTagStyle.LongDateTime).ToString())
+                                    TimestampTagStyles.LongDateTime).ToString())
                             .WithOverride("%url%", () => feedItem.Link ?? feedItem.SpecificItem.Link)
                             .WithOverride("%feedurl%", () => rssUrl)
                             .Build();
@@ -252,7 +252,7 @@ public class FeedsService : INService
             })
             .WithOverride("%categories%", () => string.Join(", ", feedItem.Categories))
             .WithOverride("%timestamp%",
-                () => TimestampTag.FromDateTime(feedItem.PublishingDate.Value, TimestampTagStyle.LongDateTime)
+                () => TimestampTag.FromDateTime(feedItem.PublishingDate.Value, TimestampTagStyles.LongDateTime)
                     .ToString())
             .WithOverride("%url%", () => feedItem.Link ?? feedItem.SpecificItem.Link)
             .WithOverride("%feedurl%", () => sub.Url).Build();

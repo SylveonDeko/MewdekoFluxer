@@ -139,7 +139,7 @@ public class LiveBoardCommands(ServerReportService reports) : MewdekoModuleBase<
     {
         var settings = await reports.GetSettingsAsync(ctx.Guild.Id);
         var lastSent = settings.LastSentAt.HasValue
-            ? TimestampTag.FromDateTime(settings.LastSentAt.Value, TimestampTagStyle.Relative).ToString()
+            ? TimestampTag.FromDateTime(settings.LastSentAt.Value, TimestampTagStyles.Relative).ToString()
             : Strings.None(ctx.Guild.Id);
         var eb = new EmbedBuilder()
             .WithOkColor()

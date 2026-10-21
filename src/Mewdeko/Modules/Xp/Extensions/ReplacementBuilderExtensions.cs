@@ -124,7 +124,7 @@ public static class ReplacementBuilderExtensions
         builder.WithOverride("%xp.date%", () => DateTime.UtcNow.ToString("dd/MM/yyyy"));
         builder.WithOverride("%xp.timestamp%", () => TimestampTag.FromDateTime(DateTime.UtcNow).ToString());
         builder.WithOverride("%xp.timestamp.relative%",
-            () => TimestampTag.FromDateTime(DateTime.UtcNow, TimestampTagStyle.Relative).ToString());
+            () => TimestampTag.FromDateTime(DateTime.UtcNow, TimestampTagStyles.Relative).ToString());
 
         return builder;
     }

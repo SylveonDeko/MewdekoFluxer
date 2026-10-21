@@ -122,7 +122,7 @@ public sealed class AchievementViewService : INService
         {
             var lines = recent.Select(p => strings.AchievementRecentLine(guild.Id,
                 p.Definition.Name, TimestampTag.FromDateTime(DateTime.SpecifyKind(p.UnlockedAt!.Value, DateTimeKind.Utc),
-                    TimestampTagStyle.Relative)));
+                    TimestampTagStyles.Relative)));
             embed.AddField(strings.AchievementRecentTitle(guild.Id), string.Join("\n", lines));
         }
 
@@ -194,7 +194,7 @@ public sealed class AchievementViewService : INService
         if (progress.Unlocked)
         {
             var when = TimestampTag.FromDateTime(DateTime.SpecifyKind(progress.UnlockedAt!.Value, DateTimeKind.Utc),
-                TimestampTagStyle.ShortDate);
+                TimestampTagStyles.ShortDate);
             return strings.AchievementLineUnlocked(guildId, def.Name, grade.Name, def.Points, def.Description, when);
         }
 

@@ -8,15 +8,15 @@ namespace Mewdeko.Modules.Utility.Extensions;
 /// </summary>
 public static class InviteReplacementExtensions
 {
-    private static readonly (string Suffix, TimestampTagStyle Style)[] TimestampStyles =
+    private static readonly (string Suffix, TimestampTagStyles Style)[] TimestampStyles =
     [
-        ("t", TimestampTagStyle.ShortTime),
-        ("T", TimestampTagStyle.LongTime),
-        ("d", TimestampTagStyle.ShortDate),
-        ("D", TimestampTagStyle.LongDate),
-        ("f", TimestampTagStyle.ShortDateTime),
-        ("F", TimestampTagStyle.LongDateTime),
-        ("R", TimestampTagStyle.Relative)
+        ("t", TimestampTagStyles.ShortTime),
+        ("T", TimestampTagStyles.LongTime),
+        ("d", TimestampTagStyles.ShortDate),
+        ("D", TimestampTagStyles.LongDate),
+        ("f", TimestampTagStyles.ShortDateTime),
+        ("F", TimestampTagStyles.LongDateTime),
+        ("R", TimestampTagStyles.Relative)
     ];
 
     /// <summary>

@@ -1785,7 +1785,7 @@ public partial class Utility(
     /// <param name="format">The style the timestamp is shown in.</param>
     [Cmd]
     [Aliases]
-    public async Task Timestamp(string tz, DateTime time, TimestampTagStyle format = TimestampTagStyle.ShortDateTime)
+    public async Task Timestamp(string tz, DateTime time, TimestampTagStyles format = TimestampTagStyles.ShortDateTime)
     {
         if (!TimeZoneInfo.TryFindSystemTimeZoneById(tz, out var timezone))
         {

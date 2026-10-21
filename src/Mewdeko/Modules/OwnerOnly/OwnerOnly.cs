@@ -1144,8 +1144,8 @@ public class OwnerOnly(
                     : entry.GuildName;
                 eb.AddField($"{name} `{entry.GuildId}`",
                     Strings.RetentionEntry(ctx.Guild.Id,
-                        TimestampTag.FromDateTime(entry.LeftAt, TimestampTagStyle.Relative),
-                        TimestampTag.FromDateTime(entry.PurgeAfter, TimestampTagStyle.Relative),
+                        TimestampTag.FromDateTime(entry.LeftAt, TimestampTagStyles.Relative),
+                        TimestampTag.FromDateTime(entry.PurgeAfter, TimestampTagStyles.Relative),
                         entry.Source));
             }
 
@@ -1181,7 +1181,7 @@ public class OwnerOnly(
                 listed += $" +{batch.Count() - 5}";
             eb.AddField(
                 Strings.RetentionRecentEntry(ctx.Guild.Id,
-                    TimestampTag.FromDateTime(batch.Key, TimestampTagStyle.Relative), batch.Count(),
+                    TimestampTag.FromDateTime(batch.Key, TimestampTagStyles.Relative), batch.Count(),
                     batch.First().RowsDeleted),
                 listed.TrimTo(1024));
         }

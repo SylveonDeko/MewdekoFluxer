@@ -118,26 +118,26 @@ public static class ChannelAdapter
         ///     Creates or replaces the overwrite for a role.
         /// </summary>
         public Task AddPermissionOverwriteAsync(Role role, OverwritePermissions permissions) =>
-            channel.SetPermissionOverwriteAsync(role.Id, PermissionOverwriteType.Role, permissions.AllowValue,
+            channel.AddPermissionOverwriteAsync(role.Id, PermissionOverwriteType.Role, permissions.AllowValue,
                 permissions.DenyValue);
 
         /// <summary>
         ///     Creates or replaces the overwrite for a member.
         /// </summary>
         public Task AddPermissionOverwriteAsync(GuildMember member, OverwritePermissions permissions) =>
-            channel.SetPermissionOverwriteAsync(member.Id, PermissionOverwriteType.Member, permissions.AllowValue,
+            channel.AddPermissionOverwriteAsync(member.Id, PermissionOverwriteType.Member, permissions.AllowValue,
                 permissions.DenyValue);
 
         /// <summary>
         ///     Removes the overwrite for a role.
         /// </summary>
-        public Task RemovePermissionOverwriteAsync(Role role) => channel.DeletePermissionOverwriteAsync(role.Id);
+        public Task RemovePermissionOverwriteAsync(Role role) => channel.RemovePermissionOverwriteAsync(role.Id);
 
         /// <summary>
         ///     Removes the overwrite for a member.
         /// </summary>
         public Task RemovePermissionOverwriteAsync(GuildMember member) =>
-            channel.DeletePermissionOverwriteAsync(member.Id);
+            channel.RemovePermissionOverwriteAsync(member.Id);
 
         /// <summary>
         ///     The web link to the channel.

@@ -170,7 +170,7 @@ public partial class ReplacementBuilder
 
             return TimestampTag.FromDateTime(TimeZoneInfo.ConvertTime(DateTime.UtcNow,
                 TimeZoneInfo.Utc,
-                to), TimestampTagStyle.LongDateTime).ToString();
+                to), TimestampTagStyles.LongDateTime).ToString();
         });
         reps.TryAdd("%server.timestamp.longtime%", () =>
         {
@@ -181,7 +181,7 @@ public partial class ReplacementBuilder
 
             return TimestampTag.FromDateTime(TimeZoneInfo.ConvertTime(DateTime.UtcNow,
                 TimeZoneInfo.Utc,
-                to), TimestampTagStyle.LongTime).ToString();
+                to), TimestampTagStyles.LongTime).ToString();
         });
         reps.TryAdd("%server.timestamp.longdate%", () =>
         {
@@ -192,7 +192,7 @@ public partial class ReplacementBuilder
 
             return TimestampTag.FromDateTime(TimeZoneInfo.ConvertTime(DateTime.UtcNow,
                 TimeZoneInfo.Utc,
-                to), TimestampTagStyle.LongDate).ToString();
+                to), TimestampTagStyles.LongDate).ToString();
         });
         reps.TryAdd("%server.timestamp.shortdatetime%", () =>
         {
