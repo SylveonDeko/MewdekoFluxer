@@ -53,7 +53,7 @@ public static class ReplacementBuilderExtensions
         builder.WithOverride("%xp.user.avatar%", () => user.GetAvatarUrl(size: 2048) ?? user.GetDefaultAvatarUrl());
         builder.WithOverride("%xp.user.id%", () => user.Id.ToString());
         builder.WithOverride("%xp.user.created%", () => user.CreatedAt.ToString("dd/MM/yyyy"));
-        builder.WithOverride("%xp.user.joined%", () => user.JoinedAt?.ToString("dd/MM/yyyy") ?? "Unknown");
+        builder.WithOverride("%xp.user.joined%", () => user.JoinedAt.ToString("dd/MM/yyyy"));
 
         // Level and XP placeholders
         builder.WithOverride("%xp.level.old%", oldLevel.ToString);
@@ -79,7 +79,7 @@ public static class ReplacementBuilderExtensions
         builder.WithOverride("%xp.guild%", () => guild.Name.EscapeWeirdStuff());
         builder.WithOverride("%xp.guild.name%", () => guild.Name.EscapeWeirdStuff());
         builder.WithOverride("%xp.guild.id%", () => guild.Id.ToString());
-        builder.WithOverride("%xp.guild.membercount%", () => guild.ApproximateMemberCount.ToString());
+        builder.WithOverride("%xp.guild.membercount%", () => guild.TotalMembers.ToString());
         builder.WithOverride("%xp.guild.icon%", () => guild.IconUrl ?? "");
         builder.WithOverride("%xp.guild.banner%", () => guild.BannerUrl ?? "");
 

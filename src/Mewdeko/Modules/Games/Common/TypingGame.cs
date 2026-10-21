@@ -76,7 +76,7 @@ public class TypingGame
     public async Task<bool> Stop()
     {
         if (!IsActive) return false;
-        handler.Unsubscribe("MessageReceived", "TypingGame", AnswerReceived);
+        handler.MessageReceived.Unsubscribe("TypingGame", AnswerReceived);
         finishedUserIds.Clear();
         IsActive = false;
         sw.Stop();
@@ -112,11 +112,7 @@ public class TypingGame
             var time = options.StartTime;
 
             var msg = await Channel.SendAsync(
-                Strings.TypingContestCountdown(Channel.Guild.Id, time, "..."),
-                options: new RequestOptions
-                {
-                    RetryMode = RetryMode.AlwaysRetry
-                }
+                Strings.TypingContestCountdown(Channel.Guild.Id, time, "...")
             ).ConfigureAwait(false);
 
             do
@@ -175,7 +171,7 @@ public class TypingGame
 
     private void HandleAnswers()
     {
-        handler.Subscribe("MessageReceived", "TypingGame", AnswerReceived);
+        handler.MessageReceived.Subscribe("TypingGame", AnswerReceived);
     }
 
     private async Task AnswerReceived(SocketMessage imsg)

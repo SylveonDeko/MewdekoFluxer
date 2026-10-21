@@ -23,7 +23,7 @@ public class XpCompetitionManager : INService, IDisposable
     /// <summary>
     ///     Initializes a new instance of the <see cref="XpCompetitionManager" /> class.
     /// </summary>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="dbFactory">The database context provider.</param>
     /// <param name="strings">The localized strings service.</param>
     /// <param name="logger">The logger instance for structured logging.</param>

@@ -1,12 +1,12 @@
 namespace Mewdeko.Modules.StatChannels.Common;
 
 /// <summary>
-///     How a stat channel pushes a new name to Discord.
+///     How a stat channel pushes a new name to Fluxer.
 /// </summary>
 public enum StatChannelUpdateMechanism
 {
     /// <summary>
-    ///     Edit the existing channel name. Discord allows two name edits per ten minutes per channel, so this is the
+    ///     Edit the existing channel name. Fluxer allows two name edits per ten minutes per channel, so this is the
     ///     safest option but caps the effective refresh rate at once every five minutes.
     /// </summary>
     Rename = 0,

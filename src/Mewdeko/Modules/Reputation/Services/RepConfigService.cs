@@ -46,7 +46,7 @@ public class RepConfigService : INService
     /// </summary>
     /// <param name="ctx">The command context.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task ShowConfigurationStatusAsync(ICommandContext ctx)
+    public async Task ShowConfigurationStatusAsync(CommandContext ctx)
     {
         await using var db = await dbFactory.CreateConnectionAsync();
         var repConfig = await GetOrCreateConfigAsync(db, ctx.Guild.Id);
@@ -73,7 +73,7 @@ public class RepConfigService : INService
     /// </summary>
     /// <param name="ctx">The command context.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task ExportConfigurationAsync(ICommandContext ctx)
+    public async Task ExportConfigurationAsync(CommandContext ctx)
     {
         try
         {
@@ -118,7 +118,7 @@ public class RepConfigService : INService
     /// </summary>
     /// <param name="ctx">The command context.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    public async Task ImportConfigurationAsync(ICommandContext ctx)
+    public async Task ImportConfigurationAsync(CommandContext ctx)
     {
         var attachment = ctx.Message.Attachments.FirstOrDefault();
         if (attachment == null || !attachment.Filename.EndsWith(".json"))

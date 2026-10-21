@@ -14,7 +14,7 @@ statchannelcreate:
 statchanneladd:
   args:
     - '#voice-channel TotalMembers [template]'
-  desc: 'Додає голосовий канал як канал статистики. Типи: TotalMembers, HumanMembers, BotCount, OnlineMembers, ChannelCount, RoleCount, BoostCount, BoostLevel, EmojiCount.'
+  desc: 'Додає голосовий канал як канал статистики. Типи: TotalMembers, HumanMembers, BotCount, OnlineMembers, ChannelCount, RoleCount, EmojiCount.'
   params:
     - desc: 'Голосовий канал для використання.'
       name: channel

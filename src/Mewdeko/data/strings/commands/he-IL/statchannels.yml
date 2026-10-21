@@ -14,7 +14,7 @@ statchannelcreate:
 statchanneladd:
   args:
     - '#voice-channel TotalMembers [template]'
-  desc: 'מוסיף ערוץ קולי כערוץ סטטיסטיקה. סוגים: TotalMembers, HumanMembers, BotCount, OnlineMembers, ChannelCount, RoleCount, BoostCount, BoostLevel, EmojiCount.'
+  desc: 'מוסיף ערוץ קולי כערוץ סטטיסטיקה. סוגים: TotalMembers, HumanMembers, BotCount, OnlineMembers, ChannelCount, RoleCount, EmojiCount.'
   params:
     - desc: 'הערוץ הקולי לשימוש.'
       name: channel

@@ -41,7 +41,7 @@ public class ServerStats(InteractiveService interactivity, ServerStatsSettingsSe
     [RequireContext(ContextType.Guild)]
     public async Task UserActivity(SocketGuildMember? user = null, int? days = null)
     {
-        user ??= (SocketGuildMember)ctx.User;
+        user ??= ctx.Member!;
         var lookback = Service.ResolveLookback(ctx.Guild.Id, days);
         var activity = await Service.GetUserActivityAsync(ctx.Guild, user.Id, lookback);
         var games = statsSettings.GetCachedSettings(ctx.Guild.Id).TrackActivities
@@ -130,7 +130,7 @@ public class ServerStats(InteractiveService interactivity, ServerStatsSettingsSe
     }
 
     /// <summary>
-    ///     Toggles whether only activities backed by a Discord application, Spotify or a stream are counted.
+    ///     Toggles whether only activities backed by a Fluxer application, Spotify or a stream are counted.
     /// </summary>
     [Cmd]
     [Aliases]

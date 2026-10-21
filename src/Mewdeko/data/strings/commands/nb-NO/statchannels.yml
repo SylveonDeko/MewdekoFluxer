@@ -14,7 +14,7 @@ statchannelcreate:
 statchanneladd:
   args:
     - '#voice-channel TotalMembers [template]'
-  desc: 'Legger til en stemmekanal som statistikkkanal. Typer: TotalMembers, HumanMembers, BotCount, OnlineMembers, ChannelCount, RoleCount, BoostCount, BoostLevel, EmojiCount.'
+  desc: 'Legger til en stemmekanal som statistikkkanal. Typer: TotalMembers, HumanMembers, BotCount, OnlineMembers, ChannelCount, RoleCount, EmojiCount.'
   params:
     - desc: 'Stemmekanalen som skal brukes.'
       name: channel

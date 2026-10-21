@@ -44,7 +44,7 @@ public class LiveBoardService : INService, IReadyExecutor, IDisposable
     /// <summary>
     ///     Initializes a new instance of the <see cref="LiveBoardService" /> class.
     /// </summary>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="dbFactory">The database connection factory.</param>
     /// <param name="stats">The stats query service.</param>
     /// <param name="invites">The invite tracking service.</param>
@@ -220,7 +220,7 @@ public class LiveBoardService : INService, IReadyExecutor, IDisposable
 
     /// <summary>
     ///     Re-renders a board and edits its message in place. A new message is only posted when the board has none
-    ///     yet or Discord reports the old one deleted; any other failure propagates so the caller retries later rather
+    ///     yet or Fluxer reports the old one deleted; any other failure propagates so the caller retries later rather
     ///     than leaving a trail of duplicate (and duplicate pinned) messages in the channel.
     /// </summary>
     /// <param name="guild">The guild.</param>
@@ -286,22 +286,14 @@ public class LiveBoardService : INService, IReadyExecutor, IDisposable
     /// <param name="messageId">The message to edit.</param>
     /// <param name="embed">The new embed.</param>
     /// <param name="image">The new chart image, if any.</param>
-    /// <returns>False only when Discord reports the message no longer exists.</returns>
+    /// <returns>False only when Fluxer reports the message no longer exists.</returns>
     private static async Task<bool> TryEditAsync(Channel channel, ulong messageId, EmbedRequest embed,
         MemoryStream? image)
     {
         try
         {
-            await channel.ModifyMessageAsync(messageId, props =>
-            {
-                props.Embed = embed;
-                props.Content = "";
-                if (image != null)
-                    props.Attachments = new[]
-                    {
-                        new AttachmentRequest(image, "graph.png")
-                    };
-            });
+            await channel.EditMessageAsync(messageId, "", [embed],
+                attachments: image != null ? [new AttachmentRequest(image, "graph.png")] : null);
             return true;
         }
         catch (FluxerApiException ex) when (ex.HttpCode == HttpStatusCode.NotFound)
@@ -442,8 +434,8 @@ public class LiveBoardService : INService, IReadyExecutor, IDisposable
                 };
                 var days = RangeToDays(range, true);
                 var (stream, embed) = await ServerStatsEmbeds.ChartAsync(stats, guild, chartKind, days);
-                var eb = embed.ToEmbedBuilder().WithFooter(footer);
-                return (eb.Build(), stream);
+                embed.Footer = new EmbedFooterRequest { Text = footer };
+                return (embed, stream);
             }
         }
     }

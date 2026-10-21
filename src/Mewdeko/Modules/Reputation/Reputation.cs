@@ -131,7 +131,7 @@ public partial class Reputation : MewdekoModuleBase<RepService>
     [Aliases]
     public async Task RepCheck([Remainder] SocketGuildMember? target = null)
     {
-        target ??= (SocketGuildMember)ctx.User;
+        target ??= ctx.Member!;
 
         var (total, rank) = await Service.GetUserReputationAsync(ctx.Guild.Id, target.Id);
 
@@ -196,7 +196,7 @@ public partial class Reputation : MewdekoModuleBase<RepService>
 
         foreach (var (userId, rep) in leaderboard)
         {
-            var user = await ctx.Guild.GetUserAsync(userId) ?? await ctx.Client.GetUserAsync(userId);
+            var user = (await ctx.Guild.GetUserAsync(userId))?.User ?? await ctx.Client.GetUserAsync(userId);
             var username = user?.ToString() ?? $"Unknown User ({userId})";
             description += $"`{i++}.` **{username}** - {rep} rep\n";
         }
@@ -252,7 +252,7 @@ public partial class Reputation : MewdekoModuleBase<RepService>
     [Aliases]
     public async Task RepHistory([Remainder] SocketGuildMember? target = null)
     {
-        target ??= (SocketGuildMember)ctx.User;
+        target ??= ctx.Member!;
 
         var history = await Service.GetReputationHistoryAsync(ctx.Guild.Id, target.Id);
 
@@ -270,7 +270,7 @@ public partial class Reputation : MewdekoModuleBase<RepService>
 
         foreach (var entry in history.Take(10))
         {
-            var giver = await ctx.Guild.GetUserAsync(entry.GiverId) ?? await ctx.Client.GetUserAsync(entry.GiverId);
+            var giver = (await ctx.Guild.GetUserAsync(entry.GiverId))?.User ?? await ctx.Client.GetUserAsync(entry.GiverId);
             var giverName = giver?.ToString() ?? "Unknown User";
 
             var sign = entry.Amount > 0 ? "+" : "";
@@ -295,7 +295,7 @@ public partial class Reputation : MewdekoModuleBase<RepService>
     [Aliases]
     public async Task RepStats([Remainder] SocketGuildMember? target = null)
     {
-        target ??= (SocketGuildMember)ctx.User;
+        target ??= ctx.Member!;
 
         var stats = await Service.GetUserStatsAsync(ctx.Guild.Id, target.Id);
 

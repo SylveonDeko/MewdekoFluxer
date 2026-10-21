@@ -14,7 +14,7 @@ statchannelcreate:
 statchanneladd:
   args:
     - '#voice-channel TotalMembers [template]'
-  desc: 'Dodaje kanał głosowy jako kanał statystyk. Typy: TotalMembers, HumanMembers, BotCount, OnlineMembers, ChannelCount, RoleCount, BoostCount, BoostLevel, EmojiCount.'
+  desc: 'Dodaje kanał głosowy jako kanał statystyk. Typy: TotalMembers, HumanMembers, BotCount, OnlineMembers, ChannelCount, RoleCount, EmojiCount.'
   params:
     - desc: 'Kanał głosowy do użycia.'
       name: channel

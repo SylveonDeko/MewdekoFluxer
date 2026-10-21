@@ -62,7 +62,7 @@ public partial class Games
             hm.OnGuessFailed += Hm_OnGuessFailed;
             hm.OnGuessSucceeded += Hm_OnGuessSucceeded;
             hm.OnLetterAlreadyUsed += Hm_OnLetterAlreadyUsed;
-            handler.Subscribe("MessageReceived", "HangmanCommands", ClientMessageReceived);
+            handler.MessageReceived.Subscribe("HangmanCommands", ClientMessageReceived);
 
             try
             {
@@ -77,7 +77,7 @@ public partial class Games
 
             await hm.EndedTask.ConfigureAwait(false);
 
-            handler.Unsubscribe("MessageReceived", "HangmanCommands", ClientMessageReceived);
+            handler.MessageReceived.Unsubscribe("HangmanCommands", ClientMessageReceived);
             Service.HangmanGames.TryRemove(ctx.Channel.Id, out _);
             hm.Dispose();
             return;

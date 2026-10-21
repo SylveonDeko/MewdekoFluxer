@@ -27,7 +27,7 @@ public class StatChannelOptions
     public StatChannelStyleOptions? StyleOptions { get; set; }
 
     /// <summary>
-    ///     How updates are pushed to Discord.
+    ///     How updates are pushed to Fluxer.
     /// </summary>
     public StatChannelUpdateMechanism? Mechanism { get; set; }
 

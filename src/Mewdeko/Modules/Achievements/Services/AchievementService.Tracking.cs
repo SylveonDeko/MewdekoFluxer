@@ -1,4 +1,5 @@
 using System.Threading;
+using System.Text.RegularExpressions;
 using LinqToDB.Async;
 using Mewdeko.Modules.Achievements.Common;
 using Mewdeko.Modules.Xp.Events;
@@ -11,6 +12,11 @@ public sealed partial class AchievementService
     ///     How soon after sending an edit or delete counts as quick.
     /// </summary>
     private static readonly TimeSpan QuickWindow = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    ///     Matches a custom emoji written into a message.
+    /// </summary>
+    private static readonly Regex CustomEmojiPattern = new(@"<a?:\w+:\d+>", RegexOptions.Compiled);
 
     /// <summary>
     ///     Window for the five message burst.
@@ -36,27 +42,27 @@ public sealed partial class AchievementService
 
     private void SubscribeEvents()
     {
-        eventHandler.Subscribe("MessageReceived", EventModuleName, OnMessageReceivedAsync);
-        eventHandler.Subscribe("MessageUpdated", EventModuleName, OnMessageUpdatedAsync);
-        eventHandler.Subscribe("MessageDeleted", EventModuleName, OnMessageDeletedAsync);
-        eventHandler.Subscribe("ReactionAdded", EventModuleName, OnReactionAddedAsync);
-        eventHandler.Subscribe("UserVoiceStateUpdated", EventModuleName, OnVoiceStateUpdatedAsync);
-        eventHandler.Subscribe("GuildMemberUpdated", EventModuleName, OnGuildMemberUpdatedAsync);
-        eventHandler.Subscribe("XpLevelChanged", EventModuleName, OnXpLevelChangedAsync);
-        eventHandler.Subscribe("LeftGuild", EventModuleName, OnLeftGuildAsync);
+        eventHandler.MessageReceived.Subscribe(EventModuleName, OnMessageReceivedAsync);
+        eventHandler.MessageUpdated.Subscribe(EventModuleName, OnMessageUpdatedAsync);
+        eventHandler.MessageDeleted.Subscribe(EventModuleName, OnMessageDeletedAsync);
+        eventHandler.ReactionAdded.Subscribe(EventModuleName, OnReactionAddedAsync);
+        eventHandler.UserVoiceStateUpdated.Subscribe(EventModuleName, OnVoiceStateUpdatedAsync);
+        eventHandler.GuildMemberUpdated.Subscribe(EventModuleName, OnGuildMemberUpdatedAsync);
+        eventHandler.XpLevelChanged.Subscribe(EventModuleName, OnXpLevelChangedAsync);
+        eventHandler.LeftGuild.Subscribe(EventModuleName, OnLeftGuildAsync);
         commandHandler.CommandExecuted += OnTextCommandExecutedAsync;
     }
 
     private void UnsubscribeEvents()
     {
-        eventHandler.Unsubscribe("MessageReceived", EventModuleName, OnMessageReceivedAsync);
-        eventHandler.Unsubscribe("MessageUpdated", EventModuleName, OnMessageUpdatedAsync);
-        eventHandler.Unsubscribe("MessageDeleted", EventModuleName, OnMessageDeletedAsync);
-        eventHandler.Unsubscribe("ReactionAdded", EventModuleName, OnReactionAddedAsync);
-        eventHandler.Unsubscribe("UserVoiceStateUpdated", EventModuleName, OnVoiceStateUpdatedAsync);
-        eventHandler.Unsubscribe("GuildMemberUpdated", EventModuleName, OnGuildMemberUpdatedAsync);
-        eventHandler.Unsubscribe("XpLevelChanged", EventModuleName, OnXpLevelChangedAsync);
-        eventHandler.Unsubscribe("LeftGuild", EventModuleName, OnLeftGuildAsync);
+        eventHandler.MessageReceived.Unsubscribe(EventModuleName, OnMessageReceivedAsync);
+        eventHandler.MessageUpdated.Unsubscribe(EventModuleName, OnMessageUpdatedAsync);
+        eventHandler.MessageDeleted.Unsubscribe(EventModuleName, OnMessageDeletedAsync);
+        eventHandler.ReactionAdded.Unsubscribe(EventModuleName, OnReactionAddedAsync);
+        eventHandler.UserVoiceStateUpdated.Unsubscribe(EventModuleName, OnVoiceStateUpdatedAsync);
+        eventHandler.GuildMemberUpdated.Unsubscribe(EventModuleName, OnGuildMemberUpdatedAsync);
+        eventHandler.XpLevelChanged.Unsubscribe(EventModuleName, OnXpLevelChangedAsync);
+        eventHandler.LeftGuild.Unsubscribe(EventModuleName, OnLeftGuildAsync);
         commandHandler.CommandExecuted -= OnTextCommandExecutedAsync;
     }
 
@@ -94,7 +100,7 @@ public sealed partial class AchievementService
     private Task OnMessageReceivedAsync(SocketMessage message)
     {
         if (message is not SocketMessage userMessage ||
-            message.Author is not SocketGuildMember user ||
+            message.Member is not { } user ||
             message.Channel is not Channel channel ||
             !CanEarn(user, channel.Id))
             return Task.CompletedTask;
@@ -121,21 +127,20 @@ public sealed partial class AchievementService
             };
             var content = message.Content ?? "";
 
-            if (message.Poll is not null)
-                feats.Add(AchievementFeat.Poll);
-            if (message.Stickers.Count > 0)
+            if (message.Stickers is { Length: > 0 })
                 feats.Add(AchievementFeat.Sticker);
-            if (message.Tags.Any(t => t.Type == TagType.Emoji))
+            if (CustomEmojiPattern.IsMatch(content))
                 feats.Add(AchievementFeat.CustomEmoji);
-            if (message.Attachments.Count > 0)
+            if (message.Attachments is { Length: > 0 })
                 feats.Add(AchievementFeat.Attachment);
-            if (message.ForwardedMessages.Count > 0)
+            if (message.MessageReference is { Type: MessageReferenceType.Forward })
                 feats.Add(AchievementFeat.Forward);
             if (message.MentionedUsers.Any(u => u.Id != user.Id && !u.IsBot))
                 feats.Add(AchievementFeat.Mention);
             if (message.MentionedUsers.Any(u => u.Id == user.Id))
                 feats.Add(AchievementFeat.SelfMention);
-            if (message.ReferencedMessage is { } referenced && referenced.Author.Id == user.Id &&
+            if (message.MessageReference is { Type: MessageReferenceType.Default } reference &&
+                FluxerContext.Snapshots.GetMessage(reference.MessageId)?.Author.Id == user.Id &&
                 message.Type == MessageType.Reply)
                 feats.Add(AchievementFeat.SelfReply);
             if (content.Length == 200)
@@ -221,14 +226,13 @@ public sealed partial class AchievementService
         }
     }
 
-    private Task OnMessageUpdatedAsync(Cacheable<Message> before, SocketMessage after,
-        Channel channel)
+    private Task OnMessageUpdatedAsync(Message? before, SocketMessage after)
     {
-        if (after.Author is not SocketGuildMember user || !recentMessages.TryGetValue(after.Id, out var recent))
+        if (after.Member is not { } user || !recentMessages.TryGetValue(after.Id, out var recent))
             return Task.CompletedTask;
         if (after.EditedTimestamp is not { } edited || edited.UtcDateTime - recent.SentAt > QuickWindow)
             return Task.CompletedTask;
-        if (before.HasValue && before.Value.Content == after.Content)
+        if (before is not null && before.Content == after.Content)
             return Task.CompletedTask;
         if (!CanEarn(user, recent.ChannelId))
             return Task.CompletedTask;
@@ -237,7 +241,7 @@ public sealed partial class AchievementService
         return Task.CompletedTask;
     }
 
-    private Task OnMessageDeletedAsync(Cacheable<Message> message, Cacheable<Channel> channel)
+    private Task OnMessageDeletedAsync(Cacheable<Message> message, Channel channel)
     {
         if (!recentMessages.TryRemove(message.Id, out var recent) || DateTime.UtcNow - recent.SentAt > QuickWindow)
             return Task.CompletedTask;
@@ -250,12 +254,12 @@ public sealed partial class AchievementService
         return Task.CompletedTask;
     }
 
-    private Task OnReactionAddedAsync(Cacheable<Message> message, Cacheable<Channel> channel,
+    private Task OnReactionAddedAsync(Cacheable<Message> message, Channel channel,
         SocketReaction reaction)
     {
-        var guildChannel = reaction.Channel as Channel;
-        var member = reaction.User.GetValueOrDefault() as SocketGuildMember ?? guildChannel?.Guild.GetUser(reaction.UserId);
-        if (member is null || guildChannel is null || !CanEarn(member, guildChannel.Id))
+        var guildChannel = channel;
+        var member = reaction.Member ?? guildChannel.Guild?.GetUser(reaction.UserId);
+        if (member is null || !CanEarn(member, guildChannel.Id))
             return Task.CompletedTask;
 
         _ = HandleReactionAsync(member, guildChannel.Id, message, reaction);
@@ -276,9 +280,7 @@ public sealed partial class AchievementService
             {
                 AchievementFeat.FirstReaction
             };
-            var author = message.HasValue ? message.Value.Author : null;
-            if (author is null && reaction.Message.IsSpecified)
-                author = reaction.Message.Value.Author;
+            var author = message.Value?.Author;
             if (author is not null)
             {
                 if (author.Id == user.Id)
@@ -309,20 +311,20 @@ public sealed partial class AchievementService
     /// </summary>
     /// <param name="emote">The emoji.</param>
     /// <returns>The key.</returns>
-    public static string EmojiKey(Emoji emote)
+    public static string EmojiKey(IEmoji emote)
     {
-        return emote is Emoji custom ? custom.Id.ToString() : emote.Name;
+        return emote.Id != 0 ? emote.Id.ToString() : emote.Name;
     }
 
-    private static bool EmojiMatches(string stored, Emoji emote)
+    private static bool EmojiMatches(string stored, IEmoji emote)
     {
         var trimmed = stored.Trim();
-        if (emote is Emoji custom)
+        if (emote.Id != 0)
         {
             if (Emoji.TryParse(trimmed, out var parsed))
-                return parsed.Id == custom.Id;
-            return trimmed == custom.Id.ToString() ||
-                   string.Equals(trimmed.Trim(':'), custom.Name, StringComparison.OrdinalIgnoreCase);
+                return parsed.Id == emote.Id;
+            return trimmed == emote.Id.ToString() ||
+                   string.Equals(trimmed.Trim(':'), emote.Name, StringComparison.OrdinalIgnoreCase);
         }
 
         return trimmed == emote.Name;
@@ -342,20 +344,20 @@ public sealed partial class AchievementService
                     continue;
                 voiceTracks[(guild.Id, user.Id)] = new VoiceTrack(channel.Id, now)
                 {
-                    MutedSince = IsMuted(user) ? now : null
+                    MutedSince = IsMuted(FluxerContext.Snapshots.GetVoiceState(guild.Id, user.Id)) ? now : null
                 };
             }
         }
     }
 
-    private static bool IsMuted(SocketGuildMember user)
+    private static bool IsMuted(VoiceStateSnapshot state)
     {
-        return user.IsSelfMuted || user.IsMuted || user.IsSelfDeafened || user.IsDeafened;
+        return state.IsSelfMuted || state.IsMuted || state.IsSelfDeafened || state.IsDeafened;
     }
 
-    private Task OnVoiceStateUpdatedAsync(SocketUser socketUser, SocketVoiceState before, SocketVoiceState after)
+    private Task OnVoiceStateUpdatedAsync(SocketGuildMember user, VoiceStateSnapshot before, VoiceStateSnapshot after)
     {
-        if (socketUser is not SocketGuildMember user || user.IsBot || !IsEnabled(user.Guild.Id))
+        if (user.IsBot || !IsEnabled(user.Guild.Id))
             return Task.CompletedTask;
 
         try
@@ -370,7 +372,7 @@ public sealed partial class AchievementService
         return Task.CompletedTask;
     }
 
-    private void HandleVoice(SocketGuildMember user, SocketVoiceState before, SocketVoiceState after)
+    private void HandleVoice(SocketGuildMember user, VoiceStateSnapshot before, VoiceStateSnapshot after)
     {
         var guildId = user.Guild.Id;
         var key = (guildId, user.Id);
@@ -378,7 +380,7 @@ public sealed partial class AchievementService
         var feats = new List<AchievementFeat>();
         voiceTracks.TryGetValue(key, out var track);
 
-        if (track?.MutedSince is { } mutedSince && (after.VoiceChannel is null || !IsMuted(user)))
+        if (track?.MutedSince is { } mutedSince && (after.VoiceChannel is null || !IsMuted(after)))
         {
             AddMutedSeconds(guildId, user.Id, (long)(now - mutedSince).TotalSeconds);
             track.MutedSince = null;
@@ -425,7 +427,7 @@ public sealed partial class AchievementService
             }
 
             track ??= voiceTracks.GetOrAdd(key, _ => new VoiceTrack(channel.Id, now));
-            if (IsMuted(user) && track.MutedSince is null)
+            if (IsMuted(after) && track.MutedSince is null)
                 track.MutedSince = now;
         }
 
@@ -441,14 +443,10 @@ public sealed partial class AchievementService
         MarkDirty(guildId, userId, AchievementDirty.Voice);
     }
 
-    private Task OnGuildMemberUpdatedAsync(Cacheable<SocketGuildMember> before, SocketGuildMember after)
+    private Task OnGuildMemberUpdatedAsync(MemberSnapshot? before, SocketGuildMember after)
     {
         if (after.IsBot || !IsEnabled(after.Guild.Id))
             return Task.CompletedTask;
-
-        var wasBoosting = before.HasValue && before.Value.PremiumSince is not null;
-        if (after.PremiumSince is not null && !wasBoosting && CanEarn(after))
-            _ = UnlockFeatsAsync(after, [AchievementFeat.Boosted], 0);
 
         MarkDirty(after.Guild.Id, after.Id, AchievementDirty.Membership);
         return Task.CompletedTask;
@@ -473,7 +471,7 @@ public sealed partial class AchievementService
 
     private Task OnTextCommandExecutedAsync(Message message, CommandInfo command)
     {
-        if (message.Author is SocketGuildMember user && message.Channel is Channel channel)
+        if (message is SocketMessage { Member: { } user, Channel: { } channel })
             MarkDirty(user.Guild.Id, user.Id, AchievementDirty.Commands, channel.Id);
         return Task.CompletedTask;
     }

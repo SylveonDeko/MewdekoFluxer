@@ -14,7 +14,7 @@ statchannelcreate:
 statchanneladd:
   args:
     - '#voice-channel TotalMembers [template]'
-  desc: 'Adds a voice channyew as a stat channyew. Types: TotalMembers, HumanMembers, BotCount, OnlineMembers, ChannelCount, RoleCount, BoostCount, BoostLevel, EmojiCount. ^w^'
+  desc: 'Adds a voice channyew as a stat channyew. Types: TotalMembers, HumanMembers, BotCount, OnlineMembers, ChannelCount, RoleCount, EmojiCount. ^w^'
   params:
     - desc: 'Da voice channyew to use. uwu'
       name: channel

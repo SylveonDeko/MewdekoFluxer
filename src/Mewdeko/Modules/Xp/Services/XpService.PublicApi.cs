@@ -281,7 +281,7 @@ public partial class XpService
         // Publish level change event if user had a level before reset
         if (oldLevel > 0)
         {
-            _ = EventHandler.PublishEventAsync("XpLevelChanged", new XpLevelChangedEventArgs
+            EventHandler.XpLevelChanged.Raise(new XpLevelChangedEventArgs
             {
                 GuildId = guildId,
                 UserId = userId,
@@ -292,7 +292,7 @@ public partial class XpService
                 Source = XpSource.Manual,
                 IsLevelUp = false, // This is a level down/reset
                 NotificationType = (XpNotificationType)userXp.NotifyType
-            });
+            }, Client.GetGuild(guildId));
         }
     }
 
@@ -340,7 +340,7 @@ public partial class XpService
         // Publish level change event if level changed
         if (newLevel != oldLevel)
         {
-            _ = EventHandler.PublishEventAsync("XpLevelChanged", new XpLevelChangedEventArgs
+            EventHandler.XpLevelChanged.Raise(new XpLevelChangedEventArgs
             {
                 GuildId = guildId,
                 UserId = userId,
@@ -351,7 +351,7 @@ public partial class XpService
                 Source = XpSource.Manual,
                 IsLevelUp = newLevel > oldLevel,
                 NotificationType = (XpNotificationType)userXp.NotifyType
-            });
+            }, Client.GetGuild(guildId));
         }
     }
 

@@ -11,7 +11,7 @@ using Mewdeko.Services.Strings;
 namespace Mewdeko.Modules.Birthday.Services;
 
 /// <summary>
-///     Service for managing birthday announcements and configurations across Discord guilds.
+///     Service for managing birthday announcements and configurations across Fluxer guilds.
 /// </summary>
 public class BirthdayService : INService, IDisposable
 {
@@ -32,7 +32,7 @@ public class BirthdayService : INService, IDisposable
     /// <summary>
     ///     Initializes a new instance of the <see cref="BirthdayService" /> class.
     /// </summary>
-    /// <param name="client">The Discord client instance.</param>
+    /// <param name="client">The Fluxer client instance.</param>
     /// <param name="dbFactory">Provider for database contexts.</param>
     /// <param name="guildSettings">Service for accessing guild settings.</param>
     /// <param name="config">Bot configuration settings.</param>
@@ -269,7 +269,7 @@ public class BirthdayService : INService, IDisposable
     /// <summary>
     ///     Checks if a user can announce their birthday based on privacy settings.
     /// </summary>
-    /// <param name="user">The Discord user to check.</param>
+    /// <param name="user">The Fluxer user to check.</param>
     /// <returns>True if the birthday can be announced.</returns>
     public bool CanAnnounceBirthday(DiscordUser user)
     {

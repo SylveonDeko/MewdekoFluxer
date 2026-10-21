@@ -25,7 +25,7 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
     private const string SettingsCacheKey = "stat_channel_settings_{0}";
 
     /// <summary>
-    ///     Discord permits two channel name edits per ten minutes per channel.
+    ///     Fluxer permits two channel name edits per ten minutes per channel.
     /// </summary>
     private const int RenamesPerWindow = 2;
 
@@ -164,7 +164,7 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
     /// <summary>
     ///     Creates a new locked voice channel and registers it as a stat channel.
     /// </summary>
-    /// <param name="guild">The Discord guild.</param>
+    /// <param name="guild">The Fluxer guild.</param>
     /// <param name="statType">The stat type to display.</param>
     /// <param name="template">The display template.</param>
     /// <param name="categoryId">The category to create the channel in, or null for no category.</param>
@@ -180,14 +180,14 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
     {
         var initialName = StripPlaceholders(template);
 
-        var voiceChannel = await guild.CreateVoiceChannelAsync(initialName, props =>
+        var voiceChannel = await guild.CreateVoiceChannelAsync(new CreateVoiceChannelRequest
         {
-            if (categoryId.HasValue)
-                props.CategoryId = categoryId;
+            Name = initialName,
+            ParentCategoryId = categoryId
         });
 
         await voiceChannel.AddPermissionOverwriteAsync(guild.EveryoneRole,
-            new OverwritePermissions(connect: PermValue.Deny));
+            OverwritePermissions.InheritAll.Modify(connect: PermValue.Deny));
 
         var statChannel = await AddStatChannelAsync(guild.Id, voiceChannel.Id, statType, template,
             roleId, countdownDate, goalTarget, options);
@@ -356,8 +356,8 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
     ///     Resolves the current display name for a stat channel.
     /// </summary>
     /// <param name="sc">The stat channel config.</param>
-    /// <param name="guild">The Discord guild.</param>
-    /// <returns>The resolved channel name, capped at Discord's 100 character limit.</returns>
+    /// <param name="guild">The Fluxer guild.</param>
+    /// <returns>The resolved channel name, capped at Fluxer's 100 character limit.</returns>
     public async Task<string> ResolveStatValueAsync(StatChannel sc, SocketGuild guild)
     {
         var context = new StatResolutionContext(guild);
@@ -416,9 +416,7 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
             .Replace("%count.raw%", resolved.Number.ToString(CultureInfo.InvariantCulture))
             .Replace("%server.name%", guild.Name)
             .Replace("%server.id%", guild.Id.ToString())
-            .Replace("%server.boostcount%", guild.PremiumSubscriptionCount.ToString("N0"))
-            .Replace("%server.boostlevel%", ((int)guild.PremiumTier).ToString())
-            .Replace("%server.members%", guild.MemberCount.ToString("N0"));
+            .Replace("%server.members%", guild.TotalMembers.ToString("N0"));
 
         if (resolved.Kind == StatChannelValueKind.Boolean)
             rendered = rendered.Replace("%status%", display);
@@ -435,7 +433,7 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
         switch (type)
         {
             case StatChannelType.TotalMembers:
-                return ResolvedStat.Num(guild.MemberCount);
+                return ResolvedStat.Num(guild.TotalMembers);
             case StatChannelType.HumanMembers:
                 return ResolvedStat.Num(guild.Users.Count(u => !u.IsBot));
             case StatChannelType.BotCount:
@@ -448,24 +446,24 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
                 return ResolvedStat.Num(guild.Users.Count(u => u.Status == UserStatus.DoNotDisturb));
             case StatChannelType.StreamingMembers:
                 return ResolvedStat.Num(guild.Users.Count(u =>
-                    u.Activities.Any(a => a.Type == ActivityType.Streaming)));
+                    u.VoiceStates.Values.Any(v => v.IsSelfStream)));
             case StatChannelType.InVoiceMembers:
-                return ResolvedStat.Num(guild.VoiceChannels.Sum(vc => vc.ConnectedUsers.Count));
+                return ResolvedStat.Num(guild.VoiceChannels.Sum(vc => vc.ConnectedUsers.Count()));
 
             case StatChannelType.RoleMembers:
             {
                 var role = sc.RoleId.HasValue ? guild.GetRole(sc.RoleId.Value) : null;
-                return ResolvedStat.Num(role?.Members.Count() ?? 0)
+                return ResolvedStat.Num(GetRoleMembers(guild, role).Count)
                     .With("%role.name%", role?.Name ?? "Unknown Role")
                     .With("%role.id%", role?.Id.ToString() ?? "0")
-                    .With("%role.color%", role?.Colors.PrimaryColor.ToString() ?? "#000000");
+                    .With("%role.color%", role?.Color.ToString("X6") ?? "000000");
             }
 
             case StatChannelType.NewestMember:
             {
                 var newest = guild.Users
-                    .Where(u => !u.IsBot && u.JoinedAt.HasValue)
-                    .MaxBy(u => u.JoinedAt!.Value);
+                    .Where(u => !u.IsBot)
+                    .MaxBy(u => u.JoinedAt);
                 return ResolvedStat.Str(newest?.DisplayName ?? "Unknown")
                     .With("%member.name%", newest?.DisplayName ?? "Unknown")
                     .With("%member.id%", newest?.Id.ToString() ?? "0");
@@ -479,7 +477,7 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
             case StatChannelType.MemberGoal:
             {
                 var goal = Math.Max(0, sc.GoalTarget);
-                var current = guild.MemberCount;
+                var current = guild.TotalMembers;
                 var styleOptions = StatChannelStyleOptions.Parse(sc.StyleOptions);
                 var percent = goal > 0 ? (double)current / goal * 100 : 0;
                 return ResolvedStat.Num(current, goal)
@@ -507,56 +505,25 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
             case StatChannelType.ChannelCount:
                 return ResolvedStat.Num(guild.Channels.Count);
             case StatChannelType.TextChannelCount:
-                return ResolvedStat.Num(guild.TextChannels.Count(c => c is not Channel));
+                return ResolvedStat.Num(guild.TextChannels.Count);
             case StatChannelType.VoiceChannelCount:
                 return ResolvedStat.Num(guild.VoiceChannels.Count);
             case StatChannelType.CategoryCount:
                 return ResolvedStat.Num(guild.CategoryChannels.Count);
-            case StatChannelType.StageChannelCount:
-                return ResolvedStat.Num(guild.StageChannels.Count);
             case StatChannelType.ForumChannelCount:
-                return ResolvedStat.Num(guild.ForumChannels.Count);
+                return ResolvedStat.Num(guild.Channels.Values.Count(c => c.Type == ChannelType.GuildForum));
             case StatChannelType.ThreadCount:
                 return ResolvedStat.Num(guild.ThreadChannels.Count);
             case StatChannelType.RoleCount:
                 return ResolvedStat.Num(guild.Roles.Count);
-            case StatChannelType.BoostCount:
-                return ResolvedStat.Num(guild.PremiumSubscriptionCount);
-            case StatChannelType.BoostLevel:
-                return ResolvedStat.Num((int)guild.PremiumTier);
-
-            case StatChannelType.NextBoostGoal:
-            {
-                var current = (int)guild.PremiumTier;
-                var required = current switch
-                {
-                    0 => 2, 1 => 7, 2 => 14, _ => 0
-                };
-                var remaining = Math.Max(0, required - guild.PremiumSubscriptionCount);
-                return ResolvedStat.Num(remaining)
-                    .With("%tier.current%", current.ToString())
-                    .With("%tier.next%", Math.Min(3, current + 1).ToString());
-            }
-
             case StatChannelType.EmojiCount:
                 return ResolvedStat.Num(guild.Emotes.Count);
             case StatChannelType.AnimatedEmojiCount:
-                return ResolvedStat.Num(guild.Emotes.Count(e => e.Animated));
+                return ResolvedStat.Num(guild.Emotes.Count(e => e.IsAnimated));
             case StatChannelType.StaticEmojiCount:
-                return ResolvedStat.Num(guild.Emotes.Count(e => !e.Animated));
+                return ResolvedStat.Num(guild.Emotes.Count(e => !e.IsAnimated));
             case StatChannelType.StickerCount:
                 return ResolvedStat.Num(guild.Stickers.Count);
-
-            case StatChannelType.EmojiSlotsUsed:
-            {
-                var max = guild.PremiumTier switch
-                {
-                    PremiumTier.Tier1 => 100, PremiumTier.Tier2 => 150, PremiumTier.Tier3 => 250, _ => 50
-                };
-                return ResolvedStat.Num(guild.Emotes.Count, max)
-                    .With("%slots.max%", max.ToString())
-                    .With("%slots.free%", Math.Max(0, max - guild.Emotes.Count).ToString());
-            }
 
             case StatChannelType.ServerAge:
             {
@@ -565,9 +532,6 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
                     .With("%years%", ((int)(age.TotalDays / 365)).ToString())
                     .With("%created%", guild.CreatedAt.UtcDateTime.ToString("yyyy-MM-dd"));
             }
-
-            case StatChannelType.EventCount:
-                return ResolvedStat.Num(guild.Events.Count);
 
             case StatChannelType.BotUptime:
             {
@@ -822,7 +786,7 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
             case StatChannelType.RoleMembersOnline:
             {
                 var role = sc.RoleId.HasValue ? guild.GetRole(sc.RoleId.Value) : null;
-                var members = role?.Members.ToList() ?? [];
+                var members = GetRoleMembers(guild, role).ToList();
                 return ResolvedStat.Num(members.Count(m => m.Status != UserStatus.Offline))
                     .With("%role.name%", role?.Name ?? "Unknown Role")
                     .With("%role.id%", role?.Id.ToString() ?? "0")
@@ -900,7 +864,12 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
     private static int CountJoinedSince(SocketGuild guild, TimeSpan window)
     {
         var cutoff = DateTimeOffset.UtcNow - window;
-        return guild.Users.Count(u => u.JoinedAt.HasValue && u.JoinedAt.Value >= cutoff);
+        return guild.Users.Count(u => u.JoinedAt >= cutoff);
+    }
+
+    private static IReadOnlyCollection<SocketGuildMember> GetRoleMembers(SocketGuild guild, SocketRole? role)
+    {
+        return role is null ? [] : guild.Users.Where(m => m.RoleIds.Contains(role.Id)).ToList();
     }
 
     #endregion
@@ -992,10 +961,10 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
     ///     bucket to refill rather than churning the channel ID.
     /// </summary>
     /// <param name="sc">The stat channel config.</param>
-    /// <param name="guild">The Discord guild.</param>
+    /// <param name="guild">The Fluxer guild.</param>
     /// <param name="channel">The voice channel being updated.</param>
     /// <param name="newName">The name to push.</param>
-    /// <returns>True when the new name reached Discord.</returns>
+    /// <returns>True when the new name reached Fluxer.</returns>
     private async Task<bool> AutoAsync(StatChannel sc, SocketGuild guild, Channel channel, string newName)
     {
         if (HasRenameBudget(sc.ChannelId))
@@ -1011,7 +980,7 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
     {
         try
         {
-            await channel.ModifyAsync(c => c.Name = newName);
+            await channel.ModifyAsync(new UpdateChannelRequest { Name = newName });
             RecordRename(sc.ChannelId);
             collector.Feature("stat_channel", sc.GuildId);
             return true;
@@ -1031,14 +1000,24 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
         {
             var categoryId = sc.CategoryId ?? channel.CategoryId;
             var position = sc.Position ?? channel.Position;
-            var overwrites = ReadOverwrites(sc) ?? channel.PermissionOverwrites.ToList();
+            var overwrites = ReadOverwrites(sc) ?? ToOverwriteRequests(channel.PermissionOverwrites);
 
-            var created = await guild.CreateVoiceChannelAsync(newName, props =>
+            var created = await guild.CreateVoiceChannelAsync(new CreateVoiceChannelRequest
             {
-                if (categoryId.HasValue) props.CategoryId = categoryId.Value;
-                props.Position = position;
-                props.PermissionOverwrites = overwrites;
+                Name = newName,
+                ParentCategoryId = categoryId,
+                PermissionOverwrites = overwrites.ToArray()
             });
+
+            if (position.HasValue)
+            {
+                await guild.UpdateChannelPositionsAsync([
+                    new ChannelPositionUpdateRequestItem
+                    {
+                        Id = created.Id, ParentId = categoryId, Position = position
+                    }
+                ]);
+            }
 
             await channel.DeleteAsync();
 
@@ -1146,21 +1125,32 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
 
         sc.CategoryId = channel.CategoryId;
         sc.Position = channel.Position;
-        sc.PermissionOverwrites = SerializeOverwrites(channel.PermissionOverwrites.ToList());
+        sc.PermissionOverwrites = SerializeOverwrites(ToOverwriteRequests(channel.PermissionOverwrites));
     }
 
-    private static string SerializeOverwrites(IEnumerable<PermissionOverwrite> overwrites)
+    private static List<ChannelOverwriteRequest> ToOverwriteRequests(IEnumerable<PermissionOverwrite>? overwrites)
+    {
+        return overwrites?.Select(o => new ChannelOverwriteRequest
+        {
+            Id = o.Id,
+            Type = (OverwriteRequestType)(int)o.Type,
+            Allow = (ulong)o.Allow.RawValue,
+            Deny = (ulong)o.Deny.RawValue
+        }).ToList() ?? [];
+    }
+
+    private static string SerializeOverwrites(IEnumerable<ChannelOverwriteRequest> overwrites)
     {
         return JsonSerializer.Serialize(overwrites.Select(o => new StoredOverwrite
         {
-            TargetId = o.TargetId,
-            TargetType = (int)o.TargetType,
-            Allow = o.Permissions.AllowValue,
-            Deny = o.Permissions.DenyValue
+            TargetId = o.Id,
+            TargetType = (int)o.Type,
+            Allow = o.Allow,
+            Deny = o.Deny
         }));
     }
 
-    private static List<PermissionOverwrite>? ReadOverwrites(StatChannel sc)
+    private static List<ChannelOverwriteRequest>? ReadOverwrites(StatChannel sc)
     {
         if (string.IsNullOrWhiteSpace(sc.PermissionOverwrites))
             return null;
@@ -1168,8 +1158,13 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
         try
         {
             var stored = JsonSerializer.Deserialize<List<StoredOverwrite>>(sc.PermissionOverwrites);
-            return stored?.Select(o => new PermissionOverwrite(o.TargetId, (PermissionTarget)o.TargetType,
-                new OverwritePermissions(o.Allow, o.Deny))).ToList();
+            return stored?.Select(o => new ChannelOverwriteRequest
+            {
+                Id = o.TargetId,
+                Type = (OverwriteRequestType)o.TargetType,
+                Allow = o.Allow,
+                Deny = o.Deny
+            }).ToList();
         }
         catch (JsonException)
         {

@@ -63,7 +63,7 @@ public partial class Currency
 
         /// <summary>
         ///     Waits for the join window to close and then runs the race. Runs detached from the command, so any
-        ///     Discord failure is caught here and the race cancelled with stakes refunded rather than left as an
+        ///     Fluxer failure is caught here and the race cancelled with stakes refunded rather than left as an
         ///     unobserved exception with the bets gone.
         /// </summary>
         private async Task StartRaceLaterAsync()

@@ -33,7 +33,7 @@ public class RepService : INService, IReadyExecutor, IUnloadableService
     /// <summary>
     ///     Initializes a new instance of the <see cref="RepService" /> class.
     /// </summary>
-    /// <param name="client">The Discord sharded client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="dbFactory">The database connection factory.</param>
     /// <param name="eventHandler">The event handler.</param>
     /// <param name="strings">The localized bot strings.</param>
@@ -93,8 +93,8 @@ public class RepService : INService, IReadyExecutor, IUnloadableService
         }
 
         // Subscribe to reaction events
-        eventHandler.Subscribe("ReactionAdded", "RepService", HandleReactionAdded);
-        eventHandler.Subscribe("ReactionRemoved", "RepService", HandleReactionRemoved);
+        eventHandler.ReactionAdded.Subscribe("RepService", HandleReactionAdded);
+        eventHandler.ReactionRemoved.Subscribe("RepService", HandleReactionRemoved);
 
         logger.LogInformation(
             "Reputation Cache Ready - {ConfigCount} guild configs, {ChannelCount} channel configs, {ReactionCount} reaction configs",
@@ -497,9 +497,9 @@ public class RepService : INService, IReadyExecutor, IUnloadableService
             {
                 SocketGuild guild = socketGuild;
                 var giver = await guild.GetUserAsync(giverId);
-                if (giver is { JoinedAt: not null })
+                if (giver is not null)
                 {
-                    var membershipDuration = DateTime.UtcNow - giver.JoinedAt.Value.UtcDateTime;
+                    var membershipDuration = DateTime.UtcNow - giver.JoinedAt.UtcDateTime;
                     if (membershipDuration.TotalHours < config.MinServerMembershipHours)
                         return new GiveRepResult
                         {
@@ -702,15 +702,13 @@ public class RepService : INService, IReadyExecutor, IUnloadableService
     /// <param name="message">The message this reaction was added to</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     private async Task HandleReactionAdded(Cacheable<Message> message,
-        Cacheable<Channel> channel, SocketReaction reaction)
+        Channel channel, SocketReaction reaction)
     {
         try
         {
             // Only process reactions in guilds
-            if (channel.Value is not Channel text) return;
-
-            Channel textChannel = text;
-            var guildId = textChannel.Guild.Id;
+            if (channel.Guild is not { } guild) return;
+            var guildId = guild.Id;
             var reactorId = reaction.UserId;
 
             // Check if we have reaction configs for this guild
@@ -721,9 +719,7 @@ public class RepService : INService, IReadyExecutor, IUnloadableService
             if (matchingConfig is not { IsEnabled: true }) return;
 
             // Don't give rep for own reactions or bot reactions
-            var reactingUser = reaction.User.IsSpecified
-                ? reaction.User.Value
-                : await textChannel.Guild.GetUserAsync(reactorId);
+            var reactingUser = reaction.User ?? (await guild.GetUserAsync(reactorId))?.User;
             if (reactingUser is null || reactingUser.IsBot) return;
 
             // Get the message to find the author
@@ -750,7 +746,7 @@ public class RepService : INService, IReadyExecutor, IUnloadableService
             // Check role requirements for reactor
             if (matchingConfig.RequiredRoleId.HasValue)
             {
-                var reactor = await textChannel.Guild.GetUserAsync(reactorId);
+                var reactor = await guild.GetUserAsync(reactorId);
                 if (reactor == null || reactor.RoleIds.All(r => r != matchingConfig.RequiredRoleId.Value)) return;
             }
 
@@ -760,7 +756,7 @@ public class RepService : INService, IReadyExecutor, IUnloadableService
                 var allowedRoles = JsonConvert.DeserializeObject<List<ulong>>(matchingConfig.AllowedReceiverRoles);
                 if (allowedRoles != null)
                 {
-                    var receiver = await textChannel.Guild.GetUserAsync(reactionMessage.Author.Id);
+                    var receiver = await guild.GetUserAsync(reactionMessage.Author.Id);
                     if (receiver == null || !receiver.RoleIds.Any(r => allowedRoles.Contains(r))) return;
                 }
             }
@@ -769,7 +765,7 @@ public class RepService : INService, IReadyExecutor, IUnloadableService
             await GiveReputationAsync(guildId, reactorId, reactionMessage.Author.Id, channel.Id,
                 matchingConfig.RepType, $"Reaction: {matchingConfig.EmojiName}", matchingConfig.RepAmount,
                 customCooldownMinutes: matchingConfig.CooldownMinutes,
-                processAllReactionsOnMessage: reactionMessage, reactionEmote: reaction.Emoji);
+                processAllReactionsOnMessage: reactionMessage, reactionEmote: Emoji.From(reaction.Emoji));
         }
         catch (Exception ex)
         {
@@ -785,16 +781,14 @@ public class RepService : INService, IReadyExecutor, IUnloadableService
     /// <param name="message">The message this reaction was attached to</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     private async Task HandleReactionRemoved(Cacheable<Message> message,
-        Cacheable<Channel> channel, SocketReaction reaction)
+        Channel channel, SocketReaction reaction)
     {
         try
         {
             // Only process reactions in guilds
-            if (channel.Value is not Channel text) return;
+            if (channel.Guild is not { } guild) return;
 
-            Channel textChannel = text;
-
-            var guildId = textChannel.Guild.Id;
+            var guildId = guild.Id;
 
             // Check if we have reaction configs for this guild
             if (!reactionConfigCache.ContainsKey(guildId)) return;
@@ -822,15 +816,14 @@ public class RepService : INService, IReadyExecutor, IUnloadableService
     /// <param name="guildId">The guild ID.</param>
     /// <param name="emote">The emote to match.</param>
     /// <returns>The matching configuration or null if none found.</returns>
-    private RepReactionConfig? FindMatchingReactionConfig(ulong guildId, Emoji emote)
+    private RepReactionConfig? FindMatchingReactionConfig(ulong guildId, IEmoji emote)
     {
         if (!reactionConfigCache.TryGetValue(guildId, out var configs)) return null;
 
         return emote switch
         {
-            Emoji customEmote => configs.FirstOrDefault(c => c.EmojiId == customEmote.Id),
-            Emoji unicodeEmoji => configs.FirstOrDefault(c => c.EmojiName == unicodeEmoji.Name && c.EmojiId == null),
-            _ => null
+            { Id: not 0 } => configs.FirstOrDefault(c => c.EmojiId == emote.Id),
+            _ => configs.FirstOrDefault(c => c.EmojiName == emote.Name && c.EmojiId == null)
         };
     }
 
@@ -1087,15 +1080,13 @@ public class RepService : INService, IReadyExecutor, IUnloadableService
         try
         {
             // Find the matching reaction on the message
-            var matchingReaction = message.Reactions.FirstOrDefault(kvp =>
-                DoesEmoteMatch(kvp.Key, targetEmote));
+            var matchingReaction = message.Reactions?.FirstOrDefault(r => DoesEmoteMatch(r.Emoji, targetEmote));
 
-            if (matchingReaction.Key == null || matchingReaction.Value.ReactionCount <= 1)
+            if (matchingReaction is null || matchingReaction.Count <= 1)
                 return; // No reactions or only the one we just processed
 
             // Get all users who reacted with this emote
-            var users = await message.GetReactionUsersAsync(matchingReaction.Key, matchingReaction.Value.ReactionCount)
-                .FlattenAsync();
+            var users = await message.GetReactionsForEmojiAsync(matchingReaction.Emoji);
 
             // Process each user's reaction (except the one we just processed and bots)
             foreach (var user in users)
@@ -1130,12 +1121,7 @@ public class RepService : INService, IReadyExecutor, IUnloadableService
     /// </summary>
     private static bool DoesEmoteMatch(Emoji emote1, Emoji emote2)
     {
-        return (emote1, emote2) switch
-        {
-            (Emoji custom1, Emoji custom2) => custom1.Id == custom2.Id,
-            (Emoji unicode1, Emoji unicode2) => unicode1.Name == unicode2.Name,
-            _ => false
-        };
+        return emote1.Matches(emote2);
     }
 
     #region Role Reward Extensions

@@ -112,7 +112,7 @@ public class PollStats
     public List<VoteHistoryEntry> VoteHistory { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the vote distribution by Discord role.
+    /// Gets or sets the vote distribution by Fluxer role.
     /// </summary>
     public Dictionary<string, int> VotesByRole { get; set; } = new();
 
@@ -133,7 +133,7 @@ public class PollStats
 public class VoteHistoryEntry
 {
     /// <summary>
-    /// Gets or sets the Discord user ID of the voter.
+    /// Gets or sets the Fluxer user ID of the voter.
     /// </summary>
     public ulong UserId { get; set; }
 
@@ -174,7 +174,7 @@ public class PollOptionData
     public string? Color { get; set; }
 
     /// <summary>
-    /// Gets or sets the Discord emote string for this option.
+    /// Gets or sets the Fluxer emote string for this option.
     /// </summary>
     public string? Emote { get; set; }
 }

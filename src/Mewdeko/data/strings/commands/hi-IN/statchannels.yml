@@ -14,7 +14,7 @@ statchannelcreate:
 statchanneladd:
   args:
     - '#voice-channel TotalMembers [template]'
-  desc: 'एक वॉयस चैनल को आँकड़ा चैनल के रूप में जोड़ता है। प्रकार: TotalMembers, HumanMembers, BotCount, OnlineMembers, ChannelCount, RoleCount, BoostCount, BoostLevel, EmojiCount।'
+  desc: 'एक वॉयस चैनल को आँकड़ा चैनल के रूप में जोड़ता है। प्रकार: TotalMembers, HumanMembers, BotCount, OnlineMembers, ChannelCount, RoleCount, EmojiCount।'
   params:
     - desc: 'उपयोग करने के लिए वॉयस चैनल।'
       name: channel

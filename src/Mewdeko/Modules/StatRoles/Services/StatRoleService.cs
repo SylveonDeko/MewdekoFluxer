@@ -43,7 +43,7 @@ public class StatRoleService : INService, IReadyExecutor, IDisposable
     /// <summary>
     ///     Initializes a new instance of the <see cref="StatRoleService" /> class.
     /// </summary>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="dbFactory">The database connection factory.</param>
     /// <param name="stats">The stats query service.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
@@ -152,10 +152,10 @@ public class StatRoleService : INService, IReadyExecutor, IDisposable
     }
 
     /// <summary>
-    ///     Finds the stat role that manages a Discord role.
+    ///     Finds the stat role that manages a Fluxer role.
     /// </summary>
     /// <param name="guildId">The guild ID.</param>
-    /// <param name="roleId">The Discord role.</param>
+    /// <param name="roleId">The Fluxer role.</param>
     /// <returns>The stat role, or null.</returns>
     public async Task<StatRole?> GetByRoleAsync(ulong guildId, ulong roleId)
     {
@@ -164,10 +164,10 @@ public class StatRoleService : INService, IReadyExecutor, IDisposable
     }
 
     /// <summary>
-    ///     Creates a stat role. Each Discord role can be managed by one stat role only.
+    ///     Creates a stat role. Each Fluxer role can be managed by one stat role only.
     /// </summary>
     /// <param name="role">The stat role to create; its ID is filled in.</param>
-    /// <returns>The created stat role, or null when the Discord role is already managed.</returns>
+    /// <returns>The created stat role, or null when the Fluxer role is already managed.</returns>
     public async Task<StatRole?> CreateAsync(StatRole role)
     {
         await using var db = await dbFactory.CreateConnectionAsync();
@@ -557,8 +557,7 @@ public class StatRoleService : INService, IReadyExecutor, IDisposable
                     .ToDictionary(x => x.UserId, x => (long)x.Count);
             }
             case StatRoleStat.JoinedDays:
-                return candidates.Where(m => m.JoinedAt.HasValue)
-                    .ToDictionary(m => m.Id, m => (long)(now - m.JoinedAt!.Value.UtcDateTime).TotalDays);
+                return candidates.ToDictionary(m => m.Id, m => (long)(now - m.JoinedAt.UtcDateTime).TotalDays);
             case StatRoleStat.AccountDays:
                 return candidates.ToDictionary(m => m.Id, m => (long)(now - m.CreatedAt.UtcDateTime).TotalDays);
             default:

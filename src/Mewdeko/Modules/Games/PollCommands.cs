@@ -422,7 +422,7 @@ public class PollCommands : MewdekoModuleBase<PollService>
                 return;
             }
 
-            if (template.CreatorId != ctx.User.Id && !((SocketGuildMember)ctx.User).GuildPermissions.ManageMessages)
+            if (template.CreatorId != ctx.User.Id && !ctx.Member!.GuildPermissions.ManageMessages)
             {
                 await ErrorAsync(Strings.PollTemplateDeleteNoPermission(ctx.Guild.Id));
                 return;
@@ -518,7 +518,7 @@ public class PollCommands : MewdekoModuleBase<PollService>
             return null;
         }
 
-        if (poll.CreatorId == ctx.User.Id || ((SocketGuildMember)ctx.User).GuildPermissions.ManageMessages)
+        if (poll.CreatorId == ctx.User.Id || ctx.Member!.GuildPermissions.ManageMessages)
             return poll;
 
         await ErrorAsync(Strings.PollManageNoPermission(ctx.Guild.Id));

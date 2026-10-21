@@ -116,7 +116,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
     [RequireContext(ContextType.Guild)]
     public async Task AchSearch([Remainder] string query)
     {
-        var embed = await views.SearchAsync((SocketGuild)ctx.Guild, (SocketGuildMember)ctx.User, query);
+        var embed = await views.SearchAsync((SocketGuild)ctx.Guild, ctx.Member!, query);
         await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
@@ -192,7 +192,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
         if (target is null)
             return;
 
-        await using var card = await views.CardAsync((SocketGuild)ctx.Guild, target, ctx.Guild.Id);
+        await using var card = await views.CardAsync((SocketGuild)ctx.Guild, target.User, ctx.Guild.Id);
         var fileName = Strings.AchievementCardFileName(ctx.Guild.Id);
         await ctx.Channel.SendFileAsync(card, fileName);
     }
@@ -274,7 +274,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
         var catalog = await Service.GetCatalogAsync(ctx.Guild.Id);
         var progress = (await Service.GetProgressAsync((SocketGuild)ctx.Guild, target.Id, d => d.Key == def.Key))
             .FirstOrDefault();
-        var staff = ((SocketGuildMember)ctx.User).GuildPermissions.ManageGuild;
+        var staff = ctx.Member!.GuildPermissions.ManageGuild;
         if (progress is null || def.Hidden && !progress.Unlocked && !staff &&
             !Service.GetSettings(ctx.Guild.Id).Row.RevealHidden)
         {
@@ -867,7 +867,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
 
     private async Task<SocketGuildMember?> ResolveTargetAsync(SocketGuildMember? user, AchievementPrivacyArea area)
     {
-        var target = (SocketGuildMember)(user ?? ctx.User);
+        var target = user ?? ctx.Member!;
         if (!Service.IsEnabled(ctx.Guild.Id) && target.Id == ctx.User.Id && user is null)
         {
             var prefix = await Service.GetPrefixAsync(ctx.Guild);
@@ -875,7 +875,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
             return null;
         }
 
-        var refusal = await views.PrivacyRefusalAsync(ctx.Guild.Id, ctx.User, target, area);
+        var refusal = await views.PrivacyRefusalAsync(ctx.Guild.Id, ctx.User, target.User, area);
         if (refusal is null)
             return target;
 

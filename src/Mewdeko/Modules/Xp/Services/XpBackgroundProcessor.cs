@@ -64,7 +64,7 @@ public class XpBackgroundProcessor : INService, IDisposable
     /// <param name="dbFactory">The database context provider.</param>
     /// <param name="cacheManager">The cache manager for XP operations.</param>
     /// <param name="competitionManager">The competition manager for handling XP competitions.</param>
-    /// <param name="client">The Discord sharded client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="eventHandler">The event handler service.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     public XpBackgroundProcessor(
@@ -535,7 +535,7 @@ public class XpBackgroundProcessor : INService, IDisposable
                             userXp.LastLevelUp = now;
 
                             // Publish level change event
-                            _ = eventHandler.PublishEventAsync("XpLevelChanged", new XpLevelChangedEventArgs
+                            eventHandler.XpLevelChanged.Raise(new XpLevelChangedEventArgs
                             {
                                 GuildId = guildId,
                                 UserId = userId,
@@ -546,7 +546,7 @@ public class XpBackgroundProcessor : INService, IDisposable
                                 Source = lastItem.Source,
                                 IsLevelUp = true,
                                 NotificationType = (XpNotificationType)userXp.NotifyType
-                            });
+                            }, client.GetGuild(guildId));
                         }
 
                         // Add to update collection
@@ -580,7 +580,7 @@ public class XpBackgroundProcessor : INService, IDisposable
                         if (newLevel > 0)
                         {
                             // Publish level change event for new user
-                            _ = eventHandler.PublishEventAsync("XpLevelChanged", new XpLevelChangedEventArgs
+                            eventHandler.XpLevelChanged.Raise(new XpLevelChangedEventArgs
                             {
                                 GuildId = guildId,
                                 UserId = userId,
@@ -592,7 +592,7 @@ public class XpBackgroundProcessor : INService, IDisposable
                                 IsLevelUp = true,
                                 NotificationType =
                                     XpNotificationType.None // New users don't get notifications by default
-                            });
+                            }, client.GetGuild(guildId));
                         }
 
                         // Add to insert collection
@@ -920,23 +920,14 @@ public class XpBackgroundProcessor : INService, IDisposable
             var gen1 = GC.CollectionCount(1);
             var gen2 = GC.CollectionCount(2);
 
-            // Get Discord cache stats
+            // Get Fluxer cache stats
             var cachedUsers = 0;
-            var cachedMessages = 0;
             var cachedChannels = 0;
 
             foreach (var guild in client.Guilds)
             {
                 cachedUsers += guild.Users.Count;
                 cachedChannels += guild.Channels.Count;
-
-                foreach (var channel in guild.TextChannels)
-                {
-                    if (channel is { } textChannel)
-                    {
-                        cachedMessages += textChannel.CachedMessages.Count;
-                    }
-                }
             }
 
             var bufferItemCount = batchingBuffer.Sum(kvp => kvp.Value.Count);
@@ -950,8 +941,8 @@ public class XpBackgroundProcessor : INService, IDisposable
                 gen0, gen1, gen2);
 
             logger.LogInformation(
-                "Discord Cache: Guilds: {Guilds}, Users: {Users}, Channels: {Channels}, Messages: {Messages}",
-                client.Guilds.Count, cachedUsers, cachedChannels, cachedMessages);
+                "Fluxer Cache: Guilds: {Guilds}, Users: {Users}, Channels: {Channels}",
+                client.Guilds.Count, cachedUsers, cachedChannels);
 
             // Force a Gen0 collection to see if memory can be reclaimed
             if (memoryMb > 600)

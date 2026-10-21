@@ -140,7 +140,6 @@ public static class AchievementCatalog
         new("invites", "Invites", "fa:users", "Bringing people to the server", true, true),
         new("commands", "Commands", "fa:code", "Using the bot", true, true),
         new("loyalty", "Loyalty", "fa:calendar", "Time since joining the server", true, true),
-        new("boosts", "Boosts", "fa:bolt", "Boosting the server and keeping it up", true, true),
         new("community", "Community", "fa:heart", "Levels and reputation", true, true),
         new(PrestigeCategory, "Prestige", "fa:crown", "Finishing whole categories", true, true),
         new(GlobalCategory, "Global", "fa:globe", "Earned across every server", true, false),
@@ -186,8 +185,6 @@ public static class AchievementCatalog
             "Bot commands run in the server", AchievementDirty.Commands, true, "commands"),
         new(AchievementMetric.TenureDays, "Days in server", "day", "days",
             "Days since joining the server", AchievementDirty.Membership, true, "discord"),
-        new(AchievementMetric.BoostMonths, "Months boosting", "month", "months",
-            "Full months of boosting without a break", AchievementDirty.Membership, true, "discord"),
         new(AchievementMetric.XpLevel, "XP level", "level", "levels",
             "XP level in the server", AchievementDirty.Xp, true, "xp"),
         new(AchievementMetric.Reputation, "Reputation", "rep", "rep",
@@ -388,7 +385,6 @@ public static class AchievementCatalog
 
         list.Add(Feat("messages", AchievementFeat.FirstMessage, "Hello World", "Send your first message",
             AchievementGrade.Bronze));
-        list.Add(Feat("messages", AchievementFeat.Poll, "Pollster", "Start a poll", AchievementGrade.Bronze));
         list.Add(Feat("messages", AchievementFeat.Sticker, "Sticker Slapper", "Send a sticker", AchievementGrade.Bronze));
         list.Add(Feat("messages", AchievementFeat.CustomEmoji, "Emoji Speaker", "Use a custom emoji in a message",
             AchievementGrade.Bronze));
@@ -523,15 +519,6 @@ public static class AchievementCatalog
             _ => $"Stay in the server for {n / 365} years"
         });
 
-        list.Add(Feat("boosts", AchievementFeat.Boosted, "Booster", "Boost the server", AchievementGrade.Silver));
-        AddLadder(list, "boosts", "boost_months", AchievementMetric.BoostMonths,
-        [
-            (1, AchievementGrade.Gold, "Boost Streak: 1 Month"),
-            (3, AchievementGrade.Emerald, "Boost Streak: 3 Months"),
-            (6, AchievementGrade.Amethyst, "Boost Streak: 6 Months"),
-            (12, AchievementGrade.Champion, "Boost Streak: 1 Year")
-        ], n => n == 1 ? "Keep boosting for a month" : $"Keep boosting for {n} months in a row");
-
         AddLadder(list, "community", "xp_level", AchievementMetric.XpLevel,
         [
             (5, AchievementGrade.Bronze, "Leveling Up"),
@@ -555,7 +542,6 @@ public static class AchievementCatalog
         list.Add(Completion("invites", "Invite Master"));
         list.Add(Completion("commands", "Command Master"));
         list.Add(Completion("loyalty", "Loyalty Master"));
-        list.Add(Completion("boosts", "Boost Master"));
         list.Add(Completion("community", "Community Master"));
         list.Add(new AchievementDefinition
         {

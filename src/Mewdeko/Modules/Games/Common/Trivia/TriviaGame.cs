@@ -140,7 +140,7 @@ public class TriviaGame
             //receive messages
             try
             {
-                handler.Subscribe("MessageReceived", "TriviaGame", PotentialGuess);
+                handler.MessageReceived.Subscribe("TriviaGame", PotentialGuess);
 
                 //allow people to guess
                 GameActive = true;
@@ -181,7 +181,7 @@ public class TriviaGame
             finally
             {
                 GameActive = false;
-                handler.Unsubscribe("MessageReceived", "TriviaGame", PotentialGuess);
+                handler.MessageReceived.Unsubscribe("TriviaGame", PotentialGuess);
             }
 
             if (!triviaCancelSource.IsCancellationRequested)
@@ -257,7 +257,8 @@ public class TriviaGame
             if (umsg?.Channel is not Channel textChannel || textChannel.Guild != Guild)
                 return;
 
-            var guildUser = (SocketGuildMember)umsg.Author;
+            if (umsg.Member is not { } guildUser)
+                return;
 
             var guess = false;
             await guessLock.WaitAsync().ConfigureAwait(false);

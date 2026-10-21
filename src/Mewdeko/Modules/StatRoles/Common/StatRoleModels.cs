@@ -12,7 +12,7 @@ public record StatRoleMember(ulong UserId, long Value, int? Rank);
 ///     The result of evaluating (and optionally applying) one stat role.
 /// </summary>
 /// <param name="StatRoleId">The stat role.</param>
-/// <param name="RoleId">The Discord role.</param>
+/// <param name="RoleId">The Fluxer role.</param>
 /// <param name="Qualifying">Everyone who meets the condition after filters and grouping.</param>
 /// <param name="ToGrant">Qualifying members who do not have the role yet.</param>
 /// <param name="ToRemove">Members holding the role who no longer qualify. Empty for permanent roles.</param>

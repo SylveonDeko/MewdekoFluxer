@@ -59,8 +59,8 @@ public partial class Games
                     game.OnGameEnded += Game_OnGameEnded;
 
                     // Subscribe to message events
-                    handler.Subscribe("MessageReceived", "KaladontCommands", ClientMessageReceived);
-                    handler.Subscribe("ReactionAdded", "KaladontCommands", ClientReactionAdded);
+                    handler.MessageReceived.Subscribe("KaladontCommands", ClientMessageReceived);
+                    handler.ReactionAdded.Subscribe("KaladontCommands", ClientReactionAdded);
 
                     // Show join phase message
                     await ShowJoinPhase(game).ConfigureAwait(false);
@@ -82,8 +82,8 @@ public partial class Games
                 }
                 finally
                 {
-                    handler.Unsubscribe("MessageReceived", "KaladontCommands", ClientMessageReceived);
-                    handler.Unsubscribe("ReactionAdded", "KaladontCommands", ClientReactionAdded);
+                    handler.MessageReceived.Unsubscribe("KaladontCommands", ClientMessageReceived);
+                    handler.ReactionAdded.Unsubscribe("KaladontCommands", ClientReactionAdded);
                     Service.KaladontGames.TryRemove(channel.Id, out game);
                     game?.Dispose();
                 }
@@ -160,7 +160,7 @@ public partial class Games
             }
 
             async Task ClientReactionAdded(Cacheable<Message> message,
-                Cacheable<Channel> reactionChannel, SocketReaction reaction)
+                Channel reactionChannel, SocketReaction reaction)
             {
                 if (reactionChannel.Id != ctx.Channel.Id || reaction.UserId == ctx.Client.CurrentUser.Id)
                     return;

@@ -23,7 +23,7 @@ public class MultiGreetService : INService
     ///     Initializes a new instance of the <see cref="MultiGreetService" /> class.
     /// </summary>
     /// <param name="dbFactory">The database context provider.</param>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="guildSettingsService">The guild settings service.</param>
     /// <param name="eventHandler">The event handler for user join events.</param>
     /// <param name="inviteCountService">The invite count service.</param>
@@ -40,7 +40,7 @@ public class MultiGreetService : INService
         this.logger = logger;
         this.dbFactory = dbFactory;
         this.eventHandler = eventHandler;
-        eventHandler.Subscribe("UserJoined", "MultiGreetService", DoMultiGreet);
+        eventHandler.UserJoined.Subscribe("MultiGreetService", DoMultiGreet);
     }
 
     /// <summary>
@@ -273,12 +273,12 @@ public class MultiGreetService : INService
         }
         catch (FluxerApiException ex)
         {
-            collector.Feature("greet", user.Guild.Id, false, ex.DiscordCode?.ToString() ?? ex.GetType().Name);
-            if (ex.DiscordCode is DiscordErrorCode.UnknownWebhook or DiscordErrorCode.InvalidWebhookToken
-                or DiscordErrorCode.MissingPermissions)
+            collector.Feature("greet", user.Guild.Id, false, ex.ErrorCode ?? ex.GetType().Name);
+            if (ex.ErrorCode is FluxerErrorCodes.UnknownWebhook
+                or FluxerErrorCodes.MissingPermissions)
             {
                 await MultiGreetDisable(greet, true);
-                logger.LogInformation($"MultiGreet disabled in {user.Guild} due to {ex.DiscordCode}.");
+                logger.LogInformation($"MultiGreet disabled in {user.Guild} due to {ex.ErrorCode}.");
             }
         }
     }
@@ -288,7 +288,7 @@ public class MultiGreetService : INService
     /// </summary>
     public Task Unload()
     {
-        eventHandler.Unsubscribe("UserJoined", "MultiGreetService", DoMultiGreet);
+        eventHandler.UserJoined.Unsubscribe("MultiGreetService", DoMultiGreet);
         return Task.CompletedTask;
     }
 }

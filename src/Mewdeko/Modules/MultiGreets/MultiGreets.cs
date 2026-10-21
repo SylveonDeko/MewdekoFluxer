@@ -317,10 +317,11 @@ public class MultiGreets(InteractiveService interactivity) : MewdekoModuleBase<M
             using var sr = await http.GetAsync(avatar, HttpCompletionOption.ResponseHeadersRead)
                 .ConfigureAwait(false);
             var imgData = await sr.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
-            var imgStream = imgData.ToStream();
-            await using var _ = imgStream.ConfigureAwait(false);
-            var webhook = await channel.CreateWebhookAsync(name, imgStream).ConfigureAwait(false);
-            await Service.ChangeMgWebhook(greet, $"https://discord.com/api/webhooks/{webhook.Id}/{webhook.Token}")
+            var imgType = sr.Content.Headers.ContentType?.MediaType ?? "image/png";
+            var webhook = await channel
+                .CreateWebhookAsync(name, $"data:{imgType};base64,{Convert.ToBase64String(imgData)}")
+                .ConfigureAwait(false);
+            await Service.ChangeMgWebhook(greet, $"{FluxerContext.Client.Config.RealApiBaseUrl}/webhooks/{webhook.Id}/{webhook.Token}")
                 .ConfigureAwait(false);
             await ctx.Channel.SendConfirmAsync(
                 Strings.MultigreetWebhookSet(ctx.Guild.Id)
@@ -329,7 +330,7 @@ public class MultiGreets(InteractiveService interactivity) : MewdekoModuleBase<M
         else
         {
             var webhook = await channel.CreateWebhookAsync(name).ConfigureAwait(false);
-            await Service.ChangeMgWebhook(greet, $"https://discord.com/api/webhooks/{webhook.Id}/{webhook.Token}")
+            await Service.ChangeMgWebhook(greet, $"{FluxerContext.Client.Config.RealApiBaseUrl}/webhooks/{webhook.Id}/{webhook.Token}")
                 .ConfigureAwait(false);
             await ctx.Channel.SendConfirmAsync(
                 Strings.MultigreetWebhookSet(ctx.Guild.Id)

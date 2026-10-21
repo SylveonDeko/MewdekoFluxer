@@ -37,7 +37,7 @@ public partial class Currency(
                 ? Strings.CashBalanceWithBank(ctx.Guild.Id, wallet, emote, bank, wallet + bank)
                 : Strings.CashBalance(ctx.Guild.Id, wallet, emote));
 
-        await ReplyAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -309,7 +309,7 @@ public partial class Currency(
             var game = BlackjackService.StartOrJoinGame(ctx.User, amount);
             var embed = game.CreateGameEmbed(Strings.BlackjackJoined(ctx.Guild.Id, ctx.User.Username), ctx.Guild.Id,
                 Strings);
-            await ReplyAsync(embeds: embed);
+            await ctx.Channel.SendAsync(embeds: embed);
         }
         catch (InvalidOperationException ex)
         {
@@ -355,7 +355,7 @@ public partial class Currency(
             }
             else
             {
-                await ReplyAsync(embeds: embed);
+                await ctx.Channel.SendAsync(embeds: embed);
             }
         }
         catch (InvalidOperationException ex)
@@ -388,7 +388,7 @@ public partial class Currency(
                     Service.AddTransactionAsync(userId, payout, description, ctx.Guild.Id,
                         CurrencyCategory.GamePayout, "blackjack"),
                 await Service.GetCurrencyEmote(ctx.Guild.Id));
-            await ReplyAsync(embeds: embed);
+            await ctx.Channel.SendAsync(embeds: embed);
         }
         catch (InvalidOperationException ex)
         {
@@ -421,7 +421,7 @@ public partial class Currency(
         BlackjackService.EndGame(ctx.User);
 
         var embed = game.CreateGameEmbed(message, ctx.Guild.Id, Strings);
-        await ReplyAsync(embeds: embed);
+        await ctx.Channel.SendAsync(embeds: embed);
     }
 
     /// <summary>
@@ -922,7 +922,7 @@ public partial class Currency(
             }
         }
 
-        await ReplyAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -1058,7 +1058,7 @@ public partial class Currency(
         eb.AddField(Strings.CrapsOutcomeField(ctx.Guild.Id), resultMessage)
             .WithColor(push ? Color.Gold : won ? Color.Green : Color.Red);
 
-        await ReplyAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -1127,7 +1127,7 @@ public partial class Currency(
             eb.AddField(Strings.ScratchCardSymbols(ctx.Guild.Id, symbols), "");
         }
 
-        await ReplyAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -1189,7 +1189,7 @@ public partial class Currency(
                 .WithColor(Color.Red);
         }
 
-        await ReplyAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -1317,7 +1317,7 @@ public partial class Currency(
         eb.AddField(Strings.BaccaratOutcomeField(ctx.Guild.Id), resultMessage)
             .WithColor(won ? Color.Green : Color.Red);
 
-        await ReplyAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -1386,7 +1386,7 @@ public partial class Currency(
                 .WithColor(Color.Red);
         }
 
-        await ReplyAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
 
@@ -1452,7 +1452,7 @@ public partial class Currency(
         }
 
         await ReplyAsync(Strings.LotteryTicketsBought(ctx.Guild.Id, ticketCount, totalCost, emote));
-        await ReplyAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     private static (string rank, string suit, int value) GenerateCard()
@@ -1575,7 +1575,7 @@ public partial class Currency(
             eb.WithDescription(Strings.CrashLose(ctx.Guild.Id, crashPoint, betAmount, emote));
         }
 
-        await ReplyAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -1626,7 +1626,7 @@ public partial class Currency(
             eb.WithDescription(Strings.KenoLose(ctx.Guild.Id, matches, betAmount, emote));
         }
 
-        await ReplyAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -1780,7 +1780,7 @@ public partial class Currency(
             eb.WithDescription(Strings.DuckRaceLose(ctx.Guild.Id, betAmount, emote));
         }
 
-        await ReplyAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -1839,7 +1839,7 @@ public partial class Currency(
             eb.WithDescription(Strings.BingoLose(ctx.Guild.Id, betAmount, emote));
         }
 
-        await ReplyAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -1965,7 +1965,7 @@ public partial class Currency(
                 : Strings.DiceDuelAccepterWin(ctx.Guild.Id, winner.Mention, winnerRoll, loser.Mention, loserRoll));
         }
 
-        await ReplyAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -2017,7 +2017,7 @@ public partial class Currency(
             .AddField(Strings.MemoryDifficulty(ctx.Guild.Id, difficulty.ToUpper()), "", true)
             .AddField(Strings.MemoryShowTime(ctx.Guild.Id, $"{config.showTime / 1000} seconds"), "", true);
 
-        var message = await ReplyAsync(embed: showEmbed.Build());
+        var message = await ctx.Channel.SendAsync(embed: showEmbed.Build());
 
         await Task.Delay(config.showTime);
 
@@ -2038,7 +2038,7 @@ public partial class Currency(
                 .WithDescription(Strings.MemoryTimeout(ctx.Guild.Id, betAmount, emote))
                 .WithColor(Color.Red);
 
-            await ReplyAsync(embed: timeoutEmbed.Build());
+            await ctx.Channel.SendAsync(embed: timeoutEmbed.Build());
             return;
         }
 
@@ -2054,7 +2054,7 @@ public partial class Currency(
                 .WithDescription(Strings.MemoryCorrect(ctx.Guild.Id, winAmount - betAmount, emote))
                 .WithColor(Color.Green);
 
-            await ReplyAsync(embed: winEmbed.Build());
+            await ctx.Channel.SendAsync(embed: winEmbed.Build());
         }
         else
         {
@@ -2063,7 +2063,7 @@ public partial class Currency(
                 .WithDescription(Strings.MemoryIncorrect(ctx.Guild.Id, sequenceDisplay, betAmount, emote))
                 .WithColor(Color.Red);
 
-            await ReplyAsync(embed: loseEmbed.Build());
+            await ctx.Channel.SendAsync(embed: loseEmbed.Build());
         }
     }
 
@@ -2483,7 +2483,7 @@ public partial class Currency(
                 .AddField(Strings.DailyChallengeStatus(ctx.Guild.Id), Strings.DailyChallengeReadyToClaim(ctx.Guild.Id));
         }
 
-        await ReplyAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>
@@ -2548,7 +2548,7 @@ public partial class Currency(
         for (var i = 0; i < leaderboard.Count; i++)
         {
             var (userId, completionCount) = leaderboard[i];
-            var user = await ctx.Guild.GetUserAsync(userId) ?? (IUser)await ctx.Client.GetUserAsync(userId);
+            var user = (await ctx.Guild.GetUserAsync(userId))?.User ?? await ctx.Client.GetUserAsync(userId);
             var position = i + 1;
             var medal = position switch
             {
@@ -2563,7 +2563,7 @@ public partial class Currency(
                     completionCount), true);
         }
 
-        await ReplyAsync(embed: eb.Build());
+        await ctx.Channel.SendAsync(embed: eb.Build());
     }
 
     /// <summary>

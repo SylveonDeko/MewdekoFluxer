@@ -8,10 +8,10 @@ public static class TriviaChainEmotes
     /// <summary>
     ///     The number reactions, one per answer option in order.
     /// </summary>
-    public static readonly Emoji[] Numbers = [new("1️⃣"), new("2️⃣"), new("3️⃣"), new("4️⃣")];
+    public static readonly Emoji[] Numbers = [Emoji.FromUnicode("1️⃣"), Emoji.FromUnicode("2️⃣"), Emoji.FromUnicode("3️⃣"), Emoji.FromUnicode("4️⃣")];
 
     /// <summary>
     ///     The reaction that banks the current winnings and ends the game.
     /// </summary>
-    public static readonly Emoji CashOut = new("💰");
+    public static readonly Emoji CashOut = Emoji.FromUnicode("💰");
 }

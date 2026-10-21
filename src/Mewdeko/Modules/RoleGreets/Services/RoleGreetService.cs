@@ -24,7 +24,7 @@ public class RoleGreetService : INService
     ///     Initializes a new instance of the <see cref="RoleGreetService" /> class.
     /// </summary>
     /// <param name="dbFactory">The database context provider.</param>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="eventHandler">The event handler for guild member update events.</param>
     /// <param name="inviteCountService">The invite count service</param>
     /// <param name="logger">The logger instance for structured logging.</param>
@@ -35,7 +35,7 @@ public class RoleGreetService : INService
         this.inviteCountService = inviteCountService;
         this.logger = logger;
         this.dbFactory = dbFactory;
-        eventHandler.Subscribe("GuildMemberUpdated", "RoleGreetService", DoRoleGreet);
+        eventHandler.GuildMemberUpdated.Subscribe("RoleGreetService", DoRoleGreet);
     }
 
     /// <summary>
@@ -185,18 +185,12 @@ public class RoleGreetService : INService
         }
     }
 
-    private async Task DoRoleGreet(Cacheable<SocketGuildMember> cacheable, SocketGuildMember socketGuildUser)
+    private async Task DoRoleGreet(MemberSnapshot? before, SocketGuildMember socketGuildUser)
     {
-        var user = await cacheable.GetOrDownloadAsync().ConfigureAwait(false);
-        if (user == null)
+        if (before is null)
             return;
-        if (user.Roles.SequenceEqual(socketGuildUser.Roles))
-        {
-            if (user.Roles.Count > socketGuildUser.Roles.Count)
-                return;
-        }
 
-        var diffRoles = socketGuildUser.Roles.Where(r => !user.Roles.Contains(r)).ToArray();
+        var diffRoles = socketGuildUser.Roles.Where(r => !before.RoleIds.Contains(r.Id)).ToArray();
         foreach (var role in diffRoles)
         {
             var greets = await GetGreets(role.Id);
@@ -250,11 +244,11 @@ public class RoleGreetService : INService
         }
         catch (FluxerApiException ex)
         {
-            if (ex.DiscordCode is DiscordErrorCode.UnknownWebhook or DiscordErrorCode.InvalidWebhookToken
-                or DiscordErrorCode.MissingPermissions)
+            if (ex.ErrorCode is FluxerErrorCodes.UnknownWebhook
+                or FluxerErrorCodes.MissingPermissions)
             {
                 await RoleGreetDisable(greet, true);
-                logger.LogInformation($"RoleGreet disabled in {user.Guild} due to {ex.DiscordCode}.");
+                logger.LogInformation($"RoleGreet disabled in {user.Guild} due to {ex.ErrorCode}.");
             }
         }
     }

@@ -30,7 +30,7 @@ public class XpRewardManager : INService
     /// <summary>
     ///     Initializes a new instance of the <see cref="XpRewardManager" /> class.
     /// </summary>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="dbFactory">The database factory.</param>
     /// <param name="currencyService">The currency service.</param>
     /// <param name="cacheManager">The cache manager.</param>
@@ -56,9 +56,9 @@ public class XpRewardManager : INService
         this.bss = bss;
 
         // Subscribe individual methods to XP level change events for better separation of concerns
-        eventHandler.Subscribe("XpLevelChanged", "XpRewardManager-Notifications", HandleLevelUpNotificationAsync);
-        eventHandler.Subscribe("XpLevelChanged", "XpRewardManager-RoleRewards", HandleRoleRewardsAsync);
-        eventHandler.Subscribe("XpLevelChanged", "XpRewardManager-CurrencyRewards", HandleCurrencyRewardsAsync);
+        eventHandler.XpLevelChanged.Subscribe("XpRewardManager-Notifications", HandleLevelUpNotificationAsync);
+        eventHandler.XpLevelChanged.Subscribe("XpRewardManager-RoleRewards", HandleRoleRewardsAsync);
+        eventHandler.XpLevelChanged.Subscribe("XpRewardManager-CurrencyRewards", HandleCurrencyRewardsAsync);
     }
 
     /// <summary>

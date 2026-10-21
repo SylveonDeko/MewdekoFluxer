@@ -342,7 +342,7 @@ public sealed partial class AchievementService
     {
         var catalog = await GetCatalogAsync(guild.Id);
         var impliedDefs = catalog.Earnable
-            .Where(d => d.Feat is { } feat && (ImpliedFeats.ContainsKey(feat) || feat == AchievementFeat.Boosted))
+            .Where(d => d.Feat is { } feat && ImpliedFeats.ContainsKey(feat))
             .ToList();
         var metricDefs = catalog.Earnable.Where(d => d.IsMetric).Concat(impliedDefs).ToList();
         if (metricDefs.Count == 0)
@@ -389,7 +389,6 @@ public sealed partial class AchievementService
             var reached = locked
                 .Where(d => d.Feat switch
                 {
-                    AchievementFeat.Boosted => member.PremiumSince is not null,
                     { } feat when ImpliedFeats.TryGetValue(feat, out var metric) =>
                         metrics.TryGetValue(metric, out var count) && count >= 1,
                     _ => metrics.TryGetValue(d.Metric, out var value) && value >= d.Threshold
@@ -557,7 +556,7 @@ public sealed partial class AchievementService
                 result[row.UserId][AchievementMetric.Commands] = row.Count;
         }
 
-        if (Needs(AchievementMetric.TenureDays, AchievementMetric.BoostMonths))
+        if (Needs(AchievementMetric.TenureDays))
         {
             var now = DateTimeOffset.UtcNow;
             foreach (var userId in userIds)
@@ -567,7 +566,6 @@ public sealed partial class AchievementService
                 var values = result[userId];
                 if (member.JoinedAt is { } joined)
                     values[AchievementMetric.TenureDays] = (long)(now - joined).TotalDays;
-                values[AchievementMetric.BoostMonths] = member.PremiumSince is { } since ? FullMonths(since, now) : -1;
             }
         }
 
@@ -607,14 +605,6 @@ public sealed partial class AchievementService
         return result;
     }
 
-    private static long FullMonths(DateTimeOffset since, DateTimeOffset now)
-    {
-        var months = (now.Year - since.Year) * 12 + now.Month - since.Month;
-        if (now.Day < since.Day)
-            months--;
-        return Math.Max(0, months);
-    }
-
     /// <summary>
     ///     Text channels a member can post in that count for achievements.
     /// </summary>
@@ -646,7 +636,7 @@ public sealed partial class AchievementService
         AchievementGuildSettings settings)
     {
         return guild.VoiceChannels
-            .Where(c => c is not SocketStageChannel && c.Id != guild.AFKChannel?.Id &&
+            .Where(c => c.Id != guild.AFKChannel?.Id &&
                         !settings.ExcludedChannels.Contains(c.Id))
             .Where(c =>
             {
@@ -1020,10 +1010,7 @@ public sealed partial class AchievementService
                 .ToList();
             if (roles.Count > 0)
             {
-                await user.AddRolesAsync(roles, new RequestOptions
-                {
-                    AuditLogReason = strings.AchievementAuditReason(guild.Id)
-                });
+                await user.AddRolesAsync(roles);
             }
         }
         catch (Exception ex)

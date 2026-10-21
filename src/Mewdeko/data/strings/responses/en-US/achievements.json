@@ -52,7 +52,6 @@
   "achievement_stats_title": "Tracked stats",
   "achievement_stats_line": "{0}: **{1}**",
   "achievement_stats_no_data": "no data",
-  "achievement_stats_not_boosting": "not boosting",
   "achievement_stats_source_off": "{0} (off)",
   "achievement_source_messages": "Messages",
   "achievement_source_voice": "Voice",

@@ -33,7 +33,7 @@ public class Xp(
     [Aliases]
     public async Task Rank([Remainder] SocketGuildMember? user = null)
     {
-        user ??= (SocketGuildMember)ctx.User;
+        user ??= ctx.Member!;
 
         // Prevent showing ranks for bots
         if (user.IsBot)
@@ -82,7 +82,7 @@ public class Xp(
     [Aliases]
     public async Task TextRank([Remainder] SocketGuildMember? user = null)
     {
-        user ??= (SocketGuildMember)ctx.User;
+        user ??= ctx.Member!;
 
         // Prevent showing ranks for bots
         if (user.IsBot)
@@ -898,7 +898,7 @@ public class Xp(
         }
 
         // Check if the bot can assign this role
-        if (role.Position >= ((SocketGuildMember)ctx.User).GetRoles().Max(r => r.Position))
+        if (role.Position >= ctx.Member!.GetRoles().Max(r => r.Position))
         {
             await ReplyErrorAsync(Strings.XpRoleHierarchy(ctx.Guild.Id)).ConfigureAwait(false);
             return;
@@ -1136,7 +1136,7 @@ public class Xp(
         switch (type)
         {
             case "role":
-                var roleMatch = await ctx.Guild.GetRoleAsync(MentionUtils.ParseRole(reward));
+                var roleMatch = ctx.Guild.GetRole(MentionUtils.ParseRole(reward));
                 if (roleMatch == null)
                 {
                     await ReplyErrorAsync(Strings.XpCompetitionRoleNotFound(ctx.Guild.Id)).ConfigureAwait(false);
@@ -1403,7 +1403,7 @@ public class Xp(
                 {
                     await message.ModifyAsync(msg => msg.Embed = progressEmbed.Build());
                 }
-                catch (FluxerApiException ex) when (ex.DiscordCode == DiscordErrorCode.WriteRatelimitReached)
+                catch (FluxerApiException ex) when (ex.ErrorCode == FluxerErrorCodes.RateLimited)
                 {
                     logger.LogDebug("Hit rate limit updating progress message for guild {GuildId}", ctx.Guild.Id);
                 }
@@ -1694,7 +1694,7 @@ public class Xp(
     [UserPerm(GuildPermission.ManageGuild)]
     public async Task TestLevelUpMessage([Remainder] string? message = null)
     {
-        var testUser = (SocketGuildMember)ctx.User;
+        var testUser = ctx.Member!;
 
         // If no message provided, use a random custom message or fall back to default
         if (string.IsNullOrWhiteSpace(message))
@@ -1819,7 +1819,7 @@ public class Xp(
                 "`%xp.rank.suffix%` - Rank suffix (st, nd, rd, th)\n" +
                 "`%xp.guild.name%` - Server name\n" +
                 "`%xp.time%` - Current time\n" +
-                "`%xp.timestamp%` - Discord timestamp")
+                "`%xp.timestamp%` - Fluxer timestamp")
             .AddField(Strings.LevelUpPlaceholdersLegacy(ctx.Guild.Id),
                 "`%user%`, `%user.mention%`, `%level%`, `%xp%`, `%rank%`, `%server%`, `%guild%`");
 

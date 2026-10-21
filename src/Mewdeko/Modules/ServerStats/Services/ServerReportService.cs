@@ -31,7 +31,7 @@ public class ServerReportService : INService, IReadyExecutor, IDisposable
     /// <summary>
     ///     Initializes a new instance of the <see cref="ServerReportService" /> class.
     /// </summary>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="dbFactory">The database connection factory.</param>
     /// <param name="stats">The stats query service.</param>
     /// <param name="invites">The invite tracking service.</param>
@@ -243,12 +243,12 @@ public class ServerReportService : INService, IReadyExecutor, IDisposable
         if (snapshots.Count > 1)
         {
             eb.AddField(strings.ReportMembers(guild.Id),
-                strings.ReportMembersValue(guild.Id, guild.MemberCount.ToString("N0"),
+                strings.ReportMembersValue(guild.Id, guild.TotalMembers.ToString("N0"),
                     (snapshots[^1].Members - snapshots[0].Members).ToString("+#,0;-#,0;0")), true);
         }
         else
         {
-            eb.AddField(strings.ReportMembers(guild.Id), guild.MemberCount.ToString("N0"), true);
+            eb.AddField(strings.ReportMembers(guild.Id), guild.TotalMembers.ToString("N0"), true);
         }
 
         if (analytics.TopInviters.Count > 0)

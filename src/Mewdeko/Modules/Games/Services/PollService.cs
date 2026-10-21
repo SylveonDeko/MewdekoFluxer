@@ -27,7 +27,7 @@ public class PollService : INService, IReadyExecutor
     /// <param name="dbFactory">The database connection factory.</param>
     /// <param name="logger">The logger instance.</param>
     /// <param name="strings">The localized strings service.</param>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="collector">The analytics collector.</param>
     public PollService(IDataConnectionFactory dbFactory, ILogger<PollService> logger,
         GeneratedBotStrings strings, FluxerClient client, IAnalyticsCollector collector)
@@ -75,10 +75,10 @@ public class PollService : INService, IReadyExecutor
     /// <summary>
     /// Creates a new poll in the specified guild and channel.
     /// </summary>
-    /// <param name="guildId">The Discord guild ID where the poll will be created.</param>
-    /// <param name="channelId">The Discord channel ID where the poll will be posted.</param>
-    /// <param name="messageId">The Discord message ID of the poll message.</param>
-    /// <param name="creatorId">The Discord user ID of the poll creator.</param>
+    /// <param name="guildId">The Fluxer guild ID where the poll will be created.</param>
+    /// <param name="channelId">The Fluxer channel ID where the poll will be posted.</param>
+    /// <param name="messageId">The Fluxer message ID of the poll message.</param>
+    /// <param name="creatorId">The Fluxer user ID of the poll creator.</param>
     /// <param name="question">The poll question text.</param>
     /// <param name="options">The list of poll options.</param>
     /// <param name="type">The type of poll to create.</param>
@@ -160,7 +160,7 @@ public class PollService : INService, IReadyExecutor
     /// <summary>
     /// Retrieves all active polls for a specific guild.
     /// </summary>
-    /// <param name="guildId">The Discord guild ID to search for polls.</param>
+    /// <param name="guildId">The Fluxer guild ID to search for polls.</param>
     /// <returns>A list of active polls in the guild.</returns>
     public async Task<List<Poll>> GetActivePollsAsync(ulong guildId)
     {
@@ -190,7 +190,7 @@ public class PollService : INService, IReadyExecutor
     /// <summary>
     /// Retrieves all polls for a specific guild (both active and inactive).
     /// </summary>
-    /// <param name="guildId">The Discord guild ID to search for polls.</param>
+    /// <param name="guildId">The Fluxer guild ID to search for polls.</param>
     /// <returns>A list of all polls in the guild.</returns>
     public async Task<List<Poll>> GetAllPollsAsync(ulong guildId)
     {
@@ -239,7 +239,7 @@ public class PollService : INService, IReadyExecutor
     /// Records a member adding or taking back a reaction on a poll option.
     /// </summary>
     /// <param name="pollId">The ID of the poll.</param>
-    /// <param name="userId">The Discord user ID of the voter.</param>
+    /// <param name="userId">The Fluxer user ID of the voter.</param>
     /// <param name="optionIndex">The index of the option the reaction stands for.</param>
     /// <param name="add">True when the reaction was added, false when it was taken back.</param>
     /// <returns>
@@ -378,7 +378,7 @@ public class PollService : INService, IReadyExecutor
     /// Closes a poll manually before its expiration time.
     /// </summary>
     /// <param name="pollId">The ID of the poll to close.</param>
-    /// <param name="closedBy">The Discord user ID of who closed the poll.</param>
+    /// <param name="closedBy">The Fluxer user ID of who closed the poll.</param>
     /// <returns>True if the poll was successfully closed, otherwise false.</returns>
     public async Task<bool> ClosePollAsync(int pollId, ulong closedBy)
     {
@@ -587,7 +587,7 @@ public class PollService : INService, IReadyExecutor
     /// Deletes a poll and all associated data.
     /// </summary>
     /// <param name="pollId">The ID of the poll to delete.</param>
-    /// <param name="deletedBy">The Discord user ID of who deleted the poll.</param>
+    /// <param name="deletedBy">The Fluxer user ID of who deleted the poll.</param>
     /// <returns>True if the poll was successfully deleted, otherwise false.</returns>
     public async Task<bool> DeletePollAsync(int pollId, ulong deletedBy)
     {

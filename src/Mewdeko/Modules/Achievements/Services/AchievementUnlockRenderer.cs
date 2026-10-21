@@ -13,7 +13,7 @@ namespace Mewdeko.Modules.Achievements.Services;
 public sealed class AchievementUnlockRenderer : INService
 {
     /// <summary>
-    ///     Transparent space around the card. Discord rounds the corners of image attachments, much more on mobile,
+    ///     Transparent space around the card. Fluxer rounds the corners of image attachments, much more on mobile,
     ///     so the card sits inside this margin and the rounding only cuts empty pixels and the edge of the shadow.
     /// </summary>
     public const int Margin = 40;

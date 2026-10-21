@@ -77,10 +77,10 @@ public partial class XpService : INService, IUnloadableService
     /// <summary>
     ///     Initializes a new instance of the <see cref="XpService" /> class.
     /// </summary>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="dbFactory">The database context provider.</param>
     /// <param name="dataCache">The data cache service.</param>
-    /// <param name="eventHandler">The Discord event handler.</param>
+    /// <param name="eventHandler">The Fluxer event handler.</param>
     /// <param name="currencyService">The currency service.</param>
     /// <param name="httpClientFactory">The http client factory</param>
     /// <param name="cacheManager">The XP cache manager.</param>
@@ -120,10 +120,10 @@ public partial class XpService : INService, IUnloadableService
         this.collector = collector;
 
         // Register event handlers
-        EventHandler.Subscribe("MessageReceived", "XpService", HandleMessageXp);
-        EventHandler.Subscribe("UserVoiceStateUpdated", "XpService", voiceTracker.HandleVoiceStateUpdate);
-        EventHandler.Subscribe("GuildAvailable", "XpService", OnGuildAvailable);
-        EventHandler.Subscribe("MessageReceived", "XpService", OnMessageReceived);
+        EventHandler.MessageReceived.Subscribe("XpService", HandleMessageXp);
+        EventHandler.UserVoiceStateUpdated.Subscribe("XpService", voiceTracker.HandleVoiceStateUpdate);
+        EventHandler.GuildAvailable.Subscribe("XpService", OnGuildAvailable);
+        EventHandler.MessageReceived.Subscribe("XpService", OnMessageReceived);
 
         _ = Task.Run(async () =>
         {
@@ -147,10 +147,10 @@ public partial class XpService : INService, IUnloadableService
     public Task Unload()
     {
         // Unregister event handlers
-        EventHandler.Unsubscribe("MessageReceived", "XpService", HandleMessageXp);
-        EventHandler.Unsubscribe("UserVoiceStateUpdated", "XpService", voiceTracker.HandleVoiceStateUpdate);
-        EventHandler.Unsubscribe("GuildAvailable", "XpService", OnGuildAvailable);
-        EventHandler.Unsubscribe("MessageReceived", "XpService", OnMessageReceived);
+        EventHandler.MessageReceived.Unsubscribe("XpService", HandleMessageXp);
+        EventHandler.UserVoiceStateUpdated.Unsubscribe("XpService", voiceTracker.HandleVoiceStateUpdate);
+        EventHandler.GuildAvailable.Unsubscribe("XpService", OnGuildAvailable);
+        EventHandler.MessageReceived.Unsubscribe("XpService", OnMessageReceived);
 
         // Clean up resources
         backgroundProcessor.Dispose();
@@ -170,7 +170,7 @@ public partial class XpService : INService, IUnloadableService
     /// </summary>
     private async Task HandleMessageXp(SocketMessage message)
     {
-        if (message.Author is not SocketGuildMember user || user.IsBot)
+        if (message.Member is not { } user || user.IsBot)
             return;
 
         try
@@ -230,7 +230,7 @@ public partial class XpService : INService, IUnloadableService
     /// </summary>
     private async Task OnMessageReceived(SocketMessage msg)
     {
-        if (msg.Author.IsBot || msg is not SocketMessage { Author: SocketGuildMember user })
+        if (msg.Member is not { } user || user.IsBot)
             return;
 
         try

@@ -10,7 +10,7 @@ namespace Mewdeko.Modules.Currency.Common;
 ///     the system clock, so calls landing in the same tick produced identical results, and a player who
 ///     could time their commands could see the same roll twice. Drawing from the system CSPRNG removes
 ///     both the seeding problem and any question of predictability, at a cost that is irrelevant next to
-///     the surrounding database and Discord calls.
+///     the surrounding database and Fluxer calls.
 /// </remarks>
 public static class CurrencyRng
 {

@@ -14,7 +14,7 @@ statchannelcreate:
 statchanneladd:
   args:
     - '#voice-channel TotalMembers [template]'
-  desc: 'يضيف قناة صوتية كقناة إحصائيات. الأنواع: TotalMembers، HumanMembers، BotCount، OnlineMembers، ChannelCount، RoleCount، BoostCount، BoostLevel، EmojiCount.'
+  desc: 'يضيف قناة صوتية كقناة إحصائيات. الأنواع: TotalMembers، HumanMembers، BotCount، OnlineMembers، ChannelCount، RoleCount، EmojiCount.'
   params:
     - desc: 'القناة الصوتية للاستخدام.'
       name: channel

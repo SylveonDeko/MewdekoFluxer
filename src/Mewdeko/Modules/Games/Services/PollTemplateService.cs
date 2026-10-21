@@ -29,8 +29,8 @@ public class PollTemplateService : INService
     /// <summary>
     /// Creates a new poll template.
     /// </summary>
-    /// <param name="guildId">The Discord guild ID where the template will be available.</param>
-    /// <param name="creatorId">The Discord user ID of the template creator.</param>
+    /// <param name="guildId">The Fluxer guild ID where the template will be available.</param>
+    /// <param name="creatorId">The Fluxer user ID of the template creator.</param>
     /// <param name="name">The template name.</param>
     /// <param name="question">The template question.</param>
     /// <param name="options">The template options.</param>
@@ -92,7 +92,7 @@ public class PollTemplateService : INService
     /// <summary>
     /// Retrieves all templates available in a guild.
     /// </summary>
-    /// <param name="guildId">The Discord guild ID to search for templates.</param>
+    /// <param name="guildId">The Fluxer guild ID to search for templates.</param>
     /// <returns>A list of available templates.</returns>
     public async Task<List<PollTemplate>> GetTemplatesAsync(ulong guildId)
     {
@@ -134,7 +134,7 @@ public class PollTemplateService : INService
     /// <summary>
     /// Retrieves a template by name within a guild.
     /// </summary>
-    /// <param name="guildId">The Discord guild ID.</param>
+    /// <param name="guildId">The Fluxer guild ID.</param>
     /// <param name="name">The name of the template.</param>
     /// <returns>The template if found, otherwise null.</returns>
     public async Task<PollTemplate?> GetTemplateByNameAsync(ulong guildId, string name)
@@ -164,7 +164,7 @@ public class PollTemplateService : INService
     /// <param name="question">The new template question.</param>
     /// <param name="options">The new template options.</param>
     /// <param name="settings">The new template settings.</param>
-    /// <param name="updatedBy">The Discord user ID of who updated the template.</param>
+    /// <param name="updatedBy">The Fluxer user ID of who updated the template.</param>
     /// <returns>True if the template was successfully updated, otherwise false.</returns>
     public async Task<bool> UpdateTemplateAsync(int templateId, string? name, string? question,
         List<PollOptionData>? options, PollSettings? settings, ulong updatedBy)
@@ -254,7 +254,7 @@ public class PollTemplateService : INService
     /// Deletes a poll template.
     /// </summary>
     /// <param name="templateId">The ID of the template to delete.</param>
-    /// <param name="deletedBy">The Discord user ID of who deleted the template.</param>
+    /// <param name="deletedBy">The Fluxer user ID of who deleted the template.</param>
     /// <returns>True if the template was successfully deleted, otherwise false.</returns>
     public async Task<bool> DeleteTemplateAsync(int templateId, ulong deletedBy)
     {
@@ -296,9 +296,9 @@ public class PollTemplateService : INService
     /// Creates a poll from a template.
     /// </summary>
     /// <param name="templateId">The ID of the template to use.</param>
-    /// <param name="channelId">The Discord channel ID where the poll will be posted.</param>
-    /// <param name="messageId">The Discord message ID of the poll message.</param>
-    /// <param name="creatorId">The Discord user ID of the poll creator.</param>
+    /// <param name="channelId">The Fluxer channel ID where the poll will be posted.</param>
+    /// <param name="messageId">The Fluxer message ID of the poll message.</param>
+    /// <param name="creatorId">The Fluxer user ID of the poll creator.</param>
     /// <param name="pollType">The type of poll to create.</param>
     /// <param name="customSettings">Optional custom settings to override template settings.</param>
     /// <returns>The created poll if successful, otherwise null.</returns>
@@ -335,7 +335,7 @@ public class PollTemplateService : INService
     /// <summary>
     /// Gets template usage statistics for a guild.
     /// </summary>
-    /// <param name="guildId">The Discord guild ID.</param>
+    /// <param name="guildId">The Fluxer guild ID.</param>
     /// <returns>Dictionary of template names and their usage counts.</returns>
     public async Task<Dictionary<string, int>> GetTemplateUsageStatsAsync(ulong guildId)
     {

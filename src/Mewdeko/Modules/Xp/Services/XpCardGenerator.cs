@@ -76,7 +76,8 @@ public class XpCardGenerator : INService
 
         return new FullUserStats
         {
-            User = user,
+            User = user.User,
+            Member = user,
             Guild = new UserLevelStats
             {
                 Level = xpStats.Level, LevelXp = xpStats.LevelXp, RequiredXp = xpStats.RequiredXp
@@ -250,7 +251,7 @@ public class XpCardGenerator : INService
         }
 
         // Draw user avatar
-        if (stats.User.GetAvatarUrl() != null && template.TemplateUser.ShowIcon)
+        if (stats.User.GetAvatarUrl(256) != null && template.TemplateUser.ShowIcon)
         {
             try
             {
@@ -512,11 +513,11 @@ public class XpCardGenerator : INService
     private static string ResolveElementText(string text, FullUserStats stats)
     {
         var percent = stats.Guild.RequiredXp == 0 ? 100 : stats.Guild.LevelXp * 100.0 / stats.Guild.RequiredXp;
-        var guildUser = stats.User as SocketGuildMember;
+        var guildUser = stats.Member;
         return text
             .Replace("%xp.user%", stats.User.Username, StringComparison.OrdinalIgnoreCase)
             .Replace("%xp.user.name%", stats.User.Username, StringComparison.OrdinalIgnoreCase)
-            .Replace("%xp.user.displayname%", guildUser?.DisplayName ?? stats.User.GlobalName ?? stats.User.Username,
+            .Replace("%xp.user.displayname%", guildUser?.DisplayName ?? stats.User.DisplayName ?? stats.User.Username,
                 StringComparison.OrdinalIgnoreCase)
             .Replace("%xp.user.nickname%", guildUser?.Nickname ?? stats.User.Username,
                 StringComparison.OrdinalIgnoreCase)
@@ -793,7 +794,7 @@ public class XpCardGenerator : INService
     /// <returns>The avatar URL.</returns>
     private static string GetAvatarUrl(IUser user)
     {
-        return user.GetAvatarUrl(ImageFormat.Png, 256) ?? user.GetDefaultAvatarUrl();
+        return user.GetAvatarOrDefaultUrl(256);
     }
 
     /// <summary>
@@ -817,6 +818,11 @@ public class FullUserStats
     ///     Gets or sets the user information.
     /// </summary>
     public IUser User { get; set; }
+
+    /// <summary>
+    ///     Gets or sets the guild membership of the user.
+    /// </summary>
+    public SocketGuildMember? Member { get; set; }
 
     /// <summary>
     ///     Gets or sets the guild level statistics.

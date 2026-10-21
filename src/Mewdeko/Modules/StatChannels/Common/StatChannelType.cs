@@ -41,16 +41,6 @@ public enum StatChannelType
     RoleCount = 6,
 
     /// <summary>
-    ///     Server boost count.
-    /// </summary>
-    BoostCount = 7,
-
-    /// <summary>
-    ///     Server boost level/tier.
-    /// </summary>
-    BoostLevel = 8,
-
-    /// <summary>
     ///     Emoji count.
     /// </summary>
     EmojiCount = 9,
@@ -101,11 +91,6 @@ public enum StatChannelType
     CategoryCount = 18,
 
     /// <summary>
-    ///     Stage channel count.
-    /// </summary>
-    StageChannelCount = 19,
-
-    /// <summary>
     ///     Forum channel count.
     /// </summary>
     ForumChannelCount = 20,
@@ -131,11 +116,6 @@ public enum StatChannelType
     StickerCount = 24,
 
     /// <summary>
-    ///     Emoji slots used against the tier cap.
-    /// </summary>
-    EmojiSlotsUsed = 25,
-
-    /// <summary>
     ///     Days since the server was created.
     /// </summary>
     ServerAge = 26,
@@ -156,19 +136,9 @@ public enum StatChannelType
     MembersJoinedWeek = 29,
 
     /// <summary>
-    ///     Scheduled event count.
-    /// </summary>
-    EventCount = 30,
-
-    /// <summary>
     ///     Tracked invite count.
     /// </summary>
     InviteCount = 31,
-
-    /// <summary>
-    ///     Boosts remaining until the next boost tier.
-    /// </summary>
-    NextBoostGoal = 32,
 
     /// <summary>
     ///     Bot uptime in hours.

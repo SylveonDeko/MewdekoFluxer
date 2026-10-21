@@ -34,7 +34,7 @@ public class VoiceActivityService : INService, IReadyExecutor, IDisposable
     /// <summary>
     ///     Initializes a new instance of the <see cref="VoiceActivityService" /> class.
     /// </summary>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="dbFactory">The database connection factory.</param>
     /// <param name="settings">The stats settings service.</param>
     /// <param name="eventHandler">The event handler.</param>
@@ -51,15 +51,15 @@ public class VoiceActivityService : INService, IReadyExecutor, IDisposable
         this.logger = logger;
         this.collector = collector;
 
-        eventHandler.Subscribe("UserVoiceStateUpdated", "VoiceActivityService", OnVoiceStateUpdated);
-        eventHandler.Subscribe("LeftGuild", "VoiceActivityService", OnLeftGuild);
+        eventHandler.UserVoiceStateUpdated.Subscribe("VoiceActivityService", OnVoiceStateUpdated);
+        eventHandler.LeftGuild.Subscribe("VoiceActivityService", OnLeftGuild);
     }
 
     /// <inheritdoc />
     public void Dispose()
     {
-        eventHandler.Unsubscribe("UserVoiceStateUpdated", "VoiceActivityService", OnVoiceStateUpdated);
-        eventHandler.Unsubscribe("LeftGuild", "VoiceActivityService", OnLeftGuild);
+        eventHandler.UserVoiceStateUpdated.Unsubscribe("VoiceActivityService", OnVoiceStateUpdated);
+        eventHandler.LeftGuild.Unsubscribe("VoiceActivityService", OnLeftGuild);
         checkpointTimer?.Dispose();
         checkpointLock.Dispose();
     }
@@ -96,11 +96,9 @@ public class VoiceActivityService : INService, IReadyExecutor, IDisposable
         return Task.CompletedTask;
     }
 
-    private async Task OnVoiceStateUpdated(SocketUser user, SocketVoiceState before, SocketVoiceState after)
+    private async Task OnVoiceStateUpdated(SocketGuildMember guildUser, VoiceStateSnapshot before,
+        VoiceStateSnapshot after)
     {
-        if (user is not SocketGuildMember guildUser)
-            return;
-
         var guild = guildUser.Guild;
         var now = DateTime.UtcNow;
         var key = (guild.Id, guildUser.Id);
@@ -117,7 +115,7 @@ public class VoiceActivityService : INService, IReadyExecutor, IDisposable
             if (trackable)
             {
                 sessions[key] = new VoiceSession(after.VoiceChannel!.Id, now,
-                    ComputeState(guild, after.VoiceChannel, guildUser));
+                    ComputeState(guild, after.VoiceChannel, guildUser, after));
             }
 
             // Other members in the affected channels may have gained or lost company, which changes their state.
@@ -130,7 +128,7 @@ public class VoiceActivityService : INService, IReadyExecutor, IDisposable
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error tracking voice state for {UserId} in {GuildId}", user.Id, guild.Id);
+            logger.LogError(ex, "Error tracking voice state for {UserId} in {GuildId}", guildUser.Id, guild.Id);
         }
     }
 
@@ -158,15 +156,17 @@ public class VoiceActivityService : INService, IReadyExecutor, IDisposable
         }
     }
 
-    private static VoiceStateFlags ComputeState(SocketGuild guild, Channel channel, SocketGuildMember user)
+    private static VoiceStateFlags ComputeState(SocketGuild guild, Channel channel, SocketGuildMember user,
+        VoiceStateSnapshot? voice = null)
     {
+        voice ??= FluxerContext.Snapshots.GetVoiceState(guild.Id, user.Id);
         var state = VoiceStateFlags.Normal;
-        if (user.IsSelfMuted) state |= VoiceStateFlags.SelfMuted;
-        if (user.IsSelfDeafened) state |= VoiceStateFlags.SelfDeafened;
-        if (user.IsMuted) state |= VoiceStateFlags.ServerMuted;
-        if (user.IsDeafened) state |= VoiceStateFlags.ServerDeafened;
-        if (user.IsStreaming) state |= VoiceStateFlags.Streaming;
-        if (user.IsVideoing) state |= VoiceStateFlags.Video;
+        if (voice.IsSelfMuted) state |= VoiceStateFlags.SelfMuted;
+        if (voice.IsSelfDeafened) state |= VoiceStateFlags.SelfDeafened;
+        if (voice.IsMuted) state |= VoiceStateFlags.ServerMuted;
+        if (voice.IsDeafened) state |= VoiceStateFlags.ServerDeafened;
+        if (voice.IsStreaming) state |= VoiceStateFlags.Streaming;
+        if (voice.IsVideoing) state |= VoiceStateFlags.Video;
         if (guild.AFKChannel?.Id == channel.Id) state |= VoiceStateFlags.Afk;
         if (channel.ConnectedUsers.Count(u => !u.IsBot) <= 1) state |= VoiceStateFlags.Alone;
         return state;

@@ -25,7 +25,7 @@ public enum AchievementIconKind
     Url,
 
     /// <summary>
-    ///     A Discord custom emoji, stored as <c>&lt;:name:id&gt;</c> or <c>&lt;a:name:id&gt;</c>.
+    ///     A Fluxer custom emoji, stored as <c>&lt;:name:id&gt;</c> or <c>&lt;a:name:id&gt;</c>.
     /// </summary>
     Emoji,
 
@@ -200,8 +200,7 @@ public static partial class AchievementIcons
         var match = CustomEmoji().Match(icon.Value);
         if (!match.Success)
             return null;
-        var animated = match.Groups[1].Value == "a";
-        return $"https://cdn.discordapp.com/emojis/{match.Groups[2].Value}.{(animated ? "gif" : "png")}?size=128";
+        return $"{FluxerContext.Client.Config.MediaUrl}/emojis/{match.Groups[2].Value}.webp?size=128";
     }
 
     private static (IReadOnlyList<AchievementGlyph>, Dictionary<string, AchievementGlyph>) LoadTable()

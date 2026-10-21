@@ -104,7 +104,7 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
     /// <summary>
     ///     Initializes a new instance of the <see cref="AchievementService" /> class.
     /// </summary>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="dbFactory">Database connection factory.</param>
     /// <param name="strings">Localized bot strings.</param>
     /// <param name="eventHandler">Event handler for gateway events.</param>
@@ -587,7 +587,6 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
         return metric switch
         {
             AchievementMetric.TenureDays => $"Stay in the server for {threshold:N0} {unit}",
-            AchievementMetric.BoostMonths => $"Keep boosting for {threshold:N0} {unit} in a row",
             AchievementMetric.XpLevel => $"Reach XP level {threshold:N0}",
             AchievementMetric.NetWorth => $"Have a net worth of {threshold:N0}",
             _ => $"Reach {threshold:N0} {unit} ({info.Label.ToLowerInvariant()})"
@@ -1312,7 +1311,7 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
     public static bool CanAssign(SocketGuild guild, ulong roleId)
     {
         var role = guild.GetRole(roleId);
-        if (role is null || role.IsManaged || role.Id == guild.EveryoneRole.Id)
+        if (role is null || role.Id == guild.EveryoneRole.Id)
             return false;
         var bot = guild.CurrentUser;
         return bot.GuildPermissions.ManageRoles && bot.Hierarchy > role.Position;

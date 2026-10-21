@@ -27,7 +27,7 @@ public class PollSchedulerService : INService, IReadyExecutor, IDisposable
     /// <param name="dbFactory">The database connection factory.</param>
     /// <param name="pollService">The poll service.</param>
     /// <param name="pollMessages">The service that posts poll messages.</param>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="logger">The logger instance.</param>
     public PollSchedulerService(IDataConnectionFactory dbFactory, PollService pollService,
         PollMessageService pollMessages,
@@ -57,9 +57,9 @@ public class PollSchedulerService : INService, IReadyExecutor, IDisposable
     /// <summary>
     /// Schedules a poll to be created at a specific time.
     /// </summary>
-    /// <param name="guildId">The Discord guild ID.</param>
-    /// <param name="channelId">The Discord channel ID.</param>
-    /// <param name="creatorId">The Discord user ID of the creator.</param>
+    /// <param name="guildId">The Fluxer guild ID.</param>
+    /// <param name="channelId">The Fluxer channel ID.</param>
+    /// <param name="creatorId">The Fluxer user ID of the creator.</param>
     /// <param name="question">The poll question.</param>
     /// <param name="options">The poll options.</param>
     /// <param name="pollType">The poll type.</param>
@@ -106,7 +106,7 @@ public class PollSchedulerService : INService, IReadyExecutor, IDisposable
     /// <summary>
     /// Gets all scheduled polls for a guild.
     /// </summary>
-    /// <param name="guildId">The Discord guild ID.</param>
+    /// <param name="guildId">The Fluxer guild ID.</param>
     /// <param name="includeCancelled">Whether to include cancelled polls.</param>
     /// <param name="includeExecuted">Whether to include executed polls.</param>
     /// <returns>List of scheduled polls.</returns>
@@ -139,7 +139,7 @@ public class PollSchedulerService : INService, IReadyExecutor, IDisposable
     /// Cancels a scheduled poll.
     /// </summary>
     /// <param name="scheduledPollId">The ID of the scheduled poll.</param>
-    /// <param name="cancelledBy">The Discord user ID of who cancelled it.</param>
+    /// <param name="cancelledBy">The Fluxer user ID of who cancelled it.</param>
     /// <returns>True if the poll was successfully cancelled.</returns>
     public async Task<bool> CancelScheduledPollAsync(int scheduledPollId, ulong cancelledBy)
     {

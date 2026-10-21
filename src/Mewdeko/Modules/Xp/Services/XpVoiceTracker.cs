@@ -50,7 +50,7 @@ public class XpVoiceTracker : INService, IDisposable
     /// <summary>
     ///     Initializes a new instance of the <see cref="XpVoiceTracker" /> class.
     /// </summary>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="dbFactory">The database context provider.</param>
     /// <param name="cacheManager">The cache manager.</param>
     /// <param name="backgroundProcessor">The background processor.</param>
@@ -104,9 +104,10 @@ public class XpVoiceTracker : INService, IDisposable
     /// <param name="before">The previous voice state.</param>
     /// <param name="after">The new voice state.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task HandleVoiceStateUpdate(SocketUser user, SocketVoiceState before, SocketVoiceState after)
+    public async Task HandleVoiceStateUpdate(SocketGuildMember guildUser, VoiceStateSnapshot before,
+        VoiceStateSnapshot after)
     {
-        if (user is not SocketGuildMember guildUser || guildUser.IsBot)
+        if (guildUser.IsBot)
             return;
 
         try
@@ -159,7 +160,7 @@ public class XpVoiceTracker : INService, IDisposable
         catch (Exception ex)
         {
             logger.LogError(ex, "Error handling voice state update for {UserId} in {GuildId}",
-                user.Id, guildUser.Guild.Id);
+                guildUser.Id, guildUser.Guild.Id);
         }
     }
 
@@ -186,7 +187,7 @@ public class XpVoiceTracker : INService, IDisposable
             foreach (var channel in guild.VoiceChannels)
             {
                 // Check if channel has enough users for XP
-                var eligibleUsers = channel.Users.Where(u => !u.IsBot && IsParticipatingInVoice(u)).ToList();
+                var eligibleUsers = channel.ConnectedUsers.Where(u => !u.IsBot && IsParticipatingInVoice(u)).ToList();
                 var isEligible = eligibleUsers.Count >= MinUsersForXp;
 
                 // Update channel eligibility cache
@@ -260,7 +261,7 @@ public class XpVoiceTracker : INService, IDisposable
             }
 
             // Pre-validate: Check if channel has minimum users for XP eligibility
-            var eligibleUserCount = voiceChannel.Users.Count(u => !u.IsBot && IsParticipatingInVoice(u));
+            var eligibleUserCount = voiceChannel.ConnectedUsers.Count(u => !u.IsBot && IsParticipatingInVoice(u));
             if (eligibleUserCount < MinUsersForXp)
             {
                 logger.LogDebug(
@@ -482,7 +483,7 @@ public class XpVoiceTracker : INService, IDisposable
                         continue;
 
                     // Check channel eligibility (need at least 2 participating users)
-                    var eligibleUserCount = channel.Users.Count(u => !u.IsBot && IsParticipatingInVoice(u));
+                    var eligibleUserCount = channel.ConnectedUsers.Count(u => !u.IsBot && IsParticipatingInVoice(u));
                     var isEligible = eligibleUserCount >= MinUsersForXp;
 
                     // Update channel eligibility cache
@@ -632,7 +633,7 @@ public class XpVoiceTracker : INService, IDisposable
                         }
 
                         // Check if channel no longer meets minimum user requirements
-                        var currentEligibleUsers = channel.Users.Count(u => !u.IsBot && IsParticipatingInVoice(u));
+                        var currentEligibleUsers = channel.ConnectedUsers.Count(u => !u.IsBot && IsParticipatingInVoice(u));
                         if (currentEligibleUsers < MinUsersForXp && session.CurrentlyEligible)
                         {
                             // End eligibility period but keep session for potential future eligibility
@@ -732,7 +733,7 @@ public class XpVoiceTracker : INService, IDisposable
         // If we have the channel object, check it directly
         if (voiceChannel != null)
         {
-            var isEligible = voiceChannel.Users.Count(u => !u.IsBot && IsParticipatingInVoice(u)) >= MinUsersForXp;
+            var isEligible = voiceChannel.ConnectedUsers.Count(u => !u.IsBot && IsParticipatingInVoice(u)) >= MinUsersForXp;
             var options = new MemoryCacheEntryOptions()
                 .SetSize(1)
                 .SetAbsoluteExpiration(eligibilityCacheTtl);
@@ -753,7 +754,7 @@ public class XpVoiceTracker : INService, IDisposable
             return Task.FromResult(false);
         }
 
-        var eligibleCount = channel.Users.Count(u => !u.IsBot && IsParticipatingInVoice(u));
+        var eligibleCount = channel.ConnectedUsers.Count(u => !u.IsBot && IsParticipatingInVoice(u));
         var eligible = eligibleCount >= MinUsersForXp;
 
         var cacheEntryOptions = new MemoryCacheEntryOptions()
@@ -766,12 +767,22 @@ public class XpVoiceTracker : INService, IDisposable
     /// <summary>
     ///     Determines if a user is actively participating in a voice channel.
     /// </summary>
-    /// <param name="user">The voice state user.</param>
+    /// <param name="state">The voice state.</param>
     /// <returns>True if the user is participating, false otherwise.</returns>
-    private static bool IsParticipatingInVoice(IVoiceState user)
+    private static bool IsParticipatingInVoice(VoiceStateSnapshot state)
     {
-        return !user.IsDeafened && !user.IsMuted && !user.IsSelfDeafened && !user.IsSelfMuted &&
-               user.VoiceChannel is not null;
+        return !state.IsDeafened && !state.IsMuted && !state.IsSelfDeafened && !state.IsSelfMuted &&
+               state.ChannelId is not null;
+    }
+
+    /// <summary>
+    ///     Determines if a member is actively participating in a voice channel.
+    /// </summary>
+    /// <param name="member">The member.</param>
+    /// <returns>True if the member is participating, false otherwise.</returns>
+    private static bool IsParticipatingInVoice(SocketGuildMember member)
+    {
+        return IsParticipatingInVoice(FluxerContext.Snapshots.GetVoiceState(member.GuildId, member.Id));
     }
 
     /// <summary>

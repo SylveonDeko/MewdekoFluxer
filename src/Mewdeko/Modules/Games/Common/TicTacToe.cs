@@ -205,7 +205,7 @@ public class TicTacToe
             }
         }, null, options.TurnTimer * 1000, Timeout.Infinite);
 
-        handler.Subscribe("MessageReceived", "TicTacToe", Client_MessageReceived);
+        handler.MessageReceived.Subscribe("TicTacToe", Client_MessageReceived);
 
         previousMessage =
             await channel.EmbedAsync(GetEmbed(Strings.GameStarted(users[0].Guild.Id))).ConfigureAwait(false);
@@ -285,14 +285,14 @@ public class TicTacToe
                 {
                     reason = Strings.TttMatchedThree(users[0].Guild.Id);
                     winner = users[curUserIndex];
-                    handler.Unsubscribe("MessageReceived", "TicTacToe", Client_MessageReceived);
+                    handler.MessageReceived.Unsubscribe("TicTacToe", Client_MessageReceived);
                     OnEnded.Invoke(this);
                 }
                 else if (IsDraw())
                 {
                     reason = Strings.TttADraw(users[0].Guild.Id);
                     phase = Phase.Ended;
-                    handler.Unsubscribe("MessageReceived", "TicTacToe", Client_MessageReceived);
+                    handler.MessageReceived.Unsubscribe("TicTacToe", Client_MessageReceived);
                     OnEnded.Invoke(this);
                 }
 

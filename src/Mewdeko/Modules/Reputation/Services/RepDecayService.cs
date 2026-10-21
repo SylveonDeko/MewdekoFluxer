@@ -27,7 +27,7 @@ public class RepDecayService : INService, IReadyExecutor, IUnloadableService
     /// <param name="dbFactory">The database connection factory.</param>
     /// <param name="logger">The logger instance.</param>
     /// <param name="strings">The localized bot strings.</param>
-    /// <param name="client">The Discord sharded client.</param>
+    /// <param name="client">The Fluxer client.</param>
     public RepDecayService(
         IDataConnectionFactory dbFactory,
         ILogger<RepDecayService> logger,

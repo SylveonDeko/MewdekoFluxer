@@ -82,8 +82,8 @@ public record ChannelActivity(
 ///     One game or app with the time members spent in it.
 /// </summary>
 /// <param name="Name">The activity name.</param>
-/// <param name="ApplicationId">The Discord application, when known.</param>
-/// <param name="Type">The Discord activity type.</param>
+/// <param name="ApplicationId">The Fluxer application, when known.</param>
+/// <param name="Type">The Fluxer activity type.</param>
 /// <param name="Seconds">Seconds spent across all members.</param>
 /// <param name="Players">Distinct members who spent time in it.</param>
 public record ActivitySummary(string Name, ulong? ApplicationId, ActivityType Type, long Seconds, int Players);

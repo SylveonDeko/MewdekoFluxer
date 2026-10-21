@@ -34,11 +34,11 @@ public partial class Games
             {
                 if (Service.TicTacToeGames.TryGetValue(channel.Id, out var game))
                 {
-                    _ = game.Start((SocketGuildMember)ctx.User);
+                    _ = game.Start(ctx.Member!);
                     return;
                 }
 
-                game = new TicTacToe(Strings, channel, (SocketGuildMember)ctx.User, options, Config, handler);
+                game = new TicTacToe(Strings, channel, ctx.Member!, options, Config, handler);
                 Service.TicTacToeGames.Add(channel.Id, game);
                 await ReplyConfirmAsync(Strings.TttCreated(ctx.Guild.Id)).ConfigureAwait(false);
 

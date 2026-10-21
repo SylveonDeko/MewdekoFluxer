@@ -8,7 +8,7 @@ using Mewdeko.Modules.RoleGreets.Services;
 namespace Mewdeko.Modules.RoleGreets;
 
 /// <summary>
-///     The RoleGreets module provides commands for managing role greet messages within a Discord guild.
+///     The RoleGreets module provides commands for managing role greet messages within a Fluxer guild.
 ///     These messages are sent when a user receives a specific role, allowing for custom greetings or information to be
 ///     shared automatically.
 /// </summary>
@@ -247,17 +247,18 @@ public class RoleGreets(InteractiveService interactivity, HttpClient http) : Mew
             using var sr = await http.GetAsync(avatar, HttpCompletionOption.ResponseHeadersRead)
                 .ConfigureAwait(false);
             var imgData = await sr.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
-            var imgStream = imgData.ToStream();
-            await using var _ = imgStream.ConfigureAwait(false);
-            var webhook = await channel.CreateWebhookAsync(name, imgStream).ConfigureAwait(false);
-            await Service.ChangeMgWebhook(greet, $"https://discord.com/api/webhooks/{webhook.Id}/{webhook.Token}")
+            var imgType = sr.Content.Headers.ContentType?.MediaType ?? "image/png";
+            var webhook = await channel
+                .CreateWebhookAsync(name, $"data:{imgType};base64,{Convert.ToBase64String(imgData)}")
+                .ConfigureAwait(false);
+            await Service.ChangeMgWebhook(greet, $"{FluxerContext.Client.Config.RealApiBaseUrl}/webhooks/{webhook.Id}/{webhook.Token}")
                 .ConfigureAwait(false);
             await ctx.Channel.SendConfirmAsync(Strings.WebhookSet(ctx.Guild.Id)).ConfigureAwait(false);
         }
         else
         {
             var webhook = await channel.CreateWebhookAsync(name).ConfigureAwait(false);
-            await Service.ChangeMgWebhook(greet, $"https://discord.com/api/webhooks/{webhook.Id}/{webhook.Token}")
+            await Service.ChangeMgWebhook(greet, $"{FluxerContext.Client.Config.RealApiBaseUrl}/webhooks/{webhook.Id}/{webhook.Token}")
                 .ConfigureAwait(false);
             await ctx.Channel.SendConfirmAsync(Strings.WebhookSet(ctx.Guild.Id)).ConfigureAwait(false);
         }

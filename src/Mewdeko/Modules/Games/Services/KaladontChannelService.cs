@@ -50,7 +50,7 @@ public class KaladontChannelService : INService, IReadyExecutor
         this.strings = strings;
 
         // Subscribe to message events
-        this.eventHandler.Subscribe("MessageReceived", "KaladontChannelService", MessageReceived);
+        this.eventHandler.MessageReceived.Subscribe("KaladontChannelService", MessageReceived);
     }
 
     /// <summary>
@@ -388,7 +388,7 @@ public class KaladontChannelService : INService, IReadyExecutor
             else if (result.ValidationResult != KaladontGame.ValidationResult.Valid)
             {
                 // Show error for failed game attempts
-                var guildId = textChannel.GuildId;
+                var guildId = textChannel.GuildId ?? 0;
                 var errorMsg = GetErrorMessage(result.ValidationResult, content, currentWord, guildId);
                 if (!string.IsNullOrEmpty(errorMsg))
                 {

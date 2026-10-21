@@ -14,7 +14,7 @@ statchannelcreate:
 statchanneladd:
   args:
     - '#voice-channel TotalMembers [template]'
-  desc: 'ボイスチャンネルを統計チャンネルとして追加します。タイプ：TotalMembers、HumanMembers、BotCount、OnlineMembers、ChannelCount、RoleCount、BoostCount、BoostLevel、EmojiCount。'
+  desc: 'ボイスチャンネルを統計チャンネルとして追加します。タイプ：TotalMembers、HumanMembers、BotCount、OnlineMembers、ChannelCount、RoleCount、EmojiCount。'
   params:
     - desc: '使用するボイスチャンネル。'
       name: channel

@@ -60,7 +60,7 @@ public class RepCommandRequirementsService : INService, ILateBlocker
     /// <summary>
     ///     Checks if a user meets the reputation requirements for a specific command.
     /// </summary>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="ctx">The command context.</param>
     /// <param name="moduleName">The module name.</param>
     /// <param name="command">The command info.</param>
@@ -93,7 +93,7 @@ public class RepCommandRequirementsService : INService, ILateBlocker
                 var message = requirement.DenialMessage ??
                               strings.RepCommandRequirementNotMet(ctx.Guild.Id, requirement.MinReputation,
                                   requirement.RequiredRepType ?? "total");
-                await ctx.Channel.SendErrorAsync(message, config);
+                await ((CommandContext)ctx).Channel.SendErrorAsync(message, config);
                 return true; // Block the command
             }
 

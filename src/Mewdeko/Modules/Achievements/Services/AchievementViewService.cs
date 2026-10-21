@@ -30,7 +30,7 @@ public sealed class AchievementViewService : INService
     /// <param name="service">The achievement service.</param>
     /// <param name="renderer">The profile card renderer.</param>
     /// <param name="strings">Localized bot strings.</param>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="dbFactory">Database connection factory.</param>
     public AchievementViewService(AchievementService service, AchievementCardRenderer renderer,
         GeneratedBotStrings strings, FluxerClient client, IDataConnectionFactory dbFactory)
@@ -284,7 +284,7 @@ public sealed class AchievementViewService : INService
 
         return new EmbedBuilder()
             .WithColor(tier.Grade is { } grade ? new Color(AchievementCatalog.GetGrade(grade).Color) : Mewdeko.OkColor)
-            .WithAuthor(target.GlobalName ?? target.Username, target.GetAvatarUrl() ?? target.GetDefaultAvatarUrl())
+            .WithAuthor(target.DisplayName ?? target.Username, target.GetAvatarOrDefaultUrl(128))
             .WithTitle(strings.AchievementGlobalTitle(guildId))
             .WithDescription(description);
     }
@@ -368,9 +368,7 @@ public sealed class AchievementViewService : INService
             var lines = group.Select(m =>
             {
                 var shown = values.TryGetValue(m.Metric, out var value)
-                    ? m.Metric == AchievementMetric.BoostMonths && value < 0
-                        ? strings.AchievementStatsNotBoosting(guild.Id)
-                        : value.ToString("N0")
+                    ? value.ToString("N0")
                     : strings.AchievementStatsNoData(guild.Id);
                 return strings.AchievementStatsLine(guild.Id, m.Label, shown);
             });
@@ -467,11 +465,11 @@ public sealed class AchievementViewService : INService
             ? strings.AchievementCardProgress(localeGuildId, (next.MinPoints - summary.Points).ToString("N0"), next.Name)
             : strings.AchievementOverviewTopTier(localeGuildId);
 
-        var name = target is SocketGuildMember member ? member.DisplayName : target.GlobalName ?? target.Username;
+        var name = guild?.GetUser(target.Id)?.DisplayName ?? target.DisplayName ?? target.Username;
         return await renderer.RenderAsync(new AchievementCardRenderer.CardData
         {
             Name = name,
-            AvatarUrl = target.GetAvatarUrl(ImageFormat.Png, 256) ?? target.GetDefaultAvatarUrl(),
+            AvatarUrl = target.GetAvatarOrDefaultUrl(256),
             Scope = scope,
             Summary = summary,
             Badges = badges,

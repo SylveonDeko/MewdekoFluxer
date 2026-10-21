@@ -185,9 +185,8 @@ public static class ServerStatsEmbeds
                 string.Join("\n", topActivities.Select(x =>
                     $"{TypeIcon(x.Type)} {x.Name}: **{ServerStatsService.FormatDuration(x.Seconds)}**")), true);
 
-        if (user.JoinedAt.HasValue)
-            eb.AddField(strings.StatsJoined(guild.Id),
-                TimestampTag.FromDateTimeOffset(user.JoinedAt.Value, TimestampTagStyle.Relative).ToString(), true);
+        eb.AddField(strings.StatsJoined(guild.Id),
+            TimestampTag.FromDateTimeOffset(user.JoinedAt, TimestampTagStyle.Relative).ToString(), true);
         eb.AddField(strings.StatsAccountAge(guild.Id),
             TimestampTag.FromDateTimeOffset(user.CreatedAt, TimestampTagStyle.Relative).ToString(), true);
 

@@ -31,7 +31,7 @@ public class GuildSnapshotService : INService, IReadyExecutor, IDisposable
     /// <summary>
     ///     Initializes a new instance of the <see cref="GuildSnapshotService" /> class.
     /// </summary>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="dbFactory">The database connection factory.</param>
     /// <param name="settings">The stats settings service.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
@@ -115,14 +115,14 @@ public class GuildSnapshotService : INService, IReadyExecutor, IDisposable
         {
             GuildId = guild.Id,
             Timestamp = stamp,
-            Members = guild.MemberCount,
+            Members = guild.TotalMembers,
             Humans = users.Count(u => !u.IsBot),
             Bots = users.Count(u => u.IsBot),
             Online = users.Count(u => u.Status == UserStatus.Online),
             Idle = users.Count(u => u.Status == UserStatus.Idle),
             Dnd = users.Count(u => u.Status == UserStatus.DoNotDisturb),
             Offline = users.Count(u => u.Status is UserStatus.Offline or UserStatus.Invisible),
-            InVoice = guild.VoiceChannels.Sum(vc => vc.ConnectedUsers.Count)
+            InVoice = guild.VoiceChannels.Sum(vc => vc.ConnectedUsers.Count())
         };
     }
 

@@ -86,7 +86,7 @@ public partial class Currency
     [RequireContext(ContextType.Guild)]
     public async Task Buy([Remainder] string name)
     {
-        var guildUser = (SocketGuildMember)ctx.User;
+        var guildUser = ctx.Member!;
         var result = await ShopService.PurchaseAsync(ctx.Guild.Id, ctx.User.Id, name, guildUser.RoleIds.ToList());
         var emote = await Service.GetCurrencyEmote(ctx.Guild.Id);
 

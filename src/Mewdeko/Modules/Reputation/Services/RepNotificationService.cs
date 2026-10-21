@@ -22,7 +22,7 @@ public class RepNotificationService : INService
     /// <summary>
     ///     Initializes a new instance of the <see cref="RepNotificationService" /> class.
     /// </summary>
-    /// <param name="client">The Discord sharded client.</param>
+    /// <param name="client">The Fluxer client.</param>
     /// <param name="dbFactory">The database connection factory.</param>
     /// <param name="strings">The localized bot strings.</param>
     /// <param name="logger">The logger instance.</param>
@@ -120,7 +120,7 @@ public class RepNotificationService : INService
                 .WithColor(amount > 0 ? Color.Green : Color.Red)
                 .WithTitle(strings.RepNotificationTitle(guildId))
                 .WithDescription(BuildNotificationMessage(guildId, amount, newTotal, repType,
-                    giver, isAnonymous, reason))
+                    giver?.User, isAnonymous, reason))
                 .WithFooter(strings.RepFooterGuild(guildId, guild.Name))
                 .WithTimestamp(DateTimeOffset.UtcNow);
 

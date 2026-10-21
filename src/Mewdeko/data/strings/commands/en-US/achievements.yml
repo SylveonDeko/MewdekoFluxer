@@ -14,7 +14,7 @@ achcategory:
     - 'voice @Someone'
   desc: 'Shows every achievement in one category, with progress toward the ones still locked.'
   params:
-    - desc: The category key or name, such as messages, voice, reactions, invites, commands, loyalty, boosts, community, prestige, or custom.
+    - desc: The category key or name, such as messages, voice, reactions, invites, commands, loyalty, community, prestige, or custom.
       name: category
       optional: false
       type: string
@@ -107,7 +107,7 @@ achstats:
   args:
     - ''
     - '@Someone'
-  desc: 'Shows every number achievements track: messages, voice time, reactions, invites, commands, time in the server, boosting, level, and reputation.'
+  desc: 'Shows every number achievements track: messages, voice time, reactions, invites, commands, time in the server, level, and reputation.'
   params:
     - desc: The member to look at. Defaults to you.
       name: user
@@ -294,7 +294,7 @@ achdisable:
       type: string
 achcategorytoggle:
   args:
-    - 'boosts'
+    - 'loyalty'
   desc: 'Activates or deactivates a whole category.'
   params:
     - desc: The category key or name.

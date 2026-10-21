@@ -184,7 +184,7 @@ public sealed partial class AchievementService
         if (image is null)
             return await channel.SendAsync(text, embeds: embeds, allowedMentions: allowed);
 
-        return await channel.SendFileAsync(new AttachmentRequest(image, UnlockImageFileName), text, embeds: embeds,
+        return await channel.SendFileAsync(image, UnlockImageFileName, text, embeds: embeds,
             allowedMentions: allowed);
     }
 
@@ -390,7 +390,7 @@ public sealed partial class AchievementService
     /// </summary>
     /// <param name="user">Who to preview as.</param>
     /// <param name="source">The message source, or null for the default embed.</param>
-    /// <returns>The plain text and embeds Discord would get.</returns>
+    /// <returns>The plain text and embeds Fluxer would get.</returns>
     public async Task<(string? Text, EmbedRequest[]? Embeds)> PreviewUnlockAsync(SocketGuildMember user, string? source)
     {
         var catalog = await GetCatalogAsync(user.Guild.Id);
