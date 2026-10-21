@@ -55,11 +55,6 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     public const int MessageSourceLength = 12000;
 
     /// <summary>
-    ///     Role problem text for roles an integration manages.
-    /// </summary>
-    public const string ProblemManaged = "Managed by an integration";
-
-    /// <summary>
     ///     Role problem text for roles at or above the bot's highest role.
     /// </summary>
     public const string ProblemAboveBot = "Above the bot's highest role";
@@ -477,7 +472,6 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
         {
             RoleMenuRoleProblem.None => null,
             RoleMenuRoleProblem.Missing => ProblemRoleDeleted,
-            RoleMenuRoleProblem.Managed => ProblemManaged,
             RoleMenuRoleProblem.AboveActor => ProblemAboveActor,
             _ when !botCanManageRoles => ProblemBotMissingManageRoles,
             _ => ProblemAboveBot

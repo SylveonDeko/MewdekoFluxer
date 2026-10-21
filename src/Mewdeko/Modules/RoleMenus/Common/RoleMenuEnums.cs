@@ -79,11 +79,6 @@ public enum RoleMenuRoleProblem
     Everyone,
 
     /// <summary>
-    ///     An integration manages the role.
-    /// </summary>
-    Managed,
-
-    /// <summary>
     ///     The role is at or above the bot's highest role, or the bot lacks Manage Roles.
     /// </summary>
     AboveBot,

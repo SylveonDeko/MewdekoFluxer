@@ -46,7 +46,7 @@
   "retention_recent_entry": "Purged {0} · {1} server(s) · {2} rows",
   "retention_recent_title": "Recent Data Purges",
   "retention_scan_done": "Orphan scan queued {0} server(s) the bot is no longer in.",
-  "retention_scan_skipped": "Orphan scan skipped, not every shard is connected yet.",
+  "retention_scan_skipped": "Orphan scan skipped, the bot is not fully connected yet.",
   "retention_still_in_guild": "The bot is still in `{0}`, leave it first before purging its data.",
   "retention_unknown_server": "Unknown",
   "user_stats": "User Statistics"
