@@ -1,5 +1,4 @@
 using System.Net.Http;
-using System.Text.RegularExpressions;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Services.Settings;
 
@@ -182,7 +181,7 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
         }
         else if (url.StartsWith("<"))
         {
-            var result = GetMessageEmotes(url).Select(GetEmoteUrl);
+            var result = EmoteAdapter.GetMessageEmotes(url).Select(EmoteAdapter.GetEmoteUrl);
             acturl = string.Join("", result);
         }
         else
@@ -224,7 +223,7 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
     [RequireContext(ContextType.Guild)]
     public async Task RemoveEmote(string _)
     {
-        var tags = GetMessageEmotes(ctx.Message.Content)
+        var tags = EmoteAdapter.GetMessageEmotes(ctx.Message.Content)
             .FirstOrDefault();
         try
         {
@@ -261,7 +260,7 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
             return;
         }
 
-        var tags = GetMessageEmotes(ctx.Message.Content)
+        var tags = EmoteAdapter.GetMessageEmotes(ctx.Message.Content)
             .FirstOrDefault();
         try
         {
@@ -302,13 +301,13 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
         };
         var errored = new List<string>();
         var emotes = new List<string>();
-        var tags = GetMessageEmotes(ctx.Message.Content);
+        var tags = EmoteAdapter.GetMessageEmotes(ctx.Message.Content);
         if (!tags.Any()) return;
         var msg = await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
         foreach (var i in tags)
         {
             using var http = factory.CreateClient();
-            using var sr = await http.GetAsync(GetEmoteUrl(i), HttpCompletionOption.ResponseHeadersRead)
+            using var sr = await http.GetAsync(EmoteAdapter.GetEmoteUrl(i), HttpCompletionOption.ResponseHeadersRead)
                 .ConfigureAwait(false);
             var imgData = await sr.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
             var imgStream = imgData.ToStream();
@@ -323,7 +322,7 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
                 }
                 catch (Exception)
                 {
-                    errored.Add($"{i.Name}\n{GetEmoteUrl(i)}");
+                    errored.Add($"{i.Name}\n{EmoteAdapter.GetEmoteUrl(i)}");
                 }
             }
         }
@@ -336,34 +335,4 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
         if (errored.Count > 0) b.AddField(Strings.ErroredEmotes(ctx.Guild.Id, errored.Count), string.Join("\n\n", errored));
         await msg.ModifyAsync(x => x.Embed = b.Build()).ConfigureAwait(false);
     }
-
-    /// <summary>
-    ///     Finds the custom emotes written in a piece of message text.
-    /// </summary>
-    /// <param name="content">The message text.</param>
-    /// <returns>The distinct custom emotes in the text.</returns>
-    private static List<Emoji> GetMessageEmotes(string? content)
-    {
-        var emotes = new List<Emoji>();
-        foreach (Match match in EmoteRegex().Matches(content ?? string.Empty))
-        {
-            if (Emoji.TryParseCustom(match.Value, out var emote) && emotes.All(x => x.Id != emote.Id))
-                emotes.Add(emote);
-        }
-
-        return emotes;
-    }
-
-    /// <summary>
-    ///     Gets the image address of a custom emote.
-    /// </summary>
-    /// <param name="emote">The emote.</param>
-    /// <returns>The address of the emote image.</returns>
-    private static string GetEmoteUrl(Emoji emote)
-    {
-        return $"{FluxerContext.Client.Config.MediaUrl}/emojis/{emote.Id}.webp?size=160";
-    }
-
-    [GeneratedRegex(@"<a?:\w+:\d+>")]
-    private static partial Regex EmoteRegex();
 }

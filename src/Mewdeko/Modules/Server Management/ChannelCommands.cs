@@ -336,13 +336,7 @@ public partial class ServerManagement
                 {
                     Name = chan.Name,
                     Topic = chan.Topic,
-                    PermissionOverwrites = chan.PermissionOverwrites?.Select(x => new ChannelOverwriteRequest
-                    {
-                        Id = x.Id,
-                        Type = x.Type == PermissionOverwriteType.Role ? OverwriteRequestType.Role : OverwriteRequestType.Member,
-                        Allow = (ulong)x.Allow.RawValue,
-                        Deny = (ulong)x.Deny.RawValue
-                    }).ToArray(),
+                    PermissionOverwrites = chan.PermissionOverwrites?.Select(OverwritePermissions.ToRequest).ToArray(),
                     Nsfw = chan.IsNsfw,
                     ParentCategoryId = chan.CategoryId,
                     RatelimitPerUser = chan.SlowModeInterval

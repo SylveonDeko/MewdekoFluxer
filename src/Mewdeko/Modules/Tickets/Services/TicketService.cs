@@ -1697,9 +1697,9 @@ public class TicketService : INService
 
         var overwrites = new List<ChannelOverwriteRequest>
         {
-            ToOverwrite(guild.Id, OverwriteRequestType.Role,
+            OverwritePermissions.ToRequest(guild.Id, OverwriteRequestType.Role,
                 OverwritePermissions.InheritAll.Modify(viewChannel: PermValue.Deny)),
-            ToOverwrite(bot.Id, OverwriteRequestType.Member,
+            OverwritePermissions.ToRequest(bot.Id, OverwriteRequestType.Member,
                 OverwritePermissions.InheritAll.Modify(
                     viewChannel: PermValue.Allow,
                     sendMessages: PermValue.Allow,
@@ -1709,7 +1709,7 @@ public class TicketService : INService
                     manageRoles: PermValue.Allow,
                     attachFiles: PermValue.Allow,
                     embedLinks: PermValue.Allow)),
-            ToOverwrite(creator.Id, OverwriteRequestType.Member,
+            OverwritePermissions.ToRequest(creator.Id, OverwriteRequestType.Member,
                 OverwritePermissions.InheritAll.Modify(
                     viewChannel: PermValue.Allow,
                     sendMessages: PermValue.Allow,
@@ -1723,7 +1723,7 @@ public class TicketService : INService
             if (guild.GetRole(roleId) == null)
                 continue;
 
-            overwrites.Add(ToOverwrite(roleId, OverwriteRequestType.Role,
+            overwrites.Add(OverwritePermissions.ToRequest(roleId, OverwriteRequestType.Role,
                 OverwritePermissions.InheritAll.Modify(
                     viewChannel: PermValue.Allow,
                     sendMessages: PermValue.Allow,
@@ -1738,7 +1738,7 @@ public class TicketService : INService
             if (guild.GetRole(roleId) == null || supportRoles.Contains(roleId))
                 continue;
 
-            overwrites.Add(ToOverwrite(roleId, OverwriteRequestType.Role,
+            overwrites.Add(OverwritePermissions.ToRequest(roleId, OverwriteRequestType.Role,
                 OverwritePermissions.InheritAll.Modify(
                     viewChannel: PermValue.Allow,
                     readMessageHistory: PermValue.Allow,
@@ -1748,14 +1748,6 @@ public class TicketService : INService
         return overwrites;
     }
 
-    private static ChannelOverwriteRequest ToOverwrite(ulong id, OverwriteRequestType type,
-        OverwritePermissions permissions)
-    {
-        return new ChannelOverwriteRequest
-        {
-            Id = id, Type = type, Allow = (ulong)permissions.AllowValue, Deny = (ulong)permissions.DenyValue
-        };
-    }
 
     /// <summary>
     ///     Recreates a deleted ticket panel in its original channel and updates the message ID.

@@ -365,7 +365,7 @@ public class ChannelCommandService : INService, IReadyExecutor
             {
                 await channel.ModifyAsync(new UpdateChannelRequest
                 {
-                    PermissionOverwrites = permissionOverrides.Select(ToOverwriteRequest).ToList()
+                    PermissionOverwrites = permissionOverrides.Select(OverwritePermissions.ToRequest).ToList()
                 });
             }
         }
@@ -415,28 +415,10 @@ public class ChannelCommandService : INService, IReadyExecutor
         {
             PermissionOverwrites = new List<ChannelOverwriteRequest>
             {
-                ToOverwriteRequest(everyoneRole.Id, OverwriteRequestType.Role, x.Permissions)
+                OverwritePermissions.ToRequest(everyoneRole.Id, OverwriteRequestType.Role, x.Permissions)
             }
         })));
     }
-
-    private static ChannelOverwriteRequest ToOverwriteRequest(PermissionOverwrite overwrite)
-    {
-        return ToOverwriteRequest(overwrite.Id, overwrite.Type == PermissionOverwriteType.Role
-                ? OverwriteRequestType.Role
-                : OverwriteRequestType.Member,
-            OverwritePermissions.From(overwrite));
-    }
-
-    private static ChannelOverwriteRequest ToOverwriteRequest(ulong id, OverwriteRequestType type,
-        OverwritePermissions permissions)
-    {
-        return new ChannelOverwriteRequest
-        {
-            Id = id, Type = type, Allow = (ulong)permissions.AllowValue, Deny = (ulong)permissions.DenyValue
-        };
-    }
-
 
     /// <summary>
     ///     Restores the original permissions for all roles and users in each relevant channel after the lockdown is lifted.
@@ -474,11 +456,11 @@ public class ChannelCommandService : INService, IReadyExecutor
                 switch ((PermissionOverwriteType)storedPerm.TargetType)
                 {
                     case PermissionOverwriteType.Role when guildRoleIds.Contains(storedPerm.TargetId):
-                        overwrites.Add(ToOverwriteRequest(storedPerm.TargetId, OverwriteRequestType.Role, permissions));
+                        overwrites.Add(OverwritePermissions.ToRequest(storedPerm.TargetId, OverwriteRequestType.Role, permissions));
                         break;
 
                     case PermissionOverwriteType.Member when guildUserIds.Contains(storedPerm.TargetId):
-                        overwrites.Add(ToOverwriteRequest(storedPerm.TargetId, OverwriteRequestType.Member, permissions));
+                        overwrites.Add(OverwritePermissions.ToRequest(storedPerm.TargetId, OverwriteRequestType.Member, permissions));
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();

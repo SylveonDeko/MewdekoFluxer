@@ -2,7 +2,6 @@ using DataModel;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Database.Enums;
-using Mewdeko.Modules.Giveaways;
 
 namespace Mewdeko.Modules.Forms.Services;
 

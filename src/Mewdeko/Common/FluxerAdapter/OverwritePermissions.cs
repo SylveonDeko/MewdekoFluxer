@@ -203,4 +203,25 @@ public readonly record struct OverwritePermissions(ChannelPermission AllowValue,
     /// </summary>
     public static OverwritePermissions From(PermissionOverwrite overwrite) =>
         new(overwrite.Allow.RawValue, overwrite.Deny.RawValue);
+
+    /// <summary>
+    ///     Builds the request that sets an overwrite on a role or member.
+    /// </summary>
+    /// <param name="id">The role or member id.</param>
+    /// <param name="type">Whether the id is a role or a member.</param>
+    /// <param name="permissions">The permissions the overwrite sets.</param>
+    public static ChannelOverwriteRequest ToRequest(ulong id, OverwriteRequestType type,
+        OverwritePermissions permissions) =>
+        new()
+        {
+            Id = id, Type = type, Allow = (ulong)permissions.AllowValue, Deny = (ulong)permissions.DenyValue
+        };
+
+    /// <summary>
+    ///     Builds the request that keeps an overwrite stored on a channel.
+    /// </summary>
+    public static ChannelOverwriteRequest ToRequest(PermissionOverwrite overwrite) =>
+        ToRequest(overwrite.Id,
+            overwrite.Type == PermissionOverwriteType.Role ? OverwriteRequestType.Role : OverwriteRequestType.Member,
+            From(overwrite));
 }

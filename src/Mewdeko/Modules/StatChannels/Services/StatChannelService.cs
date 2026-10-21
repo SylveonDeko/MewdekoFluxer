@@ -1130,13 +1130,7 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
 
     private static List<ChannelOverwriteRequest> ToOverwriteRequests(IEnumerable<PermissionOverwrite>? overwrites)
     {
-        return overwrites?.Select(o => new ChannelOverwriteRequest
-        {
-            Id = o.Id,
-            Type = (OverwriteRequestType)(int)o.Type,
-            Allow = (ulong)o.Allow.RawValue,
-            Deny = (ulong)o.Deny.RawValue
-        }).ToList() ?? [];
+        return overwrites?.Select(OverwritePermissions.ToRequest).ToList() ?? [];
     }
 
     private static string SerializeOverwrites(IEnumerable<ChannelOverwriteRequest> overwrites)
