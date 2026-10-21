@@ -28,7 +28,6 @@ public class TicketService : INService
     private const int MaxQuestionAttempts = 3;
 
     private static readonly TimeSpan QuestionTimeout = TimeSpan.FromMinutes(5);
-    private static readonly TimeSpan TemporaryMessageLifetime = TimeSpan.FromSeconds(15);
     private readonly ConcurrentDictionary<(ulong GuildId, ulong UserId), byte> openingTickets = new();
     private readonly ChatLogService chatLogService;
     private readonly FluxerClient client;
@@ -1609,9 +1608,12 @@ public class TicketService : INService
     private async Task HandleTicketControlAsync(Message message, Channel channel, SocketGuildMember member,
         SocketReaction reaction, string key)
     {
-        if (message.Author.Id != client.CurrentUser.Id ||
-            message.Reactions?.FirstOrDefault(r => r.Emoji.Matches(reaction.Emoji)) is not { Me: true })
+        if (message.Author.Id != client.CurrentUser.Id)
+        {
+            logger.LogDebug("Ignored a {Key} reaction on a message the bot did not send in ticket {ChannelId}", key,
+                channel.Id);
             return;
+        }
 
         try
         {
@@ -1642,20 +1644,17 @@ public class TicketService : INService
         try
         {
             var ticket = await CreateTicketAsync(guild, member.User, entry.Button, entry.Option);
-            await SendTemporaryAsync(panelChannel, member,
-                ticket != null
-                    ? strings.TicketOpened(guild.Id, $"<#{ticket.ChannelId}>")
-                    : strings.TicketOpenError(guild.Id),
-                ticket == null);
+            if (ticket == null)
+                await TellPrivatelyAsync(member, strings.TicketOpenError(guild.Id));
         }
         catch (InvalidOperationException ex)
         {
-            await SendTemporaryAsync(panelChannel, member, ex.Message, true);
+            await TellPrivatelyAsync(member, ex.Message);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error opening a ticket for {UserId} in {GuildId}", member.Id, guild.Id);
-            await SendTemporaryAsync(panelChannel, member, strings.TicketOpenError(guild.Id), true);
+            await TellPrivatelyAsync(member, strings.TicketOpenError(guild.Id));
         }
         finally
         {
@@ -1663,21 +1662,15 @@ public class TicketService : INService
         }
     }
 
-    private async Task SendTemporaryAsync(Channel channel, SocketGuildMember user, string text, bool isError)
+    private async Task TellPrivatelyAsync(SocketGuildMember member, string text)
     {
         try
         {
-            var message = await channel.SendAsync(user.Mention, embed: new EmbedBuilder()
-                .WithDescription(text)
-                .WithColor(isError ? Color.Red : Mewdeko.OkColor)
-                .Build());
-
-            await Task.Delay(TemporaryMessageLifetime);
-            await message.DeleteAsync();
+            await member.User.SendErrorAsync(text);
         }
         catch (Exception ex)
         {
-            logger.LogDebug(ex, "Could not send or clear a ticket notice in {ChannelId}", channel.Id);
+            logger.LogDebug(ex, "Could not DM {UserId} about their ticket", member.Id);
         }
     }
 
