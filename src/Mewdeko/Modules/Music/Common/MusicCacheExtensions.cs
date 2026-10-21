@@ -9,8 +9,6 @@ namespace Mewdeko.Modules.Music.Common;
 /// </summary>
 public static class MusicCacheExtensions
 {
-    private const string Prefix = "mewdeko:music";
-
     private static readonly JsonSerializerOptions Options = new()
     {
         ReferenceHandler = ReferenceHandler.IgnoreCycles
@@ -25,7 +23,7 @@ public static class MusicCacheExtensions
     /// <returns>A task representing the asynchronous operation.</returns>
     public static Task SetPlayerState(this IDataCache cache, ulong guildId, MusicPlayerState state)
     {
-        return cache.Redis.GetDatabase().StringSetAsync($"{Prefix}:player_state:{guildId}",
+        return cache.Redis.GetDatabase().StringSetAsync($"{cache.KeyPrefix}_music:player_state:{guildId}",
             JsonSerializer.Serialize(state), TimeSpan.FromHours(1));
     }
 
@@ -37,7 +35,7 @@ public static class MusicCacheExtensions
     /// <returns>The player state if found; otherwise, null.</returns>
     public static async Task<MusicPlayerState?> GetPlayerState(this IDataCache cache, ulong guildId)
     {
-        var result = await cache.Redis.GetDatabase().StringGetAsync($"{Prefix}:player_state:{guildId}");
+        var result = await cache.Redis.GetDatabase().StringGetAsync($"{cache.KeyPrefix}_music:player_state:{guildId}");
         return result.IsNull ? null : JsonSerializer.Deserialize<MusicPlayerState>((string)result!);
     }
 
@@ -49,7 +47,7 @@ public static class MusicCacheExtensions
     /// <returns>A task representing the asynchronous operation.</returns>
     public static Task RemovePlayerState(this IDataCache cache, ulong guildId)
     {
-        return cache.Redis.GetDatabase().KeyDeleteAsync($"{Prefix}:player_state:{guildId}");
+        return cache.Redis.GetDatabase().KeyDeleteAsync($"{cache.KeyPrefix}_music:player_state:{guildId}");
     }
 
     /// <summary>
@@ -60,7 +58,7 @@ public static class MusicCacheExtensions
     /// <returns>A list of tracks.</returns>
     public static async Task<List<MewdekoTrack>> GetMusicQueue(this IDataCache cache, ulong id)
     {
-        var result = await cache.Redis.GetDatabase().StringGetAsync($"{Prefix}:queue:{id}");
+        var result = await cache.Redis.GetDatabase().StringGetAsync($"{cache.KeyPrefix}_music:queue:{id}");
         return result.HasValue ? JsonSerializer.Deserialize<List<MewdekoTrack>>((string)result!, Options) ?? [] : [];
     }
 
@@ -73,7 +71,7 @@ public static class MusicCacheExtensions
     /// <returns>A task representing the asynchronous operation.</returns>
     public static Task SetMusicQueue(this IDataCache cache, ulong id, List<MewdekoTrack> tracks)
     {
-        return cache.Redis.GetDatabase().StringSetAsync($"{Prefix}:queue:{id}",
+        return cache.Redis.GetDatabase().StringSetAsync($"{cache.KeyPrefix}_music:queue:{id}",
             JsonSerializer.Serialize(tracks, Options));
     }
 
@@ -88,9 +86,9 @@ public static class MusicCacheExtensions
     {
         var db = cache.Redis.GetDatabase();
         if (track is null)
-            await db.KeyDeleteAsync($"{Prefix}:current:{id}");
+            await db.KeyDeleteAsync($"{cache.KeyPrefix}_music:current:{id}");
         else
-            await db.StringSetAsync($"{Prefix}:current:{id}", JsonSerializer.Serialize(track, Options));
+            await db.StringSetAsync($"{cache.KeyPrefix}_music:current:{id}", JsonSerializer.Serialize(track, Options));
     }
 
     /// <summary>
@@ -101,7 +99,7 @@ public static class MusicCacheExtensions
     /// <returns>The current track, or null.</returns>
     public static async Task<MewdekoTrack?> GetCurrentTrack(this IDataCache cache, ulong id)
     {
-        var result = await cache.Redis.GetDatabase().StringGetAsync($"{Prefix}:current:{id}");
+        var result = await cache.Redis.GetDatabase().StringGetAsync($"{cache.KeyPrefix}_music:current:{id}");
         return result.HasValue ? JsonSerializer.Deserialize<MewdekoTrack>((string)result!, Options) : null;
     }
 }
