@@ -146,7 +146,7 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task SetVoiceHub(VoiceChannel channel, CategoryChannel category = null)
+    public async Task SetVoiceHub(IVoiceChannel channel, ICategoryChannel category = null)
     {
         // Setup the hub
         await Service.SetupHubAsync(Context.Guild.Id, channel.Id, category?.Id);

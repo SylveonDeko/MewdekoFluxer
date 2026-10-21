@@ -181,7 +181,7 @@ public class MusicPlayerRecoveryService : INService, IReadyExecutor
             }
 
             // Check if voice channel still exists
-            var voiceChannel = guild.GetVoiceChannel(state.VoiceChannelId);
+            var voiceChannel = guild.GetVoiceChannel(state.VoiceChannelId) as Channel;
             if (voiceChannel == null)
             {
                 logger.LogWarning("Skipping recovery for guild {GuildId} - voice channel {ChannelId} no longer exists",

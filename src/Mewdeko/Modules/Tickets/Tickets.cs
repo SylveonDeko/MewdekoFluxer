@@ -173,7 +173,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task TicketCategory(int buttonId, CategoryChannel? category = null)
+    public async Task TicketCategory(int buttonId, ICategoryChannel? category = null)
     {
         var panel = await Service.GetButtonAsync(buttonId);
         if (panel == null || panel.Panel.GuildId != ctx.Guild.Id)
@@ -202,7 +202,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task TicketArchiveCategory(int buttonId, CategoryChannel? category = null)
+    public async Task TicketArchiveCategory(int buttonId, ICategoryChannel? category = null)
     {
         var panel = await Service.GetButtonAsync(buttonId);
         if (panel == null || panel.Panel.GuildId != ctx.Guild.Id)
@@ -1013,7 +1013,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task TicketMoveAll(CategoryChannel sourceCategory, CategoryChannel targetCategory)
+    public async Task TicketMoveAll(ICategoryChannel sourceCategory, ICategoryChannel targetCategory)
     {
         var (moved, failed) = await Service.BatchMoveTickets(ctx.Guild, sourceCategory.Id, targetCategory.Id);
         await ctx.Channel.SendConfirmAsync(

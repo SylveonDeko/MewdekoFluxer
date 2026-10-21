@@ -210,7 +210,7 @@ public partial class ServerManagement
         [Cmd]
         [Aliases]
         [RequireContext(ContextType.Guild)]
-        public async Task MoveTo(VoiceChannel channel)
+        public async Task MoveTo(IVoiceChannel channel)
         {
             var use = ctx.Member!;
             if (use.VoiceChannel == null)
@@ -233,7 +233,7 @@ public partial class ServerManagement
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageChannels)]
-        public async Task MoveUserTo(SocketGuildMember user, VoiceChannel channel)
+        public async Task MoveUserTo(SocketGuildMember user, IVoiceChannel channel)
         {
             if (user.VoiceChannel == null)
             {
@@ -450,7 +450,7 @@ public partial class ServerManagement
         [Cmd]
         [Aliases]
         [UserPerm(GuildPermission.ManageChannels)]
-        public async Task CreateCatVcChans(CategoryChannel chan, params string[] channels)
+        public async Task CreateCatVcChans(ICategoryChannel chan, params string[] channels)
         {
             var eb = new EmbedBuilder();
             eb.WithOkColor();
@@ -474,7 +474,7 @@ public partial class ServerManagement
         [Cmd]
         [Aliases]
         [UserPerm(GuildPermission.ManageChannels)]
-        public async Task CreateCatTxtChans(CategoryChannel chan, params string[] channels)
+        public async Task CreateCatTxtChans(ICategoryChannel chan, params string[] channels)
         {
             var eb = new EmbedBuilder();
             eb.WithOkColor();

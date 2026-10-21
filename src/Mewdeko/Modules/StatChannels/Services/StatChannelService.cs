@@ -931,7 +931,7 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
         guild ??= client.GetGuild(sc.GuildId);
         if (guild == null) return;
 
-        var channel = guild.GetVoiceChannel(sc.ChannelId);
+        var channel = guild.GetVoiceChannel(sc.ChannelId) as Channel;
         if (channel == null) return;
 
         context ??= new StatResolutionContext(guild);
@@ -1120,7 +1120,7 @@ public class StatChannelService : INService, IReadyExecutor, IDisposable
     private void CaptureChannelLayout(StatChannel sc)
     {
         var guild = client.GetGuild(sc.GuildId);
-        var channel = guild?.GetVoiceChannel(sc.ChannelId);
+        var channel = guild?.GetVoiceChannel(sc.ChannelId) as Channel;
         if (channel == null) return;
 
         sc.CategoryId = channel.CategoryId;

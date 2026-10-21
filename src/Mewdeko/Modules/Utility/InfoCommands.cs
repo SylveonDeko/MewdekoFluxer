@@ -74,7 +74,7 @@ public partial class Utility
         [Cmd]
         [Aliases]
         [RequireContext(ContextType.Guild)]
-        public async Task VInfo([Remainder] VoiceChannel? channel = null)
+        public async Task VInfo([Remainder] IVoiceChannel? channel = null)
         {
             var voiceChannel = ctx.Member!.VoiceChannel;
             var eb = new EmbedBuilder();
@@ -89,7 +89,7 @@ public partial class Utility
                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                 case null when channel is not null:
                     eb.WithTitle(channel.Name);
-                    eb.AddField("Users", channel.ConnectedUsers.Count());
+                    eb.AddField("Users", ((Channel)channel).ConnectedUsers.Count());
                     eb.AddField("Created On", channel.CreatedAt);
                     eb.AddField("Bitrate", channel.Bitrate);
                     eb.AddField("User Limit", channel.UserLimit == null ? "Infinite" : channel.UserLimit);
@@ -102,7 +102,7 @@ public partial class Utility
             if (voiceChannel is not null && channel is not null)
             {
                 eb.WithTitle(channel.Name);
-                eb.AddField("Users", channel.ConnectedUsers.Count());
+                eb.AddField("Users", ((Channel)channel).ConnectedUsers.Count());
                 eb.AddField("Created On", channel.CreatedAt);
                 eb.AddField("Bitrate", channel.Bitrate);
                 eb.AddField("User Limit", channel.UserLimit == null ? "Infinite" : channel.UserLimit);

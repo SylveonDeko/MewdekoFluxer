@@ -45,7 +45,7 @@ public class StatChannels : MewdekoModuleBase<StatChannelService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task StatChannelAdd(VoiceChannel channel, StatChannelType type, [Remainder] string? template = null)
+    public async Task StatChannelAdd(IVoiceChannel channel, StatChannelType type, [Remainder] string? template = null)
     {
         template ??= StatChannelDefinitions.DefaultTemplate(type);
 
@@ -72,7 +72,7 @@ public class StatChannels : MewdekoModuleBase<StatChannelService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task StatChannelRole(VoiceChannel channel, SocketRole role, bool onlineOnly = false,
+    public async Task StatChannelRole(IVoiceChannel channel, SocketRole role, bool onlineOnly = false,
         [Remainder] string? template = null)
     {
         var type = onlineOnly ? StatChannelType.RoleMembersOnline : StatChannelType.RoleMembers;
@@ -100,7 +100,7 @@ public class StatChannels : MewdekoModuleBase<StatChannelService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task StatChannelCountdown(VoiceChannel channel, DateTime date, [Remainder] string? template = null)
+    public async Task StatChannelCountdown(IVoiceChannel channel, DateTime date, [Remainder] string? template = null)
     {
         template ??= StatChannelDefinitions.DefaultTemplate(StatChannelType.Countdown);
 
@@ -127,7 +127,7 @@ public class StatChannels : MewdekoModuleBase<StatChannelService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task StatChannelGoal(VoiceChannel channel, int goal, [Remainder] string? template = null)
+    public async Task StatChannelGoal(IVoiceChannel channel, int goal, [Remainder] string? template = null)
     {
         template ??= StatChannelDefinitions.DefaultTemplate(StatChannelType.MemberGoal);
 
@@ -154,7 +154,7 @@ public class StatChannels : MewdekoModuleBase<StatChannelService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task StatChannelTwitchCounter(VoiceChannel channel, string counter,
+    public async Task StatChannelTwitchCounter(IVoiceChannel channel, string counter,
         [Remainder] string? template = null)
     {
         template ??= StatChannelDefinitions.DefaultTemplate(StatChannelType.TwitchCounter);
@@ -185,7 +185,7 @@ public class StatChannels : MewdekoModuleBase<StatChannelService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task StatChannelMechanism(VoiceChannel channel, StatChannelUpdateMechanism mechanism,
+    public async Task StatChannelMechanism(IVoiceChannel channel, StatChannelUpdateMechanism mechanism,
         int? interval = null)
     {
         var sc = await Service.UpdateStatChannelConfigAsync(ctx.Guild.Id, channel.Id, new StatChannelOptions
@@ -212,7 +212,7 @@ public class StatChannels : MewdekoModuleBase<StatChannelService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task StatChannelStyle(VoiceChannel channel, StatChannelDisplayStyle style)
+    public async Task StatChannelStyle(IVoiceChannel channel, StatChannelDisplayStyle style)
     {
         var sc = await Service.UpdateStatChannelConfigAsync(ctx.Guild.Id, channel.Id, new StatChannelOptions
         {
@@ -292,7 +292,7 @@ public class StatChannels : MewdekoModuleBase<StatChannelService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task StatChannelRemove(VoiceChannel channel)
+    public async Task StatChannelRemove(IVoiceChannel channel)
     {
         var removed = await Service.RemoveStatChannelAsync(ctx.Guild.Id, channel.Id);
         if (removed)

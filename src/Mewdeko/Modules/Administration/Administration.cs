@@ -890,9 +890,9 @@ public partial class Administration(
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
     [BotPerm(GuildPermission.ManageChannels)]
-    public async Task DelVoiChanl([Remainder] VoiceChannel voiceChannel)
+    public async Task DelVoiChanl([Remainder] IVoiceChannel voiceChannel)
     {
-        await voiceChannel.DeleteAsync().ConfigureAwait(false);
+        await ((Channel)voiceChannel).DeleteAsync().ConfigureAwait(false);
         await ReplyConfirmAsync(Strings.Delvoich(ctx.Guild.Id, Format.Bold(voiceChannel.Name))).ConfigureAwait(false);
     }
 

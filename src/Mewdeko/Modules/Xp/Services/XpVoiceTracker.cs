@@ -477,7 +477,7 @@ public class XpVoiceTracker : INService, IDisposable
 
                     // Get guild and channel
                     var guild = client.GetGuild(guildId);
-                    var channel = guild?.GetVoiceChannel(channelId);
+                    var channel = guild?.GetVoiceChannel(channelId) as Channel;
 
                     if (guild == null || channel == null)
                         continue;
@@ -611,7 +611,7 @@ public class XpVoiceTracker : INService, IDisposable
                         }
 
                         // Additional cleanup checks for edge cases
-                        var channel = guild.GetVoiceChannel(session.ChannelId);
+                        var channel = guild.GetVoiceChannel(session.ChannelId) as Channel;
                         if (channel == null)
                         {
                             // Channel was deleted
@@ -743,7 +743,7 @@ public class XpVoiceTracker : INService, IDisposable
 
         // Otherwise, get the channel and check
         var guild = client.GetGuild(guildId);
-        var channel = guild?.GetVoiceChannel(channelId);
+        var channel = guild?.GetVoiceChannel(channelId) as Channel;
 
         if (channel == null)
         {

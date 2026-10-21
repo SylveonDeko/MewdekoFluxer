@@ -100,7 +100,7 @@ public class CustomVoiceService : INService, IUnloadableService
                 if (guild == null)
                     continue;
 
-                var voiceChannel = guild.GetVoiceChannel(channel.ChannelId);
+                var voiceChannel = guild.GetVoiceChannel(channel.ChannelId) as Channel;
                 if (voiceChannel == null)
                 {
                     // Channel no longer exists, remove from database
@@ -745,7 +745,7 @@ public class CustomVoiceService : INService, IUnloadableService
             if (guild == null)
                 return false;
 
-            var channel = guild.GetVoiceChannel(channelId);
+            var channel = guild.GetVoiceChannel(channelId) as Channel;
             if (channel == null)
                 return false;
 
@@ -1449,7 +1449,7 @@ public class CustomVoiceService : INService, IUnloadableService
             if (oldState.VoiceChannel != null &&
                 oldChannels != null && oldChannels.Contains(oldState.VoiceChannel.Id))
             {
-                var vc = guild.GetVoiceChannel(oldState.VoiceChannel.Id);
+                var vc = guild.GetVoiceChannel(oldState.VoiceChannel.Id) as Channel;
 
                 // Add null check and use consistent property
                 if (vc != null)
@@ -1458,7 +1458,7 @@ public class CustomVoiceService : INService, IUnloadableService
                     await Task.Delay(100);
 
                     // Refresh the channel reference to get updated user count
-                    vc = guild.GetVoiceChannel(oldState.VoiceChannel.Id);
+                    vc = guild.GetVoiceChannel(oldState.VoiceChannel.Id) as Channel;
 
                     // Check if the channel is now empty - filter for actually connected non-bot users
                     if (vc != null)
@@ -1612,7 +1612,7 @@ public class CustomVoiceService : INService, IUnloadableService
         if (guild == null)
             return;
 
-        var channel = guild.GetVoiceChannel(channelId);
+        var channel = guild.GetVoiceChannel(channelId) as Channel;
 
         // Double-check that it's still empty before deleting - check actually connected non-bot users
         if (channel != null)

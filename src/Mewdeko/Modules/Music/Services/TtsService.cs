@@ -277,7 +277,7 @@ public class TtsService : INService, IReadyExecutor
             if (!autoJoinedChannels.TryGetValue(guildId, out var trackedVc) || trackedVc != voiceChannelId)
                 return;
 
-            var vc = client.GetGuild(guildId)?.GetVoiceChannel(voiceChannelId);
+            var vc = client.GetGuild(guildId)?.GetVoiceChannel(voiceChannelId) as Channel;
             if (vc is not null && HasHumans(vc))
                 return;
 
