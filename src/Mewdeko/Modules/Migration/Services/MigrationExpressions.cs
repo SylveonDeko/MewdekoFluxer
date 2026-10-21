@@ -1,5 +1,6 @@
 using System.Net.Http;
 using System.Text.RegularExpressions;
+using System.Threading;
 using Mewdeko.Modules.Migration.Common;
 
 namespace Mewdeko.Modules.Migration.Services;
@@ -30,6 +31,7 @@ public sealed partial class MigrationExpressions(
     ILogger<MigrationExpressions> logger) : INService
 {
     private const int BatchSize = 50;
+    private const int ParallelDownloads = 8;
     private const int MaxImageBytes = 524288;
     private const int LottieFormat = 3;
     private const int GifFormat = 4;
@@ -73,17 +75,18 @@ public sealed partial class MigrationExpressions(
         var pending = new List<(DiscordEmojiInfo Emoji, CreateGuildEmojiRequest Request)>();
         var failed = 0;
 
-        foreach (var emoji in plan.Meta.Emojis.Where(x => !plan.Match.Emojis.ContainsKey(ulong.Parse(x.Id))))
+        var wanted = plan.Meta.Emojis.Where(x => !plan.Match.Emojis.ContainsKey(ulong.Parse(x.Id))).ToList();
+        var images = await DownloadAllAsync(http, wanted.Select(EmojiUrls).ToList());
+        for (var i = 0; i < wanted.Count; i++)
         {
-            var image = await DownloadAsync(http, EmojiUrls(emoji));
-            if (image is null)
+            if (images[i] is not { } image)
             {
                 failed++;
                 continue;
             }
 
-            var name = UniqueName(EmojiName(emoji.Name), taken, 32);
-            pending.Add((emoji, new CreateGuildEmojiRequest { Name = name, ImageBase64 = image }));
+            var name = UniqueName(EmojiName(wanted[i].Name), taken, 32);
+            pending.Add((wanted[i], new CreateGuildEmojiRequest { Name = name, ImageBase64 = image }));
         }
 
         var copied = 0;
@@ -171,6 +174,24 @@ public sealed partial class MigrationExpressions(
         }
 
         return (copied, failed);
+    }
+
+    private async Task<string?[]> DownloadAllAsync(HttpClient http, List<IEnumerable<string>> sources)
+    {
+        using var gate = new SemaphoreSlim(ParallelDownloads);
+        var tasks = sources.Select(async urls =>
+        {
+            await gate.WaitAsync();
+            try
+            {
+                return await DownloadAsync(http, urls);
+            }
+            finally
+            {
+                gate.Release();
+            }
+        });
+        return await Task.WhenAll(tasks);
     }
 
     private async Task<string?> DownloadAsync(HttpClient http, IEnumerable<string> urls)

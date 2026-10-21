@@ -106,7 +106,25 @@ public class MigrationController(FluxerClient client, DiscordMigrationService se
         if (plan is null)
             return Problem(problem);
 
-        return Ok(await service.ApplyAsync(plan, userId, request.CopyExpressions));
+        return service.StartApply(plan, userId, request.CopyExpressions)
+            ? Accepted(new { started = true })
+            : Conflict("A move into this server is already running.");
+    }
+
+    /// <summary>
+    ///     Gets how the background move into this server is going.
+    /// </summary>
+    [HttpGet("{guildId}/apply-status")]
+    public IActionResult GetApplyStatus(ulong guildId)
+    {
+        var job = service.GetJob(guildId);
+        return job switch
+        {
+            null => Ok(new { state = "none" }),
+            { Error: { } error } => Ok(new { state = "failed", error }),
+            { Outcome: { } outcome } => Ok(new { state = "done", outcome }),
+            _ => Ok(new { state = "running", startedAt = job.StartedAt })
+        };
     }
 
     /// <summary>

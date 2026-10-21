@@ -76,6 +76,21 @@ public sealed record MigrationOutcome(int Written, int Held, int Dropped, int Fa
     ExpressionOutcome? Expressions = null);
 
 /// <summary>
+///     A migration running in the background.
+/// </summary>
+public sealed class MigrationJob
+{
+    /// <summary>Gets when the job started.</summary>
+    public DateTime StartedAt { get; } = DateTime.UtcNow;
+
+    /// <summary>Gets or sets what the migration did, once it finished.</summary>
+    public MigrationOutcome? Outcome { get; set; }
+
+    /// <summary>Gets or sets why the migration failed, if it did.</summary>
+    public string? Error { get; set; }
+}
+
+/// <summary>
 ///     A Discord server that Mewdeko is in and the signed in user runs.
 /// </summary>
 /// <param name="Id">The Discord server id.</param>
@@ -120,6 +135,47 @@ public sealed class DiscordMigrationService(
     private const string PendingMarker = "$pending";
     private static readonly Lazy<MigrationSpec> Spec = new(() => MigrationSpec.Load("data/migration/tables.json"));
     private readonly SemaphoreSlim migrationLock = new(1, 1);
+    private readonly ConcurrentDictionary<ulong, MigrationJob> jobs = new();
+
+    /// <summary>
+    ///     Starts applying a prepared migration in the background, since copying emojis can take longer than a web
+    ///     request may stay open.
+    /// </summary>
+    /// <param name="plan">The plan from <see cref="PrepareAsync" />.</param>
+    /// <param name="invokerId">The Fluxer user who confirmed it.</param>
+    /// <param name="copyExpressions">Whether to upload the Discord server's emojis and stickers first.</param>
+    /// <returns>False when a migration into this server is already running.</returns>
+    public bool StartApply(MigrationPlan plan, ulong invokerId, bool copyExpressions)
+    {
+        var job = new MigrationJob();
+        if (jobs.TryGetValue(plan.GuildId, out var existing) && existing.Outcome is null && existing.Error is null)
+            return false;
+
+        jobs[plan.GuildId] = job;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                job.Outcome = await ApplyAsync(plan, invokerId, copyExpressions);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Migration into guild {GuildId} failed", plan.GuildId);
+                job.Error = "failed";
+            }
+        });
+        return true;
+    }
+
+    /// <summary>
+    ///     Gets the background migration of a server, if one was started since the bot started.
+    /// </summary>
+    /// <param name="guildId">The Fluxer server.</param>
+    /// <returns>The job, or null.</returns>
+    public MigrationJob? GetJob(ulong guildId)
+    {
+        return jobs.GetValueOrDefault(guildId);
+    }
 
     /// <summary>
     ///     Reads an export and matches it against a Fluxer server.
