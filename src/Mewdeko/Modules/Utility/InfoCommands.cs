@@ -292,7 +292,7 @@ public partial class Utility
                 embed.AddField("Deafened", user.IsDeaf);
                 embed.AddField("Is VC Muted", user.IsMute);
                 embed.AddField("Is Server Muted",
-                    user.Roles.Contains(await muteService.GetMuteRole(ctx.Guild).ConfigureAwait(false)));
+                    muteService.FindMuteRole(ctx.Guild) is { } muteRole && user.Roles.Contains(muteRole));
                 await msg.ModifyAsync(x => x.Embed = embed.Build()).ConfigureAwait(false);
             }
 

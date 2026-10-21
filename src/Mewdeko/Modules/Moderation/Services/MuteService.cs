@@ -788,7 +788,20 @@ public class MuteService : INService, IReadyExecutor, IDisposable
     }
 
     /// <summary>
-    ///     Gets the mute role for a guild.
+    ///     Finds the mute role of a guild without creating it.
+    /// </summary>
+    /// <param name="guild">The guild to look in.</param>
+    /// <returns>The mute <see cref="SocketRole" />, or null when the guild has none.</returns>
+    public SocketRole? FindMuteRole(SocketGuild guild)
+    {
+        ArgumentNullException.ThrowIfNull(guild);
+
+        var muteRoleName = GuildMuteRoles.GetValueOrDefault(guild.Id, "Mewdeko-mute");
+        return guild.RoleList.FirstOrDefault(r => r.Name == muteRoleName);
+    }
+
+    /// <summary>
+    ///     Gets the mute role for a guild, creating it when it does not exist.
     /// </summary>
     /// <param name="guild">The guildid to get the mute role from</param>
     /// <returns>The mute <see cref="SocketRole" /></returns>
