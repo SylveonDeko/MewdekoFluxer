@@ -1,5 +1,8 @@
 using System.Threading;
+using Fluxer.Net.Voice;
 using Lavalink4NET;
+using Lavalink4NET.Cluster;
+using Lavalink4NET.Events;
 using Lavalink4NET.Players;
 using Mewdeko.Modules.Music.Common;
 using Mewdeko.Common.ModuleBehaviors;
@@ -10,7 +13,7 @@ using Microsoft.Extensions.Options;
 namespace Mewdeko.Modules.Music.Services;
 
 /// <summary>
-///     Service that recovers music players after bot restarts.
+///     Service that recovers music players after bot restarts and after a Lavalink node loses its session.
 /// </summary>
 public class MusicPlayerRecoveryService : INService, IReadyExecutor
 {
@@ -19,13 +22,15 @@ public class MusicPlayerRecoveryService : INService, IReadyExecutor
     private readonly FluxerClient client;
     private readonly ILogger<MusicPlayerRecoveryService> logger;
     private readonly GeneratedBotStrings strings;
+    private readonly FluxerVoiceClient voiceClient;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="MusicPlayerRecoveryService" /> class.
     /// </summary>
     /// <param name="cache">The data cache service.</param>
     /// <param name="audioService">The audio service.</param>
-    /// <param name="client">The Discord client.</param>
+    /// <param name="client">The Fluxer client.</param>
+    /// <param name="voiceClient">The Fluxer voice client.</param>
     /// <param name="services">The service provider.</param>
     /// <param name="strings">The localization service.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
@@ -33,14 +38,68 @@ public class MusicPlayerRecoveryService : INService, IReadyExecutor
         IDataCache cache,
         IAudioService audioService,
         FluxerClient client,
+        FluxerVoiceClient voiceClient,
         IServiceProvider services,
         GeneratedBotStrings strings, ILogger<MusicPlayerRecoveryService> logger)
     {
         this.cache = cache;
         this.audioService = audioService;
         this.client = client;
+        this.voiceClient = voiceClient;
         this.strings = strings;
         this.logger = logger;
+
+        audioService.ConnectionReady += OnConnectionReadyAsync;
+    }
+
+    /// <summary>
+    ///     Drops players whose Lavalink session no longer exists, which happens when a node restarts and cannot resume,
+    ///     then recovers them from their saved state on the new session.
+    /// </summary>
+    private async Task OnConnectionReadyAsync(object sender, ConnectionReadyEventArgs eventArgs)
+    {
+        if (audioService is not ILavalinkCluster cluster)
+            return;
+
+        var sessions = cluster.Nodes
+            .Select(node => node.SessionId)
+            .OfType<string>()
+            .ToHashSet();
+
+        var stale = audioService.Players.Players
+            .Where(player => !sessions.Contains(player.SessionId))
+            .ToList();
+
+        foreach (var player in stale)
+        {
+            logger.LogWarning("Dropping music player for guild {GuildId}, its Lavalink session {SessionId} is gone",
+                player.GuildId, player.SessionId);
+
+            try
+            {
+                await player.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "Destroying the stale player for guild {GuildId} failed", player.GuildId);
+            }
+
+            var guild = client.GetGuild(player.GuildId);
+            if (guild is not null && await cache.GetPlayerState(guild.Id) is not null)
+            {
+                await RecoverGuildPlayerAsync(guild);
+                continue;
+            }
+
+            try
+            {
+                await voiceClient.LeaveAsync(player.GuildId);
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "Leaving voice for guild {GuildId} failed", player.GuildId);
+            }
+        }
     }
 
     /// <summary>
