@@ -706,21 +706,15 @@ public class OwnerOnlyService : ILateExecutor, IReadyExecutor, INService
     /// <param name="avatarDataUri">The new avatar as a base64 data URI, or null to keep the current one.</param>
     public async Task UpdateProfileAsync(string? username, string? avatarDataUri)
     {
-        var current = client.CurrentUser;
-        await client.Rest.UpdateCurrentUserAsync(new UserJson
-        {
-            Id = current.Id,
-            Username = username ?? current.Username,
-            Discriminator = current.Discriminator,
-            DisplayName = current.DisplayName,
-            AvatarHash = avatarDataUri ?? current.AvatarHash,
-            AvatarColor = current.AvatarColor,
-            Flags = current.Flags,
-            IsBot = current.IsBot,
-            IsSystem = current.IsSystem,
-            MentionPreference = current.MentionPreference
-        }).ConfigureAwait(false);
+        var request = new UpdateCurrentUserRequest();
+        if (username is not null)
+            request.Username = username;
+        if (avatarDataUri is not null)
+            request.AvatarBase64 = avatarDataUri;
+
+        await client.Rest.UpdateCurrentUserAsync(request).ConfigureAwait(false);
     }
+
     /// <summary>
     ///     Clears all startup commands from the database.
     /// </summary>
