@@ -88,6 +88,49 @@ public sealed class MigrationJob
 
     /// <summary>Gets or sets why the migration failed, if it did.</summary>
     public string? Error { get; set; }
+
+    /// <summary>Gets how far the migration has got.</summary>
+    public MigrationProgress Progress { get; } = new();
+}
+
+/// <summary>
+///     How far a running migration has got: the stage it is in and how much of that stage is done.
+/// </summary>
+public sealed class MigrationProgress
+{
+    private int done;
+
+    /// <summary>
+    ///     Gets the stage: starting, emoji_download, emoji_upload, stickers, settings, refreshing or panels.
+    /// </summary>
+    public string Stage { get; private set; } = "starting";
+
+    /// <summary>Gets how many items the stage has.</summary>
+    public int Total { get; private set; }
+
+    /// <summary>Gets how many items of the stage are done.</summary>
+    public int Done => Volatile.Read(ref done);
+
+    /// <summary>
+    ///     Starts a stage.
+    /// </summary>
+    /// <param name="stage">The stage name.</param>
+    /// <param name="total">How many items it has.</param>
+    public void Begin(string stage, int total)
+    {
+        Volatile.Write(ref done, 0);
+        Total = total;
+        Stage = stage;
+    }
+
+    /// <summary>
+    ///     Marks items of the current stage as done.
+    /// </summary>
+    /// <param name="count">How many.</param>
+    public void Advance(int count = 1)
+    {
+        Interlocked.Add(ref done, count);
+    }
 }
 
 /// <summary>
@@ -156,7 +199,7 @@ public sealed class DiscordMigrationService(
         {
             try
             {
-                job.Outcome = await ApplyAsync(plan, invokerId, copyExpressions);
+                job.Outcome = await ApplyAsync(plan, invokerId, copyExpressions, job.Progress);
             }
             catch (Exception ex)
             {
@@ -244,16 +287,20 @@ public sealed class DiscordMigrationService(
     /// <param name="plan">The plan from <see cref="PrepareAsync" />.</param>
     /// <param name="invokerId">The Fluxer user who confirmed it, linked to the Discord user who exported.</param>
     /// <param name="copyExpressions">Whether to upload the Discord server's emojis and stickers first.</param>
+    /// <param name="progress">Where to report how far the migration has got, if anywhere.</param>
     /// <returns>What was written.</returns>
-    public async Task<MigrationOutcome> ApplyAsync(MigrationPlan plan, ulong invokerId, bool copyExpressions = true)
+    public async Task<MigrationOutcome> ApplyAsync(MigrationPlan plan, ulong invokerId, bool copyExpressions = true,
+        MigrationProgress? progress = null)
     {
         await migrationLock.WaitAsync();
         try
         {
-            var copied = copyExpressions ? await expressions.CopyAsync(plan) : null;
-            var outcome = await ApplyLockedAsync(plan, invokerId);
+            var copied = copyExpressions ? await expressions.CopyAsync(plan, progress) : null;
+            var outcome = await ApplyLockedAsync(plan, invokerId, progress);
             await MigrationBundle.DeleteAsync(cache.Redis.GetDatabase(), plan.Code, plan.Meta);
+            progress?.Begin("refreshing", 1);
             await refresher.RefreshGuildAsync(plan.GuildId);
+            progress?.Begin("panels", 1);
             var reposted = await refresher.RepostPanelsAsync(plan.GuildId);
             return outcome with { Reposted = reposted, Expressions = copied };
         }
@@ -453,7 +500,8 @@ public sealed class DiscordMigrationService(
         }
     }
 
-    private async Task<MigrationOutcome> ApplyLockedAsync(MigrationPlan plan, ulong invokerId)
+    private async Task<MigrationOutcome> ApplyLockedAsync(MigrationPlan plan, ulong invokerId,
+        MigrationProgress? progress)
     {
         await using var connection = await OpenAsync();
         var schema = await MigrationSchema.LoadAsync(connection);
@@ -474,7 +522,8 @@ public sealed class DiscordMigrationService(
         int written = 0, held = 0, dropped = 0, failed = 0;
         var waiting = new HashSet<ulong>();
 
-        for (var position = 0; position < plan.Tables.Count; position++)
+        progress?.Begin("settings", plan.Tables.Count);
+        for (var position = 0; position < plan.Tables.Count; position++, progress?.Advance())
         {
             var (rule, data) = plan.Tables[position];
             var before = (written, held, dropped, failed);

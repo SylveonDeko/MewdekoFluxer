@@ -53,7 +53,7 @@ public sealed partial class MigrationExpressions(
     /// </summary>
     /// <param name="plan">The prepared migration, whose emoji pairs grow with every upload.</param>
     /// <returns>What was copied.</returns>
-    public async Task<ExpressionOutcome> CopyAsync(MigrationPlan plan)
+    public async Task<ExpressionOutcome> CopyAsync(MigrationPlan plan, MigrationProgress? progress = null)
     {
         var guild = client.GetGuild(plan.GuildId);
         var permissions = guild?.CurrentMember?.GuildPermissions;
@@ -64,19 +64,21 @@ public sealed partial class MigrationExpressions(
             return new ExpressionOutcome(0, 0, 0, 0, true);
 
         using var http = httpClientFactory.CreateClient();
-        var (emojisCopied, emojisFailed) = await CopyEmojisAsync(http, guild, plan);
-        var (stickersCopied, stickersFailed) = await CopyStickersAsync(http, guild, plan);
+        var (emojisCopied, emojisFailed) = await CopyEmojisAsync(http, guild, plan, progress);
+        var (stickersCopied, stickersFailed) = await CopyStickersAsync(http, guild, plan, progress);
         return new ExpressionOutcome(emojisCopied, emojisFailed, stickersCopied, stickersFailed, false);
     }
 
-    private async Task<(int Copied, int Failed)> CopyEmojisAsync(HttpClient http, SocketGuild guild, MigrationPlan plan)
+    private async Task<(int Copied, int Failed)> CopyEmojisAsync(HttpClient http, SocketGuild guild, MigrationPlan plan,
+        MigrationProgress? progress)
     {
         var taken = (guild.Emojis?.Values.Select(x => x.Name) ?? []).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var pending = new List<(DiscordEmojiInfo Emoji, CreateGuildEmojiRequest Request)>();
         var failed = 0;
 
         var wanted = plan.Meta.Emojis.Where(x => !plan.Match.Emojis.ContainsKey(ulong.Parse(x.Id))).ToList();
-        var images = await DownloadAllAsync(http, wanted.Select(EmojiUrls).ToList());
+        progress?.Begin("emoji_download", wanted.Count);
+        var images = await DownloadAllAsync(http, wanted.Select(EmojiUrls).ToList(), progress);
         for (var i = 0; i < wanted.Count; i++)
         {
             if (images[i] is not { } image)
@@ -90,6 +92,7 @@ public sealed partial class MigrationExpressions(
         }
 
         var copied = 0;
+        progress?.Begin("emoji_upload", pending.Count);
         foreach (var batch in pending.Chunk(BatchSize))
         {
             try
@@ -116,19 +119,24 @@ public sealed partial class MigrationExpressions(
                 logger.LogWarning(ex, "Uploading a batch of emojis into {GuildId} failed", guild.Id);
                 failed += batch.Length;
             }
+
+            progress?.Advance(batch.Length);
         }
 
         return (copied, failed);
     }
 
-    private async Task<(int Copied, int Failed)> CopyStickersAsync(HttpClient http, SocketGuild guild, MigrationPlan plan)
+    private async Task<(int Copied, int Failed)> CopyStickersAsync(HttpClient http, SocketGuild guild, MigrationPlan plan,
+        MigrationProgress? progress)
     {
         var taken = (guild.Stickers?.Values.Select(x => x.Name) ?? []).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var requests = new List<CreateGuildStickerRequest>();
         var failed = 0;
 
+        progress?.Begin("stickers", plan.Meta.Stickers.Count);
         foreach (var sticker in plan.Meta.Stickers)
         {
+            progress?.Advance();
             if (sticker.Format == LottieFormat || taken.Contains(sticker.Name))
             {
                 failed += sticker.Format == LottieFormat ? 1 : 0;
@@ -176,7 +184,8 @@ public sealed partial class MigrationExpressions(
         return (copied, failed);
     }
 
-    private async Task<string?[]> DownloadAllAsync(HttpClient http, List<IEnumerable<string>> sources)
+    private async Task<string?[]> DownloadAllAsync(HttpClient http, List<IEnumerable<string>> sources,
+        MigrationProgress? progress)
     {
         using var gate = new SemaphoreSlim(ParallelDownloads);
         var tasks = sources.Select(async urls =>
@@ -184,7 +193,9 @@ public sealed partial class MigrationExpressions(
             await gate.WaitAsync();
             try
             {
-                return await DownloadAsync(http, urls);
+                var image = await DownloadAsync(http, urls);
+                progress?.Advance();
+                return image;
             }
             finally
             {

@@ -123,7 +123,14 @@ public class MigrationController(FluxerClient client, DiscordMigrationService se
             null => Ok(new { state = "none" }),
             { Error: { } error } => Ok(new { state = "failed", error }),
             { Outcome: { } outcome } => Ok(new { state = "done", outcome }),
-            _ => Ok(new { state = "running", startedAt = job.StartedAt })
+            _ => Ok(new
+            {
+                state = "running",
+                startedAt = job.StartedAt,
+                stage = job.Progress.Stage,
+                done = job.Progress.Done,
+                total = job.Progress.Total
+            })
         };
     }
 
