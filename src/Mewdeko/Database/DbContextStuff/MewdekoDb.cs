@@ -467,6 +467,21 @@ public class MewdekoDb : DataConnection
     }
 
     /// <summary>
+    ///     Gets the table tying Fluxer accounts to Discord accounts.
+    /// </summary>
+    public ITable<DiscordAccountLink> DiscordAccountLinks => this.GetTable<DiscordAccountLink>();
+
+    /// <summary>
+    ///     Gets the table of servers brought over from Discord.
+    /// </summary>
+    public ITable<MigratedGuild> MigratedGuilds => this.GetTable<MigratedGuild>();
+
+    /// <summary>
+    ///     Gets the table of member rows waiting for their owner to link a Discord account.
+    /// </summary>
+    public ITable<MigrationPendingRow> MigrationPendingRows => this.GetTable<MigrationPendingRow>();
+
+    /// <summary>
     ///     Gets the AFK table.
     /// </summary>
     public ITable<Afk> Afks => this.GetTable<Afk>();

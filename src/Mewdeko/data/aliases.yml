@@ -4372,3 +4372,9 @@ timestamp:
 pronounsreport:
   - pronounsreport
   - reportpronouns
+migrate:
+  - migrate
+  - migratediscord
+linkdiscord:
+  - linkdiscord
+  - discordlink

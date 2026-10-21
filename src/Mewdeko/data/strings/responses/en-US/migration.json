@@ -1,0 +1,23 @@
+{
+  "migration_and_more": "and {0} more",
+  "migration_bad_code": "That isn't a migration code. Run `.fluxermigrate` with Mewdeko on Discord to get one.",
+  "migration_cancelled": "Nothing was changed.",
+  "migration_done": "Done. {0} rows were written, and {1} rows are waiting for {2} members to link their accounts. {3} rows were left out because their channel or role isn't in this server, and {4} were refused. {5} ticket panels, role menus and apply panels were posted again.\nMembers bring over their XP, balance and the rest by running `.fluxerlink` with Mewdeko on Discord, then `.linkdiscord <code>` here.",
+  "migration_failed": "The migration failed and nothing was changed. Please try again, and contact support if it keeps failing.",
+  "migration_link_not_found": "That link code is wrong or has expired. Run `.fluxerlink` with Mewdeko on Discord to get a new one.",
+  "migration_link_taken": "That Discord account is already linked to a different Fluxer account.",
+  "migration_linked": "Your accounts are linked. {0} rows came over from Discord into {1} servers.",
+  "migration_linked_nothing": "Your accounts are linked. Nothing was waiting for you yet; your data comes over by itself when a server you're in moves to Fluxer.",
+  "migration_not_found": "No export was found for that code. Codes expire after 24 hours, so run `.fluxermigrate` with Mewdeko on Discord again.",
+  "migration_preview_channels": "Channels matched",
+  "migration_preview_data": "Data",
+  "migration_preview_data_value": "{0} rows of settings across {1} tables, and {2} rows of member data for {3} members, {4} of them already linked.",
+  "migration_preview_description": "React to confirm. Mewdeko settings for these features in this server are replaced with the ones from Discord. Member data already on Fluxer is kept and added to.",
+  "migration_preview_emojis": "Emojis matched",
+  "migration_preview_roles": "Roles matched",
+  "migration_preview_title": "Move {0} from Discord",
+  "migration_preview_unmatched_channels": "Channels with no match here",
+  "migration_preview_unmatched_roles": "Roles with no match here",
+  "migration_unsupported": "That export was made by a newer version of Mewdeko than this one. Please try again later.",
+  "migration_working": "Moving everything over, this can take a while for large servers..."
+}

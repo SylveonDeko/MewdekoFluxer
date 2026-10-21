@@ -1,0 +1,18 @@
+linkdiscord:
+  args:
+    - code
+  desc: 'Links your Fluxer account to your Discord account and brings over your XP, balance and the rest from servers that moved to Fluxer'
+  params:
+    - desc: The code from `.fluxerlink` with Mewdeko on Discord.
+      name: code
+      optional: false
+      type: string
+migrate:
+  args:
+    - code
+  desc: 'Brings this server''s Mewdeko setup over from Discord, showing what was matched before writing anything'
+  params:
+    - desc: The code from `.fluxermigrate` with Mewdeko on Discord.
+      name: code
+      optional: false
+      type: string

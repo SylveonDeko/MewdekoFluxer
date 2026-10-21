@@ -1,0 +1,3907 @@
+{
+  "AFK": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user",
+      "Message": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "AchievementCardDesigns": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "AchievementCategories": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "AchievementEmojiUses": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": null,
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user",
+      "Emoji": "emoji"
+    },
+    "required": [
+      "Emoji"
+    ],
+    "onMemberConflict": {
+      "sum": [
+        "Count"
+      ]
+    }
+  },
+  "AchievementIconUploads": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "UploadedBy": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "AchievementMembers": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": null,
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "AchievementOverrides": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleRewardId": "role"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "AchievementSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {
+      "DefaultCardId": "AchievementCardDesigns"
+    },
+    "member": null,
+    "columns": {
+      "LogChannelId": "channel",
+      "ExcludedRoleIds": {
+        "list": "role",
+        "format": "comma"
+      },
+      "ExcludedChannelIds": {
+        "list": "channel",
+        "format": "comma"
+      },
+      "QuietChannelIds": {
+        "list": "channel",
+        "format": "comma"
+      },
+      "UnlockMessage": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "AchievementUserSettings": {
+    "action": "skip",
+    "reason": "user-global privacy settings, not tied to a server"
+  },
+  "ActivityFilters": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "ActivitySegments": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "ActivityTotals": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": {
+      "sum": [
+        "Seconds"
+      ]
+    }
+  },
+  "AiConversations": {
+    "action": "skip",
+    "reason": "AI conversations are not carried over"
+  },
+  "AiMessages": {
+    "action": "skip",
+    "reason": "AI conversations are not carried over"
+  },
+  "AnalyticsAlertEvent": {
+    "action": "skip",
+    "reason": "bot-wide analytics"
+  },
+  "AnalyticsAlertRule": {
+    "action": "skip",
+    "reason": "bot-wide analytics"
+  },
+  "AnalyticsAlertState": {
+    "action": "skip",
+    "reason": "bot-wide analytics"
+  },
+  "AnalyticsBucket": {
+    "action": "skip",
+    "reason": "bot-wide analytics"
+  },
+  "AnalyticsCommandInvocation": {
+    "action": "skip",
+    "reason": "bot-wide analytics"
+  },
+  "AnalyticsConfigCensus": {
+    "action": "skip",
+    "reason": "bot-wide analytics"
+  },
+  "AnalyticsDailySnapshot": {
+    "action": "skip",
+    "reason": "bot-wide analytics"
+  },
+  "AnalyticsDailyTotal": {
+    "action": "skip",
+    "reason": "bot-wide analytics"
+  },
+  "AnalyticsErrorSample": {
+    "action": "skip",
+    "reason": "bot-wide analytics"
+  },
+  "AnalyticsFeatureActivity": {
+    "action": "skip",
+    "reason": "bot-wide analytics"
+  },
+  "AnalyticsGuildActivity": {
+    "action": "skip",
+    "reason": "bot-wide analytics"
+  },
+  "AnalyticsGuildEventLog": {
+    "action": "skip",
+    "reason": "bot-wide analytics"
+  },
+  "AnalyticsMetricRegistry": {
+    "action": "skip",
+    "reason": "bot-wide analytics"
+  },
+  "AnalyticsPageView": {
+    "action": "skip",
+    "reason": "bot-wide analytics"
+  },
+  "AntiAltSetting": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleId": "role"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "AntiExternalAppSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleId": "role"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "AntiImageHashIgnoredChannels": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "AntiImageHashIgnoredRoles": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleId": "role"
+    },
+    "required": [
+      "RoleId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "AntiImageHashSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleId": "role"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "AntiMassMentionSetting": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleId": "role"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "AntiPatternPattern": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "Id",
+    "parents": {
+      "AntiPatternSettingId": "AntiPatternSetting"
+    },
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "AntiPatternSetting": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleId": "role"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "AntiRaidSetting": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "AntiSpamIgnore": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "Id",
+    "parents": {
+      "AntiMassMentionSettingId": "AntiMassMentionSetting",
+      "AntiSpamSettingId": "AntiSpamSetting"
+    },
+    "member": null,
+    "columns": {
+      "ChannelId": "channel"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "AntiSpamSetting": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleId": "role"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "AuthCodes": {
+    "action": "skip",
+    "reason": "bot-wide or never exported table"
+  },
+  "AutoBanRoles": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleId": "role"
+    },
+    "required": [
+      "RoleId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "AutoBanWords": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "AutoCommands": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel",
+      "VoiceChannelId": "channel",
+      "CommandText": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "AutoPublish": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel",
+      "BlacklistedUsers": "user"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "BanPruneSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ScopeId": {
+        "by": "ScopeType",
+        "map": {
+          "0": "skip",
+          "1": "channel",
+          "2": "channel"
+        }
+      }
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "BanTemplates": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "Text": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "BannedImageHashes": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleId": "role",
+      "AddedBy": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "BirthdayConfigs": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "BirthdayChannelId": "channel",
+      "BirthdayRoleId": "role",
+      "BirthdayPingRoleId": "role",
+      "BirthdayMessage": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "Blacklist": {
+    "action": "skip",
+    "reason": "bot-wide or never exported table"
+  },
+  "BlacklistedPermissions": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "BlacklistedRoles": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleId": "role"
+    },
+    "required": [
+      "RoleId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "BotInstances": {
+    "action": "skip",
+    "reason": "bot-wide or never exported table"
+  },
+  "BotReviews": {
+    "action": "skip",
+    "reason": "user-global data, not tied to a server"
+  },
+  "CaseNotes": {
+    "action": "skip",
+    "reason": "ticket history is bound to Discord ticket channels; ticket panels and settings are copied"
+  },
+  "ChannelAccessAnswers": {
+    "action": "skip",
+    "reason": "channel access applications are bound to Discord messages and threads; configs and blacklists are copied"
+  },
+  "ChannelAccessApplications": {
+    "action": "skip",
+    "reason": "channel access applications are bound to Discord messages and threads; configs and blacklists are copied"
+  },
+  "ChannelAccessBlacklists": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {
+      "ConfigId": "ChannelAccessConfigs"
+    },
+    "member": "UserId",
+    "columns": {
+      "UserId": "user",
+      "AddedBy": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "ChannelAccessConfigs": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel",
+      "AccessRoleId": "role",
+      "ReviewChannelId": "channel",
+      "LogChannelId": "channel",
+      "PanelChannelId": "channel",
+      "PanelMessageId": "message",
+      "VoterRoleId": "role",
+      "PingRoleId": "role",
+      "CreatedBy": "user"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "ChannelAccessQuestions": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "Id",
+    "parents": {
+      "ConfigId": "ChannelAccessConfigs"
+    },
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "ChannelAccessVotes": {
+    "action": "skip",
+    "reason": "channel access applications are bound to Discord messages and threads; configs and blacklists are copied"
+  },
+  "ChatLogs": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel",
+      "CreatedBy": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "ChatTriggerCounters": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": {
+      "sum": [
+        "Value"
+      ]
+    }
+  },
+  "ChatTriggers": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {
+      "NextTriggerId": "ChatTriggers"
+    },
+    "member": null,
+    "columns": {
+      "Response": "text",
+      "AdditionalResponses": "text",
+      "RequirementFailMessage": "text",
+      "GrantedRoles": {
+        "list": "role",
+        "format": "@@@"
+      },
+      "RemovedRoles": {
+        "list": "role",
+        "format": "@@@"
+      },
+      "Reactions": {
+        "list": "emoji",
+        "format": "@@@"
+      },
+      "ApplicationCommandId": "clear",
+      "CrosspostingChannelId": "channel",
+      "CrosspostingWebhookUrl": "clear",
+      "EventChannelId": "channel"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "CommandAlias": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "CommandCooldown": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "CommandStats": {
+    "action": "skip",
+    "reason": "command usage statistics for bot owners"
+  },
+  "Confessions": {
+    "action": "skip",
+    "reason": "confession log bound to Discord messages"
+  },
+  "CountingAppliedPunishments": {
+    "action": "skip",
+    "reason": "counting event log and runtime punishment state"
+  },
+  "CountingChannel": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel",
+      "LastUserId": "user",
+      "LastMessageId": "message"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "CountingChannelConfig": {
+    "action": "copy",
+    "scope": "channel",
+    "guildColumn": null,
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel",
+      "RequiredRoles": {
+        "list": "role",
+        "format": "comma"
+      },
+      "BannedRoles": {
+        "list": "role",
+        "format": "comma"
+      },
+      "IgnoreRoles": {
+        "list": "role",
+        "format": "comma"
+      },
+      "MilestoneChannelId": "channel",
+      "FailureChannelId": "channel",
+      "PunishmentRoleId": "role",
+      "SuccessEmote": "emoji",
+      "ErrorEmote": "emoji",
+      "SuccessMessage": "text",
+      "FailureMessage": "text",
+      "MilestoneMessage": "text"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "CountingEvents": {
+    "action": "skip",
+    "reason": "counting event log and runtime punishment state"
+  },
+  "CountingLeaderboard": {
+    "action": "copy",
+    "scope": "channel",
+    "guildColumn": null,
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "ChannelId": "channel",
+      "UserId": "user"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": {
+      "sum": [
+        "Score"
+      ]
+    }
+  },
+  "CountingMilestones": {
+    "action": "copy",
+    "scope": "channel",
+    "guildColumn": null,
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "ChannelId": "channel",
+      "UserId": "user"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "CountingModerationConfig": {
+    "action": "copy",
+    "scope": "channel",
+    "guildColumn": null,
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel",
+      "PunishmentRoleId": "role",
+      "IgnoreRoles": {
+        "list": "role",
+        "format": "comma"
+      },
+      "RequiredRoles": {
+        "list": "role",
+        "format": "comma"
+      },
+      "BannedRoles": {
+        "list": "role",
+        "format": "comma"
+      }
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "CountingModerationDefaults": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "PunishmentRoleId": "role",
+      "IgnoreRoles": {
+        "list": "role",
+        "format": "comma"
+      },
+      "RequiredRoles": {
+        "list": "role",
+        "format": "comma"
+      },
+      "BannedRoles": {
+        "list": "role",
+        "format": "comma"
+      }
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "CountingModerationPunishments": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel",
+      "RoleId": "role"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "CountingSaves": {
+    "action": "copy",
+    "scope": "channel",
+    "guildColumn": null,
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel",
+      "SavedBy": "user"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "CountingStats": {
+    "action": "copy",
+    "scope": "channel",
+    "guildColumn": null,
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "ChannelId": "channel",
+      "UserId": "user"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": {
+      "sum": [
+        "ContributionsCount",
+        "TotalNumbersCounted",
+        "ErrorsCount",
+        "TotalTimeSpent"
+      ]
+    }
+  },
+  "CountingUserBans": {
+    "action": "copy",
+    "scope": "channel",
+    "guildColumn": null,
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "ChannelId": "channel",
+      "UserId": "user",
+      "BannedBy": "user"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "CountingUserWrongCounts": {
+    "action": "skip",
+    "reason": "counting event log and runtime punishment state"
+  },
+  "CurrencyConfigs": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "CurrencyCooldowns": {
+    "action": "skip",
+    "reason": "short lived runtime state"
+  },
+  "CustomAchievements": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel",
+      "RoleRewardId": "role",
+      "CreatedBy": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "CustomVoiceChannel": {
+    "action": "skip",
+    "reason": "live temporary voice channels"
+  },
+  "CustomVoiceConfig": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "HubVoiceChannelId": "channel",
+      "ChannelCategoryId": "channel",
+      "CustomVoiceAdminRoleId": "role"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "CustomVoiceConfig_DuplicateBackup": {
+    "action": "skip",
+    "reason": "duplicate backup table"
+  },
+  "DailyChallenges": {
+    "action": "skip",
+    "reason": "short lived runtime state"
+  },
+  "DashboardAccess": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "TargetId": {
+        "by": "TargetType",
+        "map": {
+          "0": "user",
+          "1": "role"
+        }
+      },
+      "GrantedBy": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "DashboardAccessManagers": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "TargetId": {
+        "by": "TargetType",
+        "map": {
+          "0": "user",
+          "1": "role"
+        }
+      },
+      "GrantedBy": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "DashboardAccessSection": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "Id",
+    "parents": {
+      "DashboardAccessId": "DashboardAccess"
+    },
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "DashboardAccessSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "DashboardAuditLogs": {
+    "action": "skip",
+    "reason": "history of actions on the old platform"
+  },
+  "DataImports": {
+    "action": "skip",
+    "reason": "history of actions on the old platform"
+  },
+  "DelMsgOnCmdChannels": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "DiscordPermOverrides": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "DiscordUser": {
+    "action": "skip",
+    "reason": "user-global data, not tied to a server"
+  },
+  "EmbedWebhookPersonas": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "Embeds": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user",
+      "JsonCode": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "FeatureRequestVotes": {
+    "action": "skip",
+    "reason": "bot-wide bookkeeping about the bot itself"
+  },
+  "FeatureRequests": {
+    "action": "skip",
+    "reason": "bot-wide bookkeeping about the bot itself"
+  },
+  "FeedSub": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel",
+      "Message": "text"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "FilterInvitesChannelIds": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "FilterLinksChannelIds": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "FilterWordsChannelIds": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "FilteredWord": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "FollowedStreams": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel",
+      "OnlineMessage": "text",
+      "OfflineMessage": "text"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "GiveawayUsers": {
+    "action": "skip",
+    "reason": "giveaways are bound to Discord messages and cannot continue on Fluxer; giveaway settings live in GuildConfigs"
+  },
+  "Giveaways": {
+    "action": "skip",
+    "reason": "giveaways are bound to Discord messages and cannot continue on Fluxer; giveaway settings live in GuildConfigs"
+  },
+  "GlobalUserBalance": {
+    "action": "skip",
+    "reason": "user-global data, not tied to a server"
+  },
+  "GroupName": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "GuildAiConfig": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel",
+      "WebhookUrl": "clear",
+      "CustomEmbed": "text",
+      "SystemPrompt": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "GuildBotProfiles": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "GuildConfigs": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "StaffRole": "role",
+      "CommandLogChannel": "channel",
+      "AutoAssignRoleId": {
+        "list": "role",
+        "format": "space"
+      },
+      "AutoBotRoleIds": {
+        "list": "role",
+        "format": "space"
+      },
+      "ConfessionBlacklist": {
+        "list": "user",
+        "format": "space"
+      },
+      "GRolesBlacklist": {
+        "list": "role",
+        "format": "space"
+      },
+      "GUsersBlacklist": {
+        "list": "user",
+        "format": "space"
+      },
+      "AfkDisabledChannels": {
+        "list": "channel",
+        "format": "comma"
+      },
+      "SuggestEmotes": {
+        "list": "emoji",
+        "format": "comma"
+      },
+      "GiveawayPingRole": "role",
+      "VotesChannel": "channel",
+      "AcceptChannel": "channel",
+      "DenyChannel": "channel",
+      "ConsiderChannel": "channel",
+      "ImplementChannel": "channel",
+      "sugchan": "channel",
+      "SuggestButtonChannel": "channel",
+      "SuggestButtonMessageId": "message",
+      "ConfessionLogChannel": "channel",
+      "ConfessionChannel": "channel",
+      "MemberRole": "role",
+      "WarnlogChannelId": "channel",
+      "MiniWarnlogChannelId": "channel",
+      "BoostMessageChannelId": "channel",
+      "TicketChannel": "channel",
+      "TicketCategory": "channel",
+      "ByeMessageChannelId": "channel",
+      "GameVoiceChannel": "channel",
+      "PatreonChannelId": "channel",
+      "PatreonGoalChannel": "channel",
+      "PatreonStatsChannel": "channel",
+      "WizardCompletedByUserId": "user",
+      "PermissionRole": "role",
+      "LeaveHook": "clear",
+      "CurrencyEmoji": "emoji",
+      "GiveawayEmote": "emoji",
+      "SuggestButtonEmote": "emoji",
+      "FormApproveEmote": "emoji",
+      "FormRejectEmote": "emoji",
+      "VoteEmbed": "text",
+      "GiveawayEndMessage": "text",
+      "SuggestButtonMessage": "text",
+      "SuggestMessage": "text",
+      "DenyMessage": "text",
+      "AcceptMessage": "text",
+      "ImplementMessage": "text",
+      "ConsiderMessage": "text",
+      "AfkMessage": "text",
+      "TOpenMessage": "text",
+      "GStartMessage": "text",
+      "GEndMessage": "text",
+      "GWinMessage": "text",
+      "BoostMessage": "text",
+      "DmGreetMessageText": "text",
+      "ChannelByeMessageText": "text",
+      "PatreonMessage": "text",
+      "StreamMessage": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "GuildDataRetention": {
+    "action": "skip",
+    "reason": "bot-wide bookkeeping about the bot itself"
+  },
+  "GuildLeaveFeedbacks": {
+    "action": "skip",
+    "reason": "bot-wide bookkeeping about the bot itself"
+  },
+  "GuildRepeater": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel",
+      "LastMessageId": "message",
+      "Message": "text",
+      "ThreadStickyMessages": "clear",
+      "ForumTagConditions": "clear"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "GuildSnapshots": {
+    "action": "skip",
+    "reason": "bot-wide or never exported table"
+  },
+  "GuildTicketSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "LogChannelId": "channel",
+      "TranscriptChannelId": "channel",
+      "BlacklistedUsers": {
+        "list": "user",
+        "format": "pgarray"
+      },
+      "NotificationRoles": {
+        "list": "role",
+        "format": "pgarray"
+      }
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "GuildUserBalance": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": {
+      "sum": [
+        "Balance",
+        "Bank"
+      ]
+    }
+  },
+  "GuildUserXp": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": null,
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": {
+      "sum": [
+        "TotalXp",
+        "BonusXp"
+      ]
+    }
+  },
+  "GuildXpSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "LevelUpChannel": "channel",
+      "LevelUpMessage": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "GuildXpSettings_DuplicateBackup": {
+    "action": "skip",
+    "reason": "duplicate backup table"
+  },
+  "HighlightSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user",
+      "IgnoredChannels": {
+        "list": "channel",
+        "format": "space"
+      },
+      "IgnoredUsers": {
+        "list": "user",
+        "format": "space"
+      }
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "Highlights": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "InviteCountSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "LinkChannelId": "channel",
+      "LogChannelId": "channel"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "InviteCounts": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": {
+      "sum": [
+        "Count",
+        "Regular",
+        "Left",
+        "Fake",
+        "Bonus"
+      ]
+    }
+  },
+  "InviteLabels": {
+    "action": "skip",
+    "reason": "labels for Discord invite codes"
+  },
+  "InviteTrackingExclusions": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "TargetId": {
+        "by": "Kind",
+        "map": {
+          "0": "user",
+          "1": "role",
+          "2": "user"
+        }
+      }
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "InvitedBy": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user",
+      "InviterId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "JoinLeaveLogs": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "LastFmUsers": {
+    "action": "skip",
+    "reason": "user-global data, not tied to a server"
+  },
+  "LiveBoards": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel",
+      "MessageId": "message"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "LockdownChannelPermissions": {
+    "action": "skip",
+    "reason": "saved channel overwrites of an active lockdown, runtime state"
+  },
+  "LockdownJoinSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "LogIgnoredChannels": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "LoggingV2": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "LogOtherId": "channel",
+      "MessageUpdatedId": "channel",
+      "MessageDeletedId": "channel",
+      "ThreadCreatedId": "channel",
+      "ThreadDeletedId": "channel",
+      "ThreadUpdatedId": "channel",
+      "UsernameUpdatedId": "channel",
+      "NicknameUpdatedId": "channel",
+      "AvatarUpdatedId": "channel",
+      "UserLeftId": "channel",
+      "UserBannedId": "channel",
+      "UserUnbannedId": "channel",
+      "UserUpdatedId": "channel",
+      "UserJoinedId": "channel",
+      "UserRoleAddedId": "channel",
+      "UserRoleRemovedId": "channel",
+      "UserMutedId": "channel",
+      "LogUserPresenceId": "channel",
+      "LogVoicePresenceId": "channel",
+      "LogVoicePresenceTtsId": "channel",
+      "ServerUpdatedId": "channel",
+      "RoleUpdatedId": "channel",
+      "RoleDeletedId": "channel",
+      "EventCreatedId": "channel",
+      "RoleCreatedId": "channel",
+      "ChannelCreatedId": "channel",
+      "ChannelDestroyedId": "channel",
+      "ChannelUpdatedId": "channel",
+      "InviteCreatedId": "channel",
+      "InviteDeletedId": "channel",
+      "MessagesBulkDeletedId": "channel",
+      "ReactionEventsId": "channel"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "MessageCounts": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "ChannelId": "channel",
+      "UserId": "user"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": {
+      "sum": [
+        "Count"
+      ]
+    }
+  },
+  "MessageTimestamps": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {
+      "MessageCountId": "MessageCounts"
+    },
+    "member": "UserId",
+    "columns": {
+      "ChannelId": "channel",
+      "UserId": "user"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "MinecraftServerSnapshots": {
+    "action": "skip",
+    "reason": "status telemetry"
+  },
+  "MinecraftServers": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "WatchChannelId": "channel",
+      "WatchMessageId": "message",
+      "ChatChannelId": "channel",
+      "JoinLeaveChannelId": "channel",
+      "DeathChannelId": "channel",
+      "AdvancementChannelId": "channel",
+      "CustomEmbedTemplate": "text",
+      "CustomOnlineMessage": "text",
+      "CustomOfflineMessage": "text",
+      "EventTemplates": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "MultiGreets": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel",
+      "Message": "text",
+      "WebhookUrl": "clear"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "MusicLinkChannels": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "MusicPlayerSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "MusicChannelId": "channel",
+      "DjRoleId": "role",
+      "TtsChannelId": "channel",
+      "TtsRoleId": "role"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "MusicPlaylistTracks": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "Id",
+    "parents": {
+      "PlaylistId": "MusicPlaylists"
+    },
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "MusicPlaylists": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "AuthorId",
+    "columns": {
+      "AuthorId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "MutedUserId": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user",
+      "Roles": {
+        "list": "role",
+        "format": "space"
+      }
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "NoteEdits": {
+    "action": "skip",
+    "reason": "ticket history is bound to Discord ticket channels; ticket panels and settings are copied"
+  },
+  "NsfwBlacklistedTags": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "OwnerOnly": {
+    "action": "skip",
+    "reason": "bot-wide or never exported table"
+  },
+  "PanelButtons": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "Id",
+    "parents": {
+      "PanelId": "TicketPanels"
+    },
+    "member": null,
+    "columns": {
+      "Emoji": "emoji",
+      "CategoryId": "channel",
+      "ArchiveCategoryId": "channel",
+      "SupportRoles": {
+        "list": "role",
+        "format": "pgarray"
+      },
+      "ViewerRoles": {
+        "list": "role",
+        "format": "pgarray"
+      },
+      "OpenMessageJson": "text",
+      "ModalJson": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "PanelSelectMenus": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "Id",
+    "parents": {
+      "PanelId": "TicketPanels"
+    },
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "PatreonGoals": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "PatreonSupporters": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "DiscordUserId",
+    "columns": {
+      "DiscordUserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "PatreonTiers": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "DiscordRoleId": "role"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "Permission": {
+    "action": "skip",
+    "reason": "legacy linked list table with no server column and no way to reach it"
+  },
+  "Permissions": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "PrimaryTargetId": {
+        "by": "PrimaryTarget",
+        "map": {
+          "0": "user",
+          "1": "channel",
+          "2": "role",
+          "3": "skip",
+          "4": "channel"
+        }
+      }
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "PlaylistSong": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "Id",
+    "parents": {
+      "MusicPlaylistId": "MusicPlaylists"
+    },
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "Poll": {
+    "action": "skip",
+    "reason": "polls are bound to Discord messages and cannot continue on Fluxer"
+  },
+  "PollAnswer": {
+    "action": "skip",
+    "reason": "polls are bound to Discord messages and cannot continue on Fluxer"
+  },
+  "PollOptions": {
+    "action": "skip",
+    "reason": "polls are bound to Discord messages and cannot continue on Fluxer"
+  },
+  "PollTemplates": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "CreatorId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "PollVote": {
+    "action": "skip",
+    "reason": "polls are bound to Discord messages and cannot continue on Fluxer"
+  },
+  "PollVotes": {
+    "action": "skip",
+    "reason": "polls are bound to Discord messages and cannot continue on Fluxer"
+  },
+  "Polls": {
+    "action": "skip",
+    "reason": "polls are bound to Discord messages and cannot continue on Fluxer"
+  },
+  "PublishUserBlacklist": {
+    "action": "copy",
+    "scope": "channel",
+    "guildColumn": null,
+    "key": "Id",
+    "parents": {},
+    "member": "User",
+    "columns": {
+      "ChannelId": "channel",
+      "User": "user"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "PublishWordBlacklist": {
+    "action": "copy",
+    "scope": "channel",
+    "guildColumn": null,
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "Quotes": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "AuthorId": "user",
+      "Text": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "ReactionRole": {
+    "action": "skip",
+    "reason": "reaction roles are bound to Discord messages that do not exist on Fluxer"
+  },
+  "ReactionRoleMessages": {
+    "action": "skip",
+    "reason": "reaction roles are bound to Discord messages that do not exist on Fluxer"
+  },
+  "Reminders": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "ServerId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "ServerId": "guild",
+      "ChannelId": "channel",
+      "UserId": "user",
+      "Message": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "RepBadges": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "RepChallenge": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleReward": "role",
+      "AnnounceChannel": "channel"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "RepChallengeProgress": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": null,
+    "parents": {
+      "ChallengeId": "RepChallenge"
+    },
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "RepChannelConfig": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel",
+      "CategoryId": "channel",
+      "ForumTagMultipliers": "clear"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "RepChannelMetrics": {
+    "action": "skip",
+    "reason": "derived reputation metrics, rebuilt on Fluxer"
+  },
+  "RepCommandRequirements": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RestrictedChannels": {
+        "list": "channel",
+        "format": "json"
+      },
+      "BypassRoles": {
+        "list": "role",
+        "format": "json"
+      },
+      "DenialMessage": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "RepConfig": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": null,
+    "parents": {},
+    "member": null,
+    "columns": {
+      "NotificationChannel": "channel",
+      "DecayProtectedRoles": {
+        "list": "role",
+        "format": "json"
+      }
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "RepCooldowns": {
+    "action": "skip",
+    "reason": "short lived runtime cooldowns"
+  },
+  "RepCustomType": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "RepEvent": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RestrictedChannels": {
+        "list": "channel",
+        "format": "json"
+      },
+      "RestrictedRoles": {
+        "list": "role",
+        "format": "json"
+      },
+      "ActiveMessage": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "RepHistory": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "ReceiverId",
+    "columns": {
+      "GiverId": "user",
+      "ReceiverId": "user",
+      "ChannelId": "channel"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "RepHourlyActivity": {
+    "action": "skip",
+    "reason": "derived reputation metrics, rebuilt on Fluxer"
+  },
+  "RepMetrics": {
+    "action": "skip",
+    "reason": "derived reputation metrics, rebuilt on Fluxer"
+  },
+  "RepReactionConfig": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "EmojiId": "emoji",
+      "RequiredRoleId": "role",
+      "AllowedChannels": {
+        "list": "channel",
+        "format": "json"
+      },
+      "AllowedReceiverRoles": {
+        "list": "role",
+        "format": "json"
+      }
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "RepRoleRewards": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleId": "role",
+      "AnnounceChannel": "channel"
+    },
+    "required": [
+      "RoleId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "RepUserSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": null,
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "RepWeightedVote": {
+    "action": "skip",
+    "reason": "weighted votes are bound to Discord messages"
+  },
+  "RepWeightedVoteRecord": {
+    "action": "skip",
+    "reason": "weighted votes are bound to Discord messages"
+  },
+  "RoleGreets": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleId": "role",
+      "ChannelId": "channel",
+      "Message": "text",
+      "WebhookUrl": "clear"
+    },
+    "required": [
+      "RoleId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "RoleMenuOptions": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "Id",
+    "parents": {
+      "RoleMenuId": "RoleMenus"
+    },
+    "member": null,
+    "columns": {
+      "RoleId": "role",
+      "Emoji": "emoji"
+    },
+    "required": [
+      "RoleId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "RoleMenus": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel",
+      "MessageId": "message",
+      "RequiredRoleId": "role",
+      "CreatedBy": "user",
+      "Message": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "RoleMonitoringSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "RoleStateSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "DeniedRoles": {
+        "list": "role",
+        "format": "comma"
+      },
+      "DeniedUsers": {
+        "list": "user",
+        "format": "comma"
+      }
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "RotatingStatus": {
+    "action": "skip",
+    "reason": "bot-wide or never exported table"
+  },
+  "ScheduledTicketDeletions": {
+    "action": "skip",
+    "reason": "ticket history is bound to Discord ticket channels; ticket panels and settings are copied"
+  },
+  "SelectMenuOptions": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "Id",
+    "parents": {
+      "SelectMenuId": "PanelSelectMenus"
+    },
+    "member": null,
+    "columns": {
+      "Emoji": "emoji",
+      "CategoryId": "channel",
+      "ArchiveCategoryId": "channel",
+      "SupportRoles": {
+        "list": "role",
+        "format": "pgarray"
+      },
+      "ViewerRoles": {
+        "list": "role",
+        "format": "pgarray"
+      },
+      "OpenMessageJson": "text",
+      "ModalJson": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "SelfAssignableRoles": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleId": "role"
+    },
+    "required": [
+      "RoleId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "ServerRecoveryStore": {
+    "action": "skip",
+    "reason": "bot-wide or never exported table"
+  },
+  "ServerReportSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "ServerStatsExclusions": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "TargetId": {
+        "by": "Kind",
+        "map": {
+          "0": "channel",
+          "1": "role",
+          "2": "user"
+        }
+      }
+    },
+    "required": [
+      "TargetId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "ServerStatsSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "ShopItems": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleId": "role",
+      "RequiredRoleId": "role",
+      "TextContent": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "StarboardPosts": {
+    "action": "skip",
+    "reason": "starboard posts are bound to Discord messages"
+  },
+  "StarboardReactions": {
+    "action": "skip",
+    "reason": "starboard posts are bound to Discord messages"
+  },
+  "StarboardStats": {
+    "action": "skip",
+    "reason": "starboard posts are bound to Discord messages"
+  },
+  "Starboards": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "StarboardChannelId": "channel",
+      "Emote": "emoji",
+      "CheckedChannels": {
+        "list": "channel",
+        "format": "space"
+      }
+    },
+    "required": [
+      "StarboardChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "StatChannelSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "StatChannels": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel",
+      "RoleId": "role",
+      "CategoryId": "channel",
+      "Template": "text",
+      "TargetId": {
+        "by": "StatType",
+        "map": {
+          "45": "channel",
+          "46": "channel"
+        }
+      },
+      "PermissionOverwrites": {
+        "json": {
+          "$[*].TargetId": {
+            "by": "TargetType",
+            "map": {
+              "0": "role",
+              "1": "user"
+            }
+          }
+        }
+      }
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "StatRoles": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleId": "role",
+      "ChannelFilter": {
+        "list": "channel",
+        "format": "json"
+      },
+      "RoleWhitelist": {
+        "list": "role",
+        "format": "json"
+      },
+      "RoleBlacklist": {
+        "list": "role",
+        "format": "json"
+      },
+      "IgnoredUsers": {
+        "list": "user",
+        "format": "json"
+      },
+      "NotifyChannelId": "channel",
+      "NotifyMessage": "text"
+    },
+    "required": [
+      "RoleId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "StatsPrivacyOptOuts": {
+    "action": "skip",
+    "reason": "user-global data, not tied to a server"
+  },
+  "StatusRoles": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "StatusChannelId": "channel",
+      "ToAdd": {
+        "list": "role",
+        "format": "space"
+      },
+      "ToRemove": {
+        "list": "role",
+        "format": "space"
+      },
+      "StatusEmbed": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "StreamRoleBlacklistedUser": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "Id",
+    "parents": {
+      "StreamRoleSettingsId": "StreamRoleSettings"
+    },
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [
+      "UserId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "StreamRoleSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "AddRoleId": "role",
+      "FromRoleId": "role"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "StreamRoleWhitelistedUser": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "Id",
+    "parents": {
+      "StreamRoleSettingsId": "StreamRoleSettings"
+    },
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [
+      "UserId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "SuggestThreads": {
+    "action": "skip",
+    "reason": "suggestions are bound to Discord messages and threads"
+  },
+  "SuggestVotes": {
+    "action": "skip",
+    "reason": "suggestions are bound to Discord messages and threads"
+  },
+  "Suggestions": {
+    "action": "skip",
+    "reason": "suggestions are bound to Discord messages and threads"
+  },
+  "Template": {
+    "action": "skip",
+    "reason": "xp card templates reference per row sub-templates the exporter cannot reach"
+  },
+  "TemplateBar": {
+    "action": "skip",
+    "reason": "xp card templates reference per row sub-templates the exporter cannot reach"
+  },
+  "TemplateClub": {
+    "action": "skip",
+    "reason": "xp card templates reference per row sub-templates the exporter cannot reach"
+  },
+  "TemplateGuild": {
+    "action": "skip",
+    "reason": "xp card templates reference per row sub-templates the exporter cannot reach"
+  },
+  "TemplateUser": {
+    "action": "skip",
+    "reason": "xp card templates reference per row sub-templates the exporter cannot reach"
+  },
+  "TicketActionLogs": {
+    "action": "skip",
+    "reason": "ticket history is bound to Discord ticket channels; ticket panels and settings are copied"
+  },
+  "TicketCases": {
+    "action": "skip",
+    "reason": "ticket history is bound to Discord ticket channels; ticket panels and settings are copied"
+  },
+  "TicketNotes": {
+    "action": "skip",
+    "reason": "ticket history is bound to Discord ticket channels; ticket panels and settings are copied"
+  },
+  "TicketPanels": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel",
+      "MessageId": "message",
+      "EmbedJson": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "TicketPriorities": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "Emoji": "emoji"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "TicketTags": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "Tickets": {
+    "action": "skip",
+    "reason": "ticket history is bound to Discord ticket channels; ticket panels and settings are copied"
+  },
+  "TodoItems": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "Id",
+    "parents": {
+      "TodoListId": "TodoLists"
+    },
+    "member": null,
+    "columns": {
+      "CreatedBy": "user",
+      "CompletedBy": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "TodoListPermissions": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "Id",
+    "parents": {
+      "TodoListId": "TodoLists"
+    },
+    "member": "UserId",
+    "columns": {
+      "UserId": "user",
+      "GrantedBy": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "TodoLists": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "OwnerId",
+    "columns": {
+      "OwnerId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "TransactionHistory": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "TtsUserSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "TtsVoiceChannelSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "VoiceChannelId": "channel",
+      "LinkedTextChannelId": "channel"
+    },
+    "required": [
+      "VoiceChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "TwitchAccountLinks": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "DiscordUserId",
+    "columns": {
+      "DiscordUserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "TwitchBotAccounts": {
+    "action": "skip",
+    "reason": "Twitch access tokens, must be re-authorized on Fluxer"
+  },
+  "TwitchChannelAuthorizations": {
+    "action": "skip",
+    "reason": "Twitch access tokens, must be re-authorized on Fluxer"
+  },
+  "TwitchCounters": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "TwitchCustomCommands": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "TwitchEventHistory": {
+    "action": "skip",
+    "reason": "Twitch runtime state and event logs"
+  },
+  "TwitchEventSubSubscriptions": {
+    "action": "skip",
+    "reason": "Twitch runtime state and event logs"
+  },
+  "TwitchGuildConfigs": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "GoLiveChannelId": "channel",
+      "SubNotificationChannelId": "channel",
+      "RaidNotificationChannelId": "channel",
+      "StreamRecapChannelId": "channel",
+      "AuthorizedByDiscordUserId": "user",
+      "GoLiveMessage": "text",
+      "SubNotificationMessage": "text",
+      "RaidNotificationMessage": "text",
+      "ScheduleMessage": "text",
+      "SocialsMessage": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "TwitchLinkCodes": {
+    "action": "skip",
+    "reason": "Twitch runtime state and event logs"
+  },
+  "TwitchQuotes": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "TwitchRaidTargets": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "TwitchRedemptionActions": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "DiscordChannelId": "channel",
+      "DiscordMessage": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "TwitchRoleSyncMappings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleId": "role"
+    },
+    "required": [
+      "RoleId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "TwitchTimers": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "UnbanTimer": {
+    "action": "skip",
+    "reason": "pending timers for punishments on the old platform"
+  },
+  "UnmuteTimer": {
+    "action": "skip",
+    "reason": "pending timers for punishments on the old platform"
+  },
+  "UnroleTimer": {
+    "action": "skip",
+    "reason": "pending timers for punishments on the old platform"
+  },
+  "UserAchievements": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user",
+      "GrantedBy": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "UserCustomReputation": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {
+      "CustomTypeId": "RepCustomType"
+    },
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "UserInventoryItems": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {
+      "ShopItemId": "ShopItems"
+    },
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": {
+      "sum": [
+        "Quantity",
+        "TotalPaid"
+      ]
+    }
+  },
+  "UserReputation": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": {
+      "sum": [
+        "TotalRep",
+        "HelperRep",
+        "ArtistRep",
+        "MemerRep"
+      ]
+    }
+  },
+  "UserRoleStates": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user",
+      "SavedRoles": {
+        "list": "role",
+        "format": "comma"
+      }
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "UserVoicePreference": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user",
+      "WhitelistJson": {
+        "list": "user",
+        "format": "json"
+      },
+      "BlacklistJson": {
+        "list": "user",
+        "format": "json"
+      }
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "VcRoles": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "VoiceChannelId": "channel",
+      "RoleId": "role"
+    },
+    "required": [
+      "VoiceChannelId",
+      "RoleId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "VoiceSegments": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "ChannelId": "channel",
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "VoiceTotals": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "ChannelId": "channel",
+      "UserId": "user"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": {
+      "sum": [
+        "Seconds"
+      ]
+    }
+  },
+  "VoteRoles": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleId": "role"
+    },
+    "required": [
+      "RoleId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "Votes": {
+    "action": "skip",
+    "reason": "bot listing vote history keyed by the Discord bot id"
+  },
+  "WarningPunishment": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleId": "role"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "WarningPunishment2": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleId": "role"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "Warnings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "Warnings2": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "WhitelistedRoles": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleId": "role"
+    },
+    "required": [
+      "RoleId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "WhitelistedUsers": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [
+      "UserId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "WordOfTheDayConfigs": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel",
+      "PingRoleId": "role",
+      "MessageTemplate": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "WordOfTheDayHistory": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "WordOfTheDaySchedules": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "WordOfTheDayWords": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "AddedBy": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "XpBoostEvents": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ApplicableChannels": {
+        "list": "channel",
+        "format": "comma"
+      },
+      "ApplicableRoles": {
+        "list": "role",
+        "format": "comma"
+      }
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "XpChannelMultipliers": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": null,
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "XpCompetitionEntries": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": null,
+    "parents": {
+      "CompetitionId": "XpCompetitions"
+    },
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "XpCompetitionRewards": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "Id",
+    "parents": {
+      "CompetitionId": "XpCompetitions"
+    },
+    "member": null,
+    "columns": {
+      "RoleId": "role"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "XpCompetitions": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "AnnouncementChannelId": "channel"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "XpCurrencyRewards": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": null,
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "XpExcludedItems": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": null,
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ItemId": {
+        "by": "ItemType",
+        "map": {
+          "0": "channel",
+          "1": "role",
+          "2": "user"
+        }
+      }
+    },
+    "required": [
+      "ItemId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "XpLevelUpMessages": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "MessageContent": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "XpRoleMultipliers": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": null,
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleId": "role"
+    },
+    "required": [
+      "RoleId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "XpRoleRewards": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": null,
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleId": "role"
+    },
+    "required": [
+      "RoleId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "XpRoleTracking": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": null,
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleId": "role"
+    },
+    "required": [
+      "RoleId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "XpUserSnapshots": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "__EFMigrationsHistory": {
+    "action": "skip",
+    "reason": "bot-wide or never exported table"
+  },
+  "antimasspostignoredchannels": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "id",
+    "parents": {
+      "antimasspostsettingid": "antimasspostsettings"
+    },
+    "member": null,
+    "columns": {
+      "channelid": "channel"
+    },
+    "required": [
+      "channelid"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "antimasspostignoredroles": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "id",
+    "parents": {
+      "antimasspostsettingid": "antimasspostsettings"
+    },
+    "member": null,
+    "columns": {
+      "roleid": "role"
+    },
+    "required": [
+      "roleid"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "antimasspostignoredusers": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "id",
+    "parents": {
+      "antimasspostsettingid": "antimasspostsettings"
+    },
+    "member": "userid",
+    "columns": {
+      "userid": "user"
+    },
+    "required": [
+      "userid"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "antimasspostlinkblacklist": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "id",
+    "parents": {
+      "antimasspostsettingid": "antimasspostsettings"
+    },
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "antimasspostlinkwhitelist": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "id",
+    "parents": {
+      "antimasspostsettingid": "antimasspostsettings"
+    },
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "antimasspostsettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "guildid",
+    "key": "id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "roleid": "role"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "antipostchannel_ignoredusers": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "id",
+    "parents": {
+      "antipostchannelsettingid": "antipostchannelsettings"
+    },
+    "member": "userid",
+    "columns": {
+      "userid": "user"
+    },
+    "required": [
+      "userid"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "antipostchannelchannels": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "id",
+    "parents": {
+      "antipostchannelsettingid": "antipostchannelsettings"
+    },
+    "member": null,
+    "columns": {
+      "channelid": "channel"
+    },
+    "required": [
+      "channelid"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "antipostchannelignoredroles": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "id",
+    "parents": {
+      "antipostchannelsettingid": "antipostchannelsettings"
+    },
+    "member": null,
+    "columns": {
+      "roleid": "role"
+    },
+    "required": [
+      "roleid"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "antipostchannelsettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "guildid",
+    "key": "id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "roleid": "role",
+      "statusmessageid": "message",
+      "statuschannelid": "channel"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "coprmonitors": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "guildid",
+    "key": "id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "channelid": "channel",
+      "succeededmessage": "text",
+      "failedmessage": "text",
+      "canceledmessage": "text",
+      "pendingmessage": "text",
+      "runningmessage": "text",
+      "skippedmessage": "text",
+      "defaultmessage": "text",
+      "startingmessage": "text",
+      "importingmessage": "text",
+      "forkedmessage": "text",
+      "waitingmessage": "text"
+    },
+    "required": [
+      "channelid"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "form_answers": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "id",
+    "parents": {
+      "question_id": "form_questions",
+      "response_id": "form_responses"
+    },
+    "member": null,
+    "columns": {
+      "form_version_id": "clear"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "form_question_conditions": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "id",
+    "parents": {
+      "question_id": "form_questions",
+      "target_question_id": "form_questions"
+    },
+    "member": null,
+    "columns": {
+      "target_role_ids": {
+        "list": "role",
+        "format": "comma"
+      }
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "form_question_options": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "id",
+    "parents": {
+      "question_id": "form_questions"
+    },
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "form_questions": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "id",
+    "parents": {
+      "conditional_parent_question_id": "form_questions",
+      "form_id": "forms",
+      "required_when_parent_question_id": "form_questions"
+    },
+    "member": null,
+    "columns": {
+      "conditional_role_ids": {
+        "list": "role",
+        "format": "comma"
+      }
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "form_response_drafts": {
+    "action": "skip",
+    "reason": "form snapshots, drafts and share links"
+  },
+  "form_response_revisions": {
+    "action": "skip",
+    "reason": "form snapshots, drafts and share links"
+  },
+  "form_response_workflows": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "id",
+    "parents": {
+      "response_id": "form_responses"
+    },
+    "member": null,
+    "columns": {
+      "reviewed_by": "user",
+      "review_message_id": "message",
+      "invite_code": "clear"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "form_responses": {
+    "action": "copy",
+    "scope": "parent",
+    "guildColumn": null,
+    "key": "id",
+    "parents": {
+      "form_id": "forms"
+    },
+    "member": "user_id",
+    "columns": {
+      "user_id": "user",
+      "message_id": "message",
+      "form_version_id": "clear"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "form_share_links": {
+    "action": "skip",
+    "reason": "form snapshots, drafts and share links"
+  },
+  "form_versions": {
+    "action": "skip",
+    "reason": "form snapshots, drafts and share links"
+  },
+  "forms": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "guild_id",
+    "key": "id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "submit_channel_id": "channel",
+      "created_by": "user",
+      "required_role_id": "role",
+      "auto_approve_role_ids": {
+        "list": "role",
+        "format": "comma"
+      },
+      "approval_role_ids": {
+        "list": "role",
+        "format": "comma"
+      },
+      "rejection_role_ids": {
+        "list": "role",
+        "format": "comma"
+      },
+      "announce_channel_id": "channel",
+      "announce_role_id": "role",
+      "announce_message": "text",
+      "success_message": "text",
+      "notify_role_id": "role",
+      "submit_role_ids": {
+        "list": "role",
+        "format": "comma"
+      },
+      "pending_role_id": "role",
+      "approval_add_role_ids": {
+        "list": "role",
+        "format": "comma"
+      },
+      "approval_remove_role_ids": {
+        "list": "role",
+        "format": "comma"
+      },
+      "rejection_add_role_ids": {
+        "list": "role",
+        "format": "comma"
+      },
+      "rejection_remove_role_ids": {
+        "list": "role",
+        "format": "comma"
+      },
+      "reviewer_role_id": "role",
+      "approve_emote": "emoji",
+      "reject_emote": "emoji",
+      "notification_webhook_url": "clear"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "kaladont_channels": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "guild_id",
+    "key": "id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "channel_id": "channel",
+      "current_players": {
+        "list": "user",
+        "format": "json"
+      }
+    },
+    "required": [
+      "channel_id"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "kaladont_games": {
+    "action": "skip",
+    "reason": "finished game history"
+  },
+  "kaladont_stats": {
+    "action": "copy",
+    "scope": "channel",
+    "guildColumn": null,
+    "key": "id",
+    "parents": {},
+    "member": "user_id",
+    "columns": {
+      "channel_id": "channel",
+      "user_id": "user"
+    },
+    "required": [
+      "channel_id"
+    ],
+    "onMemberConflict": {
+      "sum": [
+        "words_count",
+        "wins",
+        "eliminations"
+      ]
+    }
+  },
+  "scheduled_polls": {
+    "action": "skip",
+    "reason": "polls are bound to Discord messages and cannot continue on Fluxer"
+  },
+  "schemaversions": {
+    "action": "skip",
+    "reason": "migration bookkeeping"
+  },
+  "schemaversions_concurrent": {
+    "action": "skip",
+    "reason": "migration bookkeeping"
+  }
+}
