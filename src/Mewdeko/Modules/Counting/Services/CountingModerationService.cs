@@ -410,9 +410,9 @@ public class CountingModerationService : INService
 
         // Get guild defaults
         var channel = client.GetChannel(channelId) as Channel;
-        if (channel == null) return null;
+        if (channel?.GuildId is not { } channelGuildId) return null;
 
-        var guildDefaults = await GetGuildDefaultsAsync(channel.GuildId);
+        var guildDefaults = await GetGuildDefaultsAsync(channelGuildId);
 
         // Combine channel config with defaults
         var effectiveConfig = new CountingModerationEffectiveConfig

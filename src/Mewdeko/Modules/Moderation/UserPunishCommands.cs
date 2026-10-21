@@ -195,7 +195,7 @@ public partial class Moderation : MewdekoModule
             var users = (await ctx.Guild.GetUsersAsync()).ToList();
             Parallel.ForEach(users, user =>
             {
-                var newNickname = user.SanitizeUserName();
+                var newNickname = user.User.SanitizeUserName();
                 if (newNickname != user.Username && user.Nickname != newNickname)
                     sanitizedUsers.TryAdd(user, newNickname);
             });
@@ -291,7 +291,7 @@ public partial class Moderation : MewdekoModule
         [BotPerm(GuildPermission.ManageNicknames)]
         public async Task Sanitize(SocketGuildMember user)
         {
-            var newName = user.SanitizeUserName();
+            var newName = user.User.SanitizeUserName();
             await user.ModifyAsync(u => u.Nickname = newName);
             await ctx.Channel.SendConfirmAsync(
                 Strings.UserSanitizedSuccess(ctx.Guild.Id, user.Mention, newName));
@@ -353,9 +353,10 @@ public partial class Moderation : MewdekoModule
                 return;
             }
 
-            await user.SetTimeOutAsync(time.Time, new RequestOptions
+            await user.ModifyAsync(x =>
             {
-                AuditLogReason = $"{ctx.User} | {reason}"
+                x.CommunicationDisabledUntil = DateTimeOffset.UtcNow + time.Time;
+                x.TimeoutReason = $"{ctx.User} | {reason}";
             }).ConfigureAwait(false);
             await ReplyConfirmAsync(Strings.TimeoutSet(ctx.Guild.Id, user.Mention,
                     time.Time.Humanize(maxUnit: TimeUnit.Day)))
@@ -375,9 +376,10 @@ public partial class Moderation : MewdekoModule
         {
             if (!await CheckRoleHierarchy(user))
                 return;
-            await user.RemoveTimeOutAsync(new RequestOptions
+            await user.ModifyAsync(x =>
             {
-                AuditLogReason = $"Removal requested by {ctx.User}"
+                x.CommunicationDisabledUntil = null;
+                x.TimeoutReason = $"Removal requested by {ctx.User}";
             }).ConfigureAwait(false);
             await ReplyConfirmAsync(Strings.TimeoutRemoved(ctx.Guild.Id, user.Mention)).ConfigureAwait(false);
         }
@@ -862,7 +864,7 @@ public partial class Moderation : MewdekoModule
                 }
             }
 
-            await mute.TimedBan(Context.Guild, user, time.Time, $"{ctx.User} | {msg}", pruneTime.Time)
+            await mute.TimedBan(Context.Guild, user.User, time.Time, $"{ctx.User} | {msg}", pruneTime.Time)
                 .ConfigureAwait(false);
             var toSend = new EmbedBuilder().WithOkColor()
                 .WithTitle($"⛔️ {Strings.BannedUser(ctx.Guild.Id)}")
@@ -897,10 +899,7 @@ public partial class Moderation : MewdekoModule
             {
                 var pruneDays = await banPrune
                     .GetPruneDaysAsync(ctx.Guild.Id, BanPruneAction.HackBan, ctx.Channel).ConfigureAwait(false);
-                await ctx.Guild.AddBanAsync(user, pruneDays, options: new RequestOptions
-                {
-                    AuditLogReason = $"{ctx.User} | {msg}"
-                }).ConfigureAwait(false);
+                await ctx.Guild.AddBanAsync(user, pruneDays, $"{ctx.User} | {msg}").ConfigureAwait(false);
 
                 await ctx.Channel.EmbedAsync(new EmbedBuilder().WithOkColor()
                         .WithTitle($"⛔️ {Strings.BannedUser(ctx.Guild.Id)}")
@@ -927,10 +926,7 @@ public partial class Moderation : MewdekoModule
         [Priority(0)]
         public async Task Ban(StoopidTime time, IUser userId, [Remainder] string? msg = null)
         {
-            await ctx.Guild.AddBanAsync(userId, time.Time.Days, options: new RequestOptions
-            {
-                AuditLogReason = $"{ctx.User} | {msg}"
-            }).ConfigureAwait(false);
+            await ctx.Guild.AddBanAsync(userId, time.Time.Days, $"{ctx.User} | {msg}").ConfigureAwait(false);
 
             await ctx.Channel.EmbedAsync(new EmbedBuilder().WithOkColor()
                     .WithTitle($"⛔️ {Strings.BannedUser(ctx.Guild.Id)}")
@@ -975,10 +971,7 @@ public partial class Moderation : MewdekoModule
 
             var pruneDays = await banPrune
                 .GetPruneDaysAsync(ctx.Guild.Id, BanPruneAction.Ban, ctx.Channel).ConfigureAwait(false);
-            await ctx.Guild.AddBanAsync(user, pruneDays, options: new RequestOptions
-            {
-                AuditLogReason = $"{ctx.User} | {msg}"
-            }).ConfigureAwait(false);
+            await ctx.Guild.AddBanAsync(user.Id, pruneDays, $"{ctx.User} | {msg}").ConfigureAwait(false);
 
             var toSend = new EmbedBuilder().WithOkColor()
                 .WithTitle($"⛔️ {Strings.BannedUser(ctx.Guild.Id)}")
@@ -1029,10 +1022,7 @@ public partial class Moderation : MewdekoModule
                 dmFailed = true;
             }
 
-            await ctx.Guild.AddBanAsync(user, time.Time.Days, options: new RequestOptions
-            {
-                AuditLogReason = $"{ctx.User} | {msg}"
-            }).ConfigureAwait(false);
+            await ctx.Guild.AddBanAsync(user.Id, time.Time.Days, $"{ctx.User} | {msg}").ConfigureAwait(false);
 
             var toSend = new EmbedBuilder().WithOkColor()
                 .WithTitle($"⛔️ {Strings.BannedUser(ctx.Guild.Id)}")
@@ -1128,7 +1118,7 @@ public partial class Moderation : MewdekoModule
             var dmChannel = await ctx.User.CreateDMChannelAsync().ConfigureAwait(false);
             var defaultMessage = Strings.Bandm(ctx.Guild.Id, Format.Bold(ctx.Guild.Name), reason);
             var crEmbed = await Service.GetBanUserDmEmbed(Context,
-                (SocketGuildMember)Context.User,
+                Context.Member!,
                 defaultMessage,
                 reason,
                 duration).ConfigureAwait(false);
@@ -1191,7 +1181,7 @@ public partial class Moderation : MewdekoModule
         [BotPerm(GuildPermission.BanMembers)]
         public async Task Unban(ulong userId)
         {
-            var bun = await Context.Guild.GetBanAsync(userId);
+            var bun = (await Context.Guild.GetBansAsync()).FirstOrDefault(x => x.User.Id == userId);
 
             if (bun == null)
             {
@@ -1238,8 +1228,7 @@ public partial class Moderation : MewdekoModule
         [BotPerm(GuildPermission.BanMembers)]
         public async Task Softban(ulong userId, [Remainder] string? msg = null)
         {
-            var user = await ((FluxerClient)Context.Client).Rest.GetGuildUserAsync(Context.Guild.Id,
-                userId).ConfigureAwait(false);
+            var user = await Context.Guild.GetUserAsync(userId).ConfigureAwait(false);
             if (user is null)
                 return;
 
@@ -1255,7 +1244,7 @@ public partial class Moderation : MewdekoModule
 
             try
             {
-                await user.SendErrorAsync(Strings.Sbdm(ctx.Guild.Id, Format.Bold(ctx.Guild.Name), msg))
+                await user.User.SendErrorAsync(Strings.Sbdm(ctx.Guild.Id, Format.Bold(ctx.Guild.Name), msg))
                     .ConfigureAwait(false);
             }
             catch
@@ -1265,17 +1254,14 @@ public partial class Moderation : MewdekoModule
 
             var softPruneDays = await banPrune
                 .GetPruneDaysAsync(ctx.Guild.Id, BanPruneAction.SoftBan, ctx.Channel).ConfigureAwait(false);
-            await ctx.Guild.AddBanAsync(user, softPruneDays, options: new RequestOptions
-            {
-                AuditLogReason = $"Softban: {ctx.User} | {msg}"
-            }).ConfigureAwait(false);
+            await ctx.Guild.AddBanAsync(user.Id, softPruneDays, $"Softban: {ctx.User} | {msg}").ConfigureAwait(false);
             try
             {
-                await ctx.Guild.RemoveBanAsync(user).ConfigureAwait(false);
+                await ctx.Guild.RemoveBanAsync(user.Id).ConfigureAwait(false);
             }
             catch
             {
-                await ctx.Guild.RemoveBanAsync(user).ConfigureAwait(false);
+                await ctx.Guild.RemoveBanAsync(user.Id).ConfigureAwait(false);
             }
 
             var toSend = new EmbedBuilder().WithOkColor()
@@ -1321,8 +1307,7 @@ public partial class Moderation : MewdekoModule
         [Priority(0)]
         public async Task Kick(ulong userId, [Remainder] string? msg = null)
         {
-            var user = await ((FluxerClient)Context.Client).Rest.GetGuildUserAsync(Context.Guild.Id,
-                userId).ConfigureAwait(false);
+            var user = await Context.Guild.GetUserAsync(userId).ConfigureAwait(false);
             if (user is null)
                 return;
 
@@ -1375,7 +1360,7 @@ public partial class Moderation : MewdekoModule
 
             try
             {
-                await user.SendErrorAsync(Strings.Kickdm(ctx.Guild.Id, Format.Bold(ctx.Guild.Name), msg))
+                await user.User.SendErrorAsync(Strings.Kickdm(ctx.Guild.Id, Format.Bold(ctx.Guild.Name), msg))
                     .ConfigureAwait(false);
             }
             catch
@@ -1431,10 +1416,7 @@ public partial class Moderation : MewdekoModule
                 .GetPruneDaysAsync(ctx.Guild.Id, BanPruneAction.MassBan, ctx.Channel).ConfigureAwait(false);
             await Task.WhenAll(valueTuples
                     .Where(x => x.id.HasValue)
-                    .Select(x => ctx.Guild.AddBanAsync(x.id.Value, massPruneDays, "", new RequestOptions
-                    {
-                        RetryMode = RetryMode.AlwaysRetry, AuditLogReason = x.Reason
-                    })))
+                    .Select(x => ctx.Guild.AddBanAsync(x.id.Value, massPruneDays, x.Reason)))
                 .ConfigureAwait(false);
 
             //wait for the message and edit it

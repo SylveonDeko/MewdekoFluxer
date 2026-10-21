@@ -68,10 +68,11 @@ public class PermissionService : ILateBlocker, INService, IReadyExecutor
         string moduleName,
         CommandInfo command)
     {
-        var guild = ctx.Guild;
-        var msg = ctx.Message;
-        var user = ctx.User;
-        var channel = ctx.Channel;
+        var commandContext = (CommandContext)ctx;
+        var guild = commandContext.Guild;
+        var msg = commandContext.Message;
+        var user = commandContext.Member;
+        var channel = commandContext.Channel;
         var commandName = command.Name.ToLowerInvariant();
 
         await Task.Yield();
@@ -89,7 +90,7 @@ public class PermissionService : ILateBlocker, INService, IReadyExecutor
                 {
                     await channel.SendErrorAsync(Strings.PermPrevent(ctx.Guild.Id, index + 1,
                             Format.Bold(pc.Permissions[index]
-                                .GetCommand(await guildSettings.GetPrefix(guild), (SocketGuild)guild))), config)
+                                .GetCommand(await guildSettings.GetPrefix(guild), guild))), config)
                         .ConfigureAwait(false);
                 }
                 catch

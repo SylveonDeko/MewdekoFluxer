@@ -25,7 +25,7 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
     public async Task VoiceControls()
     {
         // Check if user is in a voice channel
-        var user = Context.User as SocketGuildMember;
+        var user = Context.Member;
         if (user?.VoiceChannel == null)
         {
             await ReplyErrorAsync(Strings.CustomVoiceNotInChannel(Context.Guild.Id));
@@ -65,8 +65,8 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
             return;
         }
 
-        var users = await channel.GetUsersAsync().FlattenAsync();
-        users = users.Where(x => x.VoiceChannel == channel);
+        var users = channel.ConnectedUsers;
+        users = users.Where(x => x.VoiceChannel?.Id == channel.Id);
 
         // Build the embed
         var userListValue = !users.Any()
@@ -104,7 +104,7 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
             .AddField(Strings.CustomVoiceControlsCommandsTitle(Context.Guild.Id),
                 await Service.GetControlsHelpAsync(Context.Guild));
 
-        await ReplyAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -117,18 +117,21 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
     public async Task SetupVoiceHub()
     {
         // Create the join-to-create channel
-        var channel = await Context.Guild.CreateVoiceChannelAsync(Strings.CustomVoiceHubDefaultName(Context.Guild.Id));
-        var category =
-            await Context.Guild.CreateCategoryAsync(Strings.CustomVoiceCategoryDefaultName(Context.Guild.Id));
+        var channel = await Context.Guild.CreateVoiceChannelAsync(new CreateVoiceChannelRequest
+        {
+            Name = Strings.CustomVoiceHubDefaultName(Context.Guild.Id)
+        });
+        var category = await Context.Guild.CreateCategoryChannelAsync(new CreateCategoryChannelRequest
+        {
+            Name = Strings.CustomVoiceCategoryDefaultName(Context.Guild.Id)
+        });
 
         // Set permissions for the hub channel
-        await channel.AddPermissionOverwriteAsync(Context.Guild.EveryoneRole, new OverwritePermissions(
-            connect: PermValue.Allow,
-            speak: PermValue.Deny
-        ));
+        await channel.AddPermissionOverwriteAsync(Context.Guild.EveryoneRole,
+            OverwritePermissions.InheritAll.Modify(connect: PermValue.Allow, speak: PermValue.Deny));
 
         // Move the channel to the category
-        await channel.ModifyAsync(props => props.CategoryId = category.Id);
+        await channel.ModifyAsync(new UpdateChannelRequest { ParentId = category.Id });
 
         // Setup the hub in the service
         await Service.SetupHubAsync(Context.Guild.Id, channel.Id, category.Id);
@@ -235,7 +238,7 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
                         ? $"<@&{config.CustomVoiceAdminRoleId}>"
                         : Strings.CustomVoiceConfigNone(Context.Guild.Id), true);
 
-            await ReplyAsync(embed: embed.Build());
+            await ctx.Channel.SendAsync(embed: embed.Build());
             return;
         }
 
@@ -431,22 +434,6 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
             case "maxbitrate":
                 if (int.TryParse(value, out var maxBitrate) && maxBitrate > 0)
                 {
-                    // Validate against Discord's limits based on server boost level
-                    var maxAllowed = Context.Guild.PremiumTier switch
-                    {
-                        PremiumTier.Tier3 => 384,
-                        PremiumTier.Tier2 => 256,
-                        PremiumTier.Tier1 => 128,
-                        _ => 96
-                    };
-
-                    if (maxBitrate > maxAllowed)
-                    {
-                        await ReplyErrorAsync(
-                            $"Max bitrate cannot exceed {maxAllowed} kbps for your server's boost level ({Context.Guild.PremiumTier}).");
-                        return;
-                    }
-
                     config.MaxBitrate = maxBitrate;
                 }
                 else
@@ -494,7 +481,7 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
                 }
                 else
                 {
-                    var role = Context.Guild.Roles.FirstOrDefault(r =>
+                    var role = Context.Guild.RoleList.FirstOrDefault(r =>
                         r.Name.Equals(value, StringComparison.OrdinalIgnoreCase));
                     if (role != null)
                     {
@@ -553,7 +540,7 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
             if (voiceChannel == null)
                 continue;
 
-            var userCount = (await voiceChannel.GetUsersAsync().FlattenAsync()).Count();
+            var userCount = voiceChannel.ConnectedUsers.Count();
             var ownerMention = MentionUtils.MentionUser(channel.OwnerId);
 
             sb.AppendLine($"**{voiceChannel.Name}** ({channel.ChannelId})");
@@ -570,7 +557,7 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
 
         embed.WithDescription(sb.ToString());
 
-        await ReplyAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>
@@ -582,7 +569,7 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
     public async Task VoiceRename([Remainder] string name)
     {
         // Check if user is in a voice channel
-        var user = Context.User as SocketGuildMember;
+        var user = Context.Member;
         if (user?.VoiceChannel == null)
         {
             await ReplyErrorAsync(Strings.CustomVoiceNotInChannel(Context.Guild.Id));
@@ -637,7 +624,7 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
     public async Task VoiceLimit(int limit)
     {
         // Check if user is in a voice channel
-        var user = Context.User as SocketGuildMember;
+        var user = Context.Member;
         if (user?.VoiceChannel == null)
         {
             await ReplyErrorAsync(Strings.CustomVoiceNotInChannel(Context.Guild.Id));
@@ -700,7 +687,7 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
     public async Task VoiceBitrate(int bitrate)
     {
         // Check if user is in a voice channel
-        var user = Context.User as SocketGuildMember;
+        var user = Context.Member;
         if (user?.VoiceChannel == null)
         {
             await ReplyErrorAsync(Strings.CustomVoiceNotInChannel(Context.Guild.Id));
@@ -762,7 +749,7 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
     public async Task VoiceLock(bool locked = true)
     {
         // Check if user is in a voice channel
-        var user = Context.User as SocketGuildMember;
+        var user = Context.Member;
         if (user?.VoiceChannel == null)
         {
             await ReplyErrorAsync(Strings.CustomVoiceNotInChannel(Context.Guild.Id));
@@ -847,7 +834,7 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
     public async Task VoiceAllow(SocketGuildMember target)
     {
         // Check if user is in a voice channel
-        var user = Context.User as SocketGuildMember;
+        var user = Context.Member;
         if (user?.VoiceChannel == null)
         {
             await ReplyErrorAsync(Strings.CustomVoiceNotInChannel(Context.Guild.Id));
@@ -902,7 +889,7 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
     public async Task VoiceDeny(SocketGuildMember target)
     {
         // Check if user is in a voice channel
-        var user = Context.User as SocketGuildMember;
+        var user = Context.Member;
         if (user?.VoiceChannel == null)
         {
             await ReplyErrorAsync(Strings.CustomVoiceNotInChannel(Context.Guild.Id));
@@ -964,7 +951,7 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
     public async Task VoiceClaim()
     {
         // Check if user is in a voice channel
-        var user = Context.User as SocketGuildMember;
+        var user = Context.Member;
         if (user?.VoiceChannel == null)
         {
             await ReplyErrorAsync(Strings.CustomVoiceNotInChannel(Context.Guild.Id));
@@ -991,7 +978,7 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
         var originalOwner = await Context.Guild.GetUserAsync(customChannel.OwnerId);
 
         if (originalOwner != null &&
-            (await voiceChannel.GetUsersAsync().FlattenAsync()).Any(u => u.Id == originalOwner.Id))
+            voiceChannel.ConnectedUsers.Any(u => u.Id == originalOwner.Id))
         {
             await ReplyErrorAsync(Strings.CustomVoiceOwnerPresent(Context.Guild.Id));
             return;
@@ -1017,7 +1004,7 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
     public async Task VoiceTransfer(SocketGuildMember target)
     {
         // Check if user is in a voice channel
-        var user = Context.User as SocketGuildMember;
+        var user = Context.Member;
         if (user?.VoiceChannel == null)
         {
             await ReplyErrorAsync(Strings.CustomVoiceNotInChannel(Context.Guild.Id));
@@ -1046,7 +1033,7 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
 
         // Target needs to be in the channel
         var voiceChannel = await Context.Guild.GetVoiceChannelAsync(user.VoiceChannel.Id);
-        if ((await voiceChannel.GetUsersAsync().FlattenAsync()).All(u => u.Id != target.Id))
+        if (voiceChannel.ConnectedUsers.All(u => u.Id != target.Id))
         {
             await ReplyErrorAsync(Strings.CustomVoiceTransferUserNotPresent(Context.Guild.Id));
             return;
@@ -1090,7 +1077,7 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
 
         try
         {
-            await target.ModifyAsync(props => props.Channel = null);
+            await target.ModifyAsync(props => props.ChannelId = null);
         }
         catch (Exception)
         {
@@ -1130,7 +1117,7 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
 
     private async Task<CustomVoiceChannel?> GetManagedChannelAsync()
     {
-        var user = (SocketGuildMember)Context.User;
+        var user = Context.Member!;
         if (user.VoiceChannel == null)
         {
             await ReplyErrorAsync(Strings.CustomVoiceNotInChannel(Context.Guild.Id));
@@ -1164,7 +1151,7 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
     public async Task VoiceKeepAlive(bool keepAlive = true)
     {
         // Check if user is in a voice channel
-        var user = Context.User as SocketGuildMember;
+        var user = Context.Member;
         if (user?.VoiceChannel == null)
         {
             await ReplyErrorAsync(Strings.CustomVoiceNotInChannel(Context.Guild.Id));
@@ -1314,7 +1301,7 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
         embed.AddField(Strings.CustomVoicePrefsCommands(Context.Guild.Id),
             Strings.CustomVoicePrefsCommandsList(Context.Guild.Id, pref));
 
-        await ReplyAsync(embed: embed.Build());
+        await ctx.Channel.SendAsync(embed: embed.Build());
     }
 
     /// <summary>

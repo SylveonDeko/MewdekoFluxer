@@ -104,11 +104,11 @@ public partial class Moderation
                         break;
                     case "-he":
                     case "--hasembed":
-                        options.Add(x => x.Embeds.Count > 0);
+                        options.Add(x => x.Embeds?.Count() > 0);
                         break;
                     case "-ne":
                     case "--noembed":
-                        options.Add(x => x.Embeds.Count == 0);
+                        options.Add(x => x.Embeds?.Count() is null or 0);
                         break;
                     case "-c":
                     case "--contains":
@@ -230,7 +230,7 @@ public partial class Moderation
                 try
                 {
                     var messages = await i.GetMessagesAsync(messageCount).FlattenAsync();
-                    messages = messages.Where(x => x.Author == user);
+                    messages = messages.Where(x => x.Author.Id == user.Id).ToList();
 
                     if (messages is null || !messages.Any())
                         continue;

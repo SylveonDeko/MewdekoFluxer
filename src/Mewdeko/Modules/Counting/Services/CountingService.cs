@@ -65,9 +65,9 @@ public class CountingService : INService, IReadyExecutor
         this.collector = collector;
 
         // Subscribe to message events
-        this.eventHandler.Subscribe("MessageReceived", "CountingService", MessageReceived);
-        this.eventHandler.Subscribe("MessageUpdated", "CountingService", MessageUpdated);
-        this.eventHandler.Subscribe("MessageDeleted", "CountingService", MessageDeleted);
+        this.eventHandler.MessageReceived.Subscribe("CountingService", MessageReceived);
+        this.eventHandler.MessageUpdated.Subscribe("CountingService", MessageUpdated);
+        this.eventHandler.MessageDeleted.Subscribe("CountingService", MessageDeleted);
     }
 
     /// <summary>
@@ -795,7 +795,7 @@ public class CountingService : INService, IReadyExecutor
     /// </summary>
     private async Task MessageReceived(SocketMessage msg)
     {
-        if (msg.Author.IsBot || msg.Author is not SocketGuildMember user)
+        if (msg.Author.IsBot || msg.Member is not { } user)
             return;
 
         if (msg is not Message userMsg)
@@ -1097,11 +1097,12 @@ public class CountingService : INService, IReadyExecutor
     /// <summary>
     /// Handles message updated events for counting edit protection.
     /// </summary>
-    private async Task MessageUpdated(Cacheable<Message> before, SocketMessage after,
-        Channel channel)
+    private async Task MessageUpdated(Message? before, SocketMessage after)
     {
-        if (after.Author.IsBot || after.Author is not SocketGuildMember user)
+        if (after.Author.IsBot || after.Member is not { } user)
             return;
+
+        var channel = after.Channel;
 
         if (after is not Message userMsg)
             return;
@@ -1121,7 +1122,7 @@ public class CountingService : INService, IReadyExecutor
                 return;
 
             // Handle message edit - even if original message is not cached
-            if (before.HasValue && before.Value is Message originalUserMsg)
+            if (before is { } originalUserMsg)
             {
                 await moderationService.HandleMessageEditAsync(channel.Id, after.Author.Id, originalUserMsg, userMsg);
             }
@@ -1141,7 +1142,7 @@ public class CountingService : INService, IReadyExecutor
     /// <summary>
     ///     Handles message deleted events for counting channels.
     /// </summary>
-    private async Task MessageDeleted(Cacheable<Message> cachedMsg, Cacheable<Channel> channel)
+    private async Task MessageDeleted(Cacheable<Message> cachedMsg, Channel channel)
     {
         try
         {

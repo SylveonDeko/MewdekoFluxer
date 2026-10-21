@@ -27,7 +27,7 @@ public class PurgeService : INService
         if (amount <= 0 && messageId is 0)
             throw new ArgumentOutOfRangeException(nameof(amount));
 
-        if (!pruningGuilds.Add(channel.GuildId))
+        if (!pruningGuilds.Add(channel.GuildId ?? 0))
             return;
         if (amount > int.MaxValue)
             return;
@@ -42,7 +42,7 @@ public class PurgeService : INService
                 var msg = await channel.GetMessageAsync(messageId);
                 if (msg.Timestamp.Subtract(DateTimeOffset.Now).Days == 14)
                     return;
-                msgs = (await channel.GetMessagesAsync(messageId, Direction.After).FlattenAsync()).ToArray();
+                msgs = (await channel.GetMessagesAsync(afterId: messageId).FlattenAsync()).ToArray();
                 amount = Convert.ToUInt64(msgs.Length);
             }
 
@@ -78,7 +78,7 @@ public class PurgeService : INService
                 amount -= (ulong)msgs.Length;
                 if (amount > 0)
                 {
-                    msgs = (await channel.GetMessagesAsync(lastMessage, Direction.Before).FlattenAsync()
+                    msgs = (await channel.GetMessagesAsync(beforeId: lastMessage.Id).FlattenAsync()
                         .ConfigureAwait(false)).Where(predicate).Take((int)amount).ToArray();
                 }
             }
@@ -89,7 +89,7 @@ public class PurgeService : INService
         }
         finally
         {
-            pruningGuilds.TryRemove(channel.GuildId);
+            pruningGuilds.TryRemove(channel.GuildId ?? 0);
         }
     }
 }

@@ -109,7 +109,7 @@ public partial class Counting(
             }
         }
 
-        await ReplyAsync(embed: embed.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: embed.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -163,7 +163,7 @@ public partial class Counting(
             embed.AddField(Strings.CountingErrorEmote(ctx.Guild.Id), config.ErrorEmote, true);
         }
 
-        await ReplyAsync(embed: embed.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: embed.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -224,7 +224,7 @@ public partial class Counting(
     [RequireContext(ContextType.Guild)]
     public async Task CountingStats(SocketGuildMember? user = null, Channel? channel = null)
     {
-        user ??= (SocketGuildMember)ctx.User;
+        user ??= ctx.Member!;
         channel ??= (Channel)ctx.Channel;
 
         var countingChannel = await countingService.GetCountingChannelAsync(channel.Id);
@@ -263,7 +263,7 @@ public partial class Counting(
                 $"<t:{((DateTimeOffset)userStats.LastContribution.Value).ToUnixTimeSeconds()}:R>", true);
         }
 
-        await ReplyAsync(embed: embed.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: embed.Build()).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -513,7 +513,7 @@ public partial class Counting(
             embed.WithFooter(Strings.CountingMoreChannels(ctx.Guild.Id, channels.Count - 10));
         }
 
-        await ReplyAsync(embed: embed.Build()).ConfigureAwait(false);
+        await ctx.Channel.SendAsync(embed: embed.Build()).ConfigureAwait(false);
     }
 
     /// <summary>

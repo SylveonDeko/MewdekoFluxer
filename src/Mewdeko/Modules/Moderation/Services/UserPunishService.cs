@@ -276,37 +276,31 @@ public class UserPunishService : INService, IDisposable
                     if (reason.ToLower().Contains("postchannelban"))
                         pruneDays = Math.Max(pruneDays, 1);
 
-                    await guild.AddBanAsync(user, pruneDays, options: new RequestOptions
-                    {
-                        AuditLogReason = reason
-                    }).ConfigureAwait(false);
+                    await guild.AddBanAsync(user.Id, pruneDays, reason).ConfigureAwait(false);
                 }
                 else
                 {
-                    await mute.TimedBan(user.Guild, user, TimeSpan.FromMinutes(minutes), reason)
+                    await mute.TimedBan(user.Guild, user.User, TimeSpan.FromMinutes(minutes), reason)
                         .ConfigureAwait(false);
                 }
 
                 break;
             case PunishmentAction.Softban:
-                await guild.AddBanAsync(user,
+                await guild.AddBanAsync(user.Id,
                     await banPrune.GetPruneDaysAsync(guild.Id, BanPruneAction.SoftBan).ConfigureAwait(false),
-                    options: new RequestOptions
-                    {
-                        AuditLogReason = $"Softban | {reason}"
-                    }).ConfigureAwait(false);
+                    $"Softban | {reason}").ConfigureAwait(false);
                 try
                 {
-                    await guild.RemoveBanAsync(user).ConfigureAwait(false);
+                    await guild.RemoveBanAsync(user.Id).ConfigureAwait(false);
                 }
                 catch
                 {
-                    await guild.RemoveBanAsync(user).ConfigureAwait(false);
+                    await guild.RemoveBanAsync(user.Id).ConfigureAwait(false);
                 }
 
                 break;
             case PunishmentAction.RemoveRoles:
-                await user.RemoveRolesAsync(user.GetRoles().Where(x => !x.IsManaged && x != x.Guild.EveryoneRole))
+                await user.RemoveRolesAsync(user.GetRoles().Where(x => x != x.Guild.EveryoneRole))
                     .ConfigureAwait(false);
                 break;
             case PunishmentAction.AddRole:
@@ -337,9 +331,10 @@ public class UserPunishService : INService, IDisposable
             case PunishmentAction.Timeout:
                 try
                 {
-                    await user.SetTimeOutAsync(TimeSpan.FromMinutes(minutes), new RequestOptions
+                    await user.ModifyAsync(x =>
                     {
-                        AuditLogReason = reason
+                        x.CommunicationDisabledUntil = DateTimeOffset.UtcNow + TimeSpan.FromMinutes(minutes);
+                        x.TimeoutReason = reason;
                     }).ConfigureAwait(false);
                 }
                 catch
@@ -745,7 +740,7 @@ public class UserPunishService : INService, IDisposable
         return GetBanUserDmEmbed(
             (FluxerClient)context.Client,
             (SocketGuild)context.Guild,
-            (SocketGuildMember)context.User,
+            ((CommandContext)context).Member!,
             target,
             defaultMessage,
             banReason,

@@ -151,7 +151,7 @@ public partial class Moderation
             return target switch
             {
                 null => (BanPruneScope.Guild, 0UL),
-                Channel => (BanPruneScope.Category, target.Id),
+                { Type: ChannelType.GuildCategory } => (BanPruneScope.Category, target.Id),
                 _ => (BanPruneScope.Channel, target.Id)
             };
         }

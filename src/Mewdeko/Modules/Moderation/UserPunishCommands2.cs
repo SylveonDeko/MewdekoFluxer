@@ -89,7 +89,7 @@ public partial class Moderation
         {
             if (ctx.User.Id != user.Guild.OwnerId
                 && user.GetRoles().Select(r => r.Position).Max() >=
-                ((SocketGuildMember)ctx.User).GetRoles().Select(r => r.Position).Max())
+                (ctx.Member!).GetRoles().Select(r => r.Position).Max())
             {
                 await ReplyErrorAsync(Strings.Hierarchy(ctx.Guild.Id)).ConfigureAwait(false);
                 return;
@@ -212,8 +212,8 @@ public partial class Moderation
         public Task MWarnlog(SocketGuildMember? user = null)
         {
             if (user == null)
-                user = (SocketGuildMember)ctx.User;
-            return ctx.User.Id == user.Id || ((SocketGuildMember)ctx.User).GuildPermissions.MuteMembers
+                user = ctx.Member!;
+            return ctx.User.Id == user.Id || (ctx.Member!).GuildPermissions.MuteMembers
                 ? MWarnlog(user.Id)
                 : Task.CompletedTask;
         }

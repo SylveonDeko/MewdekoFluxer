@@ -144,31 +144,25 @@ public class UserPunishService2 : INService, IDisposable
                     break;
                 case PunishmentAction.Ban:
                     if (p.Time == 0)
-                        await guild.AddBanAsync(user,
+                        await guild.AddBanAsync(user.Id,
                             await banPrune.GetPruneDaysAsync(guild.Id, BanPruneAction.WarnPunishment)
                                 .ConfigureAwait(false),
-                            options: new RequestOptions
-                            {
-                                AuditLogReason = "Warned too many times"
-                            }).ConfigureAwait(false);
+                            "Warned too many times").ConfigureAwait(false);
                     else
-                        await mute.TimedBan(guild, user, TimeSpan.FromMinutes(p.Time), "Warned too many times.")
+                        await mute.TimedBan(guild, user.User, TimeSpan.FromMinutes(p.Time), "Warned too many times.")
                             .ConfigureAwait(false);
                     break;
                 case PunishmentAction.Softban:
-                    await guild.AddBanAsync(user,
+                    await guild.AddBanAsync(user.Id,
                         await banPrune.GetPruneDaysAsync(guild.Id, BanPruneAction.SoftBan).ConfigureAwait(false),
-                        options: new RequestOptions
-                        {
-                            AuditLogReason = "Warned too many times"
-                        }).ConfigureAwait(false);
+                        "Warned too many times").ConfigureAwait(false);
                     try
                     {
-                        await guild.RemoveBanAsync(user).ConfigureAwait(false);
+                        await guild.RemoveBanAsync(user.Id).ConfigureAwait(false);
                     }
                     catch
                     {
-                        await guild.RemoveBanAsync(user).ConfigureAwait(false);
+                        await guild.RemoveBanAsync(user.Id).ConfigureAwait(false);
                     }
 
                     break;

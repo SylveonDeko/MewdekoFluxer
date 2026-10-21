@@ -53,8 +53,9 @@ public class CmdCdService : ILateBlocker, INService
     public async Task<bool> TryBlockLate(FluxerClient client, ICommandContext ctx, string moduleName,
         CommandInfo command)
     {
-        var guild = ctx.Guild;
-        var user = ctx.User;
+        var commandContext = (CommandContext)ctx;
+        var guild = commandContext.Guild;
+        var user = commandContext.User;
         var commandName = command.MethodName().ToLowerInvariant();
 
         return await TryBlock(guild, user, commandName);

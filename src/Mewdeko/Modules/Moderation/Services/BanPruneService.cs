@@ -230,11 +230,16 @@ public class BanPruneService : INService
         {
             yield return (BanPruneScope.Channel, channel.Id);
 
-            if (channel is Channel { ParentChannel: not null } thread)
-                yield return (BanPruneScope.Channel, thread.ParentChannel.Id);
+            var categoryId = channel.CategoryId;
 
-            if (channel is INestedChannel { CategoryId: not null } nested)
-                yield return (BanPruneScope.Category, nested.CategoryId.Value);
+            if (channel is { ThreadMetadata: not null, ParentChannel: { } parent })
+            {
+                yield return (BanPruneScope.Channel, parent.Id);
+                categoryId = parent.CategoryId;
+            }
+
+            if (categoryId is { } id)
+                yield return (BanPruneScope.Category, id);
         }
 
         yield return (BanPruneScope.Guild, 0UL);

@@ -66,16 +66,15 @@ public class FilterService : IEarlyBehavior, INService
         this.config = config;
         this.logger = logger;
 
-        eventHandler.Subscribe("MessageUpdated", "FilterService",
-            (Cacheable<Message> _, SocketMessage newMsg, Channel channel) =>
-            {
-                var guild = (channel as Channel)?.Guild;
+        eventHandler.MessageUpdated.Subscribe("FilterService", (_, newMsg) =>
+        {
+            var guild = newMsg.Guild;
 
-                if (guild == null || newMsg is not Message usrMsg)
-                    return Task.CompletedTask;
+            if (guild == null)
+                return Task.CompletedTask;
 
-                return RunBehavior(null, guild, usrMsg);
-            });
+            return RunBehavior(null, guild, newMsg);
+        });
     }
 
     /// <summary>
@@ -116,7 +115,7 @@ public class FilterService : IEarlyBehavior, INService
     /// <returns>A task that resolves to true if the message was acted upon due to a filter match; otherwise, false.</returns>
     public async Task<bool> RunBehavior(FluxerClient socketClient, SocketGuild guild, Message msg)
     {
-        return msg.Author is SocketGuildMember gu && !gu.RoleIds.Contains(await ass.GetStaffRole(guild.Id)) &&
+        return guild.GetUser(msg.Author.Id) is { } gu && !gu.RoleIds.Contains(await ass.GetStaffRole(guild.Id)) &&
                !gu.GuildPermissions.Administrator && (await FilterInvites(guild, msg).ConfigureAwait(false)
                                                       || await FilterWords(guild, msg).ConfigureAwait(false)
                                                       || await FilterLinks(guild, msg).ConfigureAwait(false)
@@ -409,9 +408,9 @@ public class FilterService : IEarlyBehavior, INService
 
             try
             {
-                var embed = await userPunServ.GetBanUserDmEmbed(client, guild as SocketGuild,
-                    await guild.GetUserAsync(client.CurrentUser.Id).ConfigureAwait(false),
-                    msg.Author as SocketGuildMember,
+                var embed = await userPunServ.GetBanUserDmEmbed(client, guild,
+                    guild.CurrentUser,
+                    guild.GetUser(msg.Author.Id),
                     defaultMessage,
                     $"Banned for saying autoban word {matchedText}",
                     null).ConfigureAwait(false);
@@ -428,10 +427,8 @@ public class FilterService : IEarlyBehavior, INService
             var pruneDays = await banPrune.GetPruneDaysAsync(guild.Id, BanPruneAction.Filter, msg.Channel)
                 .ConfigureAwait(false);
 
-            await guild.AddBanAsync(msg.Author, pruneDays, options: new RequestOptions
-            {
-                AuditLogReason = Strings.AutobanReason(guild.Id, matchedText)
-            }).ConfigureAwait(false);
+            await guild.AddBanAsync(msg.Author.Id, pruneDays, Strings.AutobanReason(guild.Id, matchedText))
+                .ConfigureAwait(false);
 
             return true;
         }
@@ -572,8 +569,9 @@ public class FilterService : IEarlyBehavior, INService
             return false;
 
         // Check if channel is configured for link filtering
+        var linkChannelId = usrMsg.ChannelId;
         var hasChannelFilter = await db.FilterLinksChannelIds
-            .AnyAsync(x => x.GuildId == guild.Id && x.ChannelId == usrMsg.Channel.Id);
+            .AnyAsync(x => x.GuildId == guild.Id && x.ChannelId == linkChannelId);
 
         // Check if links should be filtered based on configuration
         var shouldFilter = (hasChannelFilter || guildConfig.FilterLinks) &&

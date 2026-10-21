@@ -169,13 +169,13 @@ public static class PermissionExtensions
                     return perm.State;
                 break;
             case PrimaryPermissionType.Role:
-                if (message.Author is not SocketGuildMember guildUser)
+                if (message.Guild?.GetUser(message.Author.Id) is not { } guildUser)
                     break;
                 if (guildUser.RoleIds.Contains(perm.PrimaryTargetId))
                     return perm.State;
                 break;
             case PrimaryPermissionType.Server:
-                if (message.Author is not SocketGuildMember guildUser1)
+                if (message.Guild?.GetUser(message.Author.Id) is not { } guildUser1)
                     break;
                 if (guildUser1 == null)
                     break;

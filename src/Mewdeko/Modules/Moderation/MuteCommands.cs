@@ -235,7 +235,7 @@ public partial class Moderation
             }
 
             if (Context.User.Id != Context.Guild.OwnerId &&
-                role.Position >= ((SocketGuildMember)Context.User).Roles.Max(x => x.Position))
+                role.Position >= Context.Member!.GetRoles().Max(x => x.Position))
             {
                 await ReplyErrorAsync(Strings.InsufPermsU(ctx.Guild.Id)).ConfigureAwait(false);
                 return;

@@ -58,8 +58,10 @@ public class MuteService : INService, IReadyExecutor, IDisposable
     }
 
     private static readonly OverwritePermissions DenyOverwrite =
-        new(addReactions: PermValue.Deny, sendMessages: PermValue.Deny,
-            attachFiles: PermValue.Deny, sendMessagesInThreads: PermValue.Deny, createPublicThreads: PermValue.Deny);
+        OverwritePermissions.InheritAll
+            .Modify(addReactions: PermValue.Deny, sendMessages: PermValue.Deny, attachFiles: PermValue.Deny,
+                sendMessagesInThreads: PermValue.Deny)
+            .With(ChannelPermission.CreatePublicThreads, PermValue.Deny);
 
     private readonly ConcurrentDictionary<TimerKey, Timer> activeTimers = new();
 
@@ -101,7 +103,7 @@ public class MuteService : INService, IReadyExecutor, IDisposable
         this.strings = strings;
         this.logger = logger;
         this.eventHandler = eventHandler;
-        eventHandler.Subscribe("UserJoined", "MuteService", Client_UserJoined);
+        eventHandler.UserJoined.Subscribe("MuteService", Client_UserJoined);
         UserMuted += OnUserMuted;
         UserUnmuted += OnUserUnmuted;
     }
@@ -342,11 +344,11 @@ public class MuteService : INService, IReadyExecutor, IDisposable
                     await guild.RemoveBanAsync(userId);
                     logger.LogDebug("Successfully unbanned user {UserId} from guild {GuildId}", userId, guildId);
                 }
-                catch (FluxerApiException httpEx) when (httpEx.DiscordCode == DiscordErrorCode.UnknownBan)
+                catch (FluxerApiException httpEx) when (httpEx.HttpCode == System.Net.HttpStatusCode.NotFound)
                 {
                     logger.LogInformation("User {UserId} was already unbanned from guild {GuildId}", userId, guildId);
                 }
-                catch (FluxerApiException httpEx) when (httpEx.DiscordCode == DiscordErrorCode.MissingPermissions)
+                catch (FluxerApiException httpEx) when (httpEx.ErrorCode == FluxerErrorCodes.MissingPermissions)
                 {
                     logger.LogWarning("Missing permissions to unban user {UserId} from guild {GuildId}", userId,
                         guildId);
@@ -452,20 +454,20 @@ public class MuteService : INService, IReadyExecutor, IDisposable
                 // Success - clean up
                 await CleanupRoleTimer(guildId, userId, roleId);
             }
-            catch (FluxerApiException httpEx) when (httpEx.DiscordCode == DiscordErrorCode.MissingPermissions)
+            catch (FluxerApiException httpEx) when (httpEx.ErrorCode == FluxerErrorCodes.MissingPermissions)
             {
                 logger.LogWarning(
                     "Missing permissions to remove role {RoleName} from user {UserId} in guild {GuildId}, will retry in 1 hour",
                     role.Name, userId, guildId);
                 CreateIndividualTimer(key, DateTime.UtcNow.AddHours(1)); // Retry in 1 hour
             }
-            catch (FluxerApiException httpEx) when (httpEx.DiscordCode == DiscordErrorCode.UnknownRole)
+            catch (FluxerApiException httpEx) when (httpEx.ErrorCode == FluxerErrorCodes.UnknownRole)
             {
                 logger.LogInformation("Role {RoleId} was deleted while processing timer in guild {GuildId}", roleId,
                     guildId);
                 await CleanupRoleTimer(guildId, userId, roleId);
             }
-            catch (FluxerApiException httpEx) when (httpEx.DiscordCode == DiscordErrorCode.UnknownMember)
+            catch (FluxerApiException httpEx) when (httpEx.ErrorCode == FluxerErrorCodes.UnknownMember)
             {
                 logger.LogInformation("User {UserId} left guild {GuildId} while processing timer", userId, guildId);
                 await CleanupRoleTimer(guildId, userId, roleId);
@@ -563,7 +565,7 @@ public class MuteService : INService, IReadyExecutor, IDisposable
             {
                 try
                 {
-                    await usr.ModifyAsync(x => x.Mute = true).ConfigureAwait(false);
+                    await usr.ModifyAsync(x => x.IsMute = true).ConfigureAwait(false);
                 }
                 catch
                 {
@@ -573,7 +575,7 @@ public class MuteService : INService, IReadyExecutor, IDisposable
                 await using var dbContext = await dbFactory.CreateConnectionAsync();
 
                 // Get user roles if needed for persistence
-                var roles = usr.GetRoles().Where(p => p.Tags == null).Except([
+                var roles = usr.GetRoles().Except([
                     usr.Guild.EveryoneRole
                 ]);
                 var enumerable = roles as SocketRole[] ?? roles.ToArray();
@@ -621,7 +623,7 @@ public class MuteService : INService, IReadyExecutor, IDisposable
             case MuteType.Voice:
                 try
                 {
-                    await usr.ModifyAsync(x => x.Mute = true).ConfigureAwait(false);
+                    await usr.ModifyAsync(x => x.IsMute = true).ConfigureAwait(false);
                     await UserMuted(usr, mod, MuteType.Voice, reason);
                 }
                 catch
@@ -740,7 +742,7 @@ public class MuteService : INService, IReadyExecutor, IDisposable
                 {
                     try
                     {
-                        await usr.ModifyAsync(x => x.Mute = false).ConfigureAwait(false);
+                        await usr.ModifyAsync(x => x.IsMute = false).ConfigureAwait(false);
                     }
                     catch
                     {
@@ -767,7 +769,7 @@ public class MuteService : INService, IReadyExecutor, IDisposable
             case MuteType.Voice:
                 try
                 {
-                    await usr.ModifyAsync(x => x.Mute = false).ConfigureAwait(false);
+                    await usr.ModifyAsync(x => x.IsMute = false).ConfigureAwait(false);
                     await UserUnmuted(usr, mod, MuteType.Voice, reason);
                 }
                 catch
@@ -799,20 +801,19 @@ public class MuteService : INService, IReadyExecutor, IDisposable
 
         var muteRoleName = GuildMuteRoles.GetOrAdd(guild.Id, defaultMuteRoleName);
 
-        var muteRole = guild.Roles.FirstOrDefault(r => r.Name == muteRoleName);
+        var muteRole = guild.RoleList.FirstOrDefault(r => r.Name == muteRoleName);
         if (muteRole == null)
         {
             //if it doesn't exist, create it
             try
             {
-                muteRole = await guild.CreateRoleAsync(muteRoleName, isMentionable: false).ConfigureAwait(false);
+                muteRole = await CreateMuteRoleAsync(guild, muteRoleName).ConfigureAwait(false);
             }
             catch
             {
                 //if creations fails,  maybe the name != correct, find default one, if doesn't work, create default one
-                muteRole = guild.Roles.FirstOrDefault(r => r.Name == muteRoleName) ??
-                           await guild.CreateRoleAsync(defaultMuteRoleName, isMentionable: false)
-                               .ConfigureAwait(false);
+                muteRole = guild.RoleList.FirstOrDefault(r => r.Name == muteRoleName) ??
+                           await CreateMuteRoleAsync(guild, defaultMuteRoleName).ConfigureAwait(false);
             }
         }
 
@@ -820,13 +821,10 @@ public class MuteService : INService, IReadyExecutor, IDisposable
         {
             try
             {
-                if (toOverwrite is Channel)
+                if (toOverwrite.ThreadMetadata != null)
                     continue;
-                if (toOverwrite.PermissionOverwrites.Any(x => x.TargetId == muteRole.Id
-                                                              && x.TargetType == PermissionTarget.Role))
-                {
+                if (toOverwrite.GetPermissionOverwrite(muteRole) != null)
                     continue;
-                }
 
                 await toOverwrite.AddPermissionOverwriteAsync(muteRole, DenyOverwrite)
                     .ConfigureAwait(false);
@@ -840,6 +838,27 @@ public class MuteService : INService, IReadyExecutor, IDisposable
         }
 
         return muteRole;
+    }
+
+    /// <summary>
+    ///     Creates a role and waits until the guild cache has it.
+    /// </summary>
+    private static async Task<SocketRole> CreateMuteRoleAsync(SocketGuild guild, string name)
+    {
+        var created = await guild.CreateRoleAsync(new CreateGuildRoleRequest
+        {
+            Name = name
+        }).ConfigureAwait(false);
+
+        for (var attempt = 0; attempt < 50; attempt++)
+        {
+            if (guild.Roles.TryGetValue(created.Id, out var role))
+                return role;
+
+            await Task.Delay(100).ConfigureAwait(false);
+        }
+
+        throw new InvalidOperationException($"Role {created.Id} did not reach the guild cache.");
     }
 
     /// <summary>
@@ -882,10 +901,7 @@ public class MuteService : INService, IReadyExecutor, IDisposable
             ? await banPrune.GetPruneDaysAsync(guild.Id, BanPruneAction.TempBan).ConfigureAwait(false)
             : todelete.Days;
 
-        await guild.AddBanAsync(user.Id, pruneDays, options: new RequestOptions
-        {
-            AuditLogReason = reason
-        }).ConfigureAwait(false);
+        await guild.AddBanAsync(user.Id, pruneDays, reason).ConfigureAwait(false);
 
         await using var dbContext = await dbFactory.CreateConnectionAsync();
 
@@ -969,7 +985,7 @@ public class MuteService : INService, IReadyExecutor, IDisposable
     {
         if (disposing)
         {
-            eventHandler.Unsubscribe("UserJoined", "MuteService", Client_UserJoined);
+            eventHandler.UserJoined.Unsubscribe("MuteService", Client_UserJoined);
 
             // Dispose all active timers
             foreach (var timer in activeTimers.Values)

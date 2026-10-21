@@ -51,10 +51,10 @@ public class CustomVoiceService : INService, IUnloadableService
         this.strings = strings;
         this.logger = logger;
 
-        this.eventHandler.Subscribe("UserVoiceStateUpdated", "CustomVoiceService", OnUserVoiceStateUpdated);
-        this.eventHandler.Subscribe("ChannelDestroyed", "CustomVoiceService", OnChannelDestroyed);
-        this.eventHandler.Subscribe("JoinedGuild", "CustomVoiceService", OnJoinedGuild);
-        this.eventHandler.Subscribe("LeftGuild", "CustomVoiceService", OnLeftGuild);
+        this.eventHandler.UserVoiceStateUpdated.Subscribe("CustomVoiceService", OnUserVoiceStateUpdated);
+        this.eventHandler.ChannelDestroyed.Subscribe("CustomVoiceService", OnChannelDestroyed);
+        this.eventHandler.JoinedGuild.Subscribe("CustomVoiceService", OnJoinedGuild);
+        this.eventHandler.LeftGuild.Subscribe("CustomVoiceService", OnLeftGuild);
 
         // Start cleaning task for empty channels
         _ = StartEmptyChannelCleanupTask();
@@ -68,10 +68,10 @@ public class CustomVoiceService : INService, IUnloadableService
     /// </summary>
     public Task Unload()
     {
-        eventHandler.Unsubscribe("UserVoiceStateUpdated", "CustomVoiceService", OnUserVoiceStateUpdated);
-        eventHandler.Unsubscribe("ChannelDestroyed", "CustomVoiceService", OnChannelDestroyed);
-        eventHandler.Unsubscribe("JoinedGuild", "CustomVoiceService", OnJoinedGuild);
-        eventHandler.Unsubscribe("LeftGuild", "CustomVoiceService", OnLeftGuild);
+        eventHandler.UserVoiceStateUpdated.Unsubscribe("CustomVoiceService", OnUserVoiceStateUpdated);
+        eventHandler.ChannelDestroyed.Unsubscribe("CustomVoiceService", OnChannelDestroyed);
+        eventHandler.JoinedGuild.Unsubscribe("CustomVoiceService", OnJoinedGuild);
+        eventHandler.LeftGuild.Unsubscribe("CustomVoiceService", OnLeftGuild);
 
         // Dispose all empty channel timers
         foreach (var timer in emptyChannelTimers.Values)
@@ -119,7 +119,7 @@ public class CustomVoiceService : INService, IUnloadableService
 
                 // Check if it's empty and should be tracked for deletion - filter for actually connected non-bot users
                 var connectedUsersCount =
-                    voiceChannel.Users.Count(u => u.VoiceChannel?.Id == channel.ChannelId && !u.IsBot);
+                    voiceChannel.ConnectedUsers.Count(u => u.VoiceChannel?.Id == channel.ChannelId && !u.IsBot);
                 if (connectedUsersCount == 0 && !channel.KeepAlive)
                 {
                     var config = await GetOrCreateConfigAsync(channel.GuildId);
@@ -203,37 +203,6 @@ public class CustomVoiceService : INService, IUnloadableService
                     guildId, config.MaxBitrate);
                 config.MaxBitrate = config.MaxBitrate / 1000;
                 needsUpdate = true;
-            }
-
-            // Also validate against Discord limits
-            var guild = client.GetGuild(guildId);
-            if (guild != null)
-            {
-                var maxAllowed = guild.PremiumTier switch
-                {
-                    PremiumTier.Tier3 => 384,
-                    PremiumTier.Tier2 => 256,
-                    PremiumTier.Tier1 => 128,
-                    _ => 96
-                };
-
-                if (config.MaxBitrate > maxAllowed)
-                {
-                    logger.LogWarning(
-                        "Guild {GuildId} MaxBitrate {OldValue} exceeds Discord limit {MaxAllowed} for Tier {PremiumTier}, capping to {MaxAllowed}",
-                        guildId, config.MaxBitrate, maxAllowed, guild.PremiumTier, maxAllowed);
-                    config.MaxBitrate = maxAllowed;
-                    needsUpdate = true;
-                }
-
-                if (config.DefaultBitrate > maxAllowed)
-                {
-                    logger.LogWarning(
-                        "Guild {GuildId} DefaultBitrate {OldValue} exceeds Discord limit {MaxAllowed} for Tier {PremiumTier}, capping to {MaxAllowed}",
-                        guildId, config.DefaultBitrate, maxAllowed, guild.PremiumTier, maxAllowed);
-                    config.DefaultBitrate = maxAllowed;
-                    needsUpdate = true;
-                }
             }
 
             if (needsUpdate)
@@ -503,49 +472,21 @@ public class CustomVoiceService : INService, IUnloadableService
             userLimit = Math.Min(prefs.UserLimit.Value, config.MaxUserLimit);
         }
 
-        // Determine bitrate and validate against Discord limits
+        // Determine bitrate
         var bitrate = config.DefaultBitrate;
         if (prefs?.Bitrate.HasValue == true && config.AllowBitrateCustomization)
         {
             bitrate = Math.Min(prefs.Bitrate.Value, config.MaxBitrate);
         }
 
-        // Validate bitrate against Discord's actual limits (cap to safe defaults if misconfigured)
-        var maxAllowedBitrate = (guild as SocketGuild)?.PremiumTier switch
-        {
-            PremiumTier.Tier3 => 384,
-            PremiumTier.Tier2 => 256,
-            PremiumTier.Tier1 => 128,
-            _ => 96
-        };
-
-        if (bitrate > maxAllowedBitrate)
-        {
-            logger.LogWarning(
-                "Configured bitrate {ConfiguredBitrate} exceeds Discord limit {MaxAllowed} for guild {GuildId} (Tier: {PremiumTier}). Capping to {MaxAllowed}.",
-                bitrate, maxAllowedBitrate, guild.Id, (guild as SocketGuild)?.PremiumTier, maxAllowedBitrate);
-            bitrate = maxAllowedBitrate;
-        }
-
         // Create the channel
-        Channel voiceChannel;
-        if (category != null)
+        Channel voiceChannel = await guild.CreateVoiceChannelAsync(new CreateVoiceChannelRequest
         {
-            voiceChannel = await guild.CreateVoiceChannelAsync(channelName, props =>
-            {
-                props.CategoryId = category.Id;
-                props.UserLimit = userLimit > 0 ? userLimit : null;
-                props.Bitrate = bitrate * 1000;
-            });
-        }
-        else
-        {
-            voiceChannel = await guild.CreateVoiceChannelAsync(channelName, props =>
-            {
-                props.UserLimit = userLimit > 0 ? userLimit : null;
-                props.Bitrate = bitrate * 1000;
-            });
-        }
+            Name = channelName,
+            ParentCategoryId = category?.Id,
+            UserLimit = userLimit > 0 ? userLimit : null,
+            Bitrate = bitrate * 1000
+        });
 
         // Create the channel entry in the database
         var customChannel = new CustomVoiceChannel
@@ -605,10 +546,9 @@ public class CustomVoiceService : INService, IUnloadableService
             try
             {
                 // Give the creator management permissions
-                await voiceChannel.AddPermissionOverwriteAsync(user, new OverwritePermissions(
+                await voiceChannel.AddPermissionOverwriteAsync(user, Overwrite(
                     connect: PermValue.Allow,
                     speak: PermValue.Allow,
-                    useVoiceActivation: PermValue.Allow,
                     manageChannel: PermValue.Allow,
                     moveMembers: PermValue.Allow,
                     muteMembers: PermValue.Allow,
@@ -619,7 +559,7 @@ public class CustomVoiceService : INService, IUnloadableService
                 if (customChannel.IsLocked)
                 {
                     var everyoneRole = guild.EveryoneRole;
-                    await voiceChannel.AddPermissionOverwriteAsync(everyoneRole, new OverwritePermissions(
+                    await voiceChannel.AddPermissionOverwriteAsync(everyoneRole, Overwrite(
                         connect: PermValue.Deny
                     ));
 
@@ -631,7 +571,7 @@ public class CustomVoiceService : INService, IUnloadableService
                             var allowedUser = await guild.GetUserAsync(allowedUserId);
                             if (allowedUser != null)
                             {
-                                await voiceChannel.AddPermissionOverwriteAsync(allowedUser, new OverwritePermissions(
+                                await voiceChannel.AddPermissionOverwriteAsync(allowedUser, Overwrite(
                                     connect: PermValue.Allow
                                 ));
                             }
@@ -652,7 +592,7 @@ public class CustomVoiceService : INService, IUnloadableService
                             var deniedUser = await guild.GetUserAsync(deniedUserId);
                             if (deniedUser != null)
                             {
-                                await voiceChannel.AddPermissionOverwriteAsync(deniedUser, new OverwritePermissions(
+                                await voiceChannel.AddPermissionOverwriteAsync(deniedUser, Overwrite(
                                     connect: PermValue.Deny
                                 ));
                             }
@@ -672,10 +612,9 @@ public class CustomVoiceService : INService, IUnloadableService
                     var adminRole = guild.GetRole(config.CustomVoiceAdminRoleId.Value);
                     if (adminRole != null)
                     {
-                        await voiceChannel.AddPermissionOverwriteAsync(adminRole, new OverwritePermissions(
+                        await voiceChannel.AddPermissionOverwriteAsync(adminRole, Overwrite(
                             connect: PermValue.Allow,
                             speak: PermValue.Allow,
-                            useVoiceActivation: PermValue.Allow,
                             manageChannel: PermValue.Allow,
                             moveMembers: PermValue.Allow,
                             muteMembers: PermValue.Allow,
@@ -697,7 +636,7 @@ public class CustomVoiceService : INService, IUnloadableService
             if (textChannel != null && config.AutoPermission)
             {
                 // Give the creator management permissions for the text channel
-                await textChannel.AddPermissionOverwriteAsync(user, new OverwritePermissions(
+                await textChannel.AddPermissionOverwriteAsync(user, Overwrite(
                     viewChannel: PermValue.Allow,
                     sendMessages: PermValue.Allow,
                     readMessageHistory: PermValue.Allow,
@@ -709,7 +648,7 @@ public class CustomVoiceService : INService, IUnloadableService
                 if (customChannel.IsLocked)
                 {
                     var everyoneRole = guild.EveryoneRole;
-                    await textChannel.AddPermissionOverwriteAsync(everyoneRole, new OverwritePermissions(
+                    await textChannel.AddPermissionOverwriteAsync(everyoneRole, Overwrite(
                         viewChannel: PermValue.Deny
                     ));
 
@@ -721,7 +660,7 @@ public class CustomVoiceService : INService, IUnloadableService
                             var allowedUser = await guild.GetUserAsync(allowedUserId);
                             if (allowedUser != null)
                             {
-                                await textChannel.AddPermissionOverwriteAsync(allowedUser, new OverwritePermissions(
+                                await textChannel.AddPermissionOverwriteAsync(allowedUser, Overwrite(
                                     viewChannel: PermValue.Allow,
                                     sendMessages: PermValue.Allow,
                                     readMessageHistory: PermValue.Allow
@@ -743,7 +682,7 @@ public class CustomVoiceService : INService, IUnloadableService
                     var adminRole = guild.GetRole(config.CustomVoiceAdminRoleId.Value);
                     if (adminRole != null)
                     {
-                        await textChannel.AddPermissionOverwriteAsync(adminRole, new OverwritePermissions(
+                        await textChannel.AddPermissionOverwriteAsync(adminRole, Overwrite(
                             viewChannel: PermValue.Allow,
                             sendMessages: PermValue.Allow,
                             readMessageHistory: PermValue.Allow,
@@ -774,7 +713,7 @@ public class CustomVoiceService : INService, IUnloadableService
         // Move the user to the new channel
         try
         {
-            await user.ModifyAsync(props => props.Channel = new Optional<Channel>(voiceChannel));
+            await user.ModifyAsync(props => props.ChannelId = voiceChannel.Id);
         }
         catch (Exception ex)
         {
@@ -888,37 +827,20 @@ public class CustomVoiceService : INService, IUnloadableService
             {
                 // Sanitize the name
                 name = SanitizeChannelName(name);
-                await channel.ModifyAsync(props => props.Name = name);
+                await channel.ModifyAsync(new UpdateChannelRequest { Name = name });
             }
 
             if (userLimit.HasValue && config.AllowUserLimitCustomization)
             {
                 var limit = Math.Min(userLimit.Value, config.MaxUserLimit);
-                await channel.ModifyAsync(props => props.UserLimit = limit > 0 ? limit : null);
+                await channel.ModifyAsync(new UpdateChannelRequest { UserLimit = limit > 0 ? limit : (int?)null });
             }
 
             if (bitrate.HasValue && config.AllowBitrateCustomization)
             {
                 var rate = Math.Min(bitrate.Value, config.MaxBitrate);
 
-                // Validate against Discord's actual limits
-                var maxAllowedBitrate = (guild as SocketGuild)?.PremiumTier switch
-                {
-                    PremiumTier.Tier3 => 384,
-                    PremiumTier.Tier2 => 256,
-                    PremiumTier.Tier1 => 128,
-                    _ => 96
-                };
-
-                if (rate > maxAllowedBitrate)
-                {
-                    logger.LogWarning(
-                        "Requested bitrate {RequestedBitrate} exceeds Discord limit {MaxAllowed} for guild {GuildId} (Tier: {PremiumTier}). Capping to {MaxAllowed}.",
-                        rate, maxAllowedBitrate, guildId, (guild as SocketGuild)?.PremiumTier, maxAllowedBitrate);
-                    rate = maxAllowedBitrate;
-                }
-
-                await channel.ModifyAsync(props => props.Bitrate = rate * 1000);
+                await channel.ModifyAsync(new UpdateChannelRequest { Bitrate = rate * 1000 });
             }
 
             if (isLocked.HasValue && config.AllowLocking)
@@ -931,7 +853,7 @@ public class CustomVoiceService : INService, IUnloadableService
                     // Lock both voice and text channel
 
                     // Voice channel
-                    await channel.AddPermissionOverwriteAsync(guild.EveryoneRole, new OverwritePermissions(
+                    await channel.AddPermissionOverwriteAsync(guild.EveryoneRole, Overwrite(
                         connect: PermValue.Deny
                     ));
 
@@ -941,7 +863,7 @@ public class CustomVoiceService : INService, IUnloadableService
                         Channel textChannel = channel;
                         if (textChannel != null)
                         {
-                            await textChannel.AddPermissionOverwriteAsync(guild.EveryoneRole, new OverwritePermissions(
+                            await textChannel.AddPermissionOverwriteAsync(guild.EveryoneRole, Overwrite(
                                 viewChannel: PermValue.Deny
                             ));
                         }
@@ -975,7 +897,7 @@ public class CustomVoiceService : INService, IUnloadableService
                         if (user != null)
                         {
                             // Voice channel
-                            await channel.AddPermissionOverwriteAsync(user, new OverwritePermissions(
+                            await channel.AddPermissionOverwriteAsync(user, Overwrite(
                                 connect: PermValue.Allow
                             ));
 
@@ -985,7 +907,7 @@ public class CustomVoiceService : INService, IUnloadableService
                                 Channel textChannel = channel;
                                 if (textChannel != null)
                                 {
-                                    await textChannel.AddPermissionOverwriteAsync(user, new OverwritePermissions(
+                                    await textChannel.AddPermissionOverwriteAsync(user, Overwrite(
                                         viewChannel: PermValue.Allow,
                                         sendMessages: PermValue.Allow,
                                         readMessageHistory: PermValue.Allow
@@ -1006,14 +928,12 @@ public class CustomVoiceService : INService, IUnloadableService
                     // Unlock both voice and text channel
 
                     // Voice channel
-                    var overwrites = channel.PermissionOverwrites;
-                    var everyoneOverwrite = overwrites.FirstOrDefault(o => o.TargetId == guild.EveryoneRole.Id);
-                    if (everyoneOverwrite.ToString() is not null)
+                    var everyoneOverwrite = channel.GetPermissionOverwrite(guild.EveryoneRole);
+                    if (everyoneOverwrite is { } permissions)
                     {
-                        var permissions = everyoneOverwrite.Permissions;
                         if (permissions.Connect == PermValue.Deny)
                         {
-                            await channel.AddPermissionOverwriteAsync(guild.EveryoneRole, new OverwritePermissions(
+                            await channel.AddPermissionOverwriteAsync(guild.EveryoneRole, Overwrite(
                                 connect: PermValue.Inherit
                             ));
                         }
@@ -1025,16 +945,13 @@ public class CustomVoiceService : INService, IUnloadableService
                         Channel textChannel = channel;
                         if (textChannel != null)
                         {
-                            var textOverwrites = textChannel.PermissionOverwrites;
-                            var textEveryoneOverwrite =
-                                textOverwrites.FirstOrDefault(o => o.TargetId == guild.EveryoneRole.Id);
-                            if (textEveryoneOverwrite.ToString() != null)
+                            var textEveryoneOverwrite = textChannel.GetPermissionOverwrite(guild.EveryoneRole);
+                            if (textEveryoneOverwrite is { } textPermissions)
                             {
-                                var permissions = textEveryoneOverwrite.Permissions;
-                                if (permissions.ViewChannel == PermValue.Deny)
+                                if (textPermissions.ViewChannel == PermValue.Deny)
                                 {
                                     await textChannel.AddPermissionOverwriteAsync(guild.EveryoneRole,
-                                        new OverwritePermissions(
+                                        Overwrite(
                                             viewChannel: PermValue.Inherit
                                         ));
                                 }
@@ -1126,7 +1043,7 @@ public class CustomVoiceService : INService, IUnloadableService
             if (user != null)
             {
                 // Voice channel
-                await channel.AddPermissionOverwriteAsync(user, new OverwritePermissions(
+                await channel.AddPermissionOverwriteAsync(user, Overwrite(
                     connect: PermValue.Allow
                 ));
 
@@ -1136,7 +1053,7 @@ public class CustomVoiceService : INService, IUnloadableService
                     Channel textChannel = channel;
                     if (textChannel != null)
                     {
-                        await textChannel.AddPermissionOverwriteAsync(user, new OverwritePermissions(
+                        await textChannel.AddPermissionOverwriteAsync(user, Overwrite(
                             viewChannel: PermValue.Allow,
                             sendMessages: PermValue.Allow,
                             readMessageHistory: PermValue.Allow
@@ -1243,7 +1160,7 @@ public class CustomVoiceService : INService, IUnloadableService
         if (user != null)
         {
             // Voice channel
-            await channel.AddPermissionOverwriteAsync(user, new OverwritePermissions(
+            await channel.AddPermissionOverwriteAsync(user, Overwrite(
                 connect: PermValue.Deny
             ));
 
@@ -1253,7 +1170,7 @@ public class CustomVoiceService : INService, IUnloadableService
                 Channel textChannel = channel;
                 if (textChannel != null)
                 {
-                    await textChannel.AddPermissionOverwriteAsync(user, new OverwritePermissions(
+                    await textChannel.AddPermissionOverwriteAsync(user, Overwrite(
                         viewChannel: PermValue.Deny
                     ));
                 }
@@ -1269,7 +1186,7 @@ public class CustomVoiceService : INService, IUnloadableService
             {
                 try
                 {
-                    await user.ModifyAsync(props => props.Channel = null);
+                    await user.ModifyAsync(props => props.ChannelId = null);
                 }
                 catch (Exception ex)
                 {
@@ -1351,10 +1268,9 @@ public class CustomVoiceService : INService, IUnloadableService
             if (oldOwner != null)
             {
                 // Voice channel
-                await channel.AddPermissionOverwriteAsync(oldOwner, new OverwritePermissions(
+                await channel.AddPermissionOverwriteAsync(oldOwner, Overwrite(
                     connect: PermValue.Allow,
-                    speak: PermValue.Allow,
-                    useVoiceActivation: PermValue.Allow
+                    speak: PermValue.Allow
                 ));
 
                 // Text channel
@@ -1363,7 +1279,7 @@ public class CustomVoiceService : INService, IUnloadableService
                     Channel textChannel = channel;
                     if (textChannel != null)
                     {
-                        await textChannel.AddPermissionOverwriteAsync(oldOwner, new OverwritePermissions(
+                        await textChannel.AddPermissionOverwriteAsync(oldOwner, Overwrite(
                             viewChannel: PermValue.Allow,
                             sendMessages: PermValue.Allow,
                             readMessageHistory: PermValue.Allow
@@ -1380,10 +1296,9 @@ public class CustomVoiceService : INService, IUnloadableService
 
             // Add admin permissions to new owner
             // Voice channel
-            await channel.AddPermissionOverwriteAsync(newOwner, new OverwritePermissions(
+            await channel.AddPermissionOverwriteAsync(newOwner, Overwrite(
                 connect: PermValue.Allow,
                 speak: PermValue.Allow,
-                useVoiceActivation: PermValue.Allow,
                 manageChannel: PermValue.Allow,
                 moveMembers: PermValue.Allow,
                 muteMembers: PermValue.Allow,
@@ -1396,7 +1311,7 @@ public class CustomVoiceService : INService, IUnloadableService
                 Channel textChannel = channel;
                 if (textChannel != null)
                 {
-                    await textChannel.AddPermissionOverwriteAsync(newOwner, new OverwritePermissions(
+                    await textChannel.AddPermissionOverwriteAsync(newOwner, Overwrite(
                         viewChannel: PermValue.Allow,
                         sendMessages: PermValue.Allow,
                         readMessageHistory: PermValue.Allow,
@@ -1425,13 +1340,29 @@ public class CustomVoiceService : INService, IUnloadableService
     }
 
     /// <summary>
+    ///     Builds a channel overwrite from the permissions that are set.
+    /// </summary>
+    private static OverwritePermissions Overwrite(PermValue? viewChannel = null, PermValue? sendMessages = null,
+        PermValue? connect = null, PermValue? speak = null, PermValue? readMessageHistory = null,
+        PermValue? manageMessages = null, PermValue? manageChannel = null, PermValue? muteMembers = null,
+        PermValue? deafenMembers = null, PermValue? moveMembers = null)
+    {
+        return OverwritePermissions.InheritAll
+            .Modify(viewChannel, sendMessages, null, connect, speak, null, null, null, readMessageHistory,
+                manageMessages, manageChannel)
+            .With(ChannelPermission.MuteMembers, muteMembers ?? PermValue.Inherit)
+            .With(ChannelPermission.DeafenMembers, deafenMembers ?? PermValue.Inherit)
+            .With(ChannelPermission.MoveMembers, moveMembers ?? PermValue.Inherit);
+    }
+
+    /// <summary>
     ///     Formats a channel name using placeholders.
     /// </summary>
     private string FormatChannelName(string format, SocketGuildMember user, SocketGuild guild)
     {
         return format
             .Replace("{0}", user.Username)
-            .Replace("{1}", user.DiscriminatorValue.ToString("D4"))
+            .Replace("{1}", user.Discriminator)
             .Replace("{2}", guild.Name);
     }
 
@@ -1469,10 +1400,9 @@ public class CustomVoiceService : INService, IUnloadableService
     /// <summary>
     ///     Handles voice state updates to create, manage, or clean up custom voice channels.
     /// </summary>
-    private async Task OnUserVoiceStateUpdated(SocketUser user, SocketVoiceState oldState, SocketVoiceState newState)
+    private async Task OnUserVoiceStateUpdated(SocketGuildMember guildUser, VoiceStateSnapshot oldState,
+        VoiceStateSnapshot newState)
     {
-        if (user is not SocketGuildMember guildUser)
-            return;
 
         var guild = guildUser.Guild;
         if (guild == null)
@@ -1499,7 +1429,7 @@ public class CustomVoiceService : INService, IUnloadableService
                 await using var dbContext = await dbFactory.CreateConnectionAsync();
                 var customChannel =
                     await dbContext.CustomVoiceChannels.FirstOrDefaultAsync(c =>
-                        c.ChannelId == newState.VoiceChannel.Id);
+                        c.ChannelId == newState.ChannelId);
                 if (customChannel != null)
                 {
                     customChannel.LastActive = DateTime.UtcNow;
@@ -1533,14 +1463,14 @@ public class CustomVoiceService : INService, IUnloadableService
                     // Check if the channel is now empty - filter for actually connected non-bot users
                     if (vc != null)
                     {
-                        var connectedUsersCount = vc.Users.Count(u => u.VoiceChannel?.Id == vc.Id && !u.IsBot);
+                        var connectedUsersCount = vc.ConnectedUsers.Count(u => u.VoiceChannel?.Id == vc.Id && !u.IsBot);
                         if (connectedUsersCount == 0)
                         {
                             // Get the channel to check if it should be kept
                             await using var dbContext = await dbFactory.CreateConnectionAsync();
                             var customChannel =
                                 await dbContext.CustomVoiceChannels.FirstOrDefaultAsync(c =>
-                                    c.ChannelId == oldState.VoiceChannel.Id);
+                                    c.ChannelId == oldState.ChannelId);
 
                             if (customChannel is { KeepAlive: false } && config.DeleteWhenEmpty)
                             {
@@ -1582,7 +1512,7 @@ public class CustomVoiceService : INService, IUnloadableService
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error handling voice state update for user {UserId} in guild {GuildId}", user.Id,
+            logger.LogError(ex, "Error handling voice state update for user {UserId} in guild {GuildId}", guildUser.Id,
                 guild.Id);
         }
     }
@@ -1687,7 +1617,7 @@ public class CustomVoiceService : INService, IUnloadableService
         // Double-check that it's still empty before deleting - check actually connected non-bot users
         if (channel != null)
         {
-            var connectedUsersCount = channel.Users.Count(u => u.VoiceChannel?.Id == channelId && !u.IsBot);
+            var connectedUsersCount = channel.ConnectedUsers.Count(u => u.VoiceChannel?.Id == channelId && !u.IsBot);
             if (connectedUsersCount == 0)
             {
                 await DeleteVoiceChannelAsync(guildId, channelId);
