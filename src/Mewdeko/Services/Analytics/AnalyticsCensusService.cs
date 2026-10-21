@@ -150,7 +150,7 @@ public sealed class AnalyticsCensusService : INService, IReadyExecutor, IDisposa
             Day = day,
             Bot = collector.Bot,
             Guilds = guilds.Count,
-            Users = guilds.Sum(g => (long)g.MemberCount),
+            Users = guilds.Sum(g => (long)g.TotalMembers),
             FeaturesJson = configured is null ? null : JsonSerializer.Serialize(configured)
         };
 
