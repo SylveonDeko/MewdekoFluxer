@@ -717,7 +717,7 @@ public class ChatTriggers(
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task CtCpSetChannel(int id, Channel channel)
+    public async Task CtCpSetChannel(int id, TextChannel channel)
     {
         var res = await Service.SetCrosspostingChannelId(ctx.Guild?.Id, id, channel.Id).ConfigureAwait(false);
         if (res is null)
@@ -822,7 +822,7 @@ public class ChatTriggers(
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task CtEventChannel(int id, Channel? channel = null)
+    public async Task CtEventChannel(int id, TextChannel? channel = null)
     {
         var res = await Service.ModifyAsync(ctx.Guild?.Id, id, ct => ct.EventChannelId = channel?.Id ?? 0)
             .ConfigureAwait(false);

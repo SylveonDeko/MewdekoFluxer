@@ -19,9 +19,9 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
-        public async Task AiChannel(Channel? channel = null, bool enabled = true)
+        public async Task AiChannel(TextChannel? channel = null, bool enabled = true)
         {
-            channel ??= (Channel)ctx.Channel;
+            channel ??= (TextChannel)ctx.Channel;
             var config = await Service.GetOrCreateConfig(ctx.Guild.Id);
 
             config.Enabled = enabled;

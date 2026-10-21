@@ -29,7 +29,7 @@ public partial class Administration
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
         [Priority(1)]
-        public async Task LogCategory(LogCommandService.LogCategoryTypes type, Channel? channel = null)
+        public async Task LogCategory(LogCommandService.LogCategoryTypes type, TextChannel? channel = null)
         {
             await Service.LogSetByType(ctx.Guild.Id, channel?.Id ?? 0, type);
             if (channel is null)
@@ -54,7 +54,7 @@ public partial class Administration
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
         [Priority(4)]
-        public async Task Log(Channel channel) => await ShowLogTypes(channel);
+        public async Task Log(TextChannel channel) => await ShowLogTypes(channel);
 
         /// <summary>
         ///     Sets multiple logging channels for specified event types at once.
@@ -70,7 +70,7 @@ public partial class Administration
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
         [Priority(1)]
-        public async Task Log(Channel channel, params LogType[]? types)
+        public async Task Log(TextChannel channel, params LogType[]? types)
         {
             if (types is null || types.Length == 0)
             {
@@ -277,11 +277,11 @@ public partial class Administration
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
         [Priority(0)]
-        public async Task Log(LogType type, Channel? channel = null)
+        public async Task Log(LogType type, TextChannel? channel = null)
         {
             try
             {
-                channel ??= ctx.Channel as Channel;
+                channel ??= ctx.Channel as TextChannel;
                 await Service.SetLogChannel(ctx.Guild.Id, channel?.Id ?? 0, type).ConfigureAwait(false);
                 if (channel is not null)
                 {
@@ -308,7 +308,7 @@ public partial class Administration
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task CommandLogChannel(Channel? channel = null)
+        public async Task CommandLogChannel(TextChannel? channel = null)
         {
             if (channel is null)
             {
@@ -368,9 +368,9 @@ public partial class Administration
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task LogIgnore(Channel? channel = null)
+        public async Task LogIgnore(TextChannel? channel = null)
         {
-            channel ??= (Channel)ctx.Channel;
+            channel ??= (TextChannel)ctx.Channel;
 
             var result = await Service.LogIgnore(ctx.Guild.Id, channel.Id);
 

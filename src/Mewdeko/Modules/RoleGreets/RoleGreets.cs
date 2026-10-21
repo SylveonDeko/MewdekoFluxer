@@ -25,9 +25,9 @@ public class RoleGreets(InteractiveService interactivity, HttpClient http) : Mew
     [Aliases]
     [UserPerm(GuildPermission.Administrator)]
     [RequireContext(ContextType.Guild)]
-    public async Task RoleGreetAdd(SocketRole role, [Remainder] Channel? channel = null)
+    public async Task RoleGreetAdd(SocketRole role, [Remainder] TextChannel? channel = null)
     {
-        channel ??= ctx.Channel as Channel;
+        channel ??= ctx.Channel as TextChannel;
         switch (await Service.AddRoleGreet(ctx.Guild.Id, channel.Id, role.Id))
         {
             case true:

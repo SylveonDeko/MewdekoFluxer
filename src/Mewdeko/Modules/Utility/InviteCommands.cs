@@ -174,7 +174,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
-        public async Task InviteLinkChannel(Channel? channel = null)
+        public async Task InviteLinkChannel(TextChannel? channel = null)
         {
             await Service.SetLinkChannelAsync(ctx.Guild.Id, channel?.Id);
             await ReplyConfirmAsync(channel == null
@@ -190,7 +190,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
-        public async Task InviteLogChannel(Channel? channel = null)
+        public async Task InviteLogChannel(TextChannel? channel = null)
         {
             await Service.SetLogChannelAsync(ctx.Guild.Id, channel?.Id);
             await ReplyConfirmAsync(channel == null
@@ -664,7 +664,7 @@ public partial class Utility
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
         [BotPerm(GuildPermission.ManageGuild)]
-        public async Task PurgeInvites(int maxUses = 0, Channel? channel = null)
+        public async Task PurgeInvites(int maxUses = 0, TextChannel? channel = null)
         {
             if (!await PromptUserConfirmAsync(Strings.InvitePurgeConfirm(ctx.Guild.Id, maxUses), ctx.User.Id))
                 return;

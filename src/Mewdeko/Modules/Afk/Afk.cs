@@ -431,7 +431,7 @@ public class Afk(InteractiveService serv) : MewdekoModuleBase<AfkService>
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task AfkUndisable(params Channel[] chan)
+    public async Task AfkUndisable(params TextChannel[] chan)
     {
         if (Environment.GetEnvironmentVariable("AFK_CACHED") != "1")
         {
@@ -484,7 +484,7 @@ public class Afk(InteractiveService serv) : MewdekoModuleBase<AfkService>
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task AfkDisable(params Channel[] chan)
+    public async Task AfkDisable(params TextChannel[] chan)
     {
         if (Environment.GetEnvironmentVariable("AFK_CACHED") != "1")
         {

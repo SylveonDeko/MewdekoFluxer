@@ -17,9 +17,9 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountmodShow(Channel? channel = null)
+    public async Task CountmodShow(TextChannel? channel = null)
     {
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         var config = await Service.GetModerationConfigAsync(channel.Id);
         var guildDefaults = await Service.GetGuildDefaultsAsync(ctx.Guild.Id);
@@ -116,9 +116,9 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountmodEnable(bool enabled, Channel? channel = null)
+    public async Task CountmodEnable(bool enabled, TextChannel? channel = null)
     {
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         var config = new CountingModerationConfig
         {
@@ -145,7 +145,7 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountmodThreshold(int threshold, Channel? channel = null)
+    public async Task CountmodThreshold(int threshold, TextChannel? channel = null)
     {
         if (threshold is < 1 or > 100)
         {
@@ -153,7 +153,7 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
             return;
         }
 
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         var config = new CountingModerationConfig
         {
@@ -180,7 +180,7 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountmodWindow(int hours, Channel? channel = null)
+    public async Task CountmodWindow(int hours, TextChannel? channel = null)
     {
         if (hours is < 1 or > 168) // Max 1 week
         {
@@ -188,7 +188,7 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
             return;
         }
 
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         var config = new CountingModerationConfig
         {
@@ -264,9 +264,9 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountmodIgnore(bool deleteMessages, Channel? channel = null, params SocketRole[] roles)
+    public async Task CountmodIgnore(bool deleteMessages, TextChannel? channel = null, params SocketRole[] roles)
     {
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         var roleIds = string.Join(",", roles.Select(r => r.Id));
 
@@ -302,9 +302,9 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountmodRequired(Channel? channel = null, params SocketRole[] roles)
+    public async Task CountmodRequired(TextChannel? channel = null, params SocketRole[] roles)
     {
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         var roleIds = string.Join(",", roles.Select(r => r.Id));
 
@@ -342,9 +342,9 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountmodBanned(Channel? channel = null, params SocketRole[] roles)
+    public async Task CountmodBanned(TextChannel? channel = null, params SocketRole[] roles)
     {
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         var roleIds = string.Join(",", roles.Select(r => r.Id));
 
@@ -382,9 +382,9 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountmodReset(Channel? channel = null)
+    public async Task CountmodReset(TextChannel? channel = null)
     {
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         var config = new CountingModerationConfig
         {
@@ -454,7 +454,7 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountmodUnpunish(int count, Channel? channel = null)
+    public async Task CountmodUnpunish(int count, TextChannel? channel = null)
     {
         var success = await Service.RemoveTieredPunishmentAsync(ctx.Guild.Id, channel?.Id, count);
 
@@ -476,7 +476,7 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountmodPunishList(Channel? channel = null)
+    public async Task CountmodPunishList(TextChannel? channel = null)
     {
         var punishments = await Service.GetTieredPunishmentsAsync(ctx.Guild.Id, channel?.Id);
 
@@ -516,9 +516,9 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageMessages)]
-    public async Task CountmodClear(SocketGuildMember user, Channel? channel = null)
+    public async Task CountmodClear(SocketGuildMember user, TextChannel? channel = null)
     {
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         var success = await Service.ClearUserWrongCountsAsync(channel.Id, user.Id);
 
@@ -542,9 +542,9 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageMessages)]
-    public async Task CountmodClearAll(Channel? channel = null)
+    public async Task CountmodClearAll(TextChannel? channel = null)
     {
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         var success = await Service.ClearChannelWrongCountsAsync(channel.Id);
 
@@ -567,9 +567,9 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountmodNonnumbers(bool punish, bool delete = true, Channel? channel = null)
+    public async Task CountmodNonnumbers(bool punish, bool delete = true, TextChannel? channel = null)
     {
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         var config = new CountingModerationConfig
         {
@@ -602,9 +602,9 @@ public class CountingModeration : MewdekoModuleBase<CountingModerationService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountmodEdits(bool punish, bool delete = true, Channel? channel = null)
+    public async Task CountmodEdits(bool punish, bool delete = true, TextChannel? channel = null)
     {
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         var config = new CountingModerationConfig
         {

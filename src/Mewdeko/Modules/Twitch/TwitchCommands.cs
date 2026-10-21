@@ -515,7 +515,7 @@ public class TwitchCommands : MewdekoModuleBase<TwitchService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task TwitchGoLive(Channel channel, [Remainder] string? message = null)
+    public async Task TwitchGoLive(TextChannel channel, [Remainder] string? message = null)
     {
         var config = await Service.GetConfigAsync(ctx.Guild.Id).ConfigureAwait(false);
         if (config is null)
@@ -559,7 +559,7 @@ public class TwitchCommands : MewdekoModuleBase<TwitchService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task TwitchSubChannel(Channel channel, [Remainder] string? message = null)
+    public async Task TwitchSubChannel(TextChannel channel, [Remainder] string? message = null)
     {
         await Service.SetSubNotificationChannelAsync(ctx.Guild.Id, channel.Id, message).ConfigureAwait(false);
         await ConfirmAsync(Strings.TwitchSubSet(ctx.Guild.Id, channel.Mention)).ConfigureAwait(false);
@@ -587,7 +587,7 @@ public class TwitchCommands : MewdekoModuleBase<TwitchService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task TwitchRaidChannel(Channel channel, [Remainder] string? message = null)
+    public async Task TwitchRaidChannel(TextChannel channel, [Remainder] string? message = null)
     {
         await Service.SetRaidNotificationChannelAsync(ctx.Guild.Id, channel.Id, message).ConfigureAwait(false);
         await ConfirmAsync(Strings.TwitchRaidSet(ctx.Guild.Id, channel.Mention)).ConfigureAwait(false);
@@ -614,7 +614,7 @@ public class TwitchCommands : MewdekoModuleBase<TwitchService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task TwitchRecapChannel([Remainder] Channel channel)
+    public async Task TwitchRecapChannel([Remainder] TextChannel channel)
     {
         await Service.SetStreamRecapChannelAsync(ctx.Guild.Id, channel.Id, true).ConfigureAwait(false);
         await ConfirmAsync(Strings.TwitchRecapSet(ctx.Guild.Id, channel.Mention)).ConfigureAwait(false);
@@ -697,7 +697,7 @@ public class TwitchCommands : MewdekoModuleBase<TwitchService>
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageGuild)]
     public async Task TwitchRedemptionAdd(string rewardTitle, string? twitchResponse = null,
-        Channel? discordChannel = null, [Remainder] string? discordMessage = null)
+        TextChannel? discordChannel = null, [Remainder] string? discordMessage = null)
     {
         var action = await Service.UpsertRedemptionActionAsync(ctx.Guild.Id, rewardTitle, twitchResponse,
             discordChannel?.Id, discordMessage).ConfigureAwait(false);

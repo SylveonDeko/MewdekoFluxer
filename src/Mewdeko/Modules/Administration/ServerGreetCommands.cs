@@ -40,7 +40,7 @@ public partial class Administration
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageGuild)]
-        public async Task LeaveHook(Channel? chan, string? name, string? image = null, string? text = null)
+        public async Task LeaveHook(TextChannel? chan, string? name, string? image = null, string? text = null)
         {
             if (text?.Equals("disable", StringComparison.OrdinalIgnoreCase) == true)
             {

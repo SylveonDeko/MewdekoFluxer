@@ -1163,7 +1163,7 @@ public partial class Administration
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task AntiPostChannelAdd(Channel channel)
+        public async Task AntiPostChannelAdd(TextChannel channel)
         {
             if (await Service.AddAntiPostChannelAsync(ctx.Guild.Id, channel.Id).ConfigureAwait(false))
             {
@@ -1183,7 +1183,7 @@ public partial class Administration
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task AntiPostChannelRemove(Channel channel)
+        public async Task AntiPostChannelRemove(TextChannel channel)
         {
             if (await Service.RemoveAntiPostChannelAsync(ctx.Guild.Id, channel.Id).ConfigureAwait(false))
             {
@@ -1497,7 +1497,7 @@ public partial class Administration
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task AntiImageHashIgnore([Remainder] Channel channel)
+        public async Task AntiImageHashIgnore([Remainder] TextChannel channel)
         {
             var added = await Service.ToggleAntiImageHashIgnoredChannelAsync(ctx.Guild.Id, channel.Id)
                 .ConfigureAwait(false);

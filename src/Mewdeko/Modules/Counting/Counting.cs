@@ -32,9 +32,9 @@ public partial class Counting(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountingSetup(Channel? channel = null, long startNumber = 1, int increment = 1)
+    public async Task CountingSetup(TextChannel? channel = null, long startNumber = 1, int increment = 1)
     {
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         if (increment <= 0)
         {
@@ -64,9 +64,9 @@ public partial class Counting(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task CountingStatus(Channel? channel = null)
+    public async Task CountingStatus(TextChannel? channel = null)
     {
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         var countingChannel = await countingService.GetCountingChannelAsync(channel.Id);
         if (countingChannel == null)
@@ -121,9 +121,9 @@ public partial class Counting(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountingConfig(Channel? channel = null)
+    public async Task CountingConfig(TextChannel? channel = null)
     {
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         var countingChannel = await countingService.GetCountingChannelAsync(channel.Id);
         if (countingChannel == null)
@@ -178,9 +178,9 @@ public partial class Counting(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageMessages)]
-    public async Task CountingReset(Channel? channel = null, long newNumber = 0, [Remainder] string? reason = null)
+    public async Task CountingReset(TextChannel? channel = null, long newNumber = 0, [Remainder] string? reason = null)
     {
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         var countingChannel = await countingService.GetCountingChannelAsync(channel.Id);
         if (countingChannel == null)
@@ -222,10 +222,10 @@ public partial class Counting(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task CountingStats(SocketGuildMember? user = null, Channel? channel = null)
+    public async Task CountingStats(SocketGuildMember? user = null, TextChannel? channel = null)
     {
         user ??= ctx.Member!;
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         var countingChannel = await countingService.GetCountingChannelAsync(channel.Id);
         if (countingChannel == null)
@@ -277,9 +277,9 @@ public partial class Counting(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task CountingLeaderboard(string type = "contributions", Channel? channel = null)
+    public async Task CountingLeaderboard(string type = "contributions", TextChannel? channel = null)
     {
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         var countingChannel = await countingService.GetCountingChannelAsync(channel.Id);
         if (countingChannel == null)
@@ -358,9 +358,9 @@ public partial class Counting(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageMessages)]
-    public async Task CountingSave(Channel? channel = null, [Remainder] string? reason = null)
+    public async Task CountingSave(TextChannel? channel = null, [Remainder] string? reason = null)
     {
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         var countingChannel = await countingService.GetCountingChannelAsync(channel.Id);
         if (countingChannel == null)
@@ -391,9 +391,9 @@ public partial class Counting(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageMessages)]
-    public async Task CountingRestore(int saveId, Channel? channel = null)
+    public async Task CountingRestore(int saveId, TextChannel? channel = null)
     {
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         var countingChannel = await countingService.GetCountingChannelAsync(channel.Id);
         if (countingChannel == null)
@@ -436,10 +436,10 @@ public partial class Counting(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CountingDisable(Channel? channel = null, bool purgeData = false,
+    public async Task CountingDisable(TextChannel? channel = null, bool purgeData = false,
         [Remainder] string? reason = null)
     {
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         var countingChannel = await Service.GetCountingChannelAsync(channel.Id);
         if (countingChannel == null)
@@ -528,10 +528,10 @@ public partial class Counting(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageMessages)]
-    public async Task CountingBan(SocketGuildMember user, Channel? channel = null, StoopidTime? duration = null,
+    public async Task CountingBan(SocketGuildMember user, TextChannel? channel = null, StoopidTime? duration = null,
         [Remainder] string? reason = null)
     {
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         var countingChannel = await Service.GetCountingChannelAsync(channel.Id);
         if (countingChannel == null)
@@ -566,9 +566,9 @@ public partial class Counting(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageMessages)]
-    public async Task CountingUnban(SocketGuildMember user, Channel? channel = null, [Remainder] string? reason = null)
+    public async Task CountingUnban(SocketGuildMember user, TextChannel? channel = null, [Remainder] string? reason = null)
     {
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         var countingChannel = await Service.GetCountingChannelAsync(channel.Id);
         if (countingChannel == null)
@@ -600,10 +600,10 @@ public partial class Counting(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageMessages)]
-    public async Task CountingTimeout(SocketGuildMember user, StoopidTime duration, Channel? channel = null,
+    public async Task CountingTimeout(SocketGuildMember user, StoopidTime duration, TextChannel? channel = null,
         [Remainder] string? reason = null)
     {
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         var countingChannel = await Service.GetCountingChannelAsync(channel.Id);
         if (countingChannel == null)

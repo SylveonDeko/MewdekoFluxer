@@ -558,7 +558,7 @@ public partial class Permissions(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task ChnlCmd(CommandOrCrInfo command, PermissionAction action, [Remainder] Channel chnl)
+    public async Task ChnlCmd(CommandOrCrInfo command, PermissionAction action, [Remainder] TextChannel chnl)
     {
         await Service.AddPermissions(ctx.Guild.Id, new Permission1
         {
@@ -598,7 +598,7 @@ public partial class Permissions(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task ChnlMdl(ModuleOrCrInfo module, PermissionAction action, [Remainder] Channel chnl)
+    public async Task ChnlMdl(ModuleOrCrInfo module, PermissionAction action, [Remainder] TextChannel chnl)
     {
         await Service.AddPermissions(ctx.Guild.Id, new Permission1
         {
@@ -636,7 +636,7 @@ public partial class Permissions(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task AllChnlMdls(PermissionAction action, [Remainder] Channel chnl)
+    public async Task AllChnlMdls(PermissionAction action, [Remainder] TextChannel chnl)
     {
         await Service.AddPermissions(ctx.Guild.Id, new Permission1
         {
@@ -671,7 +671,7 @@ public partial class Permissions(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task CatCmd(CommandOrCrInfo command, PermissionAction action, [Remainder] Channel chnl)
+    public async Task CatCmd(CommandOrCrInfo command, PermissionAction action, [Remainder] CategoryChannel chnl)
     {
         await Service.AddPermissions(ctx.Guild.Id, new Permission1
         {
@@ -711,7 +711,7 @@ public partial class Permissions(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task CatMdl(ModuleOrCrInfo module, PermissionAction action, [Remainder] Channel chnl)
+    public async Task CatMdl(ModuleOrCrInfo module, PermissionAction action, [Remainder] CategoryChannel chnl)
     {
         await Service.AddPermissions(ctx.Guild.Id, new Permission1
         {
@@ -749,7 +749,7 @@ public partial class Permissions(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task AllCatMdls(PermissionAction action, [Remainder] Channel chnl)
+    public async Task AllCatMdls(PermissionAction action, [Remainder] CategoryChannel chnl)
     {
         await Service.AddPermissions(ctx.Guild.Id, new Permission1
         {

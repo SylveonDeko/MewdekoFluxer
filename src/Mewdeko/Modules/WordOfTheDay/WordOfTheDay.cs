@@ -106,7 +106,7 @@ public class WordOfTheDay : MewdekoModuleBase<WordOfTheDayService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task WotdChannel(Channel? channel = null)
+    public async Task WotdChannel(TextChannel? channel = null)
     {
         if (channel is null)
         {

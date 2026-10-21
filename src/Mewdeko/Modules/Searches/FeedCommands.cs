@@ -28,13 +28,13 @@ public partial class Searches
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageMessages)]
-        public async Task FeedAdd(string url, [Remainder] Channel? channel = null)
+        public async Task FeedAdd(string url, [Remainder] TextChannel? channel = null)
         {
             var success = Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
                           (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
             if (success)
             {
-                channel ??= (Channel)ctx.Channel;
+                channel ??= (TextChannel)ctx.Channel;
                 try
                 {
                     await FeedReader.ReadAsync(url).ConfigureAwait(false);

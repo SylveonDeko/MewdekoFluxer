@@ -466,7 +466,7 @@ public class Achievements(AchievementViewService views, InteractiveService inter
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task AchLogChannel(Channel? channel = null)
+    public async Task AchLogChannel(TextChannel? channel = null)
     {
         await Service.UpdateSettingsAsync(ctx.Guild.Id, row => row.LogChannelId = channel?.Id);
         await ConfirmAsync(channel is null

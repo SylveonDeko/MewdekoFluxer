@@ -210,7 +210,7 @@ public partial class ServerManagement
         [Cmd]
         [Aliases]
         [RequireContext(ContextType.Guild)]
-        public async Task MoveTo(Channel channel)
+        public async Task MoveTo(VoiceChannel channel)
         {
             var use = ctx.Member!;
             if (use.VoiceChannel == null)
@@ -233,7 +233,7 @@ public partial class ServerManagement
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageChannels)]
-        public async Task MoveUserTo(SocketGuildMember user, Channel channel)
+        public async Task MoveUserTo(SocketGuildMember user, VoiceChannel channel)
         {
             if (user.VoiceChannel == null)
             {
@@ -306,7 +306,7 @@ public partial class ServerManagement
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageChannels)]
-        public async Task Nuke(Channel? chan3 = null)
+        public async Task Nuke(TextChannel? chan3 = null)
         {
             var embed = new EmbedBuilder
             {
@@ -362,7 +362,7 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageMessages)]
         [BotPerm(GuildPermission.ManageMessages)]
-        public async Task Lock(Channel? channel = null)
+        public async Task Lock(TextChannel? channel = null)
         {
             if (channel == null)
             {
@@ -444,7 +444,7 @@ public partial class ServerManagement
         [Cmd]
         [Aliases]
         [UserPerm(GuildPermission.ManageChannels)]
-        public async Task CreateCatVcChans(Channel chan, params string[] channels)
+        public async Task CreateCatVcChans(CategoryChannel chan, params string[] channels)
         {
             var eb = new EmbedBuilder();
             eb.WithOkColor();
@@ -468,7 +468,7 @@ public partial class ServerManagement
         [Cmd]
         [Aliases]
         [UserPerm(GuildPermission.ManageChannels)]
-        public async Task CreateCatTxtChans(Channel chan, params string[] channels)
+        public async Task CreateCatTxtChans(CategoryChannel chan, params string[] channels)
         {
             var eb = new EmbedBuilder();
             eb.WithOkColor();
@@ -493,7 +493,7 @@ public partial class ServerManagement
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageMessages)]
         [BotPerm(GuildPermission.ManageMessages)]
-        public async Task Unlock(Channel? channel = null)
+        public async Task Unlock(TextChannel? channel = null)
         {
             if (channel == null)
             {
@@ -531,7 +531,7 @@ public partial class ServerManagement
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageChannels)]
-        public Task Slowmode(StoopidTime time, Channel channel)
+        public Task Slowmode(StoopidTime time, TextChannel channel)
         {
             return InternalSlowmode(channel, (int)time.Time.TotalSeconds);
         }
@@ -567,7 +567,7 @@ public partial class ServerManagement
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageChannels)]
-        public Task Slowmode(Channel channel)
+        public Task Slowmode(TextChannel channel)
         {
             return InternalSlowmode(channel);
         }
@@ -637,7 +637,7 @@ public partial class ServerManagement
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task CreateWebhook(Channel channel, string name, string avatar = null)
+        public async Task CreateWebhook(TextChannel channel, string name, string avatar = null)
         {
             if (ctx.Message.Attachments.Any())
             {

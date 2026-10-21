@@ -30,7 +30,7 @@ public partial class CoprMonitoring(InteractiveService interactiveService) : Mew
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CoprMonitorAdd(string ownerProject, Channel? channel = null,
+    public async Task CoprMonitorAdd(string ownerProject, TextChannel? channel = null,
         [Remainder] string? packages = null)
     {
         var parts = ownerProject.Split('/');
@@ -69,7 +69,7 @@ public partial class CoprMonitoring(InteractiveService interactiveService) : Mew
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CoprMonitorRemove(string ownerProject, Channel? channel = null)
+    public async Task CoprMonitorRemove(string ownerProject, TextChannel? channel = null)
     {
         var parts = ownerProject.Split('/');
         if (parts.Length != 2)

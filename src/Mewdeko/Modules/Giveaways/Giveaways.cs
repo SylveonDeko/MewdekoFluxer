@@ -273,7 +273,7 @@ public partial class Giveaways(
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageMessages)]
-    public async Task GStart(Channel chan, StoopidTime time, int winners, [Remainder] string what)
+    public async Task GStart(TextChannel chan, StoopidTime time, int winners, [Remainder] string what)
     {
         var emote = (await Service.GetGiveawayEmote(ctx.Guild.Id)).ToIEmote();
         try
@@ -354,13 +354,13 @@ public partial class Giveaways(
                 .WithDescription(Strings.GiveawayStartChannelPrompt(ctx.Guild.Id))
                 .Build()).ConfigureAwait(false);
         var response = await NextMessageAsync(ctx.Channel.Id, ctx.User.Id).ConfigureAwait(false);
-        Channel channel = null;
+        TextChannel channel = null;
 
-        var channelReader = new ChannelTypeReader<Channel>();
+        var channelReader = new ChannelTypeReader<TextChannel>();
         var channelResult = await channelReader.ReadAsync(ctx, response, servs).ConfigureAwait(false);
         if (channelResult.IsSuccess)
         {
-            channel = (Channel)channelResult.BestMatch;
+            channel = (TextChannel)channelResult.BestMatch;
         }
         else
         {

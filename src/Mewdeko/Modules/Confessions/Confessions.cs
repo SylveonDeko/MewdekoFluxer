@@ -66,7 +66,7 @@ public class Confessions(GuildSettingsService guildSettings, IBotCredentials cre
     [Aliases]
     [UserPerm(GuildPermission.ManageChannels)]
     [RequireContext(ContextType.Guild)]
-    public async Task ConfessionChannel(Channel? channel = null)
+    public async Task ConfessionChannel(TextChannel? channel = null)
     {
         if (channel is null)
         {
@@ -97,7 +97,7 @@ public class Confessions(GuildSettingsService guildSettings, IBotCredentials cre
     [Aliases]
     [UserPerm(GuildPermission.Administrator)]
     [RequireContext(ContextType.Guild)]
-    public async Task ConfessionLogChannel(Channel? channel = null)
+    public async Task ConfessionLogChannel(TextChannel? channel = null)
     {
         if (channel is null)
         {

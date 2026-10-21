@@ -20,7 +20,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task TicketPanel(Channel channel, [Remainder] string embedJson = null)
+    public async Task TicketPanel(TextChannel channel, [Remainder] string embedJson = null)
     {
         try
         {
@@ -173,7 +173,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task TicketCategory(int buttonId, Channel? category = null)
+    public async Task TicketCategory(int buttonId, CategoryChannel? category = null)
     {
         var panel = await Service.GetButtonAsync(buttonId);
         if (panel == null || panel.Panel.GuildId != ctx.Guild.Id)
@@ -202,7 +202,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task TicketArchiveCategory(int buttonId, Channel? category = null)
+    public async Task TicketArchiveCategory(int buttonId, CategoryChannel? category = null)
     {
         var panel = await Service.GetButtonAsync(buttonId);
         if (panel == null || panel.Panel.GuildId != ctx.Guild.Id)
@@ -979,7 +979,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task TicketTranscriptChannel(Channel? channel = null)
+    public async Task TicketTranscriptChannel(TextChannel? channel = null)
     {
         await Service.SetTranscriptChannelAsync(ctx.Guild.Id, channel?.Id ?? 0);
 
@@ -996,7 +996,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task TicketLogChannel(Channel? channel = null)
+    public async Task TicketLogChannel(TextChannel? channel = null)
     {
         await Service.SetLogChannelAsync(ctx.Guild.Id, channel?.Id ?? 0);
 
@@ -1013,7 +1013,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task TicketMoveAll(Channel sourceCategory, Channel targetCategory)
+    public async Task TicketMoveAll(CategoryChannel sourceCategory, CategoryChannel targetCategory)
     {
         var (moved, failed) = await Service.BatchMoveTickets(ctx.Guild, sourceCategory.Id, targetCategory.Id);
         await ctx.Channel.SendConfirmAsync(
@@ -1065,7 +1065,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task TicketDuplicatePanel(ulong panelId, Channel targetChannel)
+    public async Task TicketDuplicatePanel(ulong panelId, TextChannel targetChannel)
     {
         var newPanel = await Service.DuplicatePanelAsync(ctx.Guild, panelId, targetChannel.Id);
         if (newPanel != null)
@@ -1097,7 +1097,7 @@ public partial class Tickets(ILogger<Tickets> logger, InteractiveService interac
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task TicketMovePanel(ulong panelId, Channel targetChannel)
+    public async Task TicketMovePanel(ulong panelId, TextChannel targetChannel)
     {
         var success = await Service.MovePanelAsync(ctx.Guild, panelId, targetChannel.Id);
         if (success)

@@ -57,7 +57,7 @@ public class Starboard(GuildSettingsService guildSettings, InteractiveService in
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task CreateStarboard(Channel channel, Emoji emote, int threshold = 1)
+    public async Task CreateStarboard(TextChannel channel, Emoji emote, int threshold = 1)
     {
         try
         {
@@ -262,7 +262,7 @@ public class Starboard(GuildSettingsService guildSettings, InteractiveService in
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task StarboardChToggle(int starboardId, [Remainder] Channel channel)
+    public async Task StarboardChToggle(int starboardId, [Remainder] TextChannel channel)
     {
         var (wasAdded, config) = await Service.ToggleChannel(ctx.Guild, starboardId, channel.Id.ToString());
         if (config == null)

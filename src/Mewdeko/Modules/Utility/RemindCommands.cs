@@ -77,7 +77,7 @@ public partial class Utility
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageMessages)]
         [Priority(0)]
-        public async Task Remind(Channel channel, [Remainder] string remindString)
+        public async Task Remind(TextChannel channel, [Remainder] string remindString)
         {
             var perms = ctx.Member!.GetPermissions(channel);
             if (!perms.SendMessages || !perms.ViewChannel)

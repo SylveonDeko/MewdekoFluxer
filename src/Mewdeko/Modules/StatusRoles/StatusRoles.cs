@@ -138,7 +138,7 @@ public class StatusRoles(BotConfigService bss, InteractiveService interactivity)
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task SetStatusRoleChannel(int index, Channel channel)
+    public async Task SetStatusRoleChannel(int index, TextChannel channel)
     {
         var statusRoles = await Service.GetStatusRoleConfig(ctx.Guild.Id);
         if (!statusRoles.Any())

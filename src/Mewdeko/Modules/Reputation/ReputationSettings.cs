@@ -40,7 +40,7 @@ public partial class Reputation
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task RepChannel(Channel channel, string state = "enabled", decimal multiplier = 1.0m)
+        public async Task RepChannel(TextChannel channel, string state = "enabled", decimal multiplier = 1.0m)
         {
             var validStates = new[]
             {
@@ -327,7 +327,7 @@ public partial class Reputation
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task RepNotificationChannel(Channel? channel = null)
+        public async Task RepNotificationChannel(TextChannel? channel = null)
         {
             await Service.SetNotificationChannelAsync(ctx.Guild.Id, channel?.Id);
 
@@ -713,7 +713,7 @@ public partial class Reputation
         [UserPerm(GuildPermission.ManageRoles)]
         [BotPerm(GuildPermission.ManageRoles)]
         public async Task RepRole(SocketRole? role = null, int? reputation = null, bool removeOnDrop = true,
-            Channel? announceChannel = null, bool announceDm = false, int? xpReward = null,
+            TextChannel? announceChannel = null, bool announceDm = false, int? xpReward = null,
             string? detailed = null)
         {
             // If no role specified or "detailed" is the first parameter, show list
@@ -934,7 +934,7 @@ public partial class Reputation
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
         public async Task RepCommandReq(string commandName, int minReputation, string? repType = null,
-            params Channel[] channels)
+            params TextChannel[] channels)
         {
             if (minReputation < 0)
             {
@@ -1265,7 +1265,7 @@ public partial class Reputation
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task RepRoleChannel(SocketRole role, Channel? channel = null)
+        public async Task RepRoleChannel(SocketRole role, TextChannel? channel = null)
         {
             var updated = await Service.UpdateRoleRewardChannelAsync(ctx.Guild.Id, role.Id, channel?.Id);
 

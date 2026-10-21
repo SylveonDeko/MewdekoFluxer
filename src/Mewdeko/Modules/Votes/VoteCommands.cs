@@ -21,7 +21,7 @@ public class Vote(InteractiveService interactivity) : MewdekoModuleBase<VoteServ
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
     [RequireContext(ContextType.Guild)]
-    public async Task VoteChannel([Remainder] Channel channel)
+    public async Task VoteChannel([Remainder] TextChannel channel)
     {
         await Service.SetVoteChannel(ctx.Guild.Id, channel.Id);
         await ctx.Channel.SendConfirmAsync(Strings.VoteChannelSet(ctx.Guild.Id));

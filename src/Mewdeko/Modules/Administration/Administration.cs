@@ -791,7 +791,7 @@ public partial class Administration(
     [UserPerm(GuildPermission.Administrator)]
     [BotPerm(GuildPermission.ManageMessages)]
     [Priority(0)]
-    public Task Delmsgoncmd(ChannelWord _, State s, Channel ch)
+    public Task Delmsgoncmd(ChannelWord _, State s, TextChannel ch)
     {
         return Delmsgoncmd(_, s, ch.Id);
     }
@@ -890,7 +890,7 @@ public partial class Administration(
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
     [BotPerm(GuildPermission.ManageChannels)]
-    public async Task DelVoiChanl([Remainder] Channel voiceChannel)
+    public async Task DelVoiChanl([Remainder] VoiceChannel voiceChannel)
     {
         await voiceChannel.DeleteAsync().ConfigureAwait(false);
         await ReplyConfirmAsync(Strings.Delvoich(ctx.Guild.Id, Format.Bold(voiceChannel.Name))).ConfigureAwait(false);
@@ -930,7 +930,7 @@ public partial class Administration(
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
     [BotPerm(GuildPermission.ManageChannels)]
-    public async Task DelTxtChanl([Remainder] Channel toDelete)
+    public async Task DelTxtChanl([Remainder] TextChannel toDelete)
     {
         await toDelete.DeleteAsync().ConfigureAwait(false);
         await ReplyConfirmAsync(Strings.Deltextchan(ctx.Guild.Id, Format.Bold(toDelete.Name))).ConfigureAwait(false);
@@ -1040,7 +1040,7 @@ public partial class Administration(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [Priority(1)]
-    public async Task Edit(Channel channel, ulong messageId, [Remainder] string? text)
+    public async Task Edit(TextChannel channel, ulong messageId, [Remainder] string? text)
     {
         var userPerms = ctx.Member!.GetPermissions(channel);
         var botPerms = ((SocketGuild)ctx.Guild).CurrentUser.GetPermissions(channel);
@@ -1076,7 +1076,7 @@ public partial class Administration(
     [BotPerm(ChannelPermission.ManageMessages)]
     public Task Delete(ulong messageId, StoopidTime? time = null)
     {
-        return Delete(ctx.Channel, messageId, time);
+        return Delete((TextChannel)ctx.Channel, messageId, time);
     }
 
     /// <summary>
@@ -1092,7 +1092,7 @@ public partial class Administration(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public Task Delete(Channel channel, ulong messageId, StoopidTime? time = null)
+    public Task Delete(TextChannel channel, ulong messageId, StoopidTime? time = null)
     {
         return InternalMessageAction(channel, messageId, time);
     }

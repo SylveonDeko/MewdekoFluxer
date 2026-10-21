@@ -61,7 +61,7 @@ public class RoleMenus : MewdekoModuleBase<RoleMenuService>
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageRoles)]
     [BotPerm(GuildPermission.ManageRoles)]
-    public async Task RoleMenuCreate(Channel channel, params SocketRole[] roles)
+    public async Task RoleMenuCreate(TextChannel channel, params SocketRole[] roles)
     {
         if (roles.Length == 0)
         {
@@ -410,7 +410,7 @@ public class RoleMenus : MewdekoModuleBase<RoleMenuService>
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageRoles)]
     [BotPerm(GuildPermission.ManageRoles)]
-    public async Task RoleMenuRepost(int menuId, Channel? channel = null)
+    public async Task RoleMenuRepost(int menuId, TextChannel? channel = null)
     {
         var menu = await FindMenuAsync(menuId);
         if (menu is null)

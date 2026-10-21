@@ -182,9 +182,9 @@ public class Birthday : MewdekoModuleBase<BirthdayService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.Administrator)]
-    public async Task BirthdayChannel(Channel? channel = null)
+    public async Task BirthdayChannel(TextChannel? channel = null)
     {
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         await Service.UpdateBirthdayConfigAsync(ctx.Guild.Id, config =>
         {

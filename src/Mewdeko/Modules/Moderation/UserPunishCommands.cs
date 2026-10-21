@@ -306,7 +306,7 @@ public partial class Moderation : MewdekoModule
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
         [Priority(0)]
-        public async Task SetWarnChannel([Remainder] Channel channel)
+        public async Task SetWarnChannel([Remainder] TextChannel channel)
         {
             var warnlogChannel = await Service.GetWarnlogChannel(ctx.Guild.Id);
             if (warnlogChannel == channel.Id)

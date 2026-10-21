@@ -183,7 +183,7 @@ public class Minecraft : MewdekoModuleBase<MinecraftService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task McWatch(string serverName, Channel? channel = null)
+    public async Task McWatch(string serverName, TextChannel? channel = null)
     {
         var server = await Service.SetWatchChannelAsync(ctx.Guild.Id, serverName, channel?.Id);
         if (server == null)

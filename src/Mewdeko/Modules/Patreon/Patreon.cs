@@ -25,7 +25,7 @@ public class Patreon(IBotCredentials creds, PatreonApiClient patreonApiClient, I
     [UserPerm(GuildPermission.Administrator)]
     [BotPerm(GuildPermission.SendMessages)]
     [RequireContext(ContextType.Guild)]
-    public async Task PatreonChannel(Channel? channel = null)
+    public async Task PatreonChannel(TextChannel? channel = null)
     {
         if (channel == null)
         {
@@ -694,7 +694,7 @@ public class Patreon(IBotCredentials creds, PatreonApiClient patreonApiClient, I
     [UserPerm(GuildPermission.Administrator)]
     [BotPerm(GuildPermission.SendMessages)]
     [RequireContext(ContextType.Guild)]
-    public async Task PatreonRecognize(Channel? channel = null)
+    public async Task PatreonRecognize(TextChannel? channel = null)
     {
         var targetChannel = channel ?? ctx.Channel as Channel;
         if (targetChannel == null)

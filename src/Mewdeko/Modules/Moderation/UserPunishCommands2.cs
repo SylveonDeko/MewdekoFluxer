@@ -45,7 +45,7 @@ public partial class Moderation
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
         [Priority(0)]
-        public async Task SetMWarnChannel([Remainder] Channel channel)
+        public async Task SetMWarnChannel([Remainder] TextChannel channel)
         {
             if (string.IsNullOrWhiteSpace(channel.Name))
                 return;

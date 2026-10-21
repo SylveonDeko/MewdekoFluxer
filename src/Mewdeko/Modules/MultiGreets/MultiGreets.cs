@@ -41,9 +41,9 @@ public class MultiGreets(InteractiveService interactivity) : MewdekoModuleBase<M
     [Aliases]
     [UserPerm(GuildPermission.Administrator)]
     [RequireContext(ContextType.Guild)]
-    public async Task MultiGreetAdd([Remainder] Channel? channel = null)
+    public async Task MultiGreetAdd([Remainder] TextChannel? channel = null)
     {
-        channel ??= ctx.Channel as Channel;
+        channel ??= ctx.Channel as TextChannel;
         var added = await Service.AddMultiGreet(ctx.Guild.Id, channel.Id);
         switch (added)
         {
@@ -95,7 +95,7 @@ public class MultiGreets(InteractiveService interactivity) : MewdekoModuleBase<M
     [Aliases]
     [UserPerm(GuildPermission.Administrator)]
     [RequireContext(ContextType.Guild)]
-    public async Task MultiGreetRemove([Remainder] Channel channel)
+    public async Task MultiGreetRemove([Remainder] TextChannel channel)
     {
         var greet = (await Service.GetGreets(ctx.Guild.Id))?.Where(x => x.ChannelId == channel.Id);
         if (!greet.Any())

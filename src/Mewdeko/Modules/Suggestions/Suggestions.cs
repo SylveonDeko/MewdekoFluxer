@@ -22,7 +22,7 @@ public partial class Suggestions : MewdekoModuleBase<SuggestionsService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageChannels)]
-    public async Task SetSuggestChannel(Channel? channel = null)
+    public async Task SetSuggestChannel(TextChannel? channel = null)
     {
         if (channel == null)
         {

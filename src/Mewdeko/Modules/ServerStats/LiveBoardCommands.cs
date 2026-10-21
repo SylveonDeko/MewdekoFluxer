@@ -23,7 +23,7 @@ public class LiveBoardCommands(ServerReportService reports) : MewdekoModuleBase<
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageGuild)]
     [BotPerm(ChannelPermission.ManageMessages)]
-    public async Task LiveBoardAdd(Channel channel, LiveBoardKind kind, StatsRange range = StatsRange.Weekly,
+    public async Task LiveBoardAdd(TextChannel channel, LiveBoardKind kind, StatsRange range = StatsRange.Weekly,
         int entries = 10, int intervalMinutes = 15)
     {
         var existing = await Service.GetAsync(ctx.Guild.Id);
@@ -102,7 +102,7 @@ public class LiveBoardCommands(ServerReportService reports) : MewdekoModuleBase<
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task ServerReportChannel(Channel? channel = null)
+    public async Task ServerReportChannel(TextChannel? channel = null)
     {
         await reports.UpdateSettingsAsync(ctx.Guild.Id, s =>
         {

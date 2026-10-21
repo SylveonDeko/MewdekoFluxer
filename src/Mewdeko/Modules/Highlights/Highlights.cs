@@ -214,7 +214,7 @@ public class Highlights(InteractiveService interactivity, IServiceProvider svcs,
             case HighlightActions.ToggleIgnore:
                 if (string.IsNullOrWhiteSpace(words))
                     return;
-                var reader1 = new ChannelTypeReader<Channel>();
+                var reader1 = new ChannelTypeReader<TextChannel>();
                 var result = await reader1.ReadAsync(ctx, words, svcs).ConfigureAwait(false);
                 if (!result.IsSuccess)
                 {
@@ -243,7 +243,7 @@ public class Highlights(InteractiveService interactivity, IServiceProvider svcs,
                     return;
                 }
 
-                var channel = (Channel)result.BestMatch;
+                var channel = (TextChannel)result.BestMatch;
 
                 if (await Service.ToggleIgnoredChannel(ctx.Guild.Id, ctx.User.Id, channel.Id.ToString())
                         .ConfigureAwait(false))

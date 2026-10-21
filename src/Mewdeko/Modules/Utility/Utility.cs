@@ -202,9 +202,9 @@ public partial class Utility(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageMessages)]
-    public async Task GetJson(ulong id, Channel channel = null)
+    public async Task GetJson(ulong id, TextChannel channel = null)
     {
-        channel ??= ctx.Channel as Channel;
+        channel ??= ctx.Channel as TextChannel;
 
         var options = new JsonSerializerOptions
         {
@@ -236,7 +236,7 @@ public partial class Utility(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageMessages)]
-    public Task GetJson(Channel channel, ulong messageId)
+    public Task GetJson(TextChannel channel, ulong messageId)
     {
         return GetJson(messageId, channel);
     }
@@ -251,7 +251,7 @@ public partial class Utility(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageMessages)]
-    public async Task SaveChat(StoopidTime time, Channel? channel = null)
+    public async Task SaveChat(StoopidTime time, TextChannel? channel = null)
     {
         var curTime = DateTime.UtcNow.Subtract(time.Time);
         if (!Directory.Exists(creds.ChatSavePath))
@@ -572,7 +572,7 @@ public partial class Utility(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task SnipeList(Channel channel, int amount = 5)
+    public async Task SnipeList(TextChannel channel, int amount = 5)
     {
         if (!await Service.GetSnipeSet(ctx.Guild.Id))
         {
@@ -635,7 +635,7 @@ public partial class Utility(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task SnipeList(Channel channel, IUser user, int amount = 5)
+    public async Task SnipeList(TextChannel channel, IUser user, int amount = 5)
     {
         if (!await Service.GetSnipeSet(ctx.Guild.Id))
         {
@@ -820,7 +820,7 @@ public partial class Utility(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task EditSnipeList(Channel channel, int amount = 5)
+    public async Task EditSnipeList(TextChannel channel, int amount = 5)
     {
         if (!await Service.GetSnipeSet(ctx.Guild.Id))
         {
@@ -883,7 +883,7 @@ public partial class Utility(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task EditSnipeList(Channel channel, IUser user, int amount = 5)
+    public async Task EditSnipeList(TextChannel channel, IUser user, int amount = 5)
     {
         if (!await Service.GetSnipeSet(ctx.Guild.Id))
         {
@@ -1022,7 +1022,7 @@ public partial class Utility(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [Priority(2)]
-    public async Task Snipe(Channel chan)
+    public async Task Snipe(TextChannel chan)
     {
         if (!await Service.GetSnipeSet(ctx.Guild.Id))
         {
@@ -1074,7 +1074,7 @@ public partial class Utility(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [Priority(2)]
-    public async Task Snipe(Channel chan, IUser user1)
+    public async Task Snipe(TextChannel chan, IUser user1)
     {
         if (!await Service.GetSnipeSet(ctx.Guild.Id))
         {
@@ -1232,7 +1232,7 @@ public partial class Utility(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [Priority(1)]
-    public async Task EditSnipe(Channel chan)
+    public async Task EditSnipe(TextChannel chan)
     {
         if (!await Service.GetSnipeSet(ctx.Guild.Id))
         {
@@ -1288,7 +1288,7 @@ public partial class Utility(
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [Priority(1)]
-    public async Task EditSnipe(Channel chan, IUser user1)
+    public async Task EditSnipe(TextChannel chan, IUser user1)
     {
         if (!await Service.GetSnipeSet(ctx.Guild.Id))
         {
@@ -1562,9 +1562,9 @@ public partial class Utility(
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task ChannelTopic([Remainder] Channel? channel = null)
+    public async Task ChannelTopic([Remainder] TextChannel? channel = null)
     {
-        channel ??= (Channel)ctx.Channel;
+        channel ??= (TextChannel)ctx.Channel;
 
         var topic = channel.Topic;
         if (string.IsNullOrWhiteSpace(topic))
@@ -1583,7 +1583,7 @@ public partial class Utility(
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageMessages)]
     [Priority(1)]
-    public async Task Say(Channel channel, [Remainder] string? message)
+    public async Task Say(TextChannel channel, [Remainder] string? message)
     {
         var isTextInAttachments = ctx.Message.Attachments.Any(x => x.Filename.EndsWith("txt"));
 
@@ -1712,7 +1712,7 @@ public partial class Utility(
     [Priority(0)]
     public Task Say([Remainder] string? message = null)
     {
-        return Say((Channel)ctx.Channel, message);
+        return Say((TextChannel)ctx.Channel, message);
     }
 
     /// <summary>

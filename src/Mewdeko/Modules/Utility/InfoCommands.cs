@@ -74,7 +74,7 @@ public partial class Utility
         [Cmd]
         [Aliases]
         [RequireContext(ContextType.Guild)]
-        public async Task VInfo([Remainder] Channel? channel = null)
+        public async Task VInfo([Remainder] VoiceChannel? channel = null)
         {
             var voiceChannel = ctx.Member!.VoiceChannel;
             var eb = new EmbedBuilder();
@@ -215,7 +215,7 @@ public partial class Utility
         [Cmd]
         [Aliases]
         [RequireContext(ContextType.Guild)]
-        public async Task ChannelInfo(Channel? channel = null)
+        public async Task ChannelInfo(TextChannel? channel = null)
         {
             var ch = channel ?? (Channel)ctx.Channel;
             var embed = new EmbedBuilder()

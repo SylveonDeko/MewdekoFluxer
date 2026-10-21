@@ -23,7 +23,7 @@ public class ChannelAccess : MewdekoModuleBase<ChannelAccessService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageRoles)]
-    public async Task ChannelAccessSetup(Channel channel, SocketRole? accessRole = null)
+    public async Task ChannelAccessSetup(TextChannel channel, SocketRole? accessRole = null)
     {
         if (await Service.GetConfigAsync(ctx.Guild.Id, channel.Id) is not null)
         {
@@ -46,7 +46,7 @@ public class ChannelAccess : MewdekoModuleBase<ChannelAccessService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageRoles)]
-    public async Task ChannelAccessRemove(Channel channel)
+    public async Task ChannelAccessRemove(TextChannel channel)
     {
         var config = await Service.GetConfigAsync(ctx.Guild.Id, channel.Id);
         if (config is null)
@@ -103,7 +103,7 @@ public class ChannelAccess : MewdekoModuleBase<ChannelAccessService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageRoles)]
-    public async Task ChannelAccessConfig(Channel channel, string? setting = null,
+    public async Task ChannelAccessConfig(TextChannel channel, string? setting = null,
         [Remainder] string? value = null)
     {
         var config = await Service.GetConfigAsync(ctx.Guild.Id, channel.Id);
@@ -144,7 +144,7 @@ public class ChannelAccess : MewdekoModuleBase<ChannelAccessService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageRoles)]
-    public async Task ChannelAccessPanel(Channel channel, Channel? target = null)
+    public async Task ChannelAccessPanel(TextChannel channel, TextChannel? target = null)
     {
         var config = await Service.GetConfigAsync(ctx.Guild.Id, channel.Id);
         if (config is null)
@@ -153,7 +153,7 @@ public class ChannelAccess : MewdekoModuleBase<ChannelAccessService>
             return;
         }
 
-        target ??= (Channel)ctx.Channel;
+        target ??= (TextChannel)ctx.Channel;
 
         if (await Service.PostPanelAsync(config, target.Id) is null)
         {
@@ -174,7 +174,7 @@ public class ChannelAccess : MewdekoModuleBase<ChannelAccessService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageRoles)]
-    public async Task ChannelAccessQuestionAdd(Channel channel, [Remainder] string question)
+    public async Task ChannelAccessQuestionAdd(TextChannel channel, [Remainder] string question)
     {
         var config = await Service.GetConfigAsync(ctx.Guild.Id, channel.Id);
         if (config is null)
@@ -202,7 +202,7 @@ public class ChannelAccess : MewdekoModuleBase<ChannelAccessService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageRoles)]
-    public async Task ChannelAccessQuestionRemove(Channel channel, int position)
+    public async Task ChannelAccessQuestionRemove(TextChannel channel, int position)
     {
         var config = await Service.GetConfigAsync(ctx.Guild.Id, channel.Id);
         if (config is null)
@@ -229,7 +229,7 @@ public class ChannelAccess : MewdekoModuleBase<ChannelAccessService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageRoles)]
-    public async Task ChannelAccessQuestionList(Channel channel)
+    public async Task ChannelAccessQuestionList(TextChannel channel)
     {
         var config = await Service.GetConfigAsync(ctx.Guild.Id, channel.Id);
         if (config is null)
@@ -263,7 +263,7 @@ public class ChannelAccess : MewdekoModuleBase<ChannelAccessService>
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task ChannelAccessApply(Channel channel)
+    public async Task ChannelAccessApply(TextChannel channel)
     {
         var config = await Service.GetConfigAsync(ctx.Guild.Id, channel.Id);
         if (config is null)
@@ -367,7 +367,7 @@ public class ChannelAccess : MewdekoModuleBase<ChannelAccessService>
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
-    public async Task ChannelAccessPending(Channel? channel = null)
+    public async Task ChannelAccessPending(TextChannel? channel = null)
     {
         int? configId = null;
         if (channel is not null)
@@ -499,7 +499,7 @@ public class ChannelAccess : MewdekoModuleBase<ChannelAccessService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageRoles)]
-    public async Task ChannelAccessBlacklistAdd(IUser user, Channel? channel = null)
+    public async Task ChannelAccessBlacklistAdd(IUser user, TextChannel? channel = null)
     {
         int? configId = null;
         if (channel is not null)
@@ -528,7 +528,7 @@ public class ChannelAccess : MewdekoModuleBase<ChannelAccessService>
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageRoles)]
-    public async Task ChannelAccessBlacklistRemove(IUser user, Channel? channel = null)
+    public async Task ChannelAccessBlacklistRemove(IUser user, TextChannel? channel = null)
     {
         int? configId = null;
         if (channel is not null)

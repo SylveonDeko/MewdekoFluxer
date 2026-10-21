@@ -399,7 +399,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageMessages)]
-        public async Task ResetMessageCounts(IUser? user = null, Channel? channel = null)
+        public async Task ResetMessageCounts(IUser? user = null, TextChannel? channel = null)
         {
             var confirmMessage = (user, channel) switch
             {
@@ -443,7 +443,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.ManageMessages)]
-        public async Task ResetMessageCounts(Channel? channel)
+        public async Task ResetMessageCounts(TextChannel? channel)
         {
             await ResetMessageCounts(null, channel);
         }

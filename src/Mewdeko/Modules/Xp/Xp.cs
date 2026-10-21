@@ -566,7 +566,7 @@ public class Xp(
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task SetChannelXp(Channel channel, double multiplier)
+    public async Task SetChannelXp(TextChannel channel, double multiplier)
     {
         if (multiplier <= 0)
         {
@@ -745,7 +745,7 @@ public class Xp(
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task XpExclude(Channel channel)
+    public async Task XpExclude(TextChannel channel)
     {
         await Service.ExcludeItemAsync(ctx.Guild.Id, channel.Id, ExcludedItemType.Channel);
         await ReplyConfirmAsync(Strings.XpChannelExcluded(ctx.Guild.Id, channel.Mention)).ConfigureAwait(false);
@@ -787,7 +787,7 @@ public class Xp(
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task XpInclude(Channel channel)
+    public async Task XpInclude(TextChannel channel)
     {
         await Service.IncludeItemAsync(ctx.Guild.Id, channel.Id, ExcludedItemType.Channel);
         await ReplyConfirmAsync(Strings.XpChannelIncluded(ctx.Guild.Id, channel.Mention)).ConfigureAwait(false);
@@ -1545,7 +1545,7 @@ public class Xp(
     [Cmd]
     [Aliases]
     [UserPerm(GuildPermission.ManageGuild)]
-    public async Task LevelUpChannel(Channel? channel = null)
+    public async Task LevelUpChannel(TextChannel? channel = null)
     {
         await Service.SetLevelUpChannelAsync(ctx.Guild.Id, channel?.Id ?? 0);
 

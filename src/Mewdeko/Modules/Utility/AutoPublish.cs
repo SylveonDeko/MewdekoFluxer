@@ -20,7 +20,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task AddAutoPublish(Channel channel)
+        public async Task AddAutoPublish(TextChannel channel)
         {
             if (channel is not { Type: ChannelType.GuildNews } chan)
             {
@@ -51,7 +51,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task AddPublishBlacklist(IUser user, Channel channel)
+        public async Task AddPublishBlacklist(IUser user, TextChannel channel)
         {
             if (await Service.CheckIfExists(channel.Id))
             {
@@ -88,7 +88,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task AddPublishBlacklist(Channel channel, [Remainder] string word)
+        public async Task AddPublishBlacklist(TextChannel channel, [Remainder] string word)
         {
             if (await Service.CheckIfExists(channel.Id))
             {
@@ -131,7 +131,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task RemovePublishBlacklist(IUser user, Channel channel)
+        public async Task RemovePublishBlacklist(IUser user, TextChannel channel)
         {
             if (await Service.CheckIfExists(channel.Id))
             {
@@ -157,7 +157,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task RemovePublishBlacklist(Channel channel, [Remainder] string word)
+        public async Task RemovePublishBlacklist(TextChannel channel, [Remainder] string word)
         {
             if (await Service.CheckIfExists(channel.Id))
             {
@@ -182,7 +182,7 @@ public partial class Utility
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task RemoveAutoPublish(Channel channel)
+        public async Task RemoveAutoPublish(TextChannel channel)
         {
             if (channel is not { Type: ChannelType.GuildNews })
             {

@@ -149,7 +149,7 @@ public partial class Suggestions
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task AcceptChannel(Channel? channel = null)
+        public async Task AcceptChannel(TextChannel? channel = null)
         {
             await Service.SetAcceptChannel(ctx.Guild, channel?.Id ?? 0).ConfigureAwait(false);
             if (channel is null)
@@ -171,7 +171,7 @@ public partial class Suggestions
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task DenyChannel(Channel? channel = null)
+        public async Task DenyChannel(TextChannel? channel = null)
         {
             await Service.SetDenyChannel(ctx.Guild, channel?.Id ?? 0).ConfigureAwait(false);
             if (channel is null)
@@ -194,7 +194,7 @@ public partial class Suggestions
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task ConsiderChannel(Channel? channel = null)
+        public async Task ConsiderChannel(TextChannel? channel = null)
         {
             await Service.SetConsiderChannel(ctx.Guild, channel?.Id ?? 0).ConfigureAwait(false);
             if (channel is null)
@@ -217,7 +217,7 @@ public partial class Suggestions
         [Aliases]
         [RequireContext(ContextType.Guild)]
         [UserPerm(GuildPermission.Administrator)]
-        public async Task ImplementChannel(Channel? channel = null)
+        public async Task ImplementChannel(TextChannel? channel = null)
         {
             await Service.SetImplementChannel(ctx.Guild, channel?.Id ?? 0).ConfigureAwait(false);
             if (channel is null)
