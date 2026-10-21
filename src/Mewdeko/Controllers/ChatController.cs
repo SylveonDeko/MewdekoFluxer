@@ -34,21 +34,20 @@ public class ChatController(
         if (!DateTime.TryParse(after, out var afterDate))
             return BadRequest("Invalid date format");
 
+        const int pageSize = 100;
+        const int maxMessages = 5000;
         var messagesResult = new List<Message>();
-        var messagesAsync = await channel.GetMessagesAsync(1000).FlattenAsync();
-        messagesResult.AddRange(messagesAsync.Where(m => m.Timestamp >= afterDate));
-
-        // If we need more messages and have some results, use the oldest message ID as the anchor
-        var oldestMessage = messagesResult.OrderBy(m => m.Timestamp).FirstOrDefault();
-        while (messagesResult.Count < 5000 && oldestMessage != null && afterDate < oldestMessage.Timestamp)
+        ulong? beforeId = null;
+        while (messagesResult.Count < maxMessages)
         {
-            var olderMessagesAsync = await channel.GetMessagesAsync(beforeId: oldestMessage.Id).FlattenAsync();
-            var olderFiltered = olderMessagesAsync.Where(m => m.Timestamp >= afterDate).ToList();
+            var page = (await channel.GetMessagesAsync(pageSize, beforeId).FlattenAsync()).ToList();
+            if (page.Count == 0) break;
 
-            if (olderFiltered.Count == 0) break;
+            messagesResult.AddRange(page.Where(m => m.Timestamp >= afterDate));
 
-            messagesResult.AddRange(olderFiltered);
-            oldestMessage = olderFiltered.OrderBy(m => m.Timestamp).FirstOrDefault();
+            if (page.Count < pageSize || page.Min(m => m.Timestamp) < afterDate) break;
+
+            beforeId = page.OrderBy(m => m.Timestamp).First().Id;
         }
 
         // Sort messages by timestamp (oldest first)
