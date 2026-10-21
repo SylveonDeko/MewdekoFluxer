@@ -1010,7 +1010,10 @@ public sealed partial class AchievementService
                 .ToList();
             if (roles.Count > 0)
             {
-                await user.AddRolesAsync(roles);
+                await user.AddRolesAsync(roles, new RequestOptions
+                {
+                    AuditLogReason = strings.AchievementAuditReason(guild.Id)
+                });
             }
         }
         catch (Exception ex)

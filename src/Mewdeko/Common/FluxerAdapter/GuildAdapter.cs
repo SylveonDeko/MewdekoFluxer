@@ -194,16 +194,17 @@ public static class GuildAdapter
         /// <summary>
         ///     Adds several roles one after another.
         /// </summary>
-        public async Task AddRolesAsync(IEnumerable<ulong> roleIds)
+        public async Task AddRolesAsync(IEnumerable<ulong> roleIds, RequestOptions? options = null)
         {
             foreach (var roleId in roleIds)
-                await member.AddRoleAsync(roleId).ConfigureAwait(false);
+                await member.AddRoleAsync(roleId, options).ConfigureAwait(false);
         }
 
         /// <summary>
         ///     Adds several roles one after another.
         /// </summary>
-        public Task AddRolesAsync(IEnumerable<Role> roles) => member.AddRolesAsync(roles.Select(r => r.Id));
+        public Task AddRolesAsync(IEnumerable<Role> roles, RequestOptions? options = null) =>
+            member.AddRolesAsync(roles.Select(r => r.Id), options);
 
         /// <summary>
         ///     Removes several roles one after another.
