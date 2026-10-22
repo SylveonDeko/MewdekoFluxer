@@ -1,4 +1,5 @@
 ﻿
+using Fluxer.Net.Voice;
 using Lavalink4NET;
 using Lavalink4NET.Filters;
 using Lavalink4NET.Integrations.ExtraFilters;
@@ -685,6 +686,12 @@ public partial class Music
             catch (TimeoutException)
             {
                 return (null, Strings.MusicLavalinkDisconnected(ctx.Guild.Id));
+            }
+            catch (VoiceJoinRefusedException ex)
+            {
+                return (null, ex.Code == FluxerErrorCodes.VoiceChannelFull
+                    ? Strings.MusicVoiceChannelFull(ctx.Guild.Id)
+                    : Strings.MusicVoiceJoinRefused(ctx.Guild.Id));
             }
         }
     }

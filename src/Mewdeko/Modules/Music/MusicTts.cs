@@ -1,6 +1,7 @@
 using System.Net.Http;
 using System.Text.Json;
 using DataModel;
+using Fluxer.Net.Voice;
 using Lavalink4NET;
 using Lavalink4NET.Players;
 using LinqToDB;
@@ -734,6 +735,12 @@ public partial class Music
             catch (TimeoutException)
             {
                 return (null, Strings.MusicLavalinkDisconnected(ctx.Guild.Id));
+            }
+            catch (VoiceJoinRefusedException ex)
+            {
+                return (null, ex.Code == FluxerErrorCodes.VoiceChannelFull
+                    ? Strings.MusicVoiceChannelFull(ctx.Guild.Id)
+                    : Strings.MusicVoiceJoinRefused(ctx.Guild.Id));
             }
         }
     }

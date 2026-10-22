@@ -40,6 +40,8 @@
   "music_now_playing_stats": "{0} **{1}%** • 📑 **{2}** of **{3}**{4}{5}",
   "music_now_playing_title": "Now Playing",
   "music_lavalink_disconnected": "Lavalink is disconnected. Please turn on lavalink and try again.",
+  "music_voice_channel_full": "I can't join that voice channel because it's full.",
+  "music_voice_join_refused": "Fluxer didn't let me join that voice channel. Peer-to-peer channels can't be joined by bots.",
   "music_link_channel_on": "Music link conversion enabled for this channel. Music links posted here will get a reply with cross-platform links.",
   "music_link_channel_off": "Music link conversion disabled for this channel.",
   "music_link_channels_none": "No channels are configured for music link conversion.",
