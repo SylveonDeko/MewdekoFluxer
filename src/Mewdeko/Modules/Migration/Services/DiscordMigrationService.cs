@@ -174,7 +174,7 @@ public sealed class DiscordMigrationService(
     MigrationExpressions expressions,
     ILogger<DiscordMigrationService> logger) : INService
 {
-    private const int SupportedVersion = 1;
+    private const int SupportedVersion = 2;
     private const string PendingMarker = "$pending";
     private static readonly Lazy<MigrationSpec> Spec = new(() => MigrationSpec.Load("data/migration/tables.json"));
     private readonly SemaphoreSlim migrationLock = new(1, 1);
@@ -250,7 +250,7 @@ public sealed class DiscordMigrationService(
         foreach (var name in OrderTables(meta.Tables.Where(x =>
                      Spec.Value.Tables.TryGetValue(x, out var rule) && rule.Copy && schema.ContainsKey(x))))
         {
-            var data = await MigrationBundle.ReadTableAsync(redis, code, name);
+            var data = await MigrationBundle.ReadTableAsync(redis, code, meta, name);
             if (data is not null && data.Rows.Count > 0)
                 tables.Add((Spec.Value.Tables[name], data));
         }
@@ -308,24 +308,6 @@ public sealed class DiscordMigrationService(
         {
             migrationLock.Release();
         }
-    }
-
-    /// <summary>
-    ///     Links a Fluxer account to the Discord account behind a link code, and writes the member's held rows.
-    /// </summary>
-    /// <param name="fluxerUserId">The Fluxer user.</param>
-    /// <param name="rawCode">The code as typed.</param>
-    /// <returns>What happened, or null when the code is unknown or expired.</returns>
-    public async Task<LinkOutcome?> LinkAsync(ulong fluxerUserId, string rawCode)
-    {
-        if (MigrationBundle.NormalizeCode(rawCode) is not { } code)
-            return null;
-
-        var value = await cache.Redis.GetDatabase().StringGetDeleteAsync($"mewdeko_link:{code}");
-        if (value.IsNullOrEmpty || !ulong.TryParse(value.ToString(), out var discordUserId))
-            return null;
-
-        return await LinkAccountsAsync(fluxerUserId, discordUserId);
     }
 
     /// <summary>

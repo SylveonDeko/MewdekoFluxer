@@ -90,6 +90,10 @@ public sealed class MigrationMeta
     [JsonPropertyName("tables")]
     public List<string> Tables { get; set; } = [];
 
+    /// <summary>Gets or sets how many pieces each table split into, for tables stored in more than one.</summary>
+    [JsonPropertyName("chunks")]
+    public Dictionary<string, int> Chunks { get; set; } = [];
+
     /// <summary>Gets the Discord server id as a number.</summary>
     [JsonIgnore]
     public ulong GuildId => ulong.Parse(DiscordGuildId);
@@ -122,7 +126,7 @@ public sealed class MigrationTable
 /// </summary>
 public static class MigrationBundle
 {
-    /// <summary>The letters migration and link codes are made of.</summary>
+    /// <summary>The letters migration codes are made of.</summary>
     public const string CodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
     /// <summary>
@@ -149,16 +153,31 @@ public static class MigrationBundle
     }
 
     /// <summary>
-    ///     Reads one exported table.
+    ///     Reads one exported table, joining its pieces when it was stored in more than one.
     /// </summary>
     /// <param name="redis">The shared Redis database.</param>
     /// <param name="code">The normalized code.</param>
+    /// <param name="meta">The export's description, which says how many pieces each table has.</param>
     /// <param name="table">The table name.</param>
     /// <returns>The table, or null when it was not exported.</returns>
-    public static async Task<MigrationTable?> ReadTableAsync(IDatabase redis, string code, string table)
+    public static async Task<MigrationTable?> ReadTableAsync(IDatabase redis, string code, MigrationMeta meta,
+        string table)
     {
-        var data = await redis.StringGetAsync($"mewdeko_migration:{code}:table:{table}");
-        return data.IsNullOrEmpty ? null : Deserialize<MigrationTable>(data!);
+        MigrationTable? result = null;
+        foreach (var key in TableKeys(code, meta, table))
+        {
+            var data = await redis.StringGetAsync(key);
+            if (data.IsNullOrEmpty)
+                return null;
+
+            var piece = Deserialize<MigrationTable>(data!);
+            if (result is null)
+                result = piece;
+            else
+                result.Rows.AddRange(piece.Rows);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -169,10 +188,17 @@ public static class MigrationBundle
     /// <param name="meta">The export's description, which lists its tables.</param>
     public static async Task DeleteAsync(IDatabase redis, string code, MigrationMeta meta)
     {
-        var keys = meta.Tables.Select(x => (RedisKey)$"mewdeko_migration:{code}:table:{x}")
+        var keys = meta.Tables.SelectMany(x => TableKeys(code, meta, x))
             .Append($"mewdeko_migration:{code}:meta")
             .ToArray();
         await redis.KeyDeleteAsync(keys);
+    }
+
+    private static IEnumerable<RedisKey> TableKeys(string code, MigrationMeta meta, string table)
+    {
+        yield return $"mewdeko_migration:{code}:table:{table}";
+        for (var i = 1; i < meta.Chunks.GetValueOrDefault(table, 1); i++)
+            yield return $"mewdeko_migration:{code}:table:{table}:{i}";
     }
 
     private static T Deserialize<T>(byte[] data)
