@@ -313,17 +313,17 @@ public sealed partial class AchievementService
     /// <returns>The key.</returns>
     public static string EmojiKey(IEmoji emote)
     {
-        return emote.Id != 0 ? emote.Id.ToString() : emote.Name;
+        return emote.Id is { } id ? id.ToString() : emote.Name;
     }
 
     private static bool EmojiMatches(string stored, IEmoji emote)
     {
         var trimmed = stored.Trim();
-        if (emote.Id != 0)
+        if (emote.Id is { } id)
         {
             if (Emoji.TryParse(trimmed, out var parsed))
-                return parsed.Id == emote.Id;
-            return trimmed == emote.Id.ToString() ||
+                return parsed.Id == id;
+            return trimmed == id.ToString() ||
                    string.Equals(trimmed.Trim(':'), emote.Name, StringComparison.OrdinalIgnoreCase);
         }
 

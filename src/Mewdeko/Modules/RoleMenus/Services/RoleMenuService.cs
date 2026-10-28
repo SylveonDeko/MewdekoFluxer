@@ -1554,7 +1554,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// <returns>The identifying text.</returns>
     private static string EmoteKey(IEmoji emote)
     {
-        return emote.Id != 0 ? emote.Id.ToString() : emote.Name;
+        return emote.Id is { } id ? id.ToString() : emote.Name;
     }
 
     /// <summary>

@@ -102,10 +102,10 @@ public sealed partial class MigrationExpressions(
                 var byName = batch.ToDictionary(x => x.Request.Name, x => x.Emoji, StringComparer.OrdinalIgnoreCase);
                 foreach (var created in result.Success)
                 {
-                    if (!byName.TryGetValue(created.Name, out var source))
+                    if (!byName.TryGetValue(created.Name, out var source) || created.Id is not { } createdId)
                         continue;
 
-                    plan.Match.Emojis[ulong.Parse(source.Id)] = (created.Id, created.Name, created.IsAnimated);
+                    plan.Match.Emojis[ulong.Parse(source.Id)] = (createdId, created.Name, created.IsAnimated);
                     copied++;
                 }
 

@@ -360,7 +360,7 @@ public class PollMessageService : INService, IReadyExecutor, IUnloadableService
 
     private static string EmoteKey(IEmoji emote)
     {
-        return emote.Id != 0 ? emote.Id.ToString(CultureInfo.InvariantCulture) : emote.Name;
+        return emote.Id is { } id ? id.ToString(CultureInfo.InvariantCulture) : emote.Name;
     }
 
     private Task OnReactionAddedAsync(Cacheable<Message> message,
