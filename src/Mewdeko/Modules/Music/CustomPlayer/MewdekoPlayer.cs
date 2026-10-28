@@ -185,9 +185,9 @@ public sealed class MewdekoPlayer : LavalinkPlayer
         var musicChannel = await GetMusicChannel();
 
         var nowPlayingEmbed = await PrettyNowPlayingAsync(queue);
-
-        await TrySendAsync(musicChannel, c => c.SendAsync(embed: nowPlayingEmbed,
-            allowedMentions: AllowedMentions.None));
+        if (nowPlayingEmbed is not null)
+            await TrySendAsync(musicChannel, c => c.SendAsync(embed: nowPlayingEmbed,
+                allowedMentions: AllowedMentions.None));
 
         if (currentTrack?.Index == queue.Count)
         {
@@ -494,11 +494,15 @@ public sealed class MewdekoPlayer : LavalinkPlayer
     }
 
     /// <summary>
-    ///     Gets a pretty now playing embed for the player.
+    ///     Gets a pretty now playing embed for the player, or null when the playing track is not in the queue.
     /// </summary>
-    public async Task<EmbedRequest> PrettyNowPlayingAsync(List<MewdekoTrack> queue)
+    public async Task<EmbedRequest?> PrettyNowPlayingAsync(List<MewdekoTrack> queue)
     {
-        var currentTrack = await cache.GetCurrentTrack(GuildId);
+        var currentTrack = await cache.GetCurrentTrack(GuildId)
+                           ?? queue.FirstOrDefault(x => x.Track.Identifier == CurrentTrack?.Identifier);
+        if (currentTrack is null || CurrentTrack is null)
+            return null;
+
         var position = Position.Value.Position;
         var duration = CurrentTrack.Duration;
         var (progressBar, _) = CreateProgressBar(position, duration);

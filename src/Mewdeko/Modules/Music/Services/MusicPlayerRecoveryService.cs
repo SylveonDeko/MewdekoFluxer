@@ -88,7 +88,8 @@ public class MusicPlayerRecoveryService : INService, IReadyExecutor
             if (guild is not null && await cache.GetPlayerState(guild.Id) is not null)
             {
                 await RecoverGuildPlayerAsync(guild);
-                continue;
+                if (audioService.Players.HasPlayer(guild.Id))
+                    continue;
             }
 
             try

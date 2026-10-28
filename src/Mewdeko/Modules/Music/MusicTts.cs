@@ -732,6 +732,10 @@ public partial class Music
                 };
                 return (null, errorMessage);
             }
+            catch (VoiceJoinTimeoutException)
+            {
+                return (null, Strings.MusicVoiceJoinTimeout(ctx.Guild.Id));
+            }
             catch (TimeoutException)
             {
                 return (null, Strings.MusicLavalinkDisconnected(ctx.Guild.Id));

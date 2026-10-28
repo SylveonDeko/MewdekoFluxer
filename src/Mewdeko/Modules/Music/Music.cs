@@ -297,6 +297,12 @@ public partial class Music(
 
 
             var nowPlayingEmbed = await player.PrettyNowPlayingAsync(queue);
+            if (nowPlayingEmbed is null)
+            {
+                await ReplyErrorAsync(Strings.MusicQueueEmpty(ctx.Guild.Id)).ConfigureAwait(false);
+                return;
+            }
+
             await ctx.Channel.SendAsync(embed: nowPlayingEmbed, allowedMentions: AllowedMentions.None)
                 .ConfigureAwait(false);
         }
@@ -1691,6 +1697,10 @@ public partial class Music(
                 _ => throw new ArgumentOutOfRangeException()
             };
             return (null, errorMessage);
+        }
+        catch (VoiceJoinTimeoutException)
+        {
+            return (null, Strings.MusicVoiceJoinTimeout(ctx.Guild.Id));
         }
         catch (TimeoutException)
         {
