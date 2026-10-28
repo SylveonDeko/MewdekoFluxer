@@ -159,7 +159,7 @@
   <ItemGroup>
     <ProjectReference Include="..\MewdekoSourceGen\MewdekoSourceGen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
     <PackageReference Include="Fluxer.Net" Version="3.9.0"/>
-    <ProjectReference Include="..\..\..\Lavalink4NET.Fluxer\src\Lavalink4NET.Fluxer\Lavalink4NET.Fluxer.csproj"/>
+    <PackageReference Include="Lavalink4NET.Fluxer" Version="0.1.1"/>
 
     <AdditionalFiles Include="data\strings\responses\en-US\*.json"/>
   </ItemGroup>
