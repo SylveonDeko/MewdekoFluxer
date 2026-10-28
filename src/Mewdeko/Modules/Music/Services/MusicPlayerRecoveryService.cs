@@ -1,5 +1,4 @@
 using System.Threading;
-using Fluxer.Net.Voice;
 using Lavalink4NET;
 using Lavalink4NET.Cluster;
 using Lavalink4NET.Events;
@@ -22,7 +21,7 @@ public class MusicPlayerRecoveryService : INService, IReadyExecutor
     private readonly FluxerClient client;
     private readonly ILogger<MusicPlayerRecoveryService> logger;
     private readonly GeneratedBotStrings strings;
-    private readonly FluxerVoiceClient voiceClient;
+    private readonly IVoiceProvider voiceClient;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="MusicPlayerRecoveryService" /> class.
@@ -30,7 +29,7 @@ public class MusicPlayerRecoveryService : INService, IReadyExecutor
     /// <param name="cache">The data cache service.</param>
     /// <param name="audioService">The audio service.</param>
     /// <param name="client">The Fluxer client.</param>
-    /// <param name="voiceClient">The Fluxer voice client.</param>
+    /// <param name="voiceClient">Joins and leaves voice for the client.</param>
     /// <param name="services">The service provider.</param>
     /// <param name="strings">The localization service.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
@@ -38,7 +37,7 @@ public class MusicPlayerRecoveryService : INService, IReadyExecutor
         IDataCache cache,
         IAudioService audioService,
         FluxerClient client,
-        FluxerVoiceClient voiceClient,
+        IVoiceProvider voiceClient,
         IServiceProvider services,
         GeneratedBotStrings strings, ILogger<MusicPlayerRecoveryService> logger)
     {
@@ -94,7 +93,7 @@ public class MusicPlayerRecoveryService : INService, IReadyExecutor
 
             try
             {
-                await voiceClient.LeaveAsync(player.GuildId);
+                await voiceClient.DisconnectAsync(player.GuildId);
             }
             catch (Exception ex)
             {
