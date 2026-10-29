@@ -74,7 +74,6 @@ public class GuildDataRetentionService : INService, IReadyExecutor
 
     private readonly BotConfigService bss;
     private readonly FluxerClient client;
-    private readonly BotCredentials creds;
     private readonly IDataConnectionFactory dbFactory;
     private readonly EventHandler handler;
     private readonly ILogger<GuildDataRetentionService> logger;
@@ -90,18 +89,16 @@ public class GuildDataRetentionService : INService, IReadyExecutor
     /// <param name="client">The discord client.</param>
     /// <param name="dbFactory">The database connection factory.</param>
     /// <param name="bss">The bot config service.</param>
-    /// <param name="creds">The bot credentials.</param>
     /// <param name="strings">The localization strings provider.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     public GuildDataRetentionService(EventHandler handler, FluxerClient client,
-        IDataConnectionFactory dbFactory, BotConfigService bss, BotCredentials creds, GeneratedBotStrings strings,
+        IDataConnectionFactory dbFactory, BotConfigService bss, GeneratedBotStrings strings,
         ILogger<GuildDataRetentionService> logger)
     {
         this.handler = handler;
         this.client = client;
         this.dbFactory = dbFactory;
         this.bss = bss;
-        this.creds = creds;
         this.strings = strings;
         this.logger = logger;
     }
@@ -518,12 +515,12 @@ public class GuildDataRetentionService : INService, IReadyExecutor
 
     private async Task NotifyAsync(IReadOnlyList<GuildDataRetention> batch, long rows)
     {
-        if (creds.GuildJoinsChannelId is 0 || batch.Count == 0)
+        if (bss.Data.GuildJoinsChannel is 0 || batch.Count == 0)
             return;
 
         try
         {
-            if (await client.Rest.GetChannelAsync(creds.GuildJoinsChannelId).ConfigureAwait(false) is not
+            if (await client.Rest.GetChannelAsync(bss.Data.GuildJoinsChannel).ConfigureAwait(false) is not
                 Channel channel)
                 return;
 

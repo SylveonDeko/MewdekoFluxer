@@ -40,7 +40,6 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
 
     private readonly BotConfigService bss;
     private readonly FluxerClient client;
-    private readonly BotCredentials creds;
     private readonly IDataConnectionFactory dbFactory;
     private readonly EventHandler handler;
     private readonly ILogger<GuildLeaveFeedbackService> logger;
@@ -54,10 +53,9 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
     /// <param name="dbFactory">The database connection factory.</param>
     /// <param name="strings">The localization strings.</param>
     /// <param name="bss">The bot config service.</param>
-    /// <param name="creds">The bot credentials.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     public GuildLeaveFeedbackService(EventHandler handler, FluxerClient client,
-        IDataConnectionFactory dbFactory, GeneratedBotStrings strings, BotConfigService bss, BotCredentials creds,
+        IDataConnectionFactory dbFactory, GeneratedBotStrings strings, BotConfigService bss,
         ILogger<GuildLeaveFeedbackService> logger)
     {
         this.handler = handler;
@@ -65,7 +63,6 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
         this.dbFactory = dbFactory;
         this.strings = strings;
         this.bss = bss;
-        this.creds = creds;
         this.logger = logger;
     }
 
@@ -100,7 +97,7 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
         {
             return bss.Data.LeaveFeedbackChannel is not 0
                 ? bss.Data.LeaveFeedbackChannel
-                : creds.GuildJoinsChannelId;
+                : bss.Data.GuildJoinsChannel;
         }
     }
 

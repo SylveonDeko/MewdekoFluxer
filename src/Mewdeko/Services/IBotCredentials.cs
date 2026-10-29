@@ -105,11 +105,6 @@ public interface IBotCredentials
     public string OpenMeteoApiUrl { get; }
 
     /// <summary>
-    ///     Gets the channel ID for confession reports.
-    /// </summary>
-    public ulong ConfessionReportChannelId { get; }
-
-    /// <summary>
     ///     Gets the bot's Cloudflare clearance cookie.
     /// </summary>
     public string CfClearance { get; }

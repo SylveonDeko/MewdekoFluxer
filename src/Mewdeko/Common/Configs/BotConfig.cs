@@ -189,6 +189,33 @@ public sealed class BotConfig
     public ulong CommandLogChannel { get; set; }
 
     /// <summary>
+    ///     Gets or sets the channel ID that server joins and leaves get posted to.
+    /// </summary>
+    [Comment("""
+             Channel that the bot joining and leaving servers gets posted to.
+             Set to 0 to turn it off.
+             """)]
+    public ulong GuildJoinsChannel { get; set; }
+
+    /// <summary>
+    ///     Gets or sets the channel ID that pronoun abuse reports get posted to.
+    /// </summary>
+    [Comment("""
+             Channel that pronoun abuse reports get posted to.
+             Set to 0 to turn reports off.
+             """)]
+    public ulong PronounAbuseReportChannel { get; set; }
+
+    /// <summary>
+    ///     Gets or sets the channel ID that confession reports get posted to.
+    /// </summary>
+    [Comment("""
+             Channel that confession reports get posted to.
+             Set to 0 to turn reports off.
+             """)]
+    public ulong ConfessionReportChannel { get; set; }
+
+    /// <summary>
     ///     Gets or sets whether the owner of a guild gets a dm asking why the bot was removed.
     /// </summary>
     [Comment("""
@@ -202,7 +229,7 @@ public sealed class BotConfig
     /// </summary>
     [Comment("""
              Channel that leave feedback answers get posted to.
-             Set to 0 to fall back to the guild joins/leaves channel from creds.
+             Set to 0 to fall back to GuildJoinsChannel.
              """)]
     public ulong LeaveFeedbackChannel { get; set; }
 
@@ -211,7 +238,7 @@ public sealed class BotConfig
     /// </summary>
     [Comment("""
              Channel that feature requests submitted from the dashboard get posted to.
-             Set to 0 to fall back to the guild joins/leaves channel from creds.
+             Set to 0 to fall back to GuildJoinsChannel.
              """)]
     public ulong FeatureRequestChannel { get; set; }
 
@@ -284,7 +311,7 @@ public sealed class BotConfig
     /// </summary>
     [Comment("""
              Channel that bot hell detections on join get posted to.
-             Set to 0 to fall back to the guild joins/leaves channel from creds.
+             Set to 0 to fall back to GuildJoinsChannel.
              """)]
     public ulong BotHellReportChannel { get; set; }
 

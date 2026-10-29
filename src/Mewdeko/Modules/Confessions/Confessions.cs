@@ -8,8 +8,7 @@ namespace Mewdeko.Modules.Confessions;
 ///     Module for managing confessions.
 /// </summary>
 /// <param name="guildSettings">The guild settings service</param>
-/// <param name="credentials">The bot credentials holding the confession report channel</param>
-public class Confessions(GuildSettingsService guildSettings, IBotCredentials credentials)
+public class Confessions(GuildSettingsService guildSettings)
     : MewdekoModuleBase<ConfessionService>
 {
     /// <summary>
@@ -185,9 +184,13 @@ public class Confessions(GuildSettingsService guildSettings, IBotCredentials cre
             return;
         }
 
-        var channel =
-            await ((FluxerClient)ctx.Client).Rest.GetChannelAsync(credentials.ConfessionReportChannelId)
-                .ConfigureAwait(false) as Channel;
+        if (Config.ConfessionReportChannel is 0)
+            return;
+
+        if (await ((FluxerClient)ctx.Client).Rest.GetChannelAsync(Config.ConfessionReportChannel)
+                .ConfigureAwait(false) is not Channel channel)
+            return;
+
         var eb = new EmbedBuilder().WithErrorColor().WithTitle(Strings.ConfessionsReportReceived(guildId))
             .AddField(Strings.ConfessionsReport(guildId), how)
             .AddField(Strings.ConfessionsReportUser(guildId), $"{ctx.User} | {ctx.User.Id}")

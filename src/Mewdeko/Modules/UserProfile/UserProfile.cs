@@ -13,8 +13,7 @@ namespace Mewdeko.Modules.UserProfile;
 ///     Handles text commands for user profiles, providing functionalities to view and manage user profile details.
 /// </summary>
 /// <param name="dbFactory">The database connection factory.</param>
-/// <param name="creds">The bot credentials holding the pronoun report channel.</param>
-public class UserProfile(IDataConnectionFactory dbFactory, BotCredentials creds) : MewdekoModuleBase<UserProfileService>
+public class UserProfile(IDataConnectionFactory dbFactory) : MewdekoModuleBase<UserProfileService>
 {
     /// <summary>
     ///     Shows the user's profile or another user's profile if specified.
@@ -294,7 +293,10 @@ public class UserProfile(IDataConnectionFactory dbFactory, BotCredentials creds)
             return;
         }
 
-        var channel = await ctx.Client.GetChannelAsync(creds.PronounAbuseReportChannelId).ConfigureAwait(false);
+        if (Config.PronounAbuseReportChannel is 0)
+            return;
+
+        var channel = await ctx.Client.GetChannelAsync(Config.PronounAbuseReportChannel).ConfigureAwait(false);
         if (channel is not Channel { IsTextable: true } reportChannel)
         {
             await ReplyErrorAsync(Strings.PronounsReportNothing(ctx.Guild.Id)).ConfigureAwait(false);

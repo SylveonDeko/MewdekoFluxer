@@ -42,6 +42,11 @@ public sealed class BotConfigService : ConfigServiceBase<BotConfig>
         AddParsedProp("locale", bs => bs.DefaultLocale, ConfigParsers.Culture, ConfigPrinters.Culture);
         AddParsedProp("prefix", bs => bs.Prefix, ConfigParsers.String, ConfigPrinters.ToString);
         AddParsedProp("commandlogchannel", bs => bs.CommandLogChannel, ulong.TryParse, ConfigPrinters.ToString);
+        AddParsedProp("guildJoinsChannel", bs => bs.GuildJoinsChannel, ulong.TryParse, ConfigPrinters.ToString);
+        AddParsedProp("pronounAbuseReportChannel", bs => bs.PronounAbuseReportChannel, ulong.TryParse,
+            ConfigPrinters.ToString);
+        AddParsedProp("confessionReportChannel", bs => bs.ConfessionReportChannel, ulong.TryParse,
+            ConfigPrinters.ToString);
         AddParsedProp("leaveFeedbackEnabled", bs => bs.LeaveFeedbackEnabled, bool.TryParse,
             ConfigPrinters.ToString);
         AddParsedProp("leaveFeedbackChannel", bs => bs.LeaveFeedbackChannel, ulong.TryParse,

@@ -178,12 +178,15 @@ public class Mewdeko : IDisposable
         {
             try
             {
-                var chan = await Client.Rest.GetChannelAsync(Credentials.GuildJoinsChannelId).ConfigureAwait(false);
-                await ((Channel)chan).SendErrorAsync($"Left server: {arg.Name} [{arg.Id}]", bss.Data,
-                [
-                    new EmbedFieldBuilder().WithName("Total Guilds")
-                        .WithValue(Client.Guilds.Count)
-                ]).ConfigureAwait(false);
+                if (bss.Data.GuildJoinsChannel is not 0 &&
+                    await Client.Rest.GetChannelAsync(bss.Data.GuildJoinsChannel).ConfigureAwait(false) is Channel chan)
+                {
+                    await chan.SendErrorAsync($"Left server: {arg.Name} [{arg.Id}]", bss.Data,
+                    [
+                        new EmbedFieldBuilder().WithName("Total Guilds")
+                            .WithValue(Client.Guilds.Count)
+                    ]).ConfigureAwait(false);
+                }
             }
             catch
             {
@@ -204,9 +207,10 @@ public class Mewdeko : IDisposable
             var gc = await GuildSettingsService.GetGuildConfig(arg.Id).ConfigureAwait(false);
 
             await JoinedGuild.Invoke(gc).ConfigureAwait(false);
-            var chan =
-                await Client.Rest.GetChannelAsync(Credentials.GuildJoinsChannelId).ConfigureAwait(false) as
-                    Channel;
+            if (bss.Data.GuildJoinsChannel is 0 ||
+                await Client.Rest.GetChannelAsync(bss.Data.GuildJoinsChannel).ConfigureAwait(false) is not Channel chan)
+                return;
+
             var eb = new EmbedBuilder();
             eb.WithTitle($"Joined {Format.Bold(arg.Name)} {arg.Id}");
             eb.AddField("Members", arg.TotalMembers);

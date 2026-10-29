@@ -123,23 +123,6 @@ public class BotCredentials : IBotCredentials
     public bool IsApiEnabled { get; set; }
 
     /// <summary>
-    ///     Gets or sets the ID of the debug guild.
-    /// </summary>
-    public ulong DebugGuildId { get; set; }
-
-    /// <summary>
-    ///     Gets or sets the ID of the channel where guild joins are reported.
-    /// </summary>
-    public ulong GuildJoinsChannelId { get; set; }
-
-
-    /// <summary>
-    ///     Gets or sets the ID of the channel where pronoun abuse reports are sent.
-    /// </summary>
-    public ulong PronounAbuseReportChannelId { get; set; }
-
-
-    /// <summary>
     ///     Gets or sets the URL of the Lavalink server. Used as a single node when <see cref="LavalinkNodes" /> is
     ///     not configured.
     /// </summary>
@@ -323,11 +306,6 @@ public class BotCredentials : IBotCredentials
     ///     Gets or sets the Open-Meteo API URL. Defaults to the public API, but can be set to a self-hosted instance.
     /// </summary>
     public string OpenMeteoApiUrl { get; set; } = "https://api.open-meteo.com";
-
-    /// <summary>
-    ///     Gets or sets the ID of the channel where confession reports are sent.
-    /// </summary>
-    public ulong ConfessionReportChannelId { get; set; }
 
     /// <summary>
     ///     Gets or sets whether the PostgreSQL setup has been completed.
@@ -598,16 +576,6 @@ public class BotCredentials : IBotCredentials
             TotalShards = int.TryParse(data[nameof(TotalShards)], out var ts) && ts > 0 ? ts : 1;
             RedisConnections = data[nameof(RedisConnections)];
 
-            DebugGuildId = ulong.TryParse(data[nameof(DebugGuildId)], out var dgid) ? dgid : 843489716674494475;
-            GuildJoinsChannelId = ulong.TryParse(data[nameof(GuildJoinsChannelId)], out var gjid)
-                ? gjid
-                : 892789588739891250;
-            ConfessionReportChannelId = ulong.TryParse(data[nameof(ConfessionReportChannelId)], out var crid)
-                ? crid
-                : 942825117820530709;
-            PronounAbuseReportChannelId = ulong.TryParse(data[nameof(PronounAbuseReportChannelId)], out var pnrepId)
-                ? pnrepId
-                : 970086914826858547;
             UseGlobalCurrency = bool.TryParse(data[nameof(UseGlobalCurrency)], out var ugc) && ugc;
             OpenMeteoApiUrl = data[nameof(OpenMeteoApiUrl)] ?? "https://api.open-meteo.com";
             PostgresSetupCompleted = bool.TryParse(data[nameof(PostgresSetupCompleted)], out var pgSetup) && pgSetup;
@@ -741,9 +709,6 @@ public class BotCredentials : IBotCredentials
         public string JwtSecret { get; set; } = StringExtensions.GenerateSecureString(64);
         public string DiscordClientId { get; set; } = "";
         public string DiscordClientSecret { get; set; } = "";
-        public ulong DebugGuildId { get; set; } = 843489716674494475;
-        public ulong GuildJoinsChannelId { get; set; } = 892789588739891250;
-        public ulong PronounAbuseReportChannelId { get; set; } = 970086914826858547;
         public bool IsApiEnabled { get; set; } = false;
         public string LavalinkUrl { get; set; } = "http://localhost:2333";
         public string LavalinkPassword { get; set; } = "youshallnotpass";
@@ -778,7 +743,6 @@ public class BotCredentials : IBotCredentials
         public string TwitchEventSubSecret { get; } = "";
         public string VotesToken { get; } = "";
         public string OpenMeteoApiUrl { get; } = "https://api.open-meteo.com";
-        public ulong ConfessionReportChannelId { get; } = 942825117820530709;
         public string ChatSavePath { get; } = "/usr/share/nginx/cdn/chatlogs/";
         public string CdnPath { get; } = "";
         public string CdnUrl { get; } = "";

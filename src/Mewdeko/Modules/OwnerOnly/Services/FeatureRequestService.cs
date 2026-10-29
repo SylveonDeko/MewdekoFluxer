@@ -32,7 +32,6 @@ public class FeatureRequestService : INService
     private readonly BotConfigService bss;
     private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
-    private readonly BotCredentials creds;
     private readonly IDataConnectionFactory dbFactory;
     private readonly ILogger<FeatureRequestService> logger;
     private readonly System.Collections.Concurrent.ConcurrentDictionary<ulong, Queue<DateTime>> recentSubmissions =
@@ -44,17 +43,15 @@ public class FeatureRequestService : INService
     /// <param name="client">The discord client.</param>
     /// <param name="dbFactory">The database connection factory.</param>
     /// <param name="bss">The bot config service.</param>
-    /// <param name="creds">The bot credentials.</param>
     /// <param name="collector">The analytics collector.</param>
     /// <param name="logger">The logger.</param>
     public FeatureRequestService(FluxerClient client, IDataConnectionFactory dbFactory,
-        BotConfigService bss, BotCredentials creds, IAnalyticsCollector collector,
+        BotConfigService bss, IAnalyticsCollector collector,
         ILogger<FeatureRequestService> logger)
     {
         this.client = client;
         this.dbFactory = dbFactory;
         this.bss = bss;
-        this.creds = creds;
         this.collector = collector;
         this.logger = logger;
     }
@@ -78,7 +75,7 @@ public class FeatureRequestService : INService
         get
         {
             var configured = bss.Data.FeatureRequestChannel;
-            return configured is not 0 ? configured : creds.GuildJoinsChannelId;
+            return configured is not 0 ? configured : bss.Data.GuildJoinsChannel;
         }
     }
 

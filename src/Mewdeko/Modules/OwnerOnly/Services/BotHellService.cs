@@ -14,7 +14,6 @@ public class BotHellService : INService, IReadyExecutor
 {
     private readonly BotConfigService bss;
     private readonly FluxerClient client;
-    private readonly BotCredentials creds;
     private readonly EventHandler handler;
     private readonly ILogger<BotHellService> logger;
     private readonly GeneratedBotStrings strings;
@@ -25,16 +24,14 @@ public class BotHellService : INService, IReadyExecutor
     /// <param name="handler">The event handler the join event is subscribed on.</param>
     /// <param name="client">The discord client.</param>
     /// <param name="bss">The bot config service.</param>
-    /// <param name="creds">The bot credentials.</param>
     /// <param name="strings">The localization strings provider.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     public BotHellService(EventHandler handler, FluxerClient client, BotConfigService bss,
-        BotCredentials creds, GeneratedBotStrings strings, ILogger<BotHellService> logger)
+        GeneratedBotStrings strings, ILogger<BotHellService> logger)
     {
         this.handler = handler;
         this.client = client;
         this.bss = bss;
-        this.creds = creds;
         this.strings = strings;
         this.logger = logger;
     }
@@ -103,7 +100,7 @@ public class BotHellService : INService, IReadyExecutor
         {
             return bss.Data.BotHellReportChannel is not 0
                 ? bss.Data.BotHellReportChannel
-                : creds.GuildJoinsChannelId;
+                : bss.Data.GuildJoinsChannel;
         }
     }
 
