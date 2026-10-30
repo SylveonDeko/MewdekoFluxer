@@ -211,10 +211,13 @@ public class Mewdeko : IDisposable
                 await Client.Rest.GetChannelAsync(bss.Data.GuildJoinsChannel).ConfigureAwait(false) is not Channel chan)
                 return;
 
+            var owner = (object?)arg.GetUser(arg.OwnerId)
+                        ?? await Client.Rest.GetUserAsync(arg.OwnerId).ConfigureAwait(false);
+
             var eb = new EmbedBuilder();
             eb.WithTitle($"Joined {Format.Bold(arg.Name)} {arg.Id}");
             eb.AddField("Members", arg.TotalMembers);
-            eb.AddField("Owner", $"Name: {arg.GetUser(arg.OwnerId)}\nID: {arg.OwnerId}");
+            eb.AddField("Owner", $"Name: {owner}\nID: {arg.OwnerId}");
             eb.AddField("Text Channels", arg.TextChannels.Count);
             eb.AddField("Voice Channels", arg.VoiceChannels.Count);
             eb.AddField("Total Guilds", Client.Guilds.Count);
