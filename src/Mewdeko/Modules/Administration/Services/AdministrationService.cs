@@ -499,7 +499,7 @@ public class AdministrationService : INService
         // The stored avatar URL is whatever was submitted when the profile was
         // set and may have expired (attachment links can), so the live
         // guild avatar Fluxer serves is preferred when one is applied.
-        var liveAvatar = botMember?.GetAvatarUrl(256);
+        var liveAvatar = string.IsNullOrEmpty(botMember?.AvatarHash) ? null : botMember.GetAvatarUrl(256);
         if (!string.IsNullOrWhiteSpace(liveAvatar))
             result["avatar"] = liveAvatar;
 
