@@ -1,4 +1,5 @@
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Services.Settings;
 
@@ -284,25 +285,34 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
     }
 
     /// <summary>
-    ///     Steals emotes from a message and adds them to the server.
+    ///     Steals emotes and adds them to the server. They are taken from the text, a message link or ID, or the
+    ///     message being replied to.
     /// </summary>
-    /// <param name="e">The message containing the emotes to steal.</param>
+    /// <param name="e">Emotes, or a message link or ID. Leave it out when replying to a message.</param>
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageExpressions)]
     [BotPerm(GuildPermission.ManageExpressions)]
     [Priority(1)]
-    public async Task StealEmotes([Remainder] string e)
+    public async Task StealEmotes([Remainder] string? e = null)
     {
+        var tags = EmoteAdapter.GetMessageEmotes(e);
+        if (tags.Count == 0 && await FindEmoteSourceAsync(e).ConfigureAwait(false) is { } source)
+            tags = EmoteAdapter.GetMessageEmotes(source.Content);
+
+        if (tags.Count == 0)
+        {
+            await ctx.Channel.SendErrorAsync(Strings.NoEmotes(ctx.Guild.Id), Config).ConfigureAwait(false);
+            return;
+        }
+
         var eb = new EmbedBuilder
         {
             Description = Strings.AddingEmotes(ctx.Guild.Id, config.Data.LoadingEmote), Color = Mewdeko.OkColor
         };
         var errored = new List<string>();
         var emotes = new List<string>();
-        var tags = EmoteAdapter.GetMessageEmotes(ctx.Message.Content);
-        if (!tags.Any()) return;
         var msg = await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
         foreach (var i in tags)
         {
@@ -335,4 +345,41 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
         if (errored.Count > 0) b.AddField(Strings.ErroredEmotes(ctx.Guild.Id, errored.Count), string.Join("\n\n", errored));
         await msg.ModifyAsync(x => x.Embed = b.Build()).ConfigureAwait(false);
     }
+
+    private async Task<Message?> FindEmoteSourceAsync(string? text)
+    {
+        var link = MessageLinkRegex().Match(text ?? string.Empty);
+        if (link.Success)
+            return await GetMessageAsync(ulong.Parse(link.Groups["channel"].Value),
+                ulong.Parse(link.Groups["message"].Value)).ConfigureAwait(false);
+
+        if (ulong.TryParse(text?.Trim(), out var messageId))
+            return await GetMessageAsync(ctx.Channel.Id, messageId).ConfigureAwait(false);
+
+        if (ctx.Message.MessageReference is { } reference)
+            return await GetMessageAsync(reference.ChannelId, reference.MessageId).ConfigureAwait(false);
+
+        return null;
+    }
+
+    private static async Task<Message?> GetMessageAsync(ulong channelId, ulong messageId)
+    {
+        if (FluxerContext.Snapshots.GetMessage(messageId) is { } cached)
+            return cached;
+
+        if (FluxerContext.Client.GetChannel(channelId) is not { } channel)
+            return null;
+
+        try
+        {
+            return await channel.GetMessageAsync(messageId).ConfigureAwait(false);
+        }
+        catch (FluxerApiException)
+        {
+            return null;
+        }
+    }
+
+    [GeneratedRegex(@"/channels/(?:\d+|@me)/(?<channel>\d+)/(?<message>\d+)")]
+    private static partial Regex MessageLinkRegex();
 }

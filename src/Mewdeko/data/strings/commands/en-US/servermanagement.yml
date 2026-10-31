@@ -2432,22 +2432,26 @@ steal:
       type: string
 stealemotes:
   args:
+    - ''
     - text
-  desc: 'Steals emotes from a message and adds them to the server.'
+    - https://web.fluxer.app/channels/123/456/789
+  desc: 'Adds emotes to the server from the text, a message link or ID, or the message you reply to.'
   params:
     - &ref_565
-      desc: 'The message containing the emotes to steal.'
+      desc: 'Emotes, or a message link or ID. Leave it out when replying to a message.'
       name: e
-      optional: false
+      optional: true
       type: string
 stealemotes_string:
   args:
+    - ''
     - text
-  desc: 'Steals emotes from a message and adds them to the server.'
+    - https://web.fluxer.app/channels/123/456/789
+  desc: 'Adds emotes to the server from the text, a message link or ID, or the message you reply to.'
   params:
-    - desc: 'The message containing the emotes to steal.'
+    - desc: 'Emotes, or a message link or ID. Leave it out when replying to a message.'
       name: e
-      optional: false
+      optional: true
       type: string
 stopjob:
   args:
