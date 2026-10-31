@@ -62,6 +62,7 @@ public partial class Utility
                 .AddField("Creation Date", TimestampTag.FromDateTimeOffset(role.CreatedAt))
                 .AddField("Position", role.Position)
                 .AddField("ID", role.Id)
+                .WithThumbnailUrl(role.GetIconUrl())
                 .WithColor(role.Colour);
             await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
         }
