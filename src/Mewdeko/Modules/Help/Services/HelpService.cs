@@ -571,7 +571,7 @@ public class HelpService : INService, IReadyExecutor
 
     private async Task HandleJoin(SocketGuild guild)
     {
-        if (blacklistService.BlacklistEntries.Select(x => x.ItemId).Contains(guild.Id))
+        if (!bss.Data.WelcomeDmEnabled || blacklistService.BlacklistEntries.Select(x => x.ItemId).Contains(guild.Id))
             return;
 
         var px = await guildSettings.GetPrefix(guild);

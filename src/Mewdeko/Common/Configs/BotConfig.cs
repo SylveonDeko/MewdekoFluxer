@@ -43,7 +43,8 @@ public sealed class BotConfig
         LogChatTriggerFires = true;
         LogPunishments = true;
         LogXpRewards = true;
-        LeaveFeedbackEnabled = true;
+        LeaveFeedbackEnabled = false;
+        WelcomeDmEnabled = false;
         AnalyticsEnabled = true;
         AnalyticsRetentionDays = 30;
         GuildDataRetentionEnabled = true;
@@ -221,8 +222,18 @@ public sealed class BotConfig
     [Comment("""
              Whether the owner of a server gets a dm asking why the bot was removed,
              right after the bot leaves or is kicked from their server.
+             Off by default: bot directories treat it as an unsolicited dm.
              """)]
     public bool LeaveFeedbackEnabled { get; set; }
+
+    /// <summary>
+    ///     Gets or sets whether the person who invited the bot gets a dm with setup instructions.
+    /// </summary>
+    [Comment("""
+             Whether the person who added the bot to a server gets a dm with setup instructions.
+             Off by default: bot directories treat it as an unsolicited dm.
+             """)]
+    public bool WelcomeDmEnabled { get; set; }
 
     /// <summary>
     ///     Gets or sets the channel ID that answered leave feedback gets posted to.

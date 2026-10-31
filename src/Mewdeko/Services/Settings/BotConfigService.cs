@@ -49,6 +49,8 @@ public sealed class BotConfigService : ConfigServiceBase<BotConfig>
             ConfigPrinters.ToString);
         AddParsedProp("leaveFeedbackEnabled", bs => bs.LeaveFeedbackEnabled, bool.TryParse,
             ConfigPrinters.ToString);
+        AddParsedProp("welcomeDmEnabled", bs => bs.WelcomeDmEnabled, bool.TryParse,
+            ConfigPrinters.ToString);
         AddParsedProp("leaveFeedbackChannel", bs => bs.LeaveFeedbackChannel, ulong.TryParse,
             ConfigPrinters.ToString);
         AddParsedProp("featureRequestChannel", bs => bs.FeatureRequestChannel, ulong.TryParse,
