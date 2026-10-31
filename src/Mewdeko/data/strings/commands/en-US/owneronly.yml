@@ -976,6 +976,13 @@ setstream_string_=_2:
       name: name
       optional: true
       type: string
+shardstats:
+  args:
+    - ''
+  desc: >-
+    Shows the shard this instance runs, with its connection state, server count
+    and member count.
+  params: [ ]
 sqlexec:
   args:
     - text

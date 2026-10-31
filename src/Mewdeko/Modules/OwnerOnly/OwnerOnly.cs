@@ -183,6 +183,27 @@ public class OwnerOnly(
     }
 
     /// <summary>
+    ///     Shows the state, guild count and member count of the shard this instance runs.
+    /// </summary>
+    [Cmd]
+    [Aliases]
+    public async Task ShardStats()
+    {
+        var gateway = client.Gateway;
+        var guilds = gateway.Guilds.Values.ToList();
+        var state = FluxerContext.IsConnected ? "✅" : "🔻";
+        var shard = $"{gateway.ShardId ?? 0}/{gateway.ShardCount ?? 1}";
+        var members = guilds.Sum(x => x.MemberCount ?? x.Members.Count);
+
+        var eb = new EmbedBuilder()
+            .WithOkColor()
+            .WithAuthor(Strings.ShardStatsTitle(ctx.Guild?.Id))
+            .WithDescription(Strings.ShardInfo(ctx.Guild?.Id, state, shard, guilds.Count, members))
+            .WithFooter($"{gateway.Latency}ms");
+        await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
+    }
+
+    /// <summary>
     ///     Executes a command as if it were sent by the specified guild user.
     /// </summary>
     /// <param name="user">The guild user to impersonate when executing the command.</param>

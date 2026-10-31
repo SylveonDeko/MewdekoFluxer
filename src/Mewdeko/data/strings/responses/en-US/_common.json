@@ -1124,6 +1124,8 @@
   "setrole_time": "Successfully added role {0} to user {1} for {2}",
   "setup_cancelled_no_label": "Setup cancelled - no label provided.",
   "setup_cancelled_no_placeholder": "Setup cancelled - no placeholder provided.",
+  "shard_info": "{0} | #{1} | {2} | {3}",
+  "shard_stats_title": "Shard Statistics",
   "ship_69": "Go 69 that mfer",
   "ship_excellent_chance": "Horoscopes conclude that today will be a good day.. And that you two will get a room together soon",
   "ship_good_chance": "I mean, go for it, I guess, looks like you would do good",

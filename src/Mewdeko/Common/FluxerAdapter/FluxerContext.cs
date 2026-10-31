@@ -19,4 +19,9 @@ public static class FluxerContext
     ///     The web address messages and channels link to.
     /// </summary>
     public static string WebUrl { get; internal set; } = "https://web.fluxer.app";
+
+    /// <summary>
+    ///     Whether the gateway connection is currently up.
+    /// </summary>
+    public static bool IsConnected { get; internal set; }
 }

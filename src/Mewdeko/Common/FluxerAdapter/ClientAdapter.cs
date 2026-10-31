@@ -53,9 +53,10 @@ public static class ClientAdapter
             client.GetChannel(channelId) ?? await client.Rest.GetChannelAsync(channelId).ConfigureAwait(false);
 
         /// <summary>
-        ///     The shard a guild is on. Fluxer has no sharding, so every guild is on shard 0.
+        ///     The shard a guild is on, from the shard count Fluxer reported in READY.
         /// </summary>
-        public int GetShardIdFor(SocketGuild? guild) => 0;
+        public int GetShardIdFor(SocketGuild? guild) =>
+            guild is null ? 0 : (int)((guild.Id >> 22) % (ulong)Math.Max(client.Gateway.ShardCount ?? 1, 1));
 
         /// <summary>
         ///     Milliseconds between the last gateway heartbeat and its acknowledgement.

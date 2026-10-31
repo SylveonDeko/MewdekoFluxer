@@ -283,8 +283,16 @@ public sealed class EventHandler : IDisposable
     private void RegisterEvents()
     {
         var gateway = client.Gateway;
-        gateway.Connected += () => Connected.Raise(client, null);
-        gateway.Disconnected += () => Disconnected.Raise(client, null);
+        gateway.Connected += () =>
+        {
+            FluxerContext.IsConnected = true;
+            Connected.Raise(client, null);
+        };
+        gateway.Disconnected += () =>
+        {
+            FluxerContext.IsConnected = false;
+            Disconnected.Raise(client, null);
+        };
         gateway.Ready += _ => Ready.Raise(client, null);
 
         gateway.GuildJoined += guild =>
