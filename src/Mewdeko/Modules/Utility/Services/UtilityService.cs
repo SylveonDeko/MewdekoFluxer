@@ -131,10 +131,11 @@ public partial class UtilityService : INService
         await guildSettings.UpdateGuildConfig(guild.Id, gc);
     }
 
-    private static string? DescribeReference(Message msg, int length)
+    private static async Task<string?> DescribeReferenceAsync(Message msg, int length)
     {
         if (msg.MessageReference is not { } reference ||
-            FluxerContext.Snapshots.GetMessage(reference.MessageId) is not { } referenced)
+            await FluxerContext.Client.Gateway.GetCachedMessageAsync(reference.MessageId).ConfigureAwait(false) is not
+                { } referenced)
             return null;
 
         return $"{Format.Bold(referenced.Author.ToString())}: {referenced.Content.TrimTo(length)}";
@@ -148,16 +149,20 @@ public partial class UtilityService : INService
         if (!await GetSnipeSet(guildId))
             return;
 
-        var msgs = messages.Where(x => x.HasValue && x.Value.Author is not null).Select(x => new SnipeStore
+        var msgs = new List<SnipeStore>();
+        foreach (var x in messages.Where(x => x.HasValue && x.Value.Author is not null))
         {
-            GuildId = guildId,
-            ChannelId = chan.Id,
-            ReferenceMessage = DescribeReference(x.Value, 400),
-            Message = x.Value.Content,
-            UserId = x.Value.Author.Id,
-            Edited = false,
-            DateAdded = DateTime.UtcNow
-        }).ToList();
+            msgs.Add(new SnipeStore
+            {
+                GuildId = guildId,
+                ChannelId = chan.Id,
+                ReferenceMessage = await DescribeReferenceAsync(x.Value, 400).ConfigureAwait(false),
+                Message = x.Value.Content,
+                UserId = x.Value.Author.Id,
+                Edited = false,
+                DateAdded = DateTime.UtcNow
+            });
+        }
 
         if (msgs.Count == 0)
             return;
@@ -179,7 +184,7 @@ public partial class UtilityService : INService
             GuildId = guildId,
             ChannelId = channel.Id,
             Message = msg.Content,
-            ReferenceMessage = DescribeReference(msg, 400),
+            ReferenceMessage = await DescribeReferenceAsync(msg, 400).ConfigureAwait(false),
             UserId = msg.Author.Id,
             Edited = false,
             DateAdded = DateTime.UtcNow
@@ -199,7 +204,7 @@ public partial class UtilityService : INService
             GuildId = guildId,
             ChannelId = channel.Id,
             Message = before.Content,
-            ReferenceMessage = DescribeReference(before, 1048),
+            ReferenceMessage = await DescribeReferenceAsync(before, 1048).ConfigureAwait(false),
             UserId = before.Author.Id,
             Edited = true,
             DateAdded = DateTime.UtcNow

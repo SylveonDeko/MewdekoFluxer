@@ -281,7 +281,7 @@ public partial class XpService
         // Publish level change event if user had a level before reset
         if (oldLevel > 0)
         {
-            EventHandler.XpLevelChanged.Raise(new XpLevelChangedEventArgs
+            await EventHandler.XpLevelChanged.RaiseAsync(new XpLevelChangedEventArgs
             {
                 GuildId = guildId,
                 UserId = userId,
@@ -340,7 +340,7 @@ public partial class XpService
         // Publish level change event if level changed
         if (newLevel != oldLevel)
         {
-            EventHandler.XpLevelChanged.Raise(new XpLevelChangedEventArgs
+            await EventHandler.XpLevelChanged.RaiseAsync(new XpLevelChangedEventArgs
             {
                 GuildId = guildId,
                 UserId = userId,

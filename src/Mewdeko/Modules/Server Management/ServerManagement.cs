@@ -364,7 +364,7 @@ public partial class ServerManagement(IHttpClientFactory factory, BotConfigServi
 
     private static async Task<Message?> GetMessageAsync(ulong channelId, ulong messageId)
     {
-        if (FluxerContext.Snapshots.GetMessage(messageId) is { } cached)
+        if (await FluxerContext.Client.Gateway.GetCachedMessageAsync(messageId).ConfigureAwait(false) is { } cached)
             return cached;
 
         if (FluxerContext.Client.GetChannel(channelId) is not { } channel)

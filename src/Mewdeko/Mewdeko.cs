@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Text.Json;
 using DataModel;
 using Figgle.Fonts;
+using Fluxer.Net.Gateway;
 using Lavalink4NET;
 using Mewdeko.Common.ModuleBehaviors;
 using Mewdeko.Common.TypeReaders;
@@ -144,7 +145,25 @@ public class Mewdeko : IDisposable
         try
         {
             await Client.LoginAsync().ConfigureAwait(false);
-            await Client.StartAsync().ConfigureAwait(false);
+            await Client.Gateway.ConnectAsync(new FluxerGatewayConfig
+            {
+                Cache = new FluxerCacheConfig
+                {
+                    Messages = new CacheLimits
+                    {
+                        MaxPerChannel = 15,
+                        Expiry = TimeSpan.FromHours(6)
+                    },
+                    Users = new CacheLimits
+                    {
+                        MaxEntries = 100_000
+                    },
+                    Presences = new CacheLimits
+                    {
+                        MaxEntries = 100_000
+                    }
+                }
+            }).ConfigureAwait(false);
         }
         catch (FluxerApiException ex)
         {

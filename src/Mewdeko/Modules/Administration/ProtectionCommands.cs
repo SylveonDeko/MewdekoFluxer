@@ -1522,7 +1522,8 @@ public partial class Administration
 
             if (ctx.Message.MessageReference is { } reference)
             {
-                var reply = FluxerContext.Snapshots.GetMessage(reference.MessageId)
+                var reply = await FluxerContext.Client.Gateway.GetCachedMessageAsync(reference.MessageId)
+                                .ConfigureAwait(false)
                             ?? await ctx.Channel.GetMessageAsync(reference.MessageId).ConfigureAwait(false);
 
                 if (reply is not null)

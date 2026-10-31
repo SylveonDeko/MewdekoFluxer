@@ -8,13 +8,14 @@ using Channel = Fluxer.Net.Channel;
 namespace Mewdeko.Services.Impl;
 
 /// <summary>
-///     Turns Fluxer gateway events into the events modules subscribe to, filling in what changed from the snapshot
-///     cache, and runs each module's handlers with metrics and error isolation.
+///     Turns Fluxer gateway events into the events modules subscribe to, using the gateway's before-state events for
+///     what changed, and runs each module's handlers with metrics and error isolation.
 /// </summary>
 public sealed class EventHandler : IDisposable
 {
     private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
+    private readonly ConcurrentDictionary<ulong, DeletedContent> deletedContent = new();
     private readonly ConcurrentDictionary<string, EventMetrics> eventMetrics = new();
     private readonly ILogger<EventHandler> logger;
     private readonly ConcurrentDictionary<string, ModuleMetrics> moduleMetrics = new();
@@ -28,7 +29,7 @@ public sealed class EventHandler : IDisposable
     ///     Initializes a new instance of the <see cref="EventHandler" /> class.
     /// </summary>
     /// <param name="client">The Fluxer client to handle events for.</param>
-    /// <param name="snapshots">Remembers earlier states so updates can report what changed.</param>
+    /// <param name="snapshots">Remembers the latest presence and voice state of members.</param>
     /// <param name="perfService">Times each handler.</param>
     /// <param name="logger">Records handler failures.</param>
     /// <param name="options">Rate limits for the noisiest events.</param>
@@ -283,101 +284,120 @@ public sealed class EventHandler : IDisposable
     private void RegisterEvents()
     {
         var gateway = client.Gateway;
-        gateway.Connected += () =>
+        gateway.Connected += async () =>
         {
             FluxerContext.IsConnected = true;
-            Connected.Raise(client, null);
+            await Connected.RaiseAsync(client, null).ConfigureAwait(false);
         };
-        gateway.Disconnected += () =>
+        gateway.Disconnected += async () =>
         {
             FluxerContext.IsConnected = false;
-            Disconnected.Raise(client, null);
+            await Disconnected.RaiseAsync(client, null).ConfigureAwait(false);
         };
-        gateway.Ready += _ => Ready.Raise(client, null);
+        gateway.Ready += _ => Ready.RaiseAsync(client, null);
 
-        gateway.GuildJoined += guild =>
+        gateway.GuildJoined += async guild =>
         {
-            _ = DownloadMembersAsync(guild);
-            JoinedGuild.Raise(guild, guild);
+            await DownloadMembersAsync(guild).ConfigureAwait(false);
+            await JoinedGuild.RaiseAsync(guild, guild).ConfigureAwait(false);
         };
-        gateway.GuildAvailable += guild =>
+        gateway.GuildAvailable += async guild =>
         {
-            _ = DownloadMembersAsync(guild);
-            GuildAvailable.Raise(guild, guild);
+            await DownloadMembersAsync(guild).ConfigureAwait(false);
+            await GuildAvailable.RaiseAsync(guild, guild).ConfigureAwait(false);
         };
-        gateway.GuildLeft += guild =>
-        {
-            snapshots.ForgetGuild(guild.Id);
-            LeftGuild.Raise(guild, guild);
-        };
-        gateway.GuildUnavailable += guild => GuildUnavailable.Raise(guild, guild);
-        gateway.GuildUpdated += (before, after) => GuildUpdated.Raise((before, after), after);
+        gateway.GuildLeft += guild => LeftGuild.RaiseAsync(guild, guild);
+        gateway.GuildUnavailable += guild => GuildUnavailable.RaiseAsync(guild, guild);
+        gateway.GuildUpdated += (before, after) => GuildUpdated.RaiseAsync((before, after), after);
 
-        gateway.MessageCreated += OnMessageCreated;
-        gateway.PrivateMessageCreated += OnPrivateMessageCreated;
-        gateway.MessageUpdated += OnMessageUpdated;
-        gateway.PrivateMessageUpdated += OnMessageUpdated;
-        gateway.MessageDeleted += OnMessageDeleted;
-        gateway.PrivateMessageDeleted += (channel, userId, messageId, content) =>
-            WithChannel(channel, c => OnMessageDeleted(c, userId, messageId, content));
-        gateway.MessagesDeleted += (channel, _, messageIds) => OnMessagesDeleted(channel, messageIds);
-        gateway.PrivateMessagesDeleted += (channel, messageIds) =>
-            WithChannel(channel, c => OnMessagesDeleted(c, messageIds));
+        gateway.MessageCreated += message => MessageReceived.RaiseAsync(message, message.Guild);
+        gateway.PrivateMessageCreated += OnPrivateMessageCreatedAsync;
+        gateway.MessageEdited += (before, after) => MessageUpdated.RaiseAsync((before, after), after.Guild);
+        gateway.PrivateMessageUpdated += after => MessageUpdated.RaiseAsync((null, after), null);
+        gateway.MessageDeleted += (_, userId, messageId, content) =>
+        {
+            if (userId is { } authorId && content is not null)
+                deletedContent[messageId] = new DeletedContent(authorId, content);
+        };
+        gateway.MessageRemoved += async (channel, messageId, removed) =>
+        {
+            deletedContent.TryRemove(messageId, out var deleted);
+            await RaiseMessageDeletedAsync(channel, messageId, removed, deleted?.AuthorId, deleted?.Content)
+                .ConfigureAwait(false);
+        };
+        gateway.PrivateMessageDeleted += async (channel, userId, messageId, content) =>
+        {
+            if (await channel.GetOrDownloadAsync().ConfigureAwait(false) is { } resolved)
+                await RaiseMessageDeletedAsync(resolved, messageId, null, userId, content).ConfigureAwait(false);
+        };
+        gateway.MessagesRemoved += (channel, messageIds, removed) =>
+        {
+            var removedById = removed.ToDictionary(m => m.Id);
+            var messages = messageIds.Select(id => Uncached(id, removedById.GetValueOrDefault(id))).ToList();
+            return MessagesBulkDeleted.RaiseAsync((messages, channel), channel.Guild);
+        };
+        gateway.PrivateMessagesDeleted += async (channel, messageIds) =>
+        {
+            if (await channel.GetOrDownloadAsync().ConfigureAwait(false) is not { } resolved)
+                return;
+
+            var messages = messageIds.Select(id => Uncached(id, null)).ToList();
+            await MessagesBulkDeleted.RaiseAsync((messages, resolved), null).ConfigureAwait(false);
+        };
 
         gateway.MessageReactionAdded += (channel, message, reaction) =>
-            ReactionAdded.Raise((WithCachedMessage(message), channel, reaction), channel.Guild);
-        gateway.PrivateMessageReactionAdded += (channel, message, reaction) =>
-            WithChannel(channel, c => ReactionAdded.Raise((WithCachedMessage(message), c, reaction), null));
+            ReactionAdded.RaiseAsync((message, channel, reaction), channel.Guild);
+        gateway.PrivateMessageReactionAdded += async (channel, message, reaction) =>
+        {
+            if (await channel.GetOrDownloadAsync().ConfigureAwait(false) is { } resolved)
+                await ReactionAdded.RaiseAsync((message, resolved, reaction), null).ConfigureAwait(false);
+        };
         gateway.MessageReactionRemoved += (channel, message, reaction) =>
-            ReactionRemoved.Raise((WithCachedMessage(message), channel, reaction), channel.Guild);
-        gateway.PrivateMessageReactionRemoved += (channel, message, reaction) =>
-            WithChannel(channel, c => ReactionRemoved.Raise((WithCachedMessage(message), c, reaction), null));
+            ReactionRemoved.RaiseAsync((message, channel, reaction), channel.Guild);
+        gateway.PrivateMessageReactionRemoved += async (channel, message, reaction) =>
+        {
+            if (await channel.GetOrDownloadAsync().ConfigureAwait(false) is { } resolved)
+                await ReactionRemoved.RaiseAsync((message, resolved, reaction), null).ConfigureAwait(false);
+        };
         gateway.MessageReactionRemoveAll += (channel, message) =>
-            ReactionsCleared.Raise((WithCachedMessage(message), channel), channel.Guild);
-        gateway.PrivateMessageReactionRemoveAll += (channel, message) =>
-            WithChannel(channel, c => ReactionsCleared.Raise((WithCachedMessage(message), c), null));
-
-        gateway.MemberJoined += member =>
+            ReactionsCleared.RaiseAsync((message, channel), channel.Guild);
+        gateway.PrivateMessageReactionRemoveAll += async (channel, message) =>
         {
-            snapshots.SeedMember(member);
-            UserJoined.Raise(member, member.Guild);
+            if (await channel.GetOrDownloadAsync().ConfigureAwait(false) is { } resolved)
+                await ReactionsCleared.RaiseAsync((message, resolved), null).ConfigureAwait(false);
         };
-        gateway.MemberUpdated += OnMemberUpdated;
-        gateway.MemberLeft += (guild, member) => _ = OnMemberLeftAsync(guild, member);
-        gateway.UserBanned += (guild, member) => _ = OnUserBannedAsync(guild, member);
-        gateway.UserUnbanned += (guild, userId) => _ = OnUserUnbannedAsync(guild, userId);
-        gateway.VoiceStateUpdated += OnVoiceStateUpdated;
-        gateway.PresenceUpdated += OnPresenceUpdated;
+
+        gateway.MemberJoined += member => UserJoined.RaiseAsync(member, member.Guild);
+        gateway.MemberChanged += (before, after) =>
+            GuildMemberUpdated.RaiseAsync((before is { } old ? MemberSnapshot.From(old) : null, after), after.Guild);
+        gateway.UserChanged += OnUserChangedAsync;
+        gateway.MemberLeft += OnMemberLeftAsync;
+        gateway.UserBanned += OnUserBannedAsync;
+        gateway.UserUnbanned += OnUserUnbannedAsync;
+        gateway.VoiceStateChanged += OnVoiceStateChangedAsync;
+        gateway.PresenceChanged += OnPresenceChangedAsync;
         gateway.TypingStarted += (channel, guild, userId, _) =>
-        {
-            if (typingLimiter.TryAcquire())
-                UserIsTyping.Raise((userId, channel), guild);
-        };
+            typingLimiter.TryAcquire() ? UserIsTyping.RaiseAsync((userId, channel), guild) : Task.CompletedTask;
 
-        gateway.ChannelCreated += (guild, channel) => ChannelCreated.Raise(channel, guild);
-        gateway.ChannelUpdated += (guild, before, after) => ChannelUpdated.Raise((before, after), guild);
-        gateway.ChannelDeleted += (guild, channel) =>
-        {
-            snapshots.ForgetChannel(channel.Id);
-            ChannelDestroyed.Raise(channel, guild);
-        };
-        gateway.ThreadCreated += (guild, thread) => ThreadCreated.Raise(thread, guild);
-        gateway.ThreadUpdated += (guild, before, after) => ThreadUpdated.Raise((before, after), guild);
-        gateway.ThreadDeleted += (guild, thread) => ThreadDeleted.Raise(thread, guild);
+        gateway.ChannelCreated += (guild, channel) => ChannelCreated.RaiseAsync(channel, guild);
+        gateway.ChannelUpdated += (guild, before, after) => ChannelUpdated.RaiseAsync((before, after), guild);
+        gateway.ChannelDeleted += (guild, channel) => ChannelDestroyed.RaiseAsync(channel, guild);
+        gateway.ThreadCreated += (guild, thread) => ThreadCreated.RaiseAsync(thread, guild);
+        gateway.ThreadUpdated += (guild, before, after) => ThreadUpdated.RaiseAsync((before, after), guild);
+        gateway.ThreadDeleted += (guild, thread) => ThreadDeleted.RaiseAsync(thread, guild);
 
-        gateway.RoleCreated += role => RoleCreated.Raise(role, role.Guild);
-        gateway.RoleUpdated += (before, after) => RoleUpdated.Raise((before, after), after.Guild);
-        gateway.RoleDeleted += role => RoleDeleted.Raise(role, role.Guild);
+        gateway.RoleCreated += role => RoleCreated.RaiseAsync(role, role.Guild);
+        gateway.RoleUpdated += (before, after) => RoleUpdated.RaiseAsync((before, after), after.Guild);
+        gateway.RoleDeleted += role => RoleDeleted.RaiseAsync(role, role.Guild);
 
-        gateway.AuditLogCreated += (guild, entry) => AuditLogCreated.Raise((entry, guild), guild);
+        gateway.AuditLogCreated += (guild, entry) => AuditLogCreated.RaiseAsync((entry, guild), guild);
         gateway.InviteCreated += invite =>
-            InviteCreated.Raise(invite, invite.Guild is { } partial ? client.GetGuild(partial.Id) : null);
-        gateway.InviteDeleted += (channel, guild, code) => InviteDeleted.Raise((channel, code), guild);
+            InviteCreated.RaiseAsync(invite, invite.Guild is { } partial ? client.GetGuild(partial.Id) : null);
+        gateway.InviteDeleted += (channel, guild, code) => InviteDeleted.RaiseAsync((channel, code), guild);
     }
 
     private async Task DownloadMembersAsync(SocketGuild guild)
     {
-        snapshots.SeedGuild(guild);
         try
         {
             if (!guild.HasAllMembers)
@@ -387,135 +407,100 @@ public sealed class EventHandler : IDisposable
         {
             logger.LogWarning(ex, "Could not download the members of {GuildId}", guild.Id);
         }
-
-        snapshots.SeedGuild(guild);
     }
 
-    private void OnMessageCreated(SocketMessage message)
+    private async Task OnPrivateMessageCreatedAsync(SocketPrivateMessage message)
     {
-        snapshots.AddMessage(message);
-        if (message.Member is { } member)
-            snapshots.SeedMember(member);
-        MessageReceived.Raise(message, message.Guild);
-    }
-
-    private void OnPrivateMessageCreated(SocketPrivateMessage message)
-    {
-        snapshots.AddMessage(message);
-        if (((SocketMessage)message).Channel is not null)
-        {
-            MessageReceived.Raise(message, null);
+        if (((SocketMessage)message).Channel is null
+            && await message.Channel.GetOrDownloadAsync().ConfigureAwait(false) is null)
             return;
-        }
 
-        _ = Task.Run(async () =>
-        {
-            if (await message.Channel.GetOrDownloadAsync().ConfigureAwait(false) is not null)
-                MessageReceived.Raise(message, null);
-        });
+        await MessageReceived.RaiseAsync(message, null).ConfigureAwait(false);
     }
 
-    private void OnMessageUpdated(SocketMessage after)
+    private async Task RaiseMessageDeletedAsync(Channel channel, ulong messageId, Message? removed, ulong? authorId,
+        string? content)
     {
-        var before = snapshots.SwapMessage(after);
-        MessageUpdated.Raise((before, after), after.Guild);
+        var message = removed;
+        if (message is null && content is not null && authorId is { } author)
+            message = await RebuildMessageAsync(channel, author, messageId, content).ConfigureAwait(false);
+
+        await MessageDeleted.RaiseAsync((Uncached(messageId, message), channel), channel.Guild).ConfigureAwait(false);
     }
 
-    private void OnMessageDeleted(Channel channel, ulong? userId, ulong messageId, string? content)
+    private Task OnUserChangedAsync(User before, User after)
     {
-        var message = snapshots.RemoveMessage(messageId);
-        if (message is null && content is not null && userId is { } authorId)
-            message = RebuildMessage(channel, authorId, messageId, content);
-
-        MessageDeleted.Raise((Uncached(messageId, message), channel), channel.Guild);
-    }
-
-    private void OnMessagesDeleted(Channel channel, ulong[] messageIds)
-    {
-        var messages = messageIds.Select(id => Uncached(id, snapshots.RemoveMessage(id))).ToList();
-        MessagesBulkDeleted.Raise((messages, channel), channel.Guild);
-    }
-
-    private void OnMemberUpdated(SocketGuildMember after)
-    {
-        var before = snapshots.SwapMember(after);
-        GuildMemberUpdated.Raise((before, after), after.Guild);
-
-        if (snapshots.SwapUser(after.User) is { } userBefore)
-            UserUpdated.Raise((userBefore, after), after.Guild);
+        var member = client.Gateway.Guilds.Values.Select(g => g.Members.GetValueOrDefault(after.Id))
+            .FirstOrDefault(m => m is not null);
+        return member is null
+            ? Task.CompletedTask
+            : UserUpdated.RaiseAsync((UserSnapshot.From(before), member), member.Guild);
     }
 
     private async Task OnMemberLeftAsync(SocketGuild guild, Cacheable<SocketGuildMember> member)
     {
-        var snapshot = snapshots.RemoveMember(guild.Id, member.Id);
-        var user = member.Value?.User ?? snapshot?.User.ToUser() ?? await FetchUserAsync(member.Id);
+        var snapshot = member.Value is { } cached ? MemberSnapshot.From(cached) : null;
+        var user = member.Value?.User ?? await FetchUserAsync(member.Id).ConfigureAwait(false);
         if (user is not null)
-            UserLeft.Raise((guild, user, snapshot), guild);
+            await UserLeft.RaiseAsync((guild, user, snapshot), guild).ConfigureAwait(false);
     }
 
     private async Task OnUserBannedAsync(SocketGuild guild, Cacheable<SocketGuildMember> member)
     {
-        var user = member.Value?.User ?? snapshots.GetMember(guild.Id, member.Id)?.User.ToUser()
-            ?? await FetchUserAsync(member.Id);
+        var user = member.Value?.User ?? await FetchUserAsync(member.Id).ConfigureAwait(false);
         if (user is not null)
-            UserBanned.Raise((user, guild), guild);
+            await UserBanned.RaiseAsync((user, guild), guild).ConfigureAwait(false);
     }
 
     private async Task OnUserUnbannedAsync(SocketGuild guild, ulong userId)
     {
-        var user = snapshots.GetUser(userId)?.ToUser() ?? await FetchUserAsync(userId);
+        var user = await FetchUserAsync(userId).ConfigureAwait(false);
         if (user is not null)
-            UserUnbanned.Raise((user, guild), guild);
+            await UserUnbanned.RaiseAsync((user, guild), guild).ConfigureAwait(false);
     }
 
-    private void OnVoiceStateUpdated(SocketVoiceState state)
+    private Task OnVoiceStateChangedAsync(SocketVoiceState? before, SocketVoiceState after)
     {
-        if (state.Guild is not { } guild || !guild.Members.TryGetValue(state.UserId, out var member))
-            return;
+        if (after.Guild is not { } guild || !guild.Members.TryGetValue(after.UserId, out var member))
+            return Task.CompletedTask;
 
-        var after = VoiceStateSnapshot.From(state);
-        var before = snapshots.SwapVoiceState(guild.Id, state.UserId, after);
-        if (before != after)
-            UserVoiceStateUpdated.Raise((member, before, after), guild);
+        var beforeSnapshot = before is null ? VoiceStateSnapshot.None : VoiceStateSnapshot.From(before);
+        var afterSnapshot = VoiceStateSnapshot.From(after);
+        return beforeSnapshot == afterSnapshot
+            ? Task.CompletedTask
+            : UserVoiceStateUpdated.RaiseAsync((member, beforeSnapshot, afterSnapshot), guild);
     }
 
-    private void OnPresenceUpdated(PresenceGatewayData data)
+    private Task OnPresenceChangedAsync(PresenceGatewayData? before, PresenceGatewayData data)
     {
         var after = PresenceSnapshot.From(data);
-        var before = snapshots.SwapPresence(after);
-        if (before == after || !presenceLimiter.TryAcquire())
-            return;
+        snapshots.SetPresence(after);
+        var beforeSnapshot = before is null ? null : PresenceSnapshot.From(before);
+        if (beforeSnapshot == after || !presenceLimiter.TryAcquire())
+            return Task.CompletedTask;
 
         var guild = data.GuildId is { } guildId ? client.GetGuild(guildId) : null;
         var user = guild?.Members.GetValueOrDefault(data.User.Id)?.User ?? User.Create(client, data.User);
-        PresenceUpdated.Raise((user, before, after), guild);
+        return PresenceUpdated.RaiseAsync((user, beforeSnapshot, after), guild);
     }
-
-    private Cacheable<Message> WithCachedMessage(Cacheable<Message> message) =>
-        message.Value is not null || snapshots.GetMessage(message.Id) is not { } cached
-            ? message
-            : new Cacheable<Message>(message.Id, cached, message.GetOrDownloadAsync!);
 
     private static Cacheable<Message> Uncached(ulong messageId, Message? message) =>
         new(messageId, message!, () => Task.FromResult<Message>(null!));
 
-    private Message RebuildMessage(Channel channel, ulong authorId, ulong messageId, string content)
+    private async Task<Message> RebuildMessageAsync(Channel channel, ulong authorId, ulong messageId, string content)
     {
-        var author = snapshots.GetUser(authorId);
+        var author = await client.Gateway.Cache.Users.GetAsync(authorId).ConfigureAwait(false);
         return Message.Create(client, new MessageJson
         {
             Id = messageId,
             ChannelId = channel.Id,
             Content = content,
             CreatedAt = SnowflakeUtils.FromSnowflake(messageId),
-            Author = new UserJson
+            Author = author ?? new UserJson
             {
                 Id = authorId,
-                Username = author?.Username ?? authorId.ToString(),
-                Discriminator = author?.Discriminator ?? "0",
-                DisplayName = author?.DisplayName,
-                AvatarHash = author?.AvatarHash,
-                IsBot = author?.IsBot ?? false
+                Username = authorId.ToString(),
+                Discriminator = "0"
             }
         });
     }
@@ -524,6 +509,9 @@ public sealed class EventHandler : IDisposable
     {
         try
         {
+            if (await client.Gateway.Cache.Users.GetAsync(userId).ConfigureAwait(false) is { } cached)
+                return User.Create(client, cached);
+
             return await client.GetUserAsync(userId).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -533,20 +521,7 @@ public sealed class EventHandler : IDisposable
         }
     }
 
-    private static void WithChannel(Cacheable<Channel> channel, Action<Channel> raise)
-    {
-        if (channel.Value is { } cached)
-        {
-            raise(cached);
-            return;
-        }
-
-        _ = Task.Run(async () =>
-        {
-            if (await channel.GetOrDownloadAsync().ConfigureAwait(false) is { } downloaded)
-                raise(downloaded);
-        });
-    }
+    private sealed record DeletedContent(ulong AuthorId, string Content);
 
     #region Delegates
 

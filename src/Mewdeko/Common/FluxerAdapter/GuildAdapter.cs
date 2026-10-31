@@ -192,45 +192,6 @@ public static class GuildAdapter
         public bool IsBot => member.User.IsBot;
 
         /// <summary>
-        ///     Adds several roles one after another.
-        /// </summary>
-        public async Task AddRolesAsync(IEnumerable<ulong> roleIds, RequestOptions? options = null)
-        {
-            foreach (var roleId in roleIds)
-                await member.AddRoleAsync(roleId, options).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        ///     Adds several roles one after another.
-        /// </summary>
-        public Task AddRolesAsync(IEnumerable<Role> roles, RequestOptions? options = null) =>
-            member.AddRolesAsync(roles.Select(r => r.Id), options);
-
-        /// <summary>
-        ///     Removes several roles one after another.
-        /// </summary>
-        public async Task RemoveRolesAsync(IEnumerable<ulong> roleIds)
-        {
-            foreach (var roleId in roleIds)
-                await member.RemoveRoleAsync(roleId).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        ///     Removes several roles one after another.
-        /// </summary>
-        public Task RemoveRolesAsync(IEnumerable<Role> roles) => member.RemoveRolesAsync(roles.Select(r => r.Id));
-
-        /// <summary>
-        ///     Times the member out for the given length of time.
-        /// </summary>
-        public Task SetTimeOutAsync(TimeSpan span) => member.SetTimeoutAsync(DateTimeOffset.UtcNow + span);
-
-        /// <summary>
-        ///     Ends the member's time out.
-        /// </summary>
-        public Task RemoveTimeOutAsync() => member.SetTimeoutAsync(null);
-
-        /// <summary>
         ///     Opens a direct message with the member.
         /// </summary>
         public Task<DMChannel> CreateDMChannelAsync() => member.User.GetOrCreateDMChannelAsync();

@@ -392,7 +392,8 @@ public class TtsService : INService, IReadyExecutor
         var ttsConsecutiveGrouping = settings?.TtsConsecutiveGrouping ?? true;
 
         if (ttsReplyContext && userMsg.MessageReference is { } reference
-            && FluxerContext.Snapshots.GetMessage(reference.MessageId) is { } referenced)
+            && await FluxerContext.Client.Gateway.GetCachedMessageAsync(reference.MessageId).ConfigureAwait(false) is
+                { } referenced)
         {
             var replyName = (referenced.Author is { } replyUser ? guild.GetUser(replyUser.Id)?.DisplayName : null)
                             ?? referenced.Author?.Username ?? "someone";

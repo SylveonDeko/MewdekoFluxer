@@ -70,11 +70,6 @@ public static class ChannelAdapter
         public Task TriggerTypingAsync() => channel.TriggerTypingIndicatorAsync();
 
         /// <summary>
-        ///     Keeps the typing indicator showing until the returned handle is disposed.
-        /// </summary>
-        public IDisposable EnterTypingState() => new TypingState(channel);
-
-        /// <summary>
         ///     The category the channel sits in, from the gateway cache.
         /// </summary>
         public Channel? Category => channel.ParentId is { } id ? FluxerContext.Client.GetChannel(id) : null;
@@ -144,39 +139,5 @@ public static class ChannelAdapter
         /// </summary>
         public string GetJumpUrl() =>
             $"{FluxerContext.WebUrl}/channels/{(channel.GuildId is { } guildId ? guildId.ToString() : "@me")}/{channel.Id}";
-    }
-
-    private sealed class TypingState : IDisposable
-    {
-        private readonly CancellationTokenSource cancel = new();
-
-        public TypingState(Channel channel)
-        {
-            _ = Task.Run(async () =>
-            {
-                while (!cancel.IsCancellationRequested)
-                {
-                    try
-                    {
-                        await channel.TriggerTypingIndicatorAsync().ConfigureAwait(false);
-                        await Task.Delay(TimeSpan.FromSeconds(8), cancel.Token).ConfigureAwait(false);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        return;
-                    }
-                    catch
-                    {
-                        return;
-                    }
-                }
-            });
-        }
-
-        public void Dispose()
-        {
-            cancel.Cancel();
-            cancel.Dispose();
-        }
     }
 }

@@ -140,7 +140,8 @@ public sealed partial class AchievementService
             if (message.MentionedUsers.Any(u => u.Id == user.Id))
                 feats.Add(AchievementFeat.SelfMention);
             if (message.MessageReference is { Type: MessageReferenceType.Default } reference &&
-                FluxerContext.Snapshots.GetMessage(reference.MessageId)?.Author.Id == user.Id &&
+                (await FluxerContext.Client.Gateway.GetCachedMessageAsync(reference.MessageId).ConfigureAwait(false))
+                ?.Author.Id == user.Id &&
                 message.Type == MessageType.Reply)
                 feats.Add(AchievementFeat.SelfReply);
             if (content.Length == 200)

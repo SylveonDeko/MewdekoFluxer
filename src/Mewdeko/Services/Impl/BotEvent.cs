@@ -44,23 +44,17 @@ public abstract class BotEventBase<TArgs>
     }
 
     /// <summary>
-    ///     Runs every subscribed handler, one after another, in the background.
+    ///     Runs every subscribed handler, one after another.
     /// </summary>
     /// <param name="args">The event arguments.</param>
     /// <param name="guild">The guild the event happened in, for metrics and error reports.</param>
-    internal void Raise(TArgs args, SocketGuild? guild)
+    /// <returns>A task that completes once every handler has finished.</returns>
+    internal async Task RaiseAsync(TArgs args, SocketGuild? guild)
     {
         owner.CountEvent(Name, guild);
-        var current = subscriptions;
-        if (current.IsEmpty)
-            return;
-
-        _ = Task.Run(async () =>
-        {
-            foreach (var subscription in current)
-                await owner.RunHandlerAsync(Name, subscription.ModuleName, guild, () => subscription.Invoke(args))
-                    .ConfigureAwait(false);
-        });
+        foreach (var subscription in subscriptions)
+            await owner.RunHandlerAsync(Name, subscription.ModuleName, guild, () => subscription.Invoke(args))
+                .ConfigureAwait(false);
     }
 
     private sealed record Subscription(string ModuleName, Delegate Handler, Func<TArgs, Task> Invoke);

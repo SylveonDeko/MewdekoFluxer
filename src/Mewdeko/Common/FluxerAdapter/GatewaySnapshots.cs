@@ -109,35 +109,12 @@ public sealed record PresenceSnapshot(
 }
 
 /// <summary>
-///     Remembers what members, users, voice states, presences and recent messages looked like, because Fluxer only
-///     sends the new state and Mewdeko's events report what changed.
+///     Gives synchronous access to the latest presence of a user and the current voice state of a member, which the
+///     gateway cache only offers asynchronously or per voice session.
 /// </summary>
 public sealed class GatewaySnapshotCache
 {
-    private const int MessagesPerChannel = 15;
-
-    private readonly ConcurrentDictionary<ulong, System.Collections.Concurrent.ConcurrentQueue<ulong>> channelMessages =
-        new();
-    private readonly ConcurrentDictionary<(ulong GuildId, ulong UserId), MemberSnapshot> members = new();
-    private readonly ConcurrentDictionary<ulong, Message> messages = new();
     private readonly ConcurrentDictionary<ulong, PresenceSnapshot> presences = new();
-    private readonly ConcurrentDictionary<ulong, UserSnapshot> users = new();
-    private readonly ConcurrentDictionary<(ulong GuildId, ulong UserId), VoiceStateSnapshot> voiceStates = new();
-
-    /// <summary>
-    ///     Gets a recent message, if it is still cached.
-    /// </summary>
-    public Message? GetMessage(ulong messageId) => messages.GetValueOrDefault(messageId);
-
-    /// <summary>
-    ///     Gets the last known state of a member.
-    /// </summary>
-    public MemberSnapshot? GetMember(ulong guildId, ulong userId) => members.GetValueOrDefault((guildId, userId));
-
-    /// <summary>
-    ///     Gets the last known state of a user.
-    /// </summary>
-    public UserSnapshot? GetUser(ulong userId) => users.GetValueOrDefault(userId);
 
     /// <summary>
     ///     Gets a user's last known presence.
@@ -145,155 +122,16 @@ public sealed class GatewaySnapshotCache
     public PresenceSnapshot? GetPresence(ulong userId) => presences.GetValueOrDefault(userId);
 
     /// <summary>
-    ///     Gets a member's last known voice state.
+    ///     Gets a member's current voice state.
     /// </summary>
     public VoiceStateSnapshot GetVoiceState(ulong guildId, ulong userId) =>
-        voiceStates.GetValueOrDefault((guildId, userId), VoiceStateSnapshot.None);
+        FluxerContext.Client.Gateway.GetGuild(guildId)?.Members.GetValueOrDefault(userId)?.VoiceStates.Values
+            .Where(state => state.ChannelId is not null)
+            .Select(VoiceStateSnapshot.From)
+            .FirstOrDefault() ?? VoiceStateSnapshot.None;
 
     /// <summary>
-    ///     Records every member and voice connection of a guild that just became available.
+    ///     Records a user's latest presence.
     /// </summary>
-    public void SeedGuild(SocketGuild guild)
-    {
-        foreach (var member in guild.Members.Values)
-        {
-            SeedMember(member);
-            foreach (var state in member.VoiceStates.Values)
-                voiceStates[(guild.Id, member.Id)] = VoiceStateSnapshot.From(state);
-        }
-    }
-
-    /// <summary>
-    ///     Forgets everything about a guild the bot left.
-    /// </summary>
-    public void ForgetGuild(ulong guildId)
-    {
-        foreach (var key in members.Keys.Where(k => k.GuildId == guildId))
-            members.TryRemove(key, out _);
-        foreach (var key in voiceStates.Keys.Where(k => k.GuildId == guildId))
-            voiceStates.TryRemove(key, out _);
-    }
-
-    /// <summary>
-    ///     Records a member that has not been seen yet.
-    /// </summary>
-    public void SeedMember(GuildMember member)
-    {
-        members.TryAdd((member.GuildId, member.Id), MemberSnapshot.From(member));
-        users.TryAdd(member.Id, UserSnapshot.From(member.User));
-    }
-
-    /// <summary>
-    ///     Records a member's new state and returns the one before it.
-    /// </summary>
-    public MemberSnapshot? SwapMember(GuildMember member)
-    {
-        var after = MemberSnapshot.From(member);
-        MemberSnapshot? before = null;
-        members.AddOrUpdate((member.GuildId, member.Id), after, (_, old) =>
-        {
-            before = old;
-            return after;
-        });
-        return before;
-    }
-
-    /// <summary>
-    ///     Forgets a member who left and returns their last state.
-    /// </summary>
-    public MemberSnapshot? RemoveMember(ulong guildId, ulong userId)
-    {
-        voiceStates.TryRemove((guildId, userId), out _);
-        return members.TryRemove((guildId, userId), out var before) ? before : null;
-    }
-
-    /// <summary>
-    ///     Records a user's new state and returns the one before it, or null when it did not change.
-    /// </summary>
-    public UserSnapshot? SwapUser(User user)
-    {
-        var after = UserSnapshot.From(user);
-        UserSnapshot? before = null;
-        users.AddOrUpdate(user.Id, after, (_, old) =>
-        {
-            before = old;
-            return after;
-        });
-        return before == after ? null : before;
-    }
-
-    /// <summary>
-    ///     Records a member's new voice state and returns the one before it.
-    /// </summary>
-    public VoiceStateSnapshot SwapVoiceState(ulong guildId, ulong userId, VoiceStateSnapshot after)
-    {
-        var before = VoiceStateSnapshot.None;
-        if (after.ChannelId is null)
-        {
-            if (voiceStates.TryRemove((guildId, userId), out var removed))
-                before = removed;
-            return before;
-        }
-
-        voiceStates.AddOrUpdate((guildId, userId), after, (_, old) =>
-        {
-            before = old;
-            return after;
-        });
-        return before;
-    }
-
-    /// <summary>
-    ///     Records a user's new presence and returns the one before it.
-    /// </summary>
-    public PresenceSnapshot? SwapPresence(PresenceSnapshot after)
-    {
-        PresenceSnapshot? before = null;
-        presences.AddOrUpdate(after.UserId, after, (_, old) =>
-        {
-            before = old;
-            return after;
-        });
-        return before;
-    }
-
-    /// <summary>
-    ///     Caches a new message, dropping the oldest one in its channel once the channel holds too many.
-    /// </summary>
-    public void AddMessage(Message message)
-    {
-        messages[message.Id] = message;
-        var queue = channelMessages.GetOrAdd(message.ChannelId,
-            _ => new System.Collections.Concurrent.ConcurrentQueue<ulong>());
-        queue.Enqueue(message.Id);
-        while (queue.Count > MessagesPerChannel && queue.TryDequeue(out var oldest))
-            messages.TryRemove(oldest, out _);
-    }
-
-    /// <summary>
-    ///     Caches an edited message and returns the version before the edit, if it was cached.
-    /// </summary>
-    public Message? SwapMessage(Message message)
-    {
-        if (!messages.TryGetValue(message.Id, out var before))
-            return null;
-        messages[message.Id] = message;
-        return before;
-    }
-
-    /// <summary>
-    ///     Forgets a deleted message and returns it, if it was cached.
-    /// </summary>
-    public Message? RemoveMessage(ulong messageId) => messages.TryRemove(messageId, out var message) ? message : null;
-
-    /// <summary>
-    ///     Forgets a deleted channel's messages.
-    /// </summary>
-    public void ForgetChannel(ulong channelId)
-    {
-        if (!channelMessages.TryRemove(channelId, out var queue))
-            return;
-        foreach (var id in queue)
-            messages.TryRemove(id, out _);
-    }
+    public void SetPresence(PresenceSnapshot presence) => presences[presence.UserId] = presence;
 }

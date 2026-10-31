@@ -535,7 +535,7 @@ public class XpBackgroundProcessor : INService, IDisposable
                             userXp.LastLevelUp = now;
 
                             // Publish level change event
-                            eventHandler.XpLevelChanged.Raise(new XpLevelChangedEventArgs
+                            await eventHandler.XpLevelChanged.RaiseAsync(new XpLevelChangedEventArgs
                             {
                                 GuildId = guildId,
                                 UserId = userId,
@@ -580,7 +580,7 @@ public class XpBackgroundProcessor : INService, IDisposable
                         if (newLevel > 0)
                         {
                             // Publish level change event for new user
-                            eventHandler.XpLevelChanged.Raise(new XpLevelChangedEventArgs
+                            await eventHandler.XpLevelChanged.RaiseAsync(new XpLevelChangedEventArgs
                             {
                                 GuildId = guildId,
                                 UserId = userId,
