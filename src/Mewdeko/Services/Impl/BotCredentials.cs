@@ -159,6 +159,12 @@ public class BotCredentials : IBotCredentials
     /// </summary>
     public string DashboardUrl { get; set; } = "";
 
+    /// <inheritdoc />
+    public string FluxerInstanceApiUrl { get; set; } = "";
+
+    /// <inheritdoc />
+    public string FluxerInstanceGatewayUrl { get; set; } = "";
+
 
     /// <summary>
     ///     Gets or sets the Redis connection strings, separated by semicolons for multiple connections.
@@ -540,6 +546,8 @@ public class BotCredentials : IBotCredentials
             DiscordClientId = data[nameof(DiscordClientId)];
             DiscordClientSecret = data[nameof(DiscordClientSecret)];
             DashboardUrl = data[nameof(DashboardUrl)];
+            FluxerInstanceApiUrl = data[nameof(FluxerInstanceApiUrl)] ?? "";
+            FluxerInstanceGatewayUrl = data[nameof(FluxerInstanceGatewayUrl)] ?? "";
             UserAgent = data[nameof(UserAgent)];
             CfClearance = data[nameof(CfClearance)];
             ApiPort = int.TryParse(data[nameof(ApiPort)], out var port) ? port : 5001;
@@ -717,6 +725,8 @@ public class BotCredentials : IBotCredentials
         public bool IsMasterInstance { get; set; } = true;
         public string LavalinkDefaultSearchSource { get; set; } = "youtube";
         public string DashboardUrl { get; set; } = "https://mewdeko.tech";
+        public string FluxerInstanceApiUrl { get; set; } = "";
+        public string FluxerInstanceGatewayUrl { get; set; } = "";
         public string RedisConnections { get; } = "127.0.0.1:6379";
         public string LastFmApiKey { get; } = "";
         public string LastFmApiSecret { get; } = "";

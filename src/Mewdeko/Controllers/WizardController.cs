@@ -389,7 +389,7 @@ public class WizardController : Controller
                 var standardPermissions = criticalPermissions.Concat(recommendedPermissions)
                     .Aggregate(0UL, (bits, permission) => bits | (ulong)permission);
                 response.SuggestedInviteUrl =
-                    $"{Fluxer.Net.OAuth.FluxerOAuthDefaults.AuthorizationEndpoint}?client_id={client.CurrentUser.Id}&permissions={standardPermissions}&scope=bot&guild_id={guildId}";
+                    $"{FluxerContext.WebUrl}/oauth2/authorize?client_id={client.CurrentUser.Id}&permissions={standardPermissions}&scope=bot&guild_id={guildId}";
             }
 
             return Ok(response);

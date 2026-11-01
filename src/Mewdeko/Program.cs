@@ -394,11 +394,17 @@ public class Program
         if (!token.StartsWith("Bot ", StringComparison.OrdinalIgnoreCase))
             token = $"Bot {token}";
 
-        var client = new FluxerClient(token, new FluxerConfig
+        var config = new FluxerConfig
         {
             GatewaySerilog = Log.Logger.ForContext("SourceContext", "Fluxer.Gateway"),
             RestSerilog = Log.Logger.ForContext("SourceContext", "Fluxer.Rest")
-        });
+        };
+
+        if (!string.IsNullOrWhiteSpace(credentials.FluxerInstanceApiUrl)
+            && !string.IsNullOrWhiteSpace(credentials.FluxerInstanceGatewayUrl))
+            config.UseInstance(credentials.FluxerInstanceApiUrl, credentials.FluxerInstanceGatewayUrl);
+
+        var client = new FluxerClient(token, config);
         FluxerContext.Client = client;
 
         services.AddSerilog((serviceProvider, loggerConfiguration) =>

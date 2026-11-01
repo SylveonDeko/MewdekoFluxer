@@ -229,6 +229,7 @@ If you prefer to install manually or the script does not support your distributi
    | `LastFmApiKey` | Optional | Enables Last.fm scrobbling |
    | `TwitchClientId` / `TwitchClientSecret` | Optional | Enables Twitch stream notifications |
    | `OsuApiKey` | Optional | Enables osu! integration |
+   | `FluxerInstanceApiUrl` / `FluxerInstanceGatewayUrl` | Optional | API and gateway URLs of a self-hosted Fluxer instance; leave empty for the main instance |
 
 ### Running the Bot
 
