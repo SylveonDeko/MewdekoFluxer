@@ -145,14 +145,9 @@ public interface IBotCredentials
     public string DashboardUrl { get; }
 
     /// <summary>
-    ///     Gets the API URL of the self-hosted Fluxer instance to connect to, or empty for the main instance.
+    ///     Gets the address of the self-hosted Fluxer instance to connect to, or empty for the main instance.
     /// </summary>
-    public string FluxerInstanceApiUrl { get; }
-
-    /// <summary>
-    ///     Gets the gateway URL of the self-hosted Fluxer instance to connect to, or empty for the main instance.
-    /// </summary>
-    public string FluxerInstanceGatewayUrl { get; }
+    public string FluxerInstanceUrl { get; }
 
     /// <summary>
     ///     Gets the bot's Patreon client ID.

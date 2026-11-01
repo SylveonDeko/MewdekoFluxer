@@ -160,10 +160,7 @@ public class BotCredentials : IBotCredentials
     public string DashboardUrl { get; set; } = "";
 
     /// <inheritdoc />
-    public string FluxerInstanceApiUrl { get; set; } = "";
-
-    /// <inheritdoc />
-    public string FluxerInstanceGatewayUrl { get; set; } = "";
+    public string FluxerInstanceUrl { get; set; } = "";
 
 
     /// <summary>
@@ -546,8 +543,7 @@ public class BotCredentials : IBotCredentials
             DiscordClientId = data[nameof(DiscordClientId)];
             DiscordClientSecret = data[nameof(DiscordClientSecret)];
             DashboardUrl = data[nameof(DashboardUrl)];
-            FluxerInstanceApiUrl = data[nameof(FluxerInstanceApiUrl)] ?? "";
-            FluxerInstanceGatewayUrl = data[nameof(FluxerInstanceGatewayUrl)] ?? "";
+            FluxerInstanceUrl = data[nameof(FluxerInstanceUrl)] ?? "";
             UserAgent = data[nameof(UserAgent)];
             CfClearance = data[nameof(CfClearance)];
             ApiPort = int.TryParse(data[nameof(ApiPort)], out var port) ? port : 5001;
@@ -725,8 +721,7 @@ public class BotCredentials : IBotCredentials
         public bool IsMasterInstance { get; set; } = true;
         public string LavalinkDefaultSearchSource { get; set; } = "youtube";
         public string DashboardUrl { get; set; } = "https://mewdeko.tech";
-        public string FluxerInstanceApiUrl { get; set; } = "";
-        public string FluxerInstanceGatewayUrl { get; set; } = "";
+        public string FluxerInstanceUrl { get; set; } = "";
         public string RedisConnections { get; } = "127.0.0.1:6379";
         public string LastFmApiKey { get; } = "";
         public string LastFmApiSecret { get; } = "";

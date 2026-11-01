@@ -400,11 +400,17 @@ public class Program
             RestSerilog = Log.Logger.ForContext("SourceContext", "Fluxer.Rest")
         };
 
-        if (!string.IsNullOrWhiteSpace(credentials.FluxerInstanceApiUrl)
-            && !string.IsNullOrWhiteSpace(credentials.FluxerInstanceGatewayUrl))
-            config.UseInstance(credentials.FluxerInstanceApiUrl, credentials.FluxerInstanceGatewayUrl);
-
         var client = new FluxerClient(token, config);
+
+        if (!string.IsNullOrWhiteSpace(credentials.FluxerInstanceUrl))
+        {
+            var instanceUrl = credentials.FluxerInstanceUrl.Trim().TrimEnd('/');
+            if (!instanceUrl.Contains("://", StringComparison.Ordinal))
+                instanceUrl = $"https://{instanceUrl}";
+
+            client.LoginAsync(instanceUrl).GetAwaiter().GetResult();
+            Log.Information("Using the Fluxer instance at {ApiUrl}", client.Config.RealApiBaseUrl);
+        }
         FluxerContext.Client = client;
 
         services.AddSerilog((serviceProvider, loggerConfiguration) =>
