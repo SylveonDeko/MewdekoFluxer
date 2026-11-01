@@ -144,7 +144,6 @@ public class Mewdeko : IDisposable
         logger.LogInformation("Logging in...");
         try
         {
-            await Client.LoginAsync().ConfigureAwait(false);
             await Client.Gateway.ConnectAsync(new FluxerGatewayConfig
             {
                 Cache = new FluxerCacheConfig
