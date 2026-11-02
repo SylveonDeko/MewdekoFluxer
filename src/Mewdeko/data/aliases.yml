@@ -4372,3 +4372,13 @@ timestamp:
 pronounsreport:
   - pronounsreport
   - reportpronouns
+linkfix:
+  - linkfix
+  - fixlinks
+  - embedfix
+linkfixhost:
+  - linkfixhost
+  - fixlinkhost
+linkfixes:
+  - linkfixes
+  - linkfixlist

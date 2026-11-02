@@ -1598,6 +1598,17 @@
     ],
     "onMemberConflict": "skip"
   },
+  "LinkFixSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
   "LockdownChannelPermissions": {
     "action": "skip",
     "reason": "saved channel overwrites of an active lockdown, runtime state"
