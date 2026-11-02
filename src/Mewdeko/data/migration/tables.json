@@ -1868,6 +1868,7 @@
       "Emoji": "emoji",
       "CategoryId": "channel",
       "ArchiveCategoryId": "channel",
+      "ThreadChannelId": "channel",
       "SupportRoles": {
         "list": "role",
         "format": "pgarray"
@@ -2401,6 +2402,7 @@
       "Emoji": "emoji",
       "CategoryId": "channel",
       "ArchiveCategoryId": "channel",
+      "ThreadChannelId": "channel",
       "SupportRoles": {
         "list": "role",
         "format": "pgarray"
