@@ -255,14 +255,27 @@ public class ClientOperations(FluxerClient client, DashboardAccessService dashbo
     /// </summary>
     /// <param name="userId">The user ID to check mutual guilds for</param>
     /// <param name="adminOnly">Whether to only return guilds where user has admin permissions (default: true)</param>
+    /// <param name="candidates">
+    ///     Comma separated IDs of servers the user's own server list says they are in. Members of these that are
+    ///     not in the bot's cache are looked up through the API.
+    /// </param>
     /// <returns></returns>
     [HttpGet("mutualguilds/{userId}")]
-    public async Task<IActionResult> GetMutualGuilds(ulong userId, [FromQuery] bool adminOnly = true)
+    public async Task<IActionResult> GetMutualGuilds(ulong userId, [FromQuery] bool adminOnly = true,
+        [FromQuery] string? candidates = null)
     {
+        var candidateIds = (candidates ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(x => ulong.TryParse(x, out var id) ? id : 0)
+            .Where(x => x != 0)
+            .Take(500)
+            .ToHashSet();
+
         var mutuals = new List<object>();
         foreach (var guild in client.Guilds)
         {
             var guildUser = guild.GetUser(userId);
+            if (guildUser == null && candidateIds.Contains(guild.Id))
+                guildUser = await guild.TryGetUserAsync(userId);
             if (guildUser == null)
                 continue;
 

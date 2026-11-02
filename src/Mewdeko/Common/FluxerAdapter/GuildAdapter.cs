@@ -77,6 +77,21 @@ public static class GuildAdapter
         public Task<SocketGuildMember?> GetUserAsync(ulong userId) => guild.GetMemberAsync(userId);
 
         /// <summary>
+        ///     Gets a member from the cache or the API, or null when they are not in the guild or the API fails.
+        /// </summary>
+        public async Task<SocketGuildMember?> TryGetUserAsync(ulong userId)
+        {
+            try
+            {
+                return await guild.GetMemberAsync(userId).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is Fluxer.Net.Rest.FluxerApiException or System.Net.Http.HttpRequestException or TaskCanceledException)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
         ///     Bans a user, deleting their recent messages from the given number of days.
         /// </summary>
         public Task AddBanAsync(ulong userId, int pruneDays = 0, string? reason = null) =>

@@ -45,7 +45,7 @@ public sealed class DashboardAccessEnforcementFilter(
         }
 
         var guild = client.GetGuild(guildId);
-        var guildUser = guild?.GetUser(userId);
+        var guildUser = guild == null ? null : guild.GetUser(userId) ?? await guild.TryGetUserAsync(userId);
         if (guild == null || guildUser == null)
         {
             context.Result = new ObjectResult("You are not a member of this server.")
