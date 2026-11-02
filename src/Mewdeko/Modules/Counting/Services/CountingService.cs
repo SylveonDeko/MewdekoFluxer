@@ -1211,6 +1211,7 @@ public class CountingService : INService, IReadyExecutor
 
         // Clear cache
         cache.Remove(string.Format(COUNTING_CONFIG_CACHE_KEY, channelId));
+        moderationService.InvalidateChannelConfig(channelId);
 
         // Log the configuration change
         await LogEventAsync(channelId, CountingEventType.ConfigChanged, 0, null, null, 0,

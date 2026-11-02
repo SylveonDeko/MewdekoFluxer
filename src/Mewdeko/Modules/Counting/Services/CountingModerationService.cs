@@ -424,6 +424,12 @@ public class CountingModerationService : INService
     }
 
     /// <summary>
+    ///     Drops a channel's cached moderation settings after the counting settings they fall back to change.
+    /// </summary>
+    /// <param name="channelId">The counting channel.</param>
+    public void InvalidateChannelConfig(ulong channelId) => cache.Remove(string.Format(ModerationConfigCacheKey, channelId));
+
+    /// <summary>
     ///     Gets the effective moderation configuration for a channel.
     /// </summary>
     public async Task<CountingModerationEffectiveConfig?> GetModerationConfigAsync(ulong channelId)
@@ -444,6 +450,10 @@ public class CountingModerationService : INService
         if (channel?.GuildId is not { } channelGuildId) return null;
 
         var guildDefaults = await GetGuildDefaultsAsync(channelGuildId);
+        var deleteWrongMessages = await db.CountingChannelConfigs
+            .Where(x => x.ChannelId == channelId)
+            .Select(x => (bool?)x.DeleteWrongMessages)
+            .FirstOrDefaultAsync() ?? true;
 
         // Combine channel config with defaults
         var effectiveConfig = new CountingModerationEffectiveConfig
@@ -463,9 +473,9 @@ public class CountingModerationService : INService
             RequiredRoles = ParseRoleIds(channelConfig?.RequiredRoles ?? guildDefaults?.RequiredRoles),
             BannedRoles = ParseRoleIds(channelConfig?.BannedRoles ?? guildDefaults?.BannedRoles),
             PunishNonNumbers = channelConfig?.PunishNonNumbers ?? guildDefaults?.PunishNonNumbers ?? false,
-            DeleteNonNumbers = channelConfig?.DeleteNonNumbers ?? guildDefaults?.DeleteNonNumbers ?? true,
+            DeleteNonNumbers = channelConfig?.DeleteNonNumbers ?? guildDefaults?.DeleteNonNumbers ?? deleteWrongMessages,
             PunishEdits = channelConfig?.PunishEdits ?? guildDefaults?.PunishEdits ?? false,
-            DeleteEdits = channelConfig?.DeleteEdits ?? guildDefaults?.DeleteEdits ?? true
+            DeleteEdits = channelConfig?.DeleteEdits ?? guildDefaults?.DeleteEdits ?? deleteWrongMessages
         };
 
         cache.Set(cacheKey, effectiveConfig, TimeSpan.FromMinutes(10));
