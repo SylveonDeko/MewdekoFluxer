@@ -22,6 +22,17 @@ public static class Extensions
         RandomRegex = new("%random:(?<min>\\d+),(?<max>\\d+)%", RegexOptions.Compiled); // Added for %random%
 
     /// <summary>
+    ///     Matches %choose{first|second|third}% placeholders. Only <c>}%</c> ends one, so options may hold a lone %.
+    /// </summary>
+    private static readonly Regex ChooseRegex = new(@"%choose\{(?<options>.*?)\}%",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
+
+    /// <summary>
+    ///     Splits the options of a %choose{}% placeholder on unescaped pipes.
+    /// </summary>
+    private static readonly Regex ChooseSplitRegex = new(@"(?<!\\)\|", RegexOptions.Compiled);
+
+    /// <summary>
     ///     Matches %regex.n% and %regex.name% placeholders, which expose the capture groups of a regex trigger.
     /// </summary>
     private static readonly Regex RegexGroupRegex = new(@"%regex\.(?<group>[\w]+)%",
@@ -132,6 +143,7 @@ public static class Extensions
     {
         if (string.IsNullOrWhiteSpace(str)) return str; // Return early if string is empty
 
+        str = ApplyChoices(str);
         var substringIndex = resolvedTrigger.Length;
         if (containsAnywhere && !string.IsNullOrEmpty(ctx.Content)) // Ensure content exists
         {
@@ -454,6 +466,24 @@ public static class Extensions
         var context = new TriggerPlaceholderContext(guild, channel, user, target);
 
         return await placeholders.ReplaceAsync(response, context).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    ///     Replaces each %choose{a|b|c}% placeholder with one of its options at random. It runs before the other
+    ///     placeholders, so the chosen option can hold placeholders of its own. A literal pipe is written as \|.
+    /// </summary>
+    /// <param name="response">The response text.</param>
+    /// <returns>The text with every choice made.</returns>
+    private static string ApplyChoices(string response)
+    {
+        if (!response.Contains("%choose{", StringComparison.OrdinalIgnoreCase))
+            return response;
+
+        return ChooseRegex.Replace(response, match =>
+        {
+            var options = ChooseSplitRegex.Split(match.Groups["options"].Value);
+            return options[Random.Shared.Next(options.Length)].Replace("\\|", "|");
+        });
     }
 
     /// <summary>
