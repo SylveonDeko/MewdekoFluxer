@@ -1386,7 +1386,7 @@ public partial class Utility(
                 .WithDescription(string.Join("\n",
                     roleUsers.Skip(page * 20).Take(20)
                         .Select(x => $"{x} `{x.Id}`"))).AddField("User Stats",
-                    $"<:online:914548119730024448> {roleUsers.Count(x => x.Status == UserStatus.Online)}\n<:dnd:914548634178187294> {roleUsers.Count(x => x.Status == UserStatus.DoNotDisturb)}\n<:idle:914548262424412172> {roleUsers.Count(x => x.Status == UserStatus.Idle)}\n<:offline:914548368037003355> {roleUsers.Count(x => x.Status == UserStatus.Offline)}");
+                    $"🟢 {roleUsers.Count(x => x.Status == UserStatus.Online)}\n🔴 {roleUsers.Count(x => x.Status == UserStatus.DoNotDisturb)}\n🟡 {roleUsers.Count(x => x.Status == UserStatus.Idle)}\n⚫ {roleUsers.Count(x => x.Status == UserStatus.Offline)}");
         }
     }
 

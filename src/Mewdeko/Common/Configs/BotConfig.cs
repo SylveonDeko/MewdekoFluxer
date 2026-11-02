@@ -28,9 +28,9 @@ public sealed class BotConfig
         Prefix = ".";
         RotateStatuses = false;
         GroupGreets = false;
-        LoadingEmote = "<a:HaneMeow:968564817784877066>";
-        ErrorEmote = "<:HaneNo:914307917954576414>";
-        SuccessEmote = "<:hane_wow:945005763829575680>";
+        LoadingEmote = "⏳";
+        ErrorEmote = "❌";
+        SuccessEmote = "✅";
         SupportServer = "https://fluxer.gg/GQuFOiBV";
         RedirectUrl = "https://mewdeko.tech/auth.html";
         YoutubeSupport = true;
