@@ -296,16 +296,8 @@ public sealed class EventHandler : IDisposable
         };
         gateway.Ready += _ => Ready.RaiseAsync(client, null);
 
-        gateway.GuildJoined += async guild =>
-        {
-            await DownloadMembersAsync(guild).ConfigureAwait(false);
-            await JoinedGuild.RaiseAsync(guild, guild).ConfigureAwait(false);
-        };
-        gateway.GuildAvailable += async guild =>
-        {
-            await DownloadMembersAsync(guild).ConfigureAwait(false);
-            await GuildAvailable.RaiseAsync(guild, guild).ConfigureAwait(false);
-        };
+        gateway.GuildJoined += guild => JoinedGuild.RaiseAsync(guild, guild);
+        gateway.GuildAvailable += guild => GuildAvailable.RaiseAsync(guild, guild);
         gateway.GuildLeft += guild => LeftGuild.RaiseAsync(guild, guild);
         gateway.GuildUnavailable += guild => GuildUnavailable.RaiseAsync(guild, guild);
         gateway.GuildUpdated += (before, after) => GuildUpdated.RaiseAsync((before, after), after);
@@ -394,19 +386,6 @@ public sealed class EventHandler : IDisposable
         gateway.InviteCreated += invite =>
             InviteCreated.RaiseAsync(invite, invite.Guild is { } partial ? client.GetGuild(partial.Id) : null);
         gateway.InviteDeleted += (channel, guild, code) => InviteDeleted.RaiseAsync((channel, code), guild);
-    }
-
-    private async Task DownloadMembersAsync(SocketGuild guild)
-    {
-        try
-        {
-            if (!guild.HasAllMembers)
-                await guild.DownloadMembersAsync().ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Could not download the members of {GuildId}", guild.Id);
-        }
     }
 
     private async Task OnPrivateMessageCreatedAsync(SocketPrivateMessage message)

@@ -146,6 +146,7 @@ public class Mewdeko : IDisposable
         {
             await Client.Gateway.ConnectAsync(new FluxerGatewayConfig
             {
+                DownloadAllMembers = true,
                 Cache = new FluxerCacheConfig
                 {
                     Messages = new CacheLimits
