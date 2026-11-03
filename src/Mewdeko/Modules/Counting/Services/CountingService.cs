@@ -237,6 +237,14 @@ public class CountingService : INService, IReadyExecutor
                 Success = false, ErrorType = CountingError.ConfigNotFound
             };
 
+        // Messages that are not numbers are never counting attempts, whoever sends them
+        var parseResult = await ParseNumberAsync(messageContent, (CountingPattern)config.Pattern, config.NumberBase);
+        if (!parseResult.Success)
+            return new CountingResult
+            {
+                Success = false, ErrorType = CountingError.InvalidNumber
+            };
+
         // Check if user is on cooldown
         if (await IsUserOnCooldownAsync(channelId, userId, config.Cooldown))
             return new CountingResult
@@ -249,14 +257,6 @@ public class CountingService : INService, IReadyExecutor
             return new CountingResult
             {
                 Success = false, ErrorType = CountingError.SameUserRepeating
-            };
-
-        // Parse the number based on the pattern
-        var parseResult = await ParseNumberAsync(messageContent, (CountingPattern)config.Pattern, config.NumberBase);
-        if (!parseResult.Success)
-            return new CountingResult
-            {
-                Success = false, ErrorType = CountingError.InvalidNumber
             };
 
         // Calculate expected number
@@ -979,16 +979,19 @@ public class CountingService : INService, IReadyExecutor
             if (await moderationService.ShouldIgnoreUserAsync(channel.Id, user))
                 return;
 
-            // Handle message edit - even if original message is not cached
-            if (before is { } originalUserMsg)
-            {
-                await moderationService.HandleMessageEditAsync(channel.Id, after.Author.Id, originalUserMsg, userMsg);
-            }
-            else
-            {
-                // Original message not in cache, still handle edit protection
-                await moderationService.HandleMessageEditAsync(channel.Id, after.Author.Id, null, userMsg);
-            }
+            // Edits only matter when a number is involved, so editing ordinary chat is left alone
+            var config = await GetCountingConfigAsync(channel.Id);
+            if (config == null)
+                return;
+
+            var pattern = (CountingPattern)config.Pattern;
+            var wasNumber = before is not null
+                            && (await ParseNumberAsync(before.Content ?? "", pattern, config.NumberBase)).Success;
+            var isNumber = (await ParseNumberAsync(after.Content ?? "", pattern, config.NumberBase)).Success;
+            if (!wasNumber && !isNumber && after.Id != countingChannel.LastMessageId)
+                return;
+
+            await moderationService.HandleMessageEditAsync(channel.Id, after.Author.Id, before, userMsg);
         }
         catch (Exception ex)
         {
