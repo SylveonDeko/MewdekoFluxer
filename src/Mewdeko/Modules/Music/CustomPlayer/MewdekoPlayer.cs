@@ -55,8 +55,14 @@ public sealed class MewdekoPlayer : LavalinkPlayer
         logger = properties.ServiceProvider.GetRequiredService<ILogger<MewdekoPlayer>>();
         stateTracker = new PlayerStateTracker(this, cache);
         ttsService = properties.ServiceProvider.GetService<TtsService>();
+        ServerId = channel?.GuildId ?? GuildId;
     }
 
+    /// <summary>
+    ///     The server the player is in. <see cref="LavalinkPlayer.GuildId" /> is the voice channel id the player was
+    ///     created with, which keys its queue and current track.
+    /// </summary>
+    public ulong ServerId { get; }
 
     /// <summary>
     ///     Handles the event the track ended, resolves stuff like auto play, auto playing the next track, and looping.
@@ -103,7 +109,7 @@ public sealed class MewdekoPlayer : LavalinkPlayer
 
                         if (nextTrack is null)
                         {
-                            await TrySendAsync(musicChannel, c => c.SendAsync(Strings.QueueEmpty(GuildId)));
+                            await TrySendAsync(musicChannel, c => c.SendAsync(Strings.QueueEmpty(ServerId)));
                             await StopAsync(token);
                             await cache.SetCurrentTrack(GuildId, null);
                         }
@@ -138,8 +144,8 @@ public sealed class MewdekoPlayer : LavalinkPlayer
             case TrackEndReason.LoadFailed:
                 var loadFailedEmbed = new EmbedBuilder()
                     .WithErrorColor()
-                    .WithTitle(Strings.MusicTrackLoadFailedTitle(GuildId))
-                    .WithDescription(Strings.TrackLoadFailed(GuildId, item.Track.Title))
+                    .WithTitle(Strings.MusicTrackLoadFailedTitle(ServerId))
+                    .WithDescription(Strings.TrackLoadFailed(ServerId, item.Track.Title))
                     .Build();
                 await TrySendAsync(musicChannel, c => c.SendAsync(embed: loadFailedEmbed,
                     allowedMentions: AllowedMentions.None));
@@ -195,7 +201,7 @@ public sealed class MewdekoPlayer : LavalinkPlayer
             if (!success)
             {
                 await TrySendAsync(musicChannel,
-                    c => c.SendErrorAsync(Strings.LastfmCredentialsInvalidAutoplay(GuildId), config));
+                    c => c.SendErrorAsync(Strings.LastfmCredentialsInvalidAutoplay(ServerId), config));
                 await SetAutoPlay(0);
             }
         }
@@ -210,7 +216,7 @@ public sealed class MewdekoPlayer : LavalinkPlayer
     {
         var settings = await GetMusicSettings();
         var resolved = settings.MusicChannelId.HasValue
-            ? client.GetGuild(GuildId)?.GetTextChannel(settings.MusicChannelId.Value)
+            ? client.GetGuild(ServerId)?.GetTextChannel(settings.MusicChannelId.Value)
             : channel;
 
         return CanSendTo(resolved) ? resolved : null;
@@ -258,13 +264,13 @@ public sealed class MewdekoPlayer : LavalinkPlayer
         {
             logger.LogInformation(
                 "Cannot post music messages in channel {ChannelId} of guild {GuildId}, clearing music channel",
-                target.Id, GuildId);
+                target.Id, ServerId);
             await ClearMusicChannelAsync();
             return null;
         }
         catch (FluxerApiException ex)
         {
-            logger.LogWarning(ex, "Failed to send music message in guild {GuildId}", GuildId);
+            logger.LogWarning(ex, "Failed to send music message in guild {GuildId}", ServerId);
             return null;
         }
     }
@@ -282,7 +288,7 @@ public sealed class MewdekoPlayer : LavalinkPlayer
 
         await using var db = await dbFactory.CreateConnectionAsync();
         await db.UpdateAsync(settings);
-        await cache.SetMusicPlayerSettings(GuildId, settings);
+        await cache.SetMusicPlayerSettings(ServerId, settings);
     }
 
     /// <summary>
@@ -296,12 +302,12 @@ public sealed class MewdekoPlayer : LavalinkPlayer
 
         await using var db = await dbFactory.CreateConnectionAsync();
         await db.UpdateAsync(settings);
-        await cache.SetMusicPlayerSettings(GuildId, settings);
+        await cache.SetMusicPlayerSettings(ServerId, settings);
     }
 
     private async Task<MusicPlayerSetting> GetMusicSettings()
     {
-        var guildId = GuildId;
+        var guildId = ServerId;
         var settings = await cache.GetMusicPlayerSettings(guildId);
         if (settings is not null)
             return settings;
@@ -340,7 +346,7 @@ public sealed class MewdekoPlayer : LavalinkPlayer
         update(settings);
         await using var db = await dbFactory.CreateConnectionAsync();
         await db.UpdateAsync(settings);
-        await cache.SetMusicPlayerSettings(GuildId, settings);
+        await cache.SetMusicPlayerSettings(ServerId, settings);
     }
 
     /// <summary>
@@ -350,7 +356,7 @@ public sealed class MewdekoPlayer : LavalinkPlayer
     {
         await using var db = await dbFactory.CreateConnectionAsync();
         return await db.GetTable<TtsVoiceChannelSetting>()
-            .FirstOrDefaultAsync(x => x.GuildId == GuildId && x.VoiceChannelId == voiceChannelId);
+            .FirstOrDefaultAsync(x => x.GuildId == ServerId && x.VoiceChannelId == voiceChannelId);
     }
 
     /// <summary>
@@ -360,7 +366,7 @@ public sealed class MewdekoPlayer : LavalinkPlayer
     {
         await using var db = await dbFactory.CreateConnectionAsync();
         return await db.GetTable<TtsVoiceChannelSetting>()
-            .Where(x => x.GuildId == GuildId)
+            .Where(x => x.GuildId == ServerId)
             .ToListAsync();
     }
 
@@ -369,10 +375,10 @@ public sealed class MewdekoPlayer : LavalinkPlayer
     /// </summary>
     public async Task UpsertTtsVcSettingAsync(TtsVoiceChannelSetting setting)
     {
-        setting.GuildId = GuildId;
+        setting.GuildId = ServerId;
         await using var db = await dbFactory.CreateConnectionAsync();
         var existing = await db.GetTable<TtsVoiceChannelSetting>()
-            .FirstOrDefaultAsync(x => x.GuildId == GuildId && x.VoiceChannelId == setting.VoiceChannelId);
+            .FirstOrDefaultAsync(x => x.GuildId == ServerId && x.VoiceChannelId == setting.VoiceChannelId);
 
         if (existing is not null)
         {
@@ -392,7 +398,7 @@ public sealed class MewdekoPlayer : LavalinkPlayer
     {
         await using var db = await dbFactory.CreateConnectionAsync();
         await db.GetTable<TtsVoiceChannelSetting>()
-            .DeleteAsync(x => x.GuildId == GuildId && x.VoiceChannelId == voiceChannelId);
+            .DeleteAsync(x => x.GuildId == ServerId && x.VoiceChannelId == voiceChannelId);
     }
 
     /// <summary>
@@ -402,10 +408,10 @@ public sealed class MewdekoPlayer : LavalinkPlayer
     {
         await using var db = await dbFactory.CreateConnectionAsync();
         var setting = await db.GetTable<TtsUserSetting>()
-            .FirstOrDefaultAsync(x => x.GuildId == GuildId && x.UserId == userId);
+            .FirstOrDefaultAsync(x => x.GuildId == ServerId && x.UserId == userId);
         return setting ?? new TtsUserSetting
         {
-            GuildId = GuildId, UserId = userId
+            GuildId = ServerId, UserId = userId
         };
     }
 
@@ -416,7 +422,7 @@ public sealed class MewdekoPlayer : LavalinkPlayer
     {
         await using var db = await dbFactory.CreateConnectionAsync();
         var existing = await db.GetTable<TtsUserSetting>()
-            .FirstOrDefaultAsync(x => x.GuildId == GuildId && x.UserId == userId);
+            .FirstOrDefaultAsync(x => x.GuildId == ServerId && x.UserId == userId);
 
         if (existing is not null)
         {
@@ -427,7 +433,7 @@ public sealed class MewdekoPlayer : LavalinkPlayer
         {
             var setting = new TtsUserSetting
             {
-                GuildId = GuildId, UserId = userId
+                GuildId = ServerId, UserId = userId
             };
             update(setting);
             await db.InsertAsync(setting);
@@ -466,7 +472,7 @@ public sealed class MewdekoPlayer : LavalinkPlayer
 
         await using var db = await dbFactory.CreateConnectionAsync();
         await db.UpdateAsync(settings);
-        await cache.SetMusicPlayerSettings(GuildId, settings);
+        await cache.SetMusicPlayerSettings(ServerId, settings);
     }
 
     /// <summary>
@@ -512,23 +518,23 @@ public sealed class MewdekoPlayer : LavalinkPlayer
 
         var activeEffects = GetActiveEffects();
         var effectsText = activeEffects.Any()
-            ? Strings.MusicNowPlayingEffects(GuildId, string.Join(", ", activeEffects))
+            ? Strings.MusicNowPlayingEffects(ServerId, string.Join(", ", activeEffects))
             : "";
         var repeatEmoji = GetRepeatEmoji(await GetRepeatType().ConfigureAwait(false));
-        var repeatText = repeatEmoji != "" ? Strings.MusicNowPlayingRepeat(GuildId, repeatEmoji) : "";
+        var repeatText = repeatEmoji != "" ? Strings.MusicNowPlayingRepeat(ServerId, repeatEmoji) : "";
 
-        var statsText = Strings.MusicNowPlayingStats(GuildId, GetVolumeEmoji(), (Volume * 100).ToString("0"), currentTrack.Index,
+        var statsText = Strings.MusicNowPlayingStats(ServerId,GetVolumeEmoji(), (Volume * 100).ToString("0"), currentTrack.Index,
             queue.Count, repeatText, effectsText);
 
         var eb = new EmbedBuilder()
             .WithColor(color)
-            .WithTitle(Strings.MusicNowPlayingTitle(GuildId))
+            .WithTitle(Strings.MusicNowPlayingTitle(ServerId))
             .WithDescription($"**[{currentTrack.Track.Title}]({currentTrack.Track.Uri})**\n" +
                              $"{currentTrack.Track.Author}\n" +
                              $"🎵 {currentTrack.Track.Provider} • 👤 {currentTrack.Requester.Username}\n\n" +
                              $"{stateEmoji} `{position:mm\\:ss}` {progressBar} `{duration:mm\\:ss}`\n\n" +
                              statsText)
-            .WithFooter(Strings.MusicNowPlayingControls(GuildId));
+            .WithFooter(Strings.MusicNowPlayingControls(ServerId));
 
         if (currentTrack.Track.ArtworkUri != null)
             eb.WithThumbnailUrl(currentTrack.Track.ArtworkUri.ToString());
@@ -898,7 +904,7 @@ public sealed class MewdekoPlayer : LavalinkPlayer
 
         var state = new MusicPlayerState
         {
-            GuildId = GuildId,
+            GuildId = ServerId,
             VoiceChannelId = VoiceChannelId,
             CurrentPosition = position,
             IsPlaying = State == PlayerState.Playing,
@@ -922,7 +928,7 @@ public sealed class MewdekoPlayer : LavalinkPlayer
 
         await using var db = await dbFactory.CreateConnectionAsync();
         await db.UpdateAsync(settings);
-        await cache.SetMusicPlayerSettings(GuildId, settings);
+        await cache.SetMusicPlayerSettings(ServerId, settings);
     }
 
     /// <summary>
@@ -959,7 +965,7 @@ public sealed class MewdekoPlayer : LavalinkPlayer
 
         await using var db = await dbFactory.CreateConnectionAsync();
         await db.UpdateAsync(settings);
-        await cache.SetMusicPlayerSettings(GuildId, settings);
+        await cache.SetMusicPlayerSettings(ServerId, settings);
     }
 
     /// <summary>
@@ -982,7 +988,7 @@ public sealed class MewdekoPlayer : LavalinkPlayer
 
         await using var db = await dbFactory.CreateConnectionAsync();
         await db.UpdateAsync(settings);
-        await cache.SetMusicPlayerSettings(GuildId, settings);
+        await cache.SetMusicPlayerSettings(ServerId, settings);
     }
 
     /// <summary>

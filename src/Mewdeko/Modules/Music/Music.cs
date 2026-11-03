@@ -85,8 +85,8 @@ public partial class Music(
             return;
         }
 
-        await cache.SetMusicQueue(ctx.Guild.Id, []).ConfigureAwait(false);
-        await cache.SetCurrentTrack(ctx.Guild.Id, null);
+        await cache.SetMusicQueue(PlayerId, []).ConfigureAwait(false);
+        await cache.SetCurrentTrack(PlayerId, null);
 
         await player.DisconnectAsync().ConfigureAwait(false);
 
@@ -124,10 +124,10 @@ public partial class Music(
             return;
         }
 
-        await cache.SetMusicQueue(ctx.Guild.Id, []).ConfigureAwait(false);
+        await cache.SetMusicQueue(PlayerId, []).ConfigureAwait(false);
         await ReplyConfirmAsync(Strings.MusicQueueCleared(ctx.Guild.Id)).ConfigureAwait(false);
         await player.StopAsync();
-        await cache.SetCurrentTrack(ctx.Guild.Id, null);
+        await cache.SetCurrentTrack(PlayerId, null);
     }
 
     /// <summary>
@@ -154,7 +154,7 @@ public partial class Music(
             return;
         }
 
-        var queue = await cache.GetMusicQueue(ctx.Guild.Id);
+        var queue = await cache.GetMusicQueue(PlayerId);
         if (queue.Count == 0)
         {
             await ReplyErrorAsync(Strings.MusicQueueEmpty(ctx.Guild.Id)).ConfigureAwait(false);
@@ -170,7 +170,7 @@ public partial class Music(
         var trackToPlay = queue.FirstOrDefault(x => x.Index == queueNumber);
         await player.StopAsync();
         await player.PlayAsync(trackToPlay.Track).ConfigureAwait(false);
-        await cache.SetCurrentTrack(ctx.Guild.Id, trackToPlay);
+        await cache.SetCurrentTrack(PlayerId, trackToPlay);
     }
 
     /// <summary>
@@ -204,7 +204,7 @@ public partial class Music(
 
             // Set initial volume
             await player.SetVolumeAsync(await player.GetVolume() / 100f);
-            var queue = await cache.GetMusicQueue(ctx.Guild.Id);
+            var queue = await cache.GetMusicQueue(PlayerId);
 
             if (!MusicSearchSources.HasSourcePrefix(query) && Uri.TryCreate(query, UriKind.Absolute, out var uri))
             {
@@ -287,7 +287,7 @@ public partial class Music(
                 return;
             }
 
-            var queue = await cache.GetMusicQueue(ctx.Guild.Id);
+            var queue = await cache.GetMusicQueue(PlayerId);
 
             if (queue.Count == 0)
             {
@@ -336,8 +336,8 @@ public partial class Music(
             return;
         }
 
-        var queue = await cache.GetMusicQueue(ctx.Guild.Id);
-        var currentTrack = await cache.GetCurrentTrack(ctx.Guild.Id);
+        var queue = await cache.GetMusicQueue(PlayerId);
+        var currentTrack = await cache.GetCurrentTrack(PlayerId);
         var nextTrack = queue.FirstOrDefault(x => x.Index == currentTrack.Index + 1);
         if (queue.Count == 0)
         {
@@ -355,16 +355,16 @@ public partial class Music(
         {
             await player.StopAsync();
             await player.PlayAsync(nextTrack.Track);
-            await cache.SetCurrentTrack(ctx.Guild.Id, nextTrack);
+            await cache.SetCurrentTrack(PlayerId, nextTrack);
         }
         else
         {
             await player.StopAsync();
-            await cache.SetCurrentTrack(ctx.Guild.Id, null);
+            await cache.SetCurrentTrack(PlayerId, null);
         }
 
         queue.Remove(currentTrack);
-        await cache.SetMusicQueue(ctx.Guild.Id, queue);
+        await cache.SetMusicQueue(PlayerId, queue);
 
         if (player.State == PlayerState.Playing)
         {
@@ -400,7 +400,7 @@ public partial class Music(
             return;
         }
 
-        var queue = await cache.GetMusicQueue(ctx.Guild.Id);
+        var queue = await cache.GetMusicQueue(PlayerId);
         if (queue.Count == 0)
         {
             await ReplyErrorAsync(Strings.MusicQueueEmpty(ctx.Guild.Id)).ConfigureAwait(false);
@@ -415,14 +415,14 @@ public partial class Music(
 
         var track = queue.FirstOrDefault(x => x.Index == from);
         var replace = queue.FirstOrDefault(x => x.Index == to);
-        var currentSong = await cache.GetCurrentTrack(ctx.Guild.Id);
+        var currentSong = await cache.GetCurrentTrack(PlayerId);
 
         queue[queue.IndexOf(track)].Index = to;
 
         if (currentSong is not null && currentSong.Index == from)
         {
             track.Index = to;
-            await cache.SetCurrentTrack(ctx.Guild.Id, track);
+            await cache.SetCurrentTrack(PlayerId, track);
         }
 
         if (replace is not null)
@@ -432,7 +432,7 @@ public partial class Music(
 
         try
         {
-            await cache.SetMusicQueue(ctx.Guild.Id, queue);
+            await cache.SetMusicQueue(PlayerId, queue);
             await ReplyConfirmAsync(Strings.MusicSongMoved(ctx.Guild.Id, track.Track.Title, to)).ConfigureAwait(false);
         }
         catch (Exception e)
@@ -568,9 +568,9 @@ public partial class Music(
             return;
         }
 
-        var votes = await cache.GetVoteSkip(ctx.Guild.Id) ?? [];
+        var votes = await cache.GetVoteSkip(PlayerId) ?? [];
         if (votes.Add(ctx.User.Id))
-            await cache.SetVoteSkip(ctx.Guild.Id, votes);
+            await cache.SetVoteSkip(PlayerId, votes);
 
         var usersInVoice = voiceChannel.ConnectedUsers.Count(x => !x.IsBot);
         var votesNeeded = (int)Math.Ceiling(usersInVoice * 0.7);
@@ -578,7 +578,7 @@ public partial class Music(
         if (votes.Count >= votesNeeded)
         {
             await player.SeekAsync(player.CurrentItem.Track.Duration).ConfigureAwait(false);
-            await cache.SetVoteSkip(ctx.Guild.Id, null);
+            await cache.SetVoteSkip(PlayerId, null);
             await ReplyConfirmAsync(Strings.MusicSkipVoteSuccess(ctx.Guild.Id)).ConfigureAwait(false);
         }
         else
@@ -651,7 +651,7 @@ public partial class Music(
             return;
         }
 
-        var queue = await cache.GetMusicQueue(ctx.Guild.Id);
+        var queue = await cache.GetMusicQueue(PlayerId);
         if (queue.Count == 0)
         {
             await ReplyErrorAsync(Strings.MusicQueueEmpty(ctx.Guild.Id)).ConfigureAwait(false);
@@ -707,7 +707,7 @@ public partial class Music(
             return;
         }
 
-        var queue = clear ? [] : await cache.GetMusicQueue(ctx.Guild.Id);
+        var queue = clear ? [] : await cache.GetMusicQueue(PlayerId);
         var startIndex = queue.Count + 1;
 
         foreach (var savedTrack in playlist.MusicPlaylistTracks)
@@ -721,12 +721,12 @@ public partial class Music(
             }));
         }
 
-        await cache.SetMusicQueue(ctx.Guild.Id, queue);
+        await cache.SetMusicQueue(PlayerId, queue);
 
         if (player.CurrentItem is null && queue.Count > 0)
         {
             await player.PlayAsync(queue[0].Track).ConfigureAwait(false);
-            await cache.SetCurrentTrack(ctx.Guild.Id, queue[0]);
+            await cache.SetCurrentTrack(PlayerId, queue[0]);
         }
 
         await ReplyConfirmAsync(
@@ -858,14 +858,14 @@ public partial class Music(
             return;
         }
 
-        var queue = await cache.GetMusicQueue(ctx.Guild.Id);
+        var queue = await cache.GetMusicQueue(PlayerId);
         if (queue.Count <= 1)
         {
             await ReplyErrorAsync(Strings.MusicQueueTooShort(ctx.Guild.Id)).ConfigureAwait(false);
             return;
         }
 
-        var currentTrack = await cache.GetCurrentTrack(ctx.Guild.Id);
+        var currentTrack = await cache.GetCurrentTrack(PlayerId);
         var remainingTracks = queue.Where(x => x.Index != currentTrack.Index).ToList();
 
         // Fisher-Yates shuffle
@@ -890,7 +890,7 @@ public partial class Music(
         };
         newQueue.AddRange(remainingTracks);
 
-        await cache.SetMusicQueue(ctx.Guild.Id, newQueue);
+        await cache.SetMusicQueue(PlayerId, newQueue);
         await ReplyConfirmAsync(Strings.MusicQueueShuffled(ctx.Guild.Id)).ConfigureAwait(false);
     }
 
@@ -947,14 +947,14 @@ public partial class Music(
             return;
         }
 
-        var queue = await cache.GetMusicQueue(ctx.Guild.Id);
+        var queue = await cache.GetMusicQueue(PlayerId);
         if (queue.Count == 0)
         {
             await ReplyErrorAsync(Strings.MusicQueueEmpty(ctx.Guild.Id)).ConfigureAwait(false);
             return;
         }
 
-        var currentTrack = await cache.GetCurrentTrack(ctx.Guild.Id);
+        var currentTrack = await cache.GetCurrentTrack(PlayerId);
         var orderedQueue = queue.OrderBy(x => x.Index).ToList();
         const int tracksPerPage = 5;
         var totalPages = Math.Max(1, (int)Math.Ceiling((double)orderedQueue.Count / tracksPerPage));
@@ -1409,13 +1409,13 @@ public partial class Music(
             addedTracks.Add(mewdekoTrack);
         }
 
-        await cache.SetMusicQueue(ctx.Guild.Id, queue);
+        await cache.SetMusicQueue(PlayerId, queue);
 
         // Start playback if nothing is currently playing
         if (player.CurrentItem is null && queue.Any())
         {
             await player.PlayAsync(queue[0].Track);
-            await cache.SetCurrentTrack(ctx.Guild.Id, queue[0]);
+            await cache.SetCurrentTrack(PlayerId, queue[0]);
         }
 
         var eb = new EmbedBuilder()
@@ -1486,8 +1486,8 @@ public partial class Music(
     private async Task<List<LavalinkTrack>> ProcessSpotifyUrl(string url, SpotifyClient spotify)
     {
         var tracks = new List<LavalinkTrack>();
-        var currentQueue = await cache.GetMusicQueue(Context.Guild.Id);
-        var currentTrack = await cache.GetCurrentTrack(Context.Guild.Id);
+        var currentQueue = await cache.GetMusicQueue(PlayerId);
+        var currentTrack = await cache.GetCurrentTrack(PlayerId);
         var (player, _) = await GetPlayerAsync();
         var shouldPlayFirst = currentQueue.Count == 0 && currentTrack == null && player.CurrentItem == null;
 
@@ -1537,7 +1537,7 @@ public partial class Music(
                             Username = Context.User.Username,
                             AvatarUrl = Context.User.GetAvatarUrl()
                         });
-                        await cache.SetCurrentTrack(Context.Guild.Id, mewdekoTrack);
+                        await cache.SetCurrentTrack(PlayerId, mewdekoTrack);
                         await player.PlayAsync(ytTrack);
 
                         if (loadingMsg != null)
@@ -1605,7 +1605,7 @@ public partial class Music(
                                 Username = Context.User.Username,
                                 AvatarUrl = Context.User.GetAvatarUrl()
                             });
-                            await cache.SetCurrentTrack(Context.Guild.Id, mewdekoTrack);
+                            await cache.SetCurrentTrack(PlayerId, mewdekoTrack);
                             await player.PlayAsync(ytTrack);
 
                             if (loadingMsg != null)
@@ -1644,10 +1644,17 @@ public partial class Music(
         return tracks;
     }
 
+    /// <summary>
+    ///     Gets the id of the player for the caller's voice channel, which also keys its queue and current track.
+    /// </summary>
+    internal static ulong GetPlayerId(CommandContext ctx) => ctx.Member?.VoiceChannel?.Id ?? ctx.Guild.Id;
+
+    private ulong PlayerId => GetPlayerId(ctx);
+
     internal static ValueTask<PlayerResult<MewdekoPlayer>> RetrievePlayerAsync(IAudioService service,
         CommandContext ctx, MewdekoPlayerOptions options, PlayerRetrieveOptions retrieveOptions)
     {
-        return service.Players.RetrieveAsync<MewdekoPlayer, MewdekoPlayerOptions>(ctx.Guild.Id,
+        return service.Players.RetrieveAsync<MewdekoPlayer, MewdekoPlayerOptions>(GetPlayerId(ctx),
             ctx.Member?.VoiceChannel?.Id, CreatePlayerAsync, new OptionsWrapper<MewdekoPlayerOptions>(options),
             retrieveOptions);
     }

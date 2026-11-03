@@ -60,7 +60,7 @@ public class PlayerStateTracker : IDisposable
 
             var playerState = new MusicPlayerState
             {
-                GuildId = player.GuildId,
+                GuildId = player.ServerId,
                 VoiceChannelId = player.VoiceChannelId,
                 CurrentPosition = player.Position?.Position ?? TimeSpan.Zero,
                 IsPlaying = player.State == PlayerState.Playing,
@@ -99,7 +99,7 @@ public class PlayerStateTracker : IDisposable
 
             var playerState = new MusicPlayerState
             {
-                GuildId = player.GuildId,
+                GuildId = player.ServerId,
                 VoiceChannelId = player.VoiceChannelId,
                 CurrentPosition = player.Position?.Position ?? TimeSpan.Zero,
                 IsPlaying = player.State == PlayerState.Playing,
