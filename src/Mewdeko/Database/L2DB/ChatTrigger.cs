@@ -53,6 +53,7 @@ namespace DataModel
 		[Column("Category"                                                                                                       )] public string?   Category                      { get; set; } // text
 		[Column("AllowBots"                                                                                                      )] public bool      AllowBots                     { get; set; } // boolean
 		[Column("NextTriggerId"                                                                                                  )] public int?      NextTriggerId                 { get; set; } // integer
+		[Column("MatchEmbeds"                                                                                                    )] public bool      MatchEmbeds                   { get; set; } // boolean
 		[Column("EventType"                                                                                                      )] public int       EventType                     { get; set; } // integer
 		[Column("EventChannelId"                                                                                                 )] public ulong     EventChannelId                { get; set; } // numeric(20,0)
 		[Column("TimeConditions"                                                                                                 )] public string?   TimeConditions                { get; set; } // text

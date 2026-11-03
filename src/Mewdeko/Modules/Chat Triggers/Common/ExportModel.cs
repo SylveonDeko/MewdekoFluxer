@@ -165,6 +165,11 @@ public class ExportedTriggers
     public bool Bots { get; set; }
 
     /// <summary>
+    ///     Gets or sets a value indicating whether the trigger also matches the text in message embeds.
+    /// </summary>
+    public bool Embeds { get; set; }
+
+    /// <summary>
     ///     Gets or sets the id of the trigger this one chains to.
     /// </summary>
     /// <remarks>
@@ -257,6 +262,7 @@ public class ExportedTriggers
             MinMember = ct.MinServerMembershipMinutes,
             Evt = ct.EventType == 0 ? CtEventType.None : (CtEventType)ct.EventType,
             Bots = ct.AllowBots,
+            Embeds = ct.MatchEmbeds,
             Next = ct.NextTriggerId,
             Reply = ct.ReplyToTrigger,
             DelAfter = ct.DeleteResponseAfter,
@@ -316,6 +322,7 @@ public class ExportedTriggers
             MinServerMembershipMinutes = MinMember,
             EventType = (int)Evt,
             AllowBots = Bots,
+            MatchEmbeds = Embeds,
             NextTriggerId = Next,
             ReplyToTrigger = Reply,
             DeleteResponseAfter = DelAfter,

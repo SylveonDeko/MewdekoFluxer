@@ -806,6 +806,8 @@ ctchain:
   desc: 'Sets a chat trigger that runs after another trigger.'
 ctallowbots:
   desc: 'Controls whether a chat trigger responds to bots.'
+ctmatchembeds:
+  desc: 'Controls whether a chat trigger also matches the text in message embeds.'
 ctcounters:
   desc: 'Lists chat-trigger counters.'
 ctcounterset:

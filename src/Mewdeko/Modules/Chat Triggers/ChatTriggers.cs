@@ -1165,6 +1165,33 @@ public class ChatTriggers(
     }
 
     /// <summary>
+    ///     Toggles whether a chat trigger also matches the text in message embeds.
+    /// </summary>
+    /// <param name="id">The ID of the chat trigger.</param>
+    /// <remarks>
+    ///     Embeds are only checked when the message text matches no trigger. The title, description, author, footer
+    ///     and each field name and value are matched on their own. Pair it with ctallowbots to match bot embeds.
+    /// </remarks>
+    /// <example>.ctmatchembeds 9987</example>
+    [Cmd]
+    [Aliases]
+    [UserPerm(GuildPermission.Administrator)]
+    public async Task CtMatchEmbeds(int id)
+    {
+        var res = await Service.ModifyAsync(ctx.Guild?.Id, id, ct => ct.MatchEmbeds = !ct.MatchEmbeds)
+            .ConfigureAwait(false);
+
+        if (res is null)
+        {
+            await ReplyErrorAsync(Strings.NoFoundId(ctx.Guild.Id)).ConfigureAwait(false);
+            return;
+        }
+
+        await ctx.Channel.EmbedAsync(Service.GetEmbed(res, ctx.Guild?.Id, Strings.EditedChatTrig(ctx.Guild.Id)))
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>
     ///     Lists the counters chat triggers in this server read and update.
     /// </summary>
     /// <example>.ctcounters</example>

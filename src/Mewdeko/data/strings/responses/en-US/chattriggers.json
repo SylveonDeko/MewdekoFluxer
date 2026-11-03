@@ -2,6 +2,7 @@
   "chat_trigger_id": "#{0}",
   "ct_active_hours": "Active Hours",
   "ct_allow_bots": "Responds To Bots",
+  "ct_match_embeds": "Matches Embeds",
   "ct_category": "Category",
   "ct_category_cleared": "Chat trigger {0} is no longer in a category.",
   "ct_category_none": "No triggers are in a category named `{0}`.",

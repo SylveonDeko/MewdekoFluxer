@@ -569,6 +569,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
         ct.CounterMax = incoming.CounterMax;
         ct.Category = incoming.Category;
         ct.AllowBots = incoming.AllowBots;
+        ct.MatchEmbeds = incoming.MatchEmbeds;
         ct.NextTriggerId = incoming.NextTriggerId;
         ct.EventType = incoming.EventType;
         ct.EventChannelId = incoming.EventChannelId;
@@ -1029,24 +1030,58 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
         if (umsg.Channel is not Channel { IsTextable: true, GuildId: not null } channel)
             return (null, null);
 
-        // Trim and convert message content to lowercase for comparison
-        var content = umsg.Content.Trim().ToLowerInvariant();
-
-        // Check if there are guild-specific reactions for the current guild
-        if (newGuildReactions.TryGetValue(channel.Guild.Id, out var reactions) && reactions.Length > 0)
-        {
-            // Attempt to match chat triggers against the message content
-            var cr = await MatchChatTriggers(content, reactions, channel.Guild, fromBot);
-            if (cr.Trigger is not null)
-                return cr;
-        }
-
-        // Get the global reactions array
+        newGuildReactions.TryGetValue(channel.Guild.Id, out var reactions);
         // ReSharper disable once InconsistentlySynchronizedField
         var localGrs = globalReactions;
 
-        // Match chat triggers against the message content
-        return await MatchChatTriggers(content, localGrs, channel.Guild, fromBot);
+        var match = await MatchAll(umsg.Content.Trim().ToLowerInvariant(), false);
+        if (match.Trigger is not null)
+            return match;
+
+        foreach (var text in EmbedTexts(umsg))
+        {
+            match = await MatchAll(text, true);
+            if (match.Trigger is not null)
+                return match;
+        }
+
+        return (null, null);
+
+        async Task<(CTModel? Trigger, Match? Match)> MatchAll(string content, bool embeds)
+        {
+            if (reactions is { Length: > 0 })
+            {
+                var cr = await MatchChatTriggers(content, reactions, channel.Guild, fromBot, embeds);
+                if (cr.Trigger is not null)
+                    return cr;
+            }
+
+            return await MatchChatTriggers(content, localGrs, channel.Guild, fromBot, embeds);
+        }
+    }
+
+    /// <summary>
+    ///     Gets each piece of text in a message's embeds, trimmed and lowercased, for triggers that match embeds.
+    /// </summary>
+    /// <param name="message">The message whose embeds to read.</param>
+    /// <returns>The title, description, author, footer and every field name and value that has text.</returns>
+    private static IEnumerable<string> EmbedTexts(Message message)
+    {
+        foreach (var embed in message.Embeds ?? [])
+        {
+            var parts = new List<string?> { embed.Title, embed.Description, embed.Author?.Name, embed.Footer?.Text };
+            foreach (var field in embed.Fields ?? [])
+            {
+                parts.Add(field.Name);
+                parts.Add(field.Value);
+            }
+
+            foreach (var part in parts)
+            {
+                if (!string.IsNullOrWhiteSpace(part))
+                    yield return part.Trim().ToLowerInvariant();
+            }
+        }
     }
 
 
@@ -1060,10 +1095,11 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     ///     Whether the message was authored by another bot. Triggers that opted into bot messages only match when this
     ///     is true, and never match human messages.
     /// </param>
+    /// <param name="embeds">Whether the content is embed text, which only triggers that match embeds consider.</param>
     /// <returns>The matched chat trigger model, or null if no match is found.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private async Task<(CTModel? Trigger, Match? Match)> MatchChatTriggers(string content, CTModel[] crs,
-        SocketGuild guild, bool fromBot = false)
+        SocketGuild guild, bool fromBot = false, bool embeds = false)
     {
         try
         {
@@ -1081,7 +1117,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
             {
                 foreach (var ct in exactMatches)
                 {
-                    if (ct.IsDisabled || ct.AllowBots != fromBot)
+                    if (ct.IsDisabled || ct.AllowBots != fromBot || (embeds && !ct.MatchEmbeds))
                         continue;
 
                     result.Add((ct, null));
@@ -1098,7 +1134,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
 
                 // A bot-authored message only matches triggers that opted in, and a trigger that opted in is not
                 // matched again through the normal human path
-                if (ct.AllowBots != fromBot)
+                if (ct.AllowBots != fromBot || (embeds && !ct.MatchEmbeds))
                     continue;
 
                 // Each trigger is matched against its own copy of the content so that
@@ -3055,6 +3091,9 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
 
         if (ct.AllowBots)
             eb.AddField(strings.CtAllowBots(gId), "\u200b");
+
+        if (ct.MatchEmbeds)
+            eb.AddField(strings.CtMatchEmbeds(gId), "\u200b");
 
         if (ct.NextTriggerId.HasValue)
             eb.AddField(strings.CtNextTrigger(gId), ct.NextTriggerId.Value.ToString());

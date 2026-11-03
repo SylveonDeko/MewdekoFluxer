@@ -879,6 +879,9 @@ ctchain:
 ctallowbots:
   - ctallowbots
   - chattriggerallowbots
+ctmatchembeds:
+  - ctmatchembeds
+  - chattriggermatchembeds
 ctcounters:
   - ctcounters
   - chattriggercounters
