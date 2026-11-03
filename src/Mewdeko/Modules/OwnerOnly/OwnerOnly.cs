@@ -302,7 +302,7 @@ public class OwnerOnly(
             return;
 
         var affected = await dbContext.ExecuteAsync(sql).ConfigureAwait(false);
-        await ctx.Channel.SendErrorAsync(Strings.SqlAffectedRows(ctx.Guild.Id, affected), botConfig)
+        await ctx.Channel.SendConfirmAsync(Strings.SqlAffectedRows(ctx.Guild.Id, affected))
             .ConfigureAwait(false);
     }
 

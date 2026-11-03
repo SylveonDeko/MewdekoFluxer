@@ -133,7 +133,7 @@
   "xp_role_sync_all_starting": "🔄 Starting role synchronization for all users...",
   "xp_role_sync_already_in_progress": "A guild-wide role sync is already in progress. Please wait for it to complete.",
   "xp_role_sync_complete": "Role Synchronization Complete",
-  "xp_role_sync_complete_desc": "Processed {0} users in {1} minutes",
+  "xp_role_sync_complete_desc": "Processed {0} users in {1}",
   "xp_role_sync_error": "An error occurred during role synchronization. Check logs for details.",
   "xp_role_sync_eta": "{0} minutes",
   "xp_role_sync_failed": "Role Sync Failed",

@@ -61,7 +61,7 @@
   "giveaway_user_not_in_server": "Cet utilisateur n'est pas sur le serveur de ce giveaway.",
   "giveaway_win_embed_color_set": "Couleur de l'embed de victoire du giveaway définie ! Gardez à l'esprit que cela ne sera pris en compte qu'au prochain giveaway.",
   "giveaway_winner_announcement": "Gagnant : {0} !\nOrganisé par : <@{1}>",
-  "giveaway_winner_description": "{0} a remporté le giveaway pour [{1}](https://discord.com/channels/{2}/{3}/{4}) ! \n\n- (Organisé par : <@{5}>)\n- Relancer : `{6}reroll {4}`",
-  "giveaway_winner_dm": "Félicitations ! Vous avez remporté un giveaway pour [{0}](https://discord.com/channels/{1}/{2}/{3}) !",
+  "giveaway_winner_description": "{0} a remporté le giveaway pour [{1}]({7}/channels/{2}/{3}/{4}) ! \n\n- (Organisé par : <@{5}>)\n- Relancer : `{6}greroll {4}`",
+  "giveaway_winner_dm": "Félicitations ! Vous avez remporté un giveaway pour [{0}]({4}/channels/{1}/{2}/{3}) !",
   "giveaway_winner_simple": "Gagnant : {0}"
 }

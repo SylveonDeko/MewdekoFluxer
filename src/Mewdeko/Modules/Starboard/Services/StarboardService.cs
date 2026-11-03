@@ -710,7 +710,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
         // Get top starred posts by this user
         var topStarredPosts = userStats.OrderByDescending(x => x.PeakReactionCount)
             .Take(3)
-            .Select(x => new TopStarredPost(x.MessageId, x.PeakReactionCount, x.Emote))
+            .Select(x => new TopStarredPost(x.MessageId, x.ChannelId, x.PeakReactionCount, x.Emote))
             .ToList();
 
         // Get who this user stars the most (their "idols")

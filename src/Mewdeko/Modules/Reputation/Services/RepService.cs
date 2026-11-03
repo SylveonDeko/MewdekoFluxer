@@ -983,6 +983,27 @@ public class RepService : INService, IReadyExecutor, IUnloadableService
     }
 
     /// <summary>
+    ///     Gets the names of the reputation types a guild accepts, standard first.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <returns>The valid type names.</returns>
+    public async Task<List<string>> GetValidReputationTypeNamesAsync(ulong guildId)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var custom = await db.RepCustomTypes
+            .Where(x => x.GuildId == guildId && x.IsActive)
+            .Select(x => x.TypeName)
+            .ToListAsync();
+
+        var names = new List<string>
+        {
+            "standard"
+        };
+        names.AddRange(custom.Where(x => !x.Equals("standard", StringComparison.OrdinalIgnoreCase)));
+        return names;
+    }
+
+    /// <summary>
     ///     Gets custom reputation for a user of a specific type.
     /// </summary>
     /// <param name="guildId">The guild ID.</param>

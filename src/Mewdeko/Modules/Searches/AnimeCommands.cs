@@ -54,7 +54,6 @@ public partial class Searches
             var bytes = await shipRequest.ReadAsByteArrayAsync().ConfigureAwait(false);
             var ms = new MemoryStream(bytes);
             await using var _ = ms.ConfigureAwait(false);
-            var color = new Color();
             var response = string.Empty;
             switch (random)
             {
@@ -76,7 +75,7 @@ public partial class Searches
             }
 
             await ctx.Channel.SendFileAsync(ms, "ship.png",
-                    embed: new EmbedBuilder().WithColor(color)
+                    embed: new EmbedBuilder().WithOkColor()
                         .WithDescription(Strings.CompatibilityResult(ctx.Guild.Id, random, response))
                         .WithImageUrl("attachment://ship.png").Build())
                 .ConfigureAwait(false);

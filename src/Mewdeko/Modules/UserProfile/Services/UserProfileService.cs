@@ -370,7 +370,7 @@ public partial class UserProfileService : INService
                     eb.AddField("Birthday", dbUser.Birthday.Value.ToString("MMMM"));
                     break;
                 case BirthdayDisplayModeEnum.YearOnly:
-                    eb.AddField("Birthday", dbUser.Birthday.Value.ToString("YYYY"));
+                    eb.AddField("Birthday", dbUser.Birthday.Value.ToString("yyyy"));
                     break;
                 case BirthdayDisplayModeEnum.MonthAndDate:
                     eb.AddField("Birthday", dbUser.Birthday.Value.ToString("M"));

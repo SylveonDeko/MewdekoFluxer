@@ -485,7 +485,7 @@ public partial class Searches
             {
                 Description =
                     toShow is null
-                        ? $"{ctx.User.Mention} is {action}\n{toShow}"
+                        ? $"{ctx.User.Mention} {action}"
                         : $"{ctx.User.Mention} {action} {toShow}",
                 ImageUrl = result.Results.FirstOrDefault().Url,
                 Color = Mewdeko.OkColor

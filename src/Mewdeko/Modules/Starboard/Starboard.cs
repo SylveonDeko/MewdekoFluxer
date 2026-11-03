@@ -466,7 +466,7 @@ public class Starboard(GuildSettingsService guildSettings, InteractiveService in
         if (stats.TopStarredPosts.Any())
         {
             var topPosts = string.Join("\n", stats.TopStarredPosts.Select(p =>
-                $"{p.Emoji}: [{p.MessageId}](https://discord.com/channels/{ctx.Guild.Id}/{ctx.Channel.Id}/{p.MessageId}) ({p.StarCount} ⭐)"));
+                $"{p.Emoji}: [{p.MessageId}]({FluxerContext.WebUrl}/channels/{ctx.Guild.Id}/{p.ChannelId}/{p.MessageId}) ({p.StarCount} ⭐)"));
             eb.AddField(Strings.TopStarredPosts(ctx.Guild.Id), topPosts);
         }
 

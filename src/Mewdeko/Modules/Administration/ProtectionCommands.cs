@@ -13,7 +13,10 @@ public partial class Administration
     ///     Commands for managing the Anti-Alt, Anti-Raid, and Anti-Spam protection settings.
     /// </summary>
     [Group]
-    public class ProtectionCommands(InteractiveService serv, ImageHashingService imageHashing)
+    public class ProtectionCommands(
+        InteractiveService serv,
+        ImageHashingService imageHashing,
+        GuildSettingsService guildSettings)
         : MewdekoSubmodule<ProtectionService>
     {
         /// <summary>
@@ -796,7 +799,7 @@ public partial class Administration
             var embed = new EmbedBuilder()
                 .WithOkColor()
                 .WithTitle(Strings.PatternListTitle(ctx.Guild.Id))
-                .WithDescription(Strings.PatternListDesc(ctx.Guild.Id, patternStats.Action, patternStats.Counter));
+                .WithDescription(Strings.PatternListDesc(ctx.Guild.Id, (PunishmentAction)patternStats.Action,patternStats.Counter));
 
             foreach (var pattern in patterns.Take(10)) // Limit to 10 patterns to avoid embed limits
             {
@@ -953,7 +956,7 @@ public partial class Administration
             var embed = new EmbedBuilder()
                 .WithOkColor()
                 .WithTitle(Strings.PatternConfigTitle(ctx.Guild.Id))
-                .WithDescription(Strings.PatternConfigDesc(ctx.Guild.Id, settings.Action, settings.MinimumScore))
+                .WithDescription(Strings.PatternConfigDesc(ctx.Guild.Id, (PunishmentAction)settings.Action,settings.MinimumScore))
                 .AddField("Account Age Check",
                     $"**Enabled:** {settings.CheckAccountAge}\n**Max Age:** {settings.MaxAccountAgeMonths} months",
                     true)
@@ -1146,7 +1149,8 @@ public partial class Administration
             {
                 var durationText = punishDuration > 0 ? $" for {TimeSpan.FromMinutes(punishDuration).Humanize()}" : "";
                 await ReplyConfirmAsync(
-                    Strings.AntiPostChannelEnabled(ctx.Guild.Id, action.ToString(), durationText)
+                    Strings.AntiPostChannelEnabled(ctx.Guild.Id, action.ToString(), durationText,
+                        await guildSettings.GetPrefix(ctx.Guild))
                 ).ConfigureAwait(false);
                 await Service.UpdateAntiPostChannelStatusEmbedAsync(ctx.Guild.Id).ConfigureAwait(false);
             }
@@ -1266,7 +1270,8 @@ public partial class Administration
 
             var durationText = punishDuration > 0 ? $" for {TimeSpan.FromMinutes(punishDuration).Humanize()}" : "";
             await ReplyConfirmAsync(Strings.AntiImageHashEnabled(ctx.Guild.Id, action.ToString(), durationText,
-                result.AntiImageHashSettings.HashThreshold)).ConfigureAwait(false);
+                result.AntiImageHashSettings.HashThreshold, await guildSettings.GetPrefix(ctx.Guild)))
+                .ConfigureAwait(false);
         }
 
         /// <summary>
@@ -1405,7 +1410,7 @@ public partial class Administration
 
             if (hashes.Count == 0)
             {
-                await ReplyErrorAsync(Strings.ImageHashListEmpty(ctx.Guild.Id)).ConfigureAwait(false);
+                await ReplyErrorAsync(Strings.ImageHashListEmpty(ctx.Guild.Id, await guildSettings.GetPrefix(ctx.Guild))).ConfigureAwait(false);
                 return;
             }
 

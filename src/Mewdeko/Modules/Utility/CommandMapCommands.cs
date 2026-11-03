@@ -56,8 +56,7 @@ public partial class Utility
             if (string.IsNullOrWhiteSpace(mapping))
             {
                 var gottenMaps = await Service.GetCommandMap(guildId);
-                if (gottenMaps != null && (gottenMaps.Count != 0 ||
-                                           !gottenMaps.Remove(trigger, out _)))
+                if (gottenMaps == null || !gottenMaps.ContainsKey(trigger))
                 {
                     await ReplyErrorAsync(Strings.AliasRemoveFail(guildId, Format.Code(trigger))).ConfigureAwait(false);
                     return;

@@ -36,7 +36,7 @@
   "todo_list_exists": "A todo list with the name '{0}' already exists.",
   "todo_list_not_found": "Todo list not found or you don't have access to it.",
   "todo_list_title": "📝 {0}",
-  "todo_lists_footer": "Use todo show <list-id> to view items",
+  "todo_lists_footer": "Use {0}todoshow <list-id> to view items",
   "todo_lists_title": "📋 Your Todo Lists",
   "todo_no_lists_found": "No todo lists found. Create one first!",
   "todo_no_permissions_found": "ℹ️ No permissions found for this list",
@@ -60,7 +60,7 @@
   "todo_set_color_failed": "Failed to set list color. You may not have permission to manage this list.",
   "todo_set_due_failed": "Failed to set due date. You may not have permission to edit this item.",
   "todo_set_reminder_failed": "Failed to set reminder. You may not have permission to edit this item.",
-  "todo_show_footer": "Use /todo add {0} <title> to add items",
+  "todo_show_footer": "Use {0}todoadd {1} <title> to add items",
   "todo_tag_added": "🏷️ Tag '{0}' added successfully",
   "todo_tag_removed": "🗑️ Tag '{0}' removed successfully",
   "todo_toggle_privacy_failed": "Failed to toggle privacy. You may not have permission to manage this list."

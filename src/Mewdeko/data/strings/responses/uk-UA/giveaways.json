@@ -61,7 +61,7 @@
   "giveaway_user_not_in_server": "Цей користувач не на сервері для цього розіграшу.",
   "giveaway_win_embed_color_set": "Колір вбудовування перемоги в розіграші встановлено! Просто майте на увазі, що це не оновиться до наступного розіграшу.",
   "giveaway_winner_announcement": "Переможець: {0}!\nХост: <@{1}>",
-  "giveaway_winner_description": "{0} виграв розіграш [{1}](https://discord.com/channels/{2}/{3}/{4})! \n\n- (Хост: <@{5}>)\n- Повторний розіграш: `{6}reroll {4}`",
-  "giveaway_winner_dm": "Вітаємо! Ви виграли розіграш [{0}](https://discord.com/channels/{1}/{2}/{3})!",
+  "giveaway_winner_description": "{0} виграв розіграш [{1}]({7}/channels/{2}/{3}/{4})! \n\n- (Хост: <@{5}>)\n- Повторний розіграш: `{6}greroll {4}`",
+  "giveaway_winner_dm": "Вітаємо! Ви виграли розіграш [{0}]({4}/channels/{1}/{2}/{3})!",
   "giveaway_winner_simple": "Переможець: {0}"
 }

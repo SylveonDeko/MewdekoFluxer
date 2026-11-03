@@ -115,7 +115,7 @@ public class UserProfile(IDataConnectionFactory dbFactory) : MewdekoModuleBase<U
         var optout = await Service.ToggleOptOut(ctx.User);
         if (!optout)
             await ctx.Channel.SendConfirmAsync(
-                "Succesfully enabled command stats collection! (This does ***not*** collect message contents!)");
+                "Successfully enabled command stats collection! (This does ***not*** collect message contents!)");
         else
             await ctx.Channel.SendConfirmAsync(Strings.StatsCollectionDisabled(ctx.Guild.Id));
     }
@@ -132,7 +132,7 @@ public class UserProfile(IDataConnectionFactory dbFactory) : MewdekoModuleBase<U
                 "Are you sure you want to delete your command stats? This action is irreversible!", ctx.User.Id))
         {
             if (await Service.DeleteStatsData(ctx.User))
-                await ctx.Channel.SendErrorAsync(Strings.StatsDeleted(ctx.Guild.Id), Config);
+                await ctx.Channel.SendConfirmAsync(Strings.StatsDeleted(ctx.Guild.Id));
             else
                 await ctx.Channel.SendErrorAsync(Strings.NoDataDelete(ctx.Guild.Id), Config);
         }
@@ -182,7 +182,7 @@ public class UserProfile(IDataConnectionFactory dbFactory) : MewdekoModuleBase<U
     public async Task SetPrivacy(ProfilePrivacyEnum privacyEnum)
     {
         await Service.SetPrivacy(ctx.User, privacyEnum);
-        await ctx.Channel.SendConfirmAsync($"Privacy succesfully set to `{privacyEnum.ToString()}`");
+        await ctx.Channel.SendConfirmAsync($"Privacy successfully set to `{privacyEnum.ToString()}`");
     }
 
     /// <summary>

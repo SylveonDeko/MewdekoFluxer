@@ -145,7 +145,7 @@ public class Afk(InteractiveService serv) : MewdekoModuleBase<AfkService>
         }
 
         await ReplyConfirmAsync(Strings.AfkMessagesDelete(ctx.Guild.Id,
-                TimeSpan.FromSeconds(await Service.GetAfkDel(ctx.Guild.Id))).Humanize())
+                TimeSpan.FromSeconds(await Service.GetAfkDel(ctx.Guild.Id)).Humanize()))
             .ConfigureAwait(false);
     }
 

@@ -27,7 +27,7 @@ public static class StatRoleEmbeds
             StatRoleStat.Invites => "invites",
             StatRoleStat.JoinedDays => "days in server",
             StatRoleStat.ActivityMinutes => $"minutes in {activity}",
-            _ => "days on Discord"
+            _ => "days on Fluxer"
         };
 
         var core = limit switch

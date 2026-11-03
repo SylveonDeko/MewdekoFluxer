@@ -8,7 +8,7 @@ namespace Mewdeko.Modules.Todo;
 /// <summary>
 ///     Commands for managing todo lists and items with comprehensive permission system.
 /// </summary>
-public class Todo : MewdekoModuleBase<TodoService>
+public class Todo(GuildSettingsService guildSettings) : MewdekoModuleBase<TodoService>
 {
     /// <summary>
     ///     Creates a new todo list
@@ -95,7 +95,7 @@ public class Todo : MewdekoModuleBase<TodoService>
             .WithTitle(Strings.TodoListsTitle(ctx.Guild.Id))
             .WithDescription(sb.ToString())
             .WithColor(Color.Purple)
-            .WithFooter(Strings.TodoListsFooter(ctx.Guild.Id));
+            .WithFooter(Strings.TodoListsFooter(ctx.Guild.Id, await guildSettings.GetPrefix(ctx.Guild)));
 
         await ctx.Channel.SendAsync(embed: embed.Build());
     }
@@ -230,7 +230,7 @@ public class Todo : MewdekoModuleBase<TodoService>
             .WithTitle(Strings.TodoListTitle(ctx.Guild.Id, list.Name))
             .WithDescription(sb.ToString())
             .WithColor(Color.Parse(list.Color ?? "#7289da"))
-            .WithFooter(Strings.TodoShowFooter(ctx.Guild.Id, listId));
+            .WithFooter(Strings.TodoShowFooter(ctx.Guild.Id, await guildSettings.GetPrefix(ctx.Guild), listId));
 
         await ctx.Channel.SendAsync(embed: embed.Build());
     }

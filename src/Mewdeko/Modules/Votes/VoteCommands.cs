@@ -51,7 +51,7 @@ public class Vote(InteractiveService interactivity) : MewdekoModuleBase<VoteServ
                 {
                     var eb = new EmbedBuilder()
                         .WithTitle(Strings.ThanksForVoting(ctx.Guild.Id, ctx.Guild.Name))
-                        .WithDescription(Strings.VoteCountTypo(ctx.Guild.Id, votes.Count))
+                        .WithDescription(Strings.VoteCountCorrect(ctx.Guild.Id, votes.Count))
                         .WithThumbnailUrl(ctx.User.RealAvatarUrl().AbsoluteUri)
                         .WithOkColor();
 
@@ -222,7 +222,7 @@ public class Vote(InteractiveService interactivity) : MewdekoModuleBase<VoteServ
             await ctx.Channel.SendErrorAsync(
                 Strings.VoteRoleUpdateFailed(ctx.Guild.Id, Format.Code(update.Item2)), Config);
         else
-            await ctx.Channel.SendConfirmAsync($"Successfuly updated the vote role time to {time.Time.Humanize()}");
+            await ctx.Channel.SendConfirmAsync(Strings.VoteRoleTimeUpdated(ctx.Guild.Id, time.Time.Humanize()));
     }
 
     /// <summary>

@@ -232,7 +232,7 @@ public class Birthday : MewdekoModuleBase<BirthdayService>
     /// <summary>
     ///     Sets a custom birthday message template.
     /// </summary>
-    /// <param name="message">The message template. Use {user} for mentions.</param>
+    /// <param name="message">The message template. Use %user% for mentions.</param>
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
@@ -242,7 +242,7 @@ public class Birthday : MewdekoModuleBase<BirthdayService>
         if (string.IsNullOrWhiteSpace(message))
         {
             var config = await Service.GetBirthdayConfigAsync(ctx.Guild.Id);
-            var currentMessage = config.BirthdayMessage ?? "🎉 Happy Birthday {user}! 🎂";
+            var currentMessage = config.BirthdayMessage ?? "🎉 Happy Birthday %user%! 🎂";
             await ctx.Channel.SendConfirmAsync(Strings.BirthdayCurrentMessage(ctx.Guild.Id, currentMessage));
             return;
         }
@@ -253,7 +253,7 @@ public class Birthday : MewdekoModuleBase<BirthdayService>
         });
 
         await ctx.Channel.SendConfirmAsync(
-            Strings.BirthdayMessageUpdated(ctx.Guild.Id, message.Replace("{user}", ctx.User.Mention)));
+            Strings.BirthdayMessageUpdated(ctx.Guild.Id, message.Replace("%user%", ctx.User.Mention)));
     }
 
     /// <summary>

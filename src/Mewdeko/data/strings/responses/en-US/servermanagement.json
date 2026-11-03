@@ -20,7 +20,7 @@
   "massrole_adding_over": "Adding {0} to {1} users who have been here for {2} or longer.\nThis will take about {3}.",
   "massrole_adding_to_role": "Adding {0} to users in {1}.\nThis will take about {2}.",
   "massrole_adding_under": "Adding {0} to {1} users who have been here for less than {2}.\nThis will take about {3}.",
-  "massrole_job_limit": "Due to discord rate limits you may only have 5 mass role operations at a time, check your current jobs with {0}.",
+  "massrole_job_limit": "Due to API rate limits you may only have 5 mass role operations at a time, check your current jobs with {0}.",
   "massrole_job_not_found": "No job with that ID exists, please check the list again with {0}",
   "massrole_removing": "Removing {0} from {1} members.\nThis will take about {2}.",
   "role_action_dm": "You have been {0} for {1}.",

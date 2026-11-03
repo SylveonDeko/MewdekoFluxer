@@ -727,22 +727,16 @@ public static class CurrencyGameLogic
     public static List<int> ParseMemorySequence(string input, string[] emojis)
     {
         var sequence = new List<int>();
-        var emojiToIndex = emojis.Select((emoji, index) => new
-            {
-                emoji, index
-            })
-            .ToDictionary(x => x.emoji, x => x.index);
+        var enumerator = System.Globalization.StringInfo.GetTextElementEnumerator(input.Replace("️", ""));
 
-        foreach (var emoji in emojis)
+        while (enumerator.MoveNext())
         {
-            var count = input.Count(c => c.ToString() == emoji);
-            for (var i = 0; i < count; i++)
-            {
-                if (emojiToIndex.TryGetValue(emoji, out var index))
-                {
-                    sequence.Add(index);
-                }
-            }
+            var element = (string)enumerator.Current;
+            var index = Array.IndexOf(emojis, element);
+            if (index >= 0)
+                sequence.Add(index);
+            else if (element.Length == 1 && element[0] >= '1' && element[0] <= '0' + emojis.Length)
+                sequence.Add(element[0] - '1');
         }
 
         return sequence;

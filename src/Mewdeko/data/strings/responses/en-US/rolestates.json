@@ -12,6 +12,7 @@
   "role_states_not_ignore_bots": "{0} Role States will not ignore bots!",
   "role_states_remove_failed": "Remove failed because:\n{0}",
   "role_states_roles_added_to_deny": "{0} {1} roles added to deny list.",
+  "role_states_roles_added_success": "Successfully added those roles to {0}'s Role State!",
   "role_states_roles_removed_from_deny": "{0} Successfully removed {1} role(s) from the deny list.",
   "role_states_roles_removed_success": "Successfully removed those roles from {0}'s Role State!",
   "role_states_saved": "Successfully saved role states for {0} users in the server.",

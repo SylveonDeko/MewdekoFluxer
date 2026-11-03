@@ -61,7 +61,7 @@
   "giveaway_user_not_in_server": "Esse usuário não está no servidor para este sorteio.",
   "giveaway_win_embed_color_set": "Cor do embed de vitória do sorteio definida! Tenha em mente que isso não é atualizado até o próximo sorteio.",
   "giveaway_winner_announcement": "Vencedor: {0}!\nHosteado por: <@{1}>",
-  "giveaway_winner_description": "{0} venceu o sorteio para [{1}](https://discord.com/channels/{2}/{3}/{4})! \n\n- (Hosteado por: <@{5}>)\n- Novo sorteio: `{6}reroll {4}`",
-  "giveaway_winner_dm": "Parabéns! Você venceu um sorteio para [{0}](https://discord.com/channels/{1}/{2}/{3})!",
+  "giveaway_winner_description": "{0} venceu o sorteio para [{1}]({7}/channels/{2}/{3}/{4})! \n\n- (Hosteado por: <@{5}>)\n- Novo sorteio: `{6}greroll {4}`",
+  "giveaway_winner_dm": "Parabéns! Você venceu um sorteio para [{0}]({4}/channels/{1}/{2}/{3})!",
   "giveaway_winner_simple": "Vencedor: {0}"
 }

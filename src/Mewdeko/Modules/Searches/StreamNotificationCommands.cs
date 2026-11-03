@@ -68,7 +68,7 @@ public partial class Searches
 
             await ReplyConfirmAsync(Strings.StreamRemoved(ctx.Guild.Id,
                 Format.Bold(fs.Username),
-                fs.Type)).ConfigureAwait(false);
+                (FType)fs.Type)).ConfigureAwait(false);
         }
 
         /// <summary>

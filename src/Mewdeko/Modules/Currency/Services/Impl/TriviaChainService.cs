@@ -193,7 +193,7 @@ public class TriviaChainService(GeneratedBotStrings strings) : ITriviaChainServi
             .WithDescription(chainState.CurrentQuestion)
             .AddField(strings.TriviaChainQuestion(guildId, chainState.ChainLength + 1, chainState.CurrentQuestion),
                 "_ _", true)
-            .AddField(strings.TriviaChainMultiplier(guildId, $"{nextMultiplier:F1}x"), "_ _", true)
+            .AddField(strings.TriviaChainMultiplier(guildId, $"{nextMultiplier:F1}"), "_ _", true)
             .AddField(strings.TriviaChainPotentialWin(guildId, potentialWin, currencyEmote), "_ _", true)
             .AddField(strings.TriviaChainCurrentWinnings(guildId, chainState.TotalWinnings, currencyEmote), "_ _",
                 true)

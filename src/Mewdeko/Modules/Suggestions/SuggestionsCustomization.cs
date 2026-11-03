@@ -153,7 +153,7 @@ public partial class Suggestions
         {
             await Service.SetAcceptChannel(ctx.Guild, channel?.Id ?? 0).ConfigureAwait(false);
             if (channel is null)
-                await ctx.Channel.SendConfirmAsync(Strings.ImplementedSuggestionsDefaultLook(ctx.Guild.Id));
+                await ctx.Channel.SendConfirmAsync(Strings.AcceptChannelDisabled(ctx.Guild.Id));
             else
                 await ctx.Channel.SendConfirmAsync(Strings.AcceptChannelSet(ctx.Guild.Id, channel.Mention))
                     .ConfigureAwait(false);

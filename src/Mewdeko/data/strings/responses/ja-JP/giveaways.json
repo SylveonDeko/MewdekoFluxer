@@ -61,7 +61,7 @@
   "giveaway_user_not_in_server": "そのユーザーはこのプレゼント企画のサーバーにいません。",
   "giveaway_win_embed_color_set": "プレゼント企画当選embedカラーを設定しました！次のプレゼント企画から反映されます。",
   "giveaway_winner_announcement": "当選者: {0}！\nホスト: <@{1}>",
-  "giveaway_winner_description": "{0}が[{1}](https://discord.com/channels/{2}/{3}/{4})のプレゼント企画に当選しました！\n\n- （ホスト: <@{5}>）\n- リロール: `{6}reroll {4}`",
-  "giveaway_winner_dm": "おめでとうございます！[{0}](https://discord.com/channels/{1}/{2}/{3})のプレゼント企画に当選しました！",
+  "giveaway_winner_description": "{0}が[{1}]({7}/channels/{2}/{3}/{4})のプレゼント企画に当選しました！\n\n- （ホスト: <@{5}>）\n- リロール: `{6}greroll {4}`",
+  "giveaway_winner_dm": "おめでとうございます！[{0}]({4}/channels/{1}/{2}/{3})のプレゼント企画に当選しました！",
   "giveaway_winner_simple": "当選者: {0}"
 }

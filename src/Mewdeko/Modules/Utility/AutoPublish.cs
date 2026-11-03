@@ -170,7 +170,7 @@ public partial class Utility
             if (!removed)
                 await ReplyErrorAsync(Strings.WordNotBlacklistedAutopub(ctx.Guild.Id, word));
             else
-                await ReplyConfirmAsync(Strings.AutopublishUserUnblacklisted(ctx.Guild.Id, word, channel.Mention));
+                await ReplyConfirmAsync(Strings.AutopublishWordUnblacklisted(ctx.Guild.Id, word.ToLower(), channel.Mention));
         }
 
         /// <summary>
@@ -238,7 +238,7 @@ public partial class Utility
                     eb.AddField(Strings.BlacklistedUsers(ctx.Guild.Id),
                         string.Join(",", userBlacklists.Select(x => $"<@{x.User}>")));
                 else
-                    eb.AddField("blacklisted_users", Strings.None(ctx.Guild.Id));
+                    eb.AddField(Strings.BlacklistedUsers(ctx.Guild.Id),Strings.None(ctx.Guild.Id));
 
                 if (wordBlacklists.Any())
                     eb.AddField(Strings.BlacklistedWords(ctx.Guild.Id),

@@ -29,7 +29,8 @@ public partial class Reputation : MewdekoModuleBase<RepService>
         // Validate reputation type
         if (!await Service.IsValidReputationTypeAsync(ctx.Guild.Id, repType))
         {
-            await ReplyErrorAsync(Strings.RepInvalidType(ctx.Guild.Id)).ConfigureAwait(false);
+            await ReplyErrorAsync(Strings.RepInvalidType(ctx.Guild.Id,
+                string.Join(", ", await Service.GetValidReputationTypeNamesAsync(ctx.Guild.Id)))).ConfigureAwait(false);
             return;
         }
 

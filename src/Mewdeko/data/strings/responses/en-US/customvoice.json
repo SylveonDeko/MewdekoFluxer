@@ -66,7 +66,7 @@
   "custom_voice_controls_not_owner": "You must be the owner of the voice channel to access these controls.",
   "custom_voice_controls_owner": "Owner",
   "custom_voice_controls_time_ago": "{0} hours ago",
-  "custom_voice_controls_title": "{0}'s Custom Voice Controls",
+  "custom_voice_controls_title": "Custom Voice Controls for {0}",
   "custom_voice_controls_user_limit": "User Limit",
   "custom_voice_controls_users": "Users",
   "custom_voice_delete_cancelled": "The channel was not deleted.",

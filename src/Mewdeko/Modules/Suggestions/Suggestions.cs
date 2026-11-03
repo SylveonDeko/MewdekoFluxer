@@ -72,9 +72,9 @@ public partial class Suggestions : MewdekoModuleBase<SuggestionsService>
         var eb = new EmbedBuilder()
             .WithOkColor()
             .AddField("Suggestion",
-                $"{suggest.Suggestion1.Truncate(256)} \n[Jump To Suggestion](https://discord.com/channels/{ctx.Guild.Id}/{Service.GetSuggestionChannel(ctx.Guild.Id)}/{suggest.MessageId})")
+                $"{suggest.Suggestion1.Truncate(256)} \n[Jump To Suggestion]({FluxerContext.WebUrl}/channels/{ctx.Guild.Id}/{await Service.GetSuggestionChannel(ctx.Guild.Id)}/{suggest.MessageId})")
             .AddField("Suggested By", $"<@{suggest.UserId}> `{suggest.UserId}`")
-            .AddField("Curerent State", (SuggestionsService.SuggestState)suggest.CurrentState)
+            .AddField("Current State", (SuggestionsService.SuggestState)suggest.CurrentState)
             .AddField("Last Changed By",
                 suggest.StateChangeUser == 0 ? "Nobody" : $"<@{suggest.StateChangeUser}> `{suggest.StateChangeUser}`")
             .AddField("State Change Count", suggest.StateChangeCount)

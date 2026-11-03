@@ -1228,7 +1228,8 @@ public partial class Searches(
                 return;
             }
 
-            var url = Uri.EscapeDataString($"https://{target}.fandom.com/wiki/{title}");
+            var url =
+                $"https://{Uri.EscapeDataString(target)}.fandom.com/wiki/{Uri.EscapeDataString(title.Replace(' ', '_'))}";
             var response = $"""
                             `{Strings.Title(ctx.Guild.Id)}` {title.SanitizeMentions()}
                             `{Strings.Url(ctx.Guild.Id)}:` {url}

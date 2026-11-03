@@ -353,9 +353,7 @@ public partial class ServerManagement
                     ]).ConfigureAwait(false);
                 }
 
-                await chan2.SendAsync(
-                        "https://pa1.narvii.com/6463/6494fab512c8f2ac0d652c44dae78be4cb644569_hq.gif")
-                    .ConfigureAwait(false);
+                await chan2.SendConfirmAsync(Strings.NukeDone(ctx.Guild.Id)).ConfigureAwait(false);
             }
         }
 

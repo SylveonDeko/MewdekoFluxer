@@ -54,7 +54,7 @@
   "invite_reset_server_confirm": "Reset invites for **everyone** in this server? This also clears the join history and cannot be undone.",
   "invite_reset_left_confirm": "Reset invites for every inviter who has left the server?",
   "invite_reset_scope_done": "Reset invites for **{0}** inviters.",
-  "invites_synced": "Imported invite uses from Discord and raised totals for **{0}** inviters.",
+  "invites_synced": "Imported invite uses from Fluxer and raised totals for **{0}** inviters.",
   "invite_not_found": "That invite code does not exist in this server.",
   "invite_purge_confirm": "Delete every unlabelled invite code used **{0}** times or fewer?",
   "invites_purged": "Deleted **{0}** invite codes.",

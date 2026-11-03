@@ -251,7 +251,7 @@ public partial class RemindService : INService
 
         var unixTime = gTime.ToUnixEpochDate();
         var response = $"⏰ {strings.Remind(serverId ?? 0,
-            Format.Bold(!isPrivate ? $"<#{targetId}>" : userId.ToString()),
+            Format.Bold(!isPrivate ? $"<#{targetId}>" : $"<@{userId}>"),
             Format.Bold(message),
             $"<t:{unixTime}:R>")}";
 

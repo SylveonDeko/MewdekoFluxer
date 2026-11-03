@@ -329,7 +329,7 @@ public partial class Utility
                     .WithOkColor()
                     .AddField(efb => efb.WithName("Username").WithValue(usr.ToString()).WithIsInline(true))
                     .AddField(efb =>
-                        efb.WithName($"{(usr.AvatarHash is null ? "" : "Guild")} Avatar Url")
+                        efb.WithName(usr.AvatarHash is null ? "Avatar Url" : "Guild Avatar Url")
                             .WithValue($"[Link]({avatarUrl})").WithIsInline(true))
                     .WithImageUrl(avatarUrl).Build())
                 .ConfigureAwait(false);

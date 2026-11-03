@@ -200,7 +200,7 @@ public partial class Administration(
         if (await PromptUserConfirmAsync(Strings.CommandStatsDeleteConfirm(ctx.Guild.Id), ctx.User.Id))
         {
             if (await Service.DeleteStatsData(ctx.Guild))
-                await ctx.Channel.SendErrorAsync(Strings.CommandStatsDeleteSuccess(ctx.Guild.Id), Config);
+                await ctx.Channel.SendConfirmAsync(Strings.CommandStatsDeleteSuccess(ctx.Guild.Id));
             else
                 await ctx.Channel.SendErrorAsync(Strings.CommandStatsDeleteFail(ctx.Guild.Id), Config);
         }

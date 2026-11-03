@@ -221,7 +221,7 @@ public partial class Music(
         {
             logger.LogError(ex, "Error in Play command with query: {Query}", query);
             collector.Feature("music_play", ctx.Guild.Id, false, ex.GetType().Name);
-            await ReplyErrorAsync(Strings.MusicGenericError(ctx.Guild.Id));
+            await ReplyErrorAsync(Strings.MusicGenericError(ctx.Guild.Id, Config.SupportServer));
         }
     }
 
@@ -338,33 +338,51 @@ public partial class Music(
 
         var queue = await cache.GetMusicQueue(PlayerId);
         var currentTrack = await cache.GetCurrentTrack(PlayerId);
-        var nextTrack = queue.FirstOrDefault(x => x.Index == currentTrack.Index + 1);
         if (queue.Count == 0)
         {
             await ReplyErrorAsync(Strings.MusicQueueEmpty(ctx.Guild.Id)).ConfigureAwait(false);
             return;
         }
 
-        if (queueNumber < 1 || queueNumber > queue.Count)
+        var targetTrack = queue.FirstOrDefault(x => x.Index == queueNumber);
+        if (queueNumber < 1 || targetTrack is null)
         {
             await ReplyErrorAsync(Strings.MusicQueueInvalidIndex(ctx.Guild.Id, queue.Count)).ConfigureAwait(false);
             return;
         }
 
-        if (nextTrack is not null)
+        var removingCurrent = currentTrack is not null && currentTrack.Index == targetTrack.Index;
+        var nextTrack = removingCurrent ? queue.FirstOrDefault(x => x.Index == currentTrack.Index + 1) : null;
+
+        queue.Remove(targetTrack);
+        var ordered = queue.OrderBy(x => x.Index).ToList();
+        for (var i = 0; i < ordered.Count; i++)
         {
-            await player.StopAsync();
-            await player.PlayAsync(nextTrack.Track);
-            await cache.SetCurrentTrack(PlayerId, nextTrack);
-        }
-        else
-        {
-            await player.StopAsync();
-            await cache.SetCurrentTrack(PlayerId, null);
+            ordered[i].Index = i + 1;
         }
 
-        queue.Remove(currentTrack);
-        await cache.SetMusicQueue(PlayerId, queue);
+        if (removingCurrent)
+        {
+            await player.StopAsync();
+            if (nextTrack is not null)
+            {
+                await player.PlayAsync(nextTrack.Track);
+                await cache.SetCurrentTrack(PlayerId, nextTrack);
+            }
+            else
+            {
+                await cache.SetCurrentTrack(PlayerId, null);
+            }
+        }
+        else if (currentTrack is not null)
+        {
+            var updatedIndex = currentTrack.Index > targetTrack.Index ? currentTrack.Index - 1 : currentTrack.Index;
+            var updatedCurrent = ordered.FirstOrDefault(x => x.Index == updatedIndex);
+            if (updatedCurrent is not null)
+                await cache.SetCurrentTrack(PlayerId, updatedCurrent);
+        }
+
+        await cache.SetMusicQueue(PlayerId, ordered);
 
         if (player.State == PlayerState.Playing)
         {

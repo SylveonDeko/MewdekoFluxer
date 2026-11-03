@@ -106,7 +106,8 @@ public partial class Currency
             .AppendLine($"`workcooldown` {config.WorkCooldownSeconds}s")
             .AppendLine($"`crime` {Fmt(config.CrimeEnabled)} {config.CrimeMinReward:N0}-{config.CrimeMaxReward:N0}")
             .AppendLine($"`crimechance` {config.CrimeSuccessChance}%")
-            .AppendLine($"`crimefine` {config.CrimeFineMin:N0}-{config.CrimeFineMax:N0}")
+            .AppendLine($"`crimefinemin` {config.CrimeFineMin:N0}")
+            .AppendLine($"`crimefinemax` {config.CrimeFineMax:N0}")
             .AppendLine($"`crimecooldown` {config.CrimeCooldownSeconds}s");
 
         var robbery = new StringBuilder()

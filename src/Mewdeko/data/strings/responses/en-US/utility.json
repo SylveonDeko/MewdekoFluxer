@@ -140,6 +140,7 @@
   "user_not_found_id": "That user could not be found. Please ensure that was the correct ID.",
   "autopublish_user_blacklisted": "Messages from {0} in {1} will no longer be auto published.",
   "autopublish_user_unblacklisted": "{0} has been removed from the auto-publish blacklist in {1}",
+  "autopublish_word_unblacklisted": "Messages that contain {0} in {1} will be auto published again.",
   "linkfix_enabled": "Link fixing is on. Links to supported sites get a reply with a copy that embeds properly.",
   "linkfix_disabled": "Link fixing is off.",
   "linkfix_platform_enabled": "{0} links will be fixed.",

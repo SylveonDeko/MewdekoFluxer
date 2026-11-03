@@ -152,7 +152,7 @@ public partial class Moderation
                         punishaction,
                         punishtime,
                         reason,
-                        $"https://discord.com/channels/{ctx.Guild.Id}/{ctx.Channel.Id}/{ctx.Message.Id}"
+                        ctx.Message.GetJumpUrl()
                     )));
             }
         }
@@ -428,13 +428,13 @@ public partial class Moderation
 
             if (time is null)
             {
-                await ReplyConfirmAsync(Strings.WarnPunishSet(ctx.Guild.Id,
+                await ReplyConfirmAsync(Strings.MiniWarnPunishSet(ctx.Guild.Id,
                     Format.Bold(punish.ToString()),
                     Format.Bold(number.ToString()))).ConfigureAwait(false);
             }
             else
             {
-                await ReplyConfirmAsync(Strings.WarnPunishSetTimed(ctx.Guild.Id,
+                await ReplyConfirmAsync(Strings.MiniWarnPunishSetTimed(ctx.Guild.Id,
                     Format.Bold(punish.ToString()),
                     Format.Bold(number.ToString()),
                     Format.Bold(time.Input))).ConfigureAwait(false);

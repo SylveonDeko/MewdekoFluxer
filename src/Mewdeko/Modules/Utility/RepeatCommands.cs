@@ -867,10 +867,10 @@ public partial class Utility
                         var description = "";
                         if (currentConditions.RequiredTags?.Any() == true)
                             description +=
-                                $"**Required Tags:** {string.Join(", ", currentConditions.RequiredTags.Select(t => $"<#{t}>"))}\n";
+                                $"**Required Tags:** {string.Join(", ", currentConditions.RequiredTags.Select(t => Format.Code(t.ToString())))}\n";
                         if (currentConditions.ExcludedTags?.Any() == true)
                             description +=
-                                $"**Excluded Tags:** {string.Join(", ", currentConditions.ExcludedTags.Select(t => $"<#{t}>"))}\n";
+                                $"**Excluded Tags:** {string.Join(", ", currentConditions.ExcludedTags.Select(t => Format.Code(t.ToString())))}\n";
 
                         await ReplyAsync(Strings.StickyForumTagsList(ctx.Guild.Id, index, description))
                             .ConfigureAwait(false);

@@ -49,7 +49,7 @@ public partial class Moderation
                 await ctx.Channel.SendConfirmAsync(Strings.RemoveRolesMuteDisabled(ctx.Guild.Id)).ConfigureAwait(false);
             }
 
-            if (yesnt.StartsWith("y"))
+            else if (yesnt.StartsWith("y"))
             {
                 await Service.Removeonmute(ctx.Guild, "y").ConfigureAwait(false);
                 await ctx.Channel.SendConfirmAsync(Strings.RemoveRolesMuteEnabled(ctx.Guild.Id)).ConfigureAwait(false);

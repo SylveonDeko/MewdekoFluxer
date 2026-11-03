@@ -144,7 +144,7 @@ public class MultiGreets(InteractiveService interactivity) : MewdekoModuleBase<M
 
         await Service.ChangeMgDelete(greet, Convert.ToInt32(time.Time.TotalSeconds)).ConfigureAwait(false);
         await ctx.Channel.SendConfirmAsync(
-                Strings.MultigreetDeleteUpdatedTimed(ctx.Guild.Id, id, time.Time.TotalSeconds).Humanize())
+                Strings.MultigreetDeleteUpdatedTimed(ctx.Guild.Id, id, time.Time.Humanize()))
             .ConfigureAwait(false);
     }
 

@@ -503,7 +503,7 @@ public class BirthdayService : INService, IDisposable
         if (guildUser == null) return;
 
         // Get the custom message or use default
-        var customBirthdayMessage = config.BirthdayMessage ?? "🎉 Happy Birthday %user.mention%! 🎂";
+        var customBirthdayMessage = config.BirthdayMessage ?? "🎉 Happy Birthday %user%! 🎂";
 
         var replacer = new ReplacementBuilder()
             .WithOverride("%birthday.age%", () =>

@@ -210,7 +210,7 @@
   "typing_article_removed": "Removed typing article #{0}",
   "typing_contest_countdown": "Starting new typing contest in **{0}**{1}",
   "typing_contest_running": "Contest already running in {0} channel",
-  "typing_contest_start": ":clock2: Next contest will last for {0} seconds. Type the bolded text as fast as you can.",
+  "typing_contest_start": ":clock2: Next contest will last for {0} seconds. Type the sentence that appears as fast as you can.",
   "typing_contest_stopped": "Typing contest stopped.",
   "typing_game_finished": ":exclamation: A lot of people finished, here is the text for those still typing:\n\n**{0}",
   "typing_no_articles": "No typing articles found. Use {0}typeadd command to add a new article for typing.",

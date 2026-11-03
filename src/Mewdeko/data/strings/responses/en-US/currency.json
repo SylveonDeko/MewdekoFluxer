@@ -233,7 +233,7 @@
   "war_battle_result": "Result",
   "war_battle_your_card": "War - Your Card",
   "wheel_fortune_invalid_bet": "Invalid bet amount!",
-  "wheel_fortune_invalid_type": "Invalid wheel type! Choose: small, medium, or large.",
+  "wheel_fortune_invalid_type": "Invalid wheel type! Choose: classic, risky, or balanced.",
   "wheel_fortune_result": "The wheel landed on x{0}!",
   "wheel_fortune_title": "🎡 Wheel of Fortune 🎡",
   "wheel_fortune_transaction_lost": "Lost Wheel of Fortune",

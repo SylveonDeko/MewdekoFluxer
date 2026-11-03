@@ -173,7 +173,7 @@ public partial class Utility
             var config = await Service.GetOrCreateConfig(ctx.Guild.Id);
             config.ApiKey = apiKey.Trim();
             await Service.UpdateConfig(config);
-            await ctx.Channel.SendConfirmAsync(Strings.AiApiKeyUpdated(ctx.Guild.Id, config.Provider));
+            await ctx.Channel.SendConfirmAsync(Strings.AiApiKeyUpdated(ctx.Guild.Id, (AiService.AiProvider)config.Provider));
         }
 
         /// <summary>
@@ -237,7 +237,7 @@ public partial class Utility
                     ctx.Guild.Id,
                     config.Enabled,
                     config.ChannelId,
-                    config.Provider,
+                    (AiService.AiProvider)config.Provider,
                     config.Model ?? "Not Set",
                     config.TokensUsed))
                 .WithOkColor();

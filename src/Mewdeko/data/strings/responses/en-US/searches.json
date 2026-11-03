@@ -32,7 +32,6 @@
   "anime_studios": "Studios",
   "anime_type": "Type",
   "bible_verse_title": "{0} {1}:{2}",
-  "color_invalid": "One or more of the provided colors could not be parsed. Use hex codes like #FF0000.",
   "define_unknown": "Can't find the definition for that term.",
   "image_checking": "Checking images for NSFW...",
   "image_no_results": "Unable to find that or the image is NSFW!",

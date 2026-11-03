@@ -61,7 +61,7 @@
   "giveaway_user_not_in_server": "That user is not in the server for this giveaway.",
   "giveaway_win_embed_color_set": "Giveaway win embed color set! Just keep in mind this doesn't update until the next giveaway.",
   "giveaway_winner_announcement": "Winner: {0}!\nHosted by: <@{1}>",
-  "giveaway_winner_description": "{0} won the giveaway for [{1}](https://discord.com/channels/{2}/{3}/{4})! \n\n- (Hosted by: <@{5}>)\n- Reroll: `{6}reroll {4}`",
-  "giveaway_winner_dm": "Congratulations! You won a giveaway for [{0}](https://discord.com/channels/{1}/{2}/{3})!",
+  "giveaway_winner_description": "{0} won the giveaway for [{1}]({7}/channels/{2}/{3}/{4})! \n\n- (Hosted by: <@{5}>)\n- Reroll: `{6}greroll {4}`",
+  "giveaway_winner_dm": "Congratulations! You won a giveaway for [{0}]({4}/channels/{1}/{2}/{3})!",
   "giveaway_winner_simple": "Winner: {0}"
 }

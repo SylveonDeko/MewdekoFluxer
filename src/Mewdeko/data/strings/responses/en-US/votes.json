@@ -12,6 +12,7 @@
   "vote_role_add_failed": "Adding vote role failed for the following reason: {0}",
   "vote_role_added": "{0} added as a vote role.",
   "vote_role_removed": "Vote role removed.",
+  "vote_role_time_updated": "Successfully updated the vote role time to {0}",
   "vote_role_timer_already_set": "VoteRole timer is already set to that value.",
   "vote_role_update_failed": "Updating vote role time failed due to the following reason: {0}",
   "vote_roles_cleared": "Vote roles cleared!",

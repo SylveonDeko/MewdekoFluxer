@@ -456,7 +456,7 @@ public partial class ServerManagement
 
             await user.RemoveRolesAsync(roles).ConfigureAwait(false);
             await ctx.Channel.SendConfirmAsync(
-                    $"{user} {Strings.RemoveRoles(ctx.Guild.Id)}:\n{string.Join<string>("|", roles.Select(x => x.Mention))}")
+                    $"{Strings.RemoveRoles(ctx.Guild.Id, user.Mention)}:\n{string.Join<string>("|", roles.Select(x => x.Mention))}")
                 .ConfigureAwait(false);
         }
 

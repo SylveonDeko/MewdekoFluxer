@@ -1416,7 +1416,7 @@ public class Xp(
             var finalEmbed = new EmbedBuilder()
                 .WithTitle(Strings.XpRoleSyncComplete(ctx.Guild.Id))
                 .WithDescription(Strings.XpRoleSyncCompleteDesc(ctx.Guild.Id, result.ProcessedUsers,
-                    result.Duration.TotalMinutes))
+                    result.Duration.Humanize(2)))
                 .AddField(Strings.XpUsersProcessed(ctx.Guild.Id),
                     Strings.XpRoleSyncUsersProcessed(ctx.Guild.Id, result.ProcessedUsers), true)
                 .AddField(Strings.XpUsersWithErrors(ctx.Guild.Id),

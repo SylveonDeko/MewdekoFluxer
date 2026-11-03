@@ -252,7 +252,7 @@ public class SuggestionsService : INService
                 try
                 {
                     await guser.User.SendErrorAsync(
-                            $"Cannot send this suggestion as its under the minimum length `({await GetMaxLength(guild.Id)})` of this server!")
+                            $"Cannot send this suggestion as its under the minimum length `({await GetMinLength(guild.Id)})` of this server!")
                         .ConfigureAwait(false);
                     spamCheck.Remove(chan.Id);
                 }

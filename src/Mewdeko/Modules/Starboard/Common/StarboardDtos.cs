@@ -134,9 +134,10 @@ public class UserStarboardStatsDto
 ///     Represents a top starred post
 /// </summary>
 /// <param name="MessageId">The message ID.</param>
+/// <param name="ChannelId">The channel the message was posted in.</param>
 /// <param name="StarCount">Number of stars.</param>
 /// <param name="Emoji">The emote used.</param>
-public record TopStarredPost(ulong MessageId, int StarCount, string Emoji);
+public record TopStarredPost(ulong MessageId, ulong ChannelId, int StarCount, string Emoji);
 
 /// <summary>
 ///     Represents a user and how many stars they've given/received

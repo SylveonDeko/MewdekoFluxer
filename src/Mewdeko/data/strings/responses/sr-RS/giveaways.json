@@ -61,7 +61,7 @@
   "giveaway_user_not_in_server": "Taj korisnik nije na serveru za ovu nagradnu igru.",
   "giveaway_win_embed_color_set": "Boja embeda za pobedu u nagradnoj igri postavljena! Imajte na umu da se ovo ne ažurira do sledeće nagradne igre.",
   "giveaway_winner_announcement": "Pobednik: {0}!\nDomaćin: <@{1}>",
-  "giveaway_winner_description": "{0} je osvojio/la nagradnu igru za [{1}](https://discord.com/channels/{2}/{3}/{4})! \n\n- (Domaćin: <@{5}>)\n- Ponovno izvlačenje: `{6}reroll {4}`",
-  "giveaway_winner_dm": "Čestitamo! Osvojili ste nagradnu igru za [{0}](https://discord.com/channels/{1}/{2}/{3})!",
+  "giveaway_winner_description": "{0} je osvojio/la nagradnu igru za [{1}]({7}/channels/{2}/{3}/{4})! \n\n- (Domaćin: <@{5}>)\n- Ponovno izvlačenje: `{6}greroll {4}`",
+  "giveaway_winner_dm": "Čestitamo! Osvojili ste nagradnu igru za [{0}]({4}/channels/{1}/{2}/{3})!",
   "giveaway_winner_simple": "Pobednik: {0}"
 }

@@ -236,7 +236,7 @@ public class RoleStates(BotConfigService bss, InteractiveService interactivity, 
                     .WithTitle(Strings.RoleStatesUserTitle(ctx.Guild.Id))
                     .WithOkColor();
 
-                var roleStatesToShow = userRoleStates.Skip(5 * page).Take(3).ToList();
+                var roleStatesToShow = userRoleStates.Skip(3 * page).Take(3).ToList();
 
                 foreach (var userRoleState in roleStatesToShow)
                 {
@@ -479,7 +479,7 @@ public class RoleStates(BotConfigService bss, InteractiveService interactivity, 
                 $"{bss.Data.ErrorEmote} {Strings.RoleStatesRemoveFailed(ctx.Guild.Id, removed.Item2)}", Config);
         else
             await ctx.Channel.SendConfirmAsync(
-                $"{bss.Data.SuccessEmote} {Strings.RoleStatesRolesRemovedSuccess(ctx.Guild.Id, user)}");
+                $"{bss.Data.SuccessEmote} {Strings.RoleStatesRolesAddedSuccess(ctx.Guild.Id, user)}");
     }
 
     /// <summary>

@@ -129,7 +129,7 @@ public class BlackjackService(GeneratedBotStrings strings) : INService
         var dealerBlackjack = BlackjackGame.IsBlackjack(game.DealerHand);
 
         var endEmbed = new EmbedBuilder()
-            .WithTitle(strings.GameOver(user.Id))
+            .WithTitle(strings.GameOver(guildId))
             .WithErrorColor()
             .AddField(strings.DealerHand(guildId), string.Join(" ", game.DealerHand.Select(c => $"{c.Rank}{c.Suit}")))
             .AddField(strings.DealerTotal(guildId, dealerTotal), "_ _");

@@ -599,7 +599,7 @@ public class GiveawayService : INService, IDisposable
                 .WithErrorColor()
                 .WithDescription(
                     strings.GiveawayWinnerDescription(guild.Id, winner.Mention, giveaway.Item, giveaway.ServerId,
-                        giveaway.ChannelId, giveaway.MessageId, giveaway.UserId, prefix))
+                        giveaway.ChannelId, giveaway.MessageId, giveaway.UserId, prefix, FluxerContext.WebUrl))
                 .Build());
 
         // Mark giveaway as ended
@@ -649,8 +649,8 @@ public class GiveawayService : INService, IDisposable
                     .WithDescription(
                         strings.GiveawayWinnerDescription(guild.Id,
                             string.Join(strings.CommaSeparator(guild.Id), winnerChunk.Select(x => x.Mention)),
-                            giveaway.Item, giveaway.ServerId,
-                            giveaway.ChannelId, giveaway.MessageId, giveaway.UserId, prefix))
+                            giveaway.Item, giveaway.ServerId, giveaway.ChannelId, giveaway.MessageId, giveaway.UserId,
+                            prefix, FluxerContext.WebUrl))
                     .Build());
         }
 
@@ -677,7 +677,7 @@ public class GiveawayService : INService, IDisposable
                     .WithUser(winner);
 
                 replacer.WithOverride("%messagelink%",
-                    () => $"https://discord.com/channels/{guild.Id}/{channel.Id}/{giveaway.MessageId}");
+                    () => $"{FluxerContext.WebUrl}/channels/{guild.Id}/{channel.Id}/{giveaway.MessageId}");
                 replacer.WithOverride("%giveawayitem%", () => giveaway.Item);
                 replacer.WithOverride("%giveawaywinners%", () => giveaway.Winners.ToString());
 
@@ -695,7 +695,7 @@ public class GiveawayService : INService, IDisposable
                         .WithOkColor()
                         .WithDescription(
                             strings.GiveawayWinnerDm(guild.Id, giveaway.Item, giveaway.ServerId, giveaway.ChannelId,
-                                giveaway.MessageId));
+                                giveaway.MessageId, FluxerContext.WebUrl));
 
                     embed.AddField(strings.GiveawayMessageFromHost(guild.Id), customMessage);
                     await winner.SendAsync(embed: embed.Build());
@@ -708,7 +708,7 @@ public class GiveawayService : INService, IDisposable
                     .WithOkColor()
                     .WithDescription(
                         strings.GiveawayWinnerDm(guild.Id, giveaway.Item, giveaway.ServerId, giveaway.ChannelId,
-                            giveaway.MessageId));
+                            giveaway.MessageId, FluxerContext.WebUrl));
 
                 await winner.SendAsync(embed: embed.Build());
             }
@@ -745,7 +745,7 @@ public class GiveawayService : INService, IDisposable
         else
         {
             description = $"React with {emote} to enter!\n" +
-                          $"Hosted by {hostUser.Mention}\n" +
+                          $"Hosted by <@{giveaway.UserId}>\n" +
                           $"End Time: <t:{giveaway.When.ToUnixEpochDate()}:R> (<t:{giveaway.When.ToUnixEpochDate()}>)\n";
         }
 
@@ -774,7 +774,7 @@ public class GiveawayService : INService, IDisposable
             if (roles.Count > 0)
             {
                 description = $"React with {emote} to enter!\n" +
-                              $"Hosted by {hostUser.Mention}\n" +
+                              $"Hosted by <@{giveaway.UserId}>\n" +
                               $"Required Roles: {string.Join("\n", roles.Select(x => x.Mention))}\n" +
                               $"End Time: <t:{giveaway.When.ToUnixEpochDate()}:R> (<t:{giveaway.When.ToUnixEpochDate()}>)\n";
             }

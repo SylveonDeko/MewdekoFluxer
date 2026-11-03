@@ -61,7 +61,7 @@
   "giveaway_user_not_in_server": "ذلك المستخدم ليس في السيرفر الخاص بهذه المسابقة.",
   "giveaway_win_embed_color_set": "تم ضبط لون embed الفوز في المسابقة! ضع في اعتبارك أن هذا لن يُحدَّث حتى المسابقة التالية.",
   "giveaway_winner_announcement": "الفائز: {0}!\nمن تنظيم: <@{1}>",
-  "giveaway_winner_description": "فاز {0} بالمسابقة لـ [{1}](https://discord.com/channels/{2}/{3}/{4})! \n\n- (من تنظيم: <@{5}>)\n- إعادة السحب: `{6}reroll {4}`",
-  "giveaway_winner_dm": "تهانينا! فزت بمسابقة لـ [{0}](https://discord.com/channels/{1}/{2}/{3})!",
+  "giveaway_winner_description": "فاز {0} بالمسابقة لـ [{1}]({7}/channels/{2}/{3}/{4})! \n\n- (من تنظيم: <@{5}>)\n- إعادة السحب: `{6}greroll {4}`",
+  "giveaway_winner_dm": "تهانينا! فزت بمسابقة لـ [{0}]({4}/channels/{1}/{2}/{3})!",
   "giveaway_winner_simple": "الفائز: {0}"
 }

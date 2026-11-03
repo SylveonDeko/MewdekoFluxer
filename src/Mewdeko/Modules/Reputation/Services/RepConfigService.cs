@@ -120,36 +120,7 @@ public class RepConfigService : INService
     /// <returns>A task that represents the asynchronous operation.</returns>
     public async Task ImportConfigurationAsync(CommandContext ctx)
     {
-        var attachment = ctx.Message.Attachments.FirstOrDefault();
-        if (attachment == null || !attachment.Filename.EndsWith(".json"))
-        {
-            await ctx.Channel.SendErrorAsync(strings.RepImportNoFile(ctx.Guild.Id), config);
-            return;
-        }
-
-        try
-        {
-            using var httpClient = new HttpClient();
-            var json = await httpClient.GetStringAsync(attachment.Url);
-            var importData = JsonConvert.DeserializeObject<dynamic>(json);
-
-            if (importData == null)
-            {
-                await ctx.Channel.SendErrorAsync(strings.RepImportInvalidFile(ctx.Guild.Id), config);
-                return;
-            }
-
-            // TODO: Implement import logic with validation
-            // This would deserialize and validate the configuration data
-            // then update the database accordingly
-
-            await ctx.Channel.SendConfirmAsync(strings.RepImportSuccess(ctx.Guild.Id));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error importing reputation configuration for guild {GuildId}", ctx.Guild.Id);
-            await ctx.Channel.SendErrorAsync(strings.RepImportError(ctx.Guild.Id), config);
-        }
+        await ctx.Channel.SendErrorAsync(strings.RepImportUnavailable(ctx.Guild.Id), config).ConfigureAwait(false);
     }
 
     /// <summary>

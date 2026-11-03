@@ -61,7 +61,7 @@
   "giveaway_user_not_in_server": "该用户不在此抽奖所在的服务器中。",
   "giveaway_win_embed_color_set": "抽奖获奖 embed 颜色已设置！请注意，此设置在下次抽奖开始前不会生效。",
   "giveaway_winner_announcement": "获奖者：{0}！\n主持人：<@{1}>",
-  "giveaway_winner_description": "{0} 赢得了 [{1}](https://discord.com/channels/{2}/{3}/{4}) 的抽奖！\n\n- （主持人：<@{5}>）\n- 重新抽取：`{6}reroll {4}`",
-  "giveaway_winner_dm": "恭喜！您赢得了 [{0}](https://discord.com/channels/{1}/{2}/{3}) 的抽奖！",
+  "giveaway_winner_description": "{0} 赢得了 [{1}]({7}/channels/{2}/{3}/{4}) 的抽奖！\n\n- （主持人：<@{5}>）\n- 重新抽取：`{6}greroll {4}`",
+  "giveaway_winner_dm": "恭喜！您赢得了 [{0}]({4}/channels/{1}/{2}/{3}) 的抽奖！",
   "giveaway_winner_simple": "获奖者：{0}"
 }

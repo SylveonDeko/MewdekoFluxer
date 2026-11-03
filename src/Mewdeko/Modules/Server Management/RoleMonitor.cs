@@ -48,7 +48,7 @@ public partial class ServerManagement
             }
             catch (InvalidOperationException ex)
             {
-                await ErrorAsync(Strings.RoleBlacklistError(ctx.Guild.Id, ex.Message, role.Mention))
+                await ErrorAsync(Strings.RoleBlacklistError(ctx.Guild.Id, role.Mention, ex.Message))
                     .ConfigureAwait(false);
             }
         }
@@ -96,7 +96,7 @@ public partial class ServerManagement
             }
             catch (InvalidOperationException ex)
             {
-                await ErrorAsync(Strings.PermissionBlacklistError(ctx.Guild.Id, ex.Message, permission))
+                await ErrorAsync(Strings.PermissionBlacklistError(ctx.Guild.Id, permission, ex.Message))
                     .ConfigureAwait(false);
             }
         }

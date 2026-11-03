@@ -176,12 +176,13 @@ public partial class Currency(
 
         if ((higher && nextNumber > currentNumber) || (lower && nextNumber < currentNumber))
         {
-            await WinAsync(betAmount, 2.0, "highlow");
-            await ReplyAsync(Strings.HighlowWon(ctx.Guild.Id, currentNumber, nextNumber, emote));
+            var winAmount = await WinAsync(betAmount, 2.0, "highlow");
+            await ReplyAsync(Strings.HighlowWon(ctx.Guild.Id, currentNumber, nextNumber, emote,
+                winAmount - betAmount));
             return;
         }
 
-        await ReplyAsync(Strings.HighlowLost(ctx.Guild.Id, currentNumber, nextNumber, emote));
+        await ReplyAsync(Strings.HighlowLost(ctx.Guild.Id, currentNumber, nextNumber, emote, betAmount));
     }
 
     /// <summary>
@@ -1170,7 +1171,7 @@ public partial class Currency(
             .WithTitle(Strings.RussianRouletteTitle(ctx.Guild.Id))
             .WithDescription(Strings.RussianRouletteDescription(ctx.Guild.Id))
             .WithColor(Color.Blue)
-            .AddField(Strings.RussianRouletteChambers(ctx.Guild.Id, $"{chamber}/6"), "", true)
+            .AddField(Strings.RussianRouletteChambers(ctx.Guild.Id, chamber.ToString()), "", true)
             .AddField(Strings.RussianRouletteBullets(ctx.Guild.Id, bullets.ToString()), "", true);
 
         if (survived)
@@ -1562,8 +1563,8 @@ public partial class Currency(
         var eb = new EmbedBuilder()
             .WithTitle(Strings.CrashTitle(ctx.Guild.Id))
             .WithColor(won ? Color.Green : Color.Red)
-            .AddField(Strings.CrashTargetMultiplier(ctx.Guild.Id, $"{targetMultiplier:F2}x"), "", true)
-            .AddField(Strings.CrashActualMultiplier(ctx.Guild.Id, $"{crashPoint:F2}x"), "", true);
+            .AddField(Strings.CrashTargetMultiplier(ctx.Guild.Id, $"{targetMultiplier:F2}"), "", true)
+            .AddField(Strings.CrashActualMultiplier(ctx.Guild.Id, $"{crashPoint:F2}"), "", true);
 
         if (won)
         {
@@ -1670,7 +1671,7 @@ public partial class Currency(
             .WithDescription(profit > 0
                 ? Strings.PlinkoWin(ctx.Guild.Id, multiplier, Math.Abs(profit), emote)
                 : Strings.PlinkoLose(ctx.Guild.Id, multiplier, Math.Abs(profit), emote))
-            .AddField(Strings.PlinkoMultiplier(ctx.Guild.Id, $"{multiplier:F2}x"), "", true)
+            .AddField(Strings.PlinkoMultiplier(ctx.Guild.Id, $"{multiplier:F2}"), "", true)
             .AddField(Strings.PlinkoSlot(ctx.Guild.Id, slot.ToString()), "", true)
             .WithImageUrl("attachment://plinko.png");
 
@@ -1720,7 +1721,7 @@ public partial class Currency(
         var eb = new EmbedBuilder()
             .WithTitle(Strings.WheelFortuneTitle(ctx.Guild.Id))
             .WithColor(balanceChange >= 0 ? Color.Green : Color.Red)
-            .WithDescription(Strings.WheelFortuneResult(ctx.Guild.Id, segment))
+            .WithDescription(Strings.WheelFortuneResult(ctx.Guild.Id, segment.TrimStart('x')))
             .AddField(Strings.WheelFortuneType(ctx.Guild.Id, wheelType.ToUpper()), "", true)
             .WithImageUrl("attachment://wheel.png");
 
@@ -1757,7 +1758,7 @@ public partial class Currency(
         var eb = new EmbedBuilder()
             .WithTitle(Strings.DuckRaceTitle(ctx.Guild.Id))
             .WithColor(multiplier > 0 ? Color.Green : Color.Red)
-            .AddField(Strings.DuckRaceYourDuck(ctx.Guild.Id, $"{ducks[userDuck]} (#{userDuck + 1})"), "", true)
+            .AddField(Strings.DuckRaceYourDuck(ctx.Guild.Id, $"{userDuck + 1} {ducks[userDuck]}"), "", true)
             .AddField(Strings.DuckRacePosition(ctx.Guild.Id, $"{userPosition}/5"), "", true);
 
         var resultsText = "";
@@ -2430,22 +2431,16 @@ public partial class Currency(
     private static List<int> ParseMemorySequence(string input, string[] emojis)
     {
         var sequence = new List<int>();
-        var emojiToIndex = emojis.Select((emoji, index) => new
-            {
-                emoji, index
-            })
-            .ToDictionary(x => x.emoji, x => x.index);
+        var enumerator = System.Globalization.StringInfo.GetTextElementEnumerator(input.Replace("️", ""));
 
-        foreach (var emoji in emojis)
+        while (enumerator.MoveNext())
         {
-            var count = input.Count(c => c.ToString() == emoji);
-            for (var i = 0; i < count; i++)
-            {
-                if (emojiToIndex.TryGetValue(emoji, out var index))
-                {
-                    sequence.Add(index);
-                }
-            }
+            var element = (string)enumerator.Current;
+            var index = Array.IndexOf(emojis, element);
+            if (index >= 0)
+                sequence.Add(index);
+            else if (element.Length == 1 && element[0] >= '1' && element[0] <= '0' + emojis.Length)
+                sequence.Add(element[0] - '1');
         }
 
         return sequence;

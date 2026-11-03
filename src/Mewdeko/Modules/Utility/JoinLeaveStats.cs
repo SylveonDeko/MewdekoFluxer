@@ -25,7 +25,7 @@ public partial class Utility
             try
             {
                 var (stream, embed) = await Service.GenerateJoinGraphAsync(ctx.Guild.Id);
-                await ctx.Channel.SendFileAsync(stream, "joingraph.png", embed: embed);
+                await ctx.Channel.SendFileAsync(stream, "graph.png", embed: embed);
             }
             catch (Exception e)
             {
@@ -46,7 +46,7 @@ public partial class Utility
             try
             {
                 var (stream, embed) = await Service.GenerateLeaveGraphAsync(ctx.Guild.Id);
-                await ctx.Channel.SendFileAsync(stream, "leavegraph.png", embed: embed);
+                await ctx.Channel.SendFileAsync(stream, "graph.png", embed: embed);
             }
             catch (Exception e)
             {
@@ -69,6 +69,7 @@ public partial class Utility
             if (r is < 0 or > 255 || g is < 0 or > 255 || b is < 0 or > 255)
             {
                 await ErrorAsync(Strings.ColorInvalid(ctx.Guild.Id));
+                return;
             }
 
             var color = (uint)Color.FromArgb(r, g, b).ToArgb();
@@ -114,6 +115,7 @@ public partial class Utility
             if (r is < 0 or > 255 || g is < 0 or > 255 || b is < 0 or > 255)
             {
                 await ErrorAsync(Strings.ColorInvalid(ctx.Guild.Id));
+                return;
             }
 
             var color = (uint)Color.FromArgb(r, g, b).ToArgb();

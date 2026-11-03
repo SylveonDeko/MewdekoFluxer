@@ -614,7 +614,8 @@ public partial class Reputation
         {
             if (!await Service.IsValidReputationTypeAsync(ctx.Guild.Id, repType))
             {
-                await ReplyErrorAsync(Strings.RepInvalidType(ctx.Guild.Id)).ConfigureAwait(false);
+                await ReplyErrorAsync(Strings.RepInvalidType(ctx.Guild.Id,
+                    string.Join(", ", await Service.GetValidReputationTypeNamesAsync(ctx.Guild.Id)))).ConfigureAwait(false);
                 return;
             }
 
@@ -946,7 +947,8 @@ public partial class Reputation
             if (!string.IsNullOrEmpty(repType) && repType != "total" &&
                 !await Service.IsValidReputationTypeAsync(ctx.Guild.Id, repType))
             {
-                await ReplyErrorAsync(Strings.RepInvalidType(ctx.Guild.Id)).ConfigureAwait(false);
+                await ReplyErrorAsync(Strings.RepInvalidType(ctx.Guild.Id,
+                    string.Join(", ", await Service.GetValidReputationTypeNamesAsync(ctx.Guild.Id)))).ConfigureAwait(false);
                 return;
             }
 

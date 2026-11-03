@@ -79,6 +79,7 @@ public class Confessions(GuildSettingsService guildSettings)
         if (!perms.SendMessages || !perms.EmbedLinks)
         {
             await ErrorAsync(Strings.ConfessionsInvalidPerms(ctx.Guild.Id)).ConfigureAwait(false);
+            return;
         }
 
         await Service.SetConfessionChannel(ctx.Guild, channel.Id).ConfigureAwait(false);
@@ -100,7 +101,7 @@ public class Confessions(GuildSettingsService guildSettings)
     {
         if (channel is null)
         {
-            await Service.SetConfessionChannel(ctx.Guild, 0).ConfigureAwait(false);
+            await Service.SetConfessionLogChannel(ctx.Guild, 0).ConfigureAwait(false);
             await ConfirmAsync(Strings.ConfessionsLoggingDisabled(ctx.Guild.Id)).ConfigureAwait(false);
             return;
         }
@@ -110,10 +111,11 @@ public class Confessions(GuildSettingsService guildSettings)
         if (!perms.SendMessages || !perms.EmbedLinks)
         {
             await ErrorAsync(Strings.ConfessionsInvalidPerms(ctx.Guild.Id)).ConfigureAwait(false);
+            return;
         }
 
         await Service.SetConfessionLogChannel(ctx.Guild, channel.Id).ConfigureAwait(false);
-        await ErrorAsync(Strings.ConfessionsSpleen(ctx.Guild.Id, channel.Mention));
+        await ConfirmAsync(Strings.ConfessionsSpleen(ctx.Guild.Id, channel.Mention)).ConfigureAwait(false);
     }
 
     /// <summary>

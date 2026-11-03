@@ -41,7 +41,7 @@ public partial class Giveaways(
                     .WithUser(Context.User);
 
                 rep.WithOverride("%messagelink%",
-                    () => $"https://discord.com/channels/{Context.Guild.Id}/{Context.Channel.Id}/{Context.Message.Id}");
+                    () => $"{FluxerContext.WebUrl}/channels/{Context.Guild.Id}/{Context.Channel.Id}/{Context.Message.Id}");
                 rep.WithOverride("%giveawayitem%", () => "test Item");
                 rep.WithOverride("%giveawaywinners%", () => "10");
 
@@ -68,9 +68,9 @@ public partial class Giveaways(
         }
         else
         {
-            gc.GiveawayEndMessage = null;
+            gc.GiveawayEndMessage = message;
             await guildSettings.UpdateGuildConfig(Context.Guild.Id, gc);
-            await ctx.Channel.SendConfirmAsync(Strings.GiveawayHostMessageRemoved(ctx.Guild.Id)).ConfigureAwait(false);
+            await ctx.Channel.SendConfirmAsync(Strings.GiveawayHostMessageSet(ctx.Guild.Id)).ConfigureAwait(false);
         }
     }
 
