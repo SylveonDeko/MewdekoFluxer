@@ -1,7 +1,7 @@
 {
   "forms_review_approve_failed": "That response could not be approved. It may already have been decided.",
   "forms_review_approved": "Approved response #{0}.",
-  "forms_review_approved_invite": "Approved response #{0} and created invite discord.gg/{1}.",
+  "forms_review_approved_invite": "Approved response #{0} and created invite fluxer.gg/{1}.",
   "forms_review_decided": "Response #{0} was already {1}.",
   "forms_review_manage_server": "the Manage Server permission",
   "forms_review_need_role": "You need {0} to decide responses to this form.",

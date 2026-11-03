@@ -261,7 +261,7 @@ public partial class FormsService
                 embed.AddField("Message", form.SuccessMessage.TrimTo(1024));
 
             if (!string.IsNullOrWhiteSpace(inviteCode))
-                embed.AddField("Invite", $"https://discord.gg/{inviteCode}");
+                embed.AddField("Invite", $"https://fluxer.gg/{inviteCode}");
 
             var channel = await user.CreateDMChannelAsync();
             await channel.SendAsync(embed: embed.Build());

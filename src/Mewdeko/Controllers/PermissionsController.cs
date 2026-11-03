@@ -8,6 +8,8 @@ using Mewdeko.Modules.Administration.Services;
 using Mewdeko.Modules.Help;
 using Mewdeko.Modules.Permissions.Services;
 using Mewdeko.Services.Impl;
+using Mewdeko.Services.Settings;
+using Mewdeko.Services.strings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -22,6 +24,8 @@ namespace Mewdeko.Controllers;
 /// <param name="dbFactory">Provider for database contexts</param>
 /// <param name="auditContext">Records before/after state for the dashboard audit log.</param>
 /// <param name="logger">The logger instance for structured logging.</param>
+/// <param name="strings">The bot's localized strings, for command descriptions and usage.</param>
+/// <param name="botConfig">The bot's configuration, for the default prefix.</param>
 [ApiController]
 [Route("botapi/[controller]")]
 [Authorize("ApiKeyPolicy")]
@@ -31,7 +35,9 @@ public class PermissionsController(
     CommandService cmdServ,
     IDataConnectionFactory dbFactory,
     IDashboardAuditContext auditContext,
-    ILogger<PermissionsController> logger
+    ILogger<PermissionsController> logger,
+    IBotStrings strings,
+    BotConfigService botConfig
 ) : Controller
 {
     /// <summary>
@@ -261,8 +267,8 @@ public class PermissionsController(
                         {
                             BotVersion = StatsService.BotVersion,
                             CommandName = cmd.Aliases.Any() ? cmd.Aliases[0] : cmd.Name,
-                            Description = cmd.Summary ?? "No description available",
-                            Example = cmd.Remarks?.Split('\n').ToList() ?? [],
+                            Description = cmd.RealSummary(strings, null, botConfig.Data.Prefix),
+                            Example = cmd.RealRemarksArr(strings, null, botConfig.Data.Prefix).ToList(),
                             GuildUserPermissions = PermissionAttributeReader.GuildPermissionOf(userPerm?.UserPermissionAttribute)?.ToString() ?? "",
                             ChannelUserPermissions =
                                 PermissionAttributeReader.ChannelPermissionOf(userPerm?.UserPermissionAttribute)?.ToString() ?? "",

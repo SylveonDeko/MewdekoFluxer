@@ -14,6 +14,7 @@ using Mewdeko.Modules.Moderation.Common;
 using Mewdeko.Modules.Moderation.Services;
 using Mewdeko.Modules.Permissions.Services;
 using Mewdeko.Services.Impl;
+using Mewdeko.Services.strings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -45,7 +46,8 @@ public class AdministrationController(
     UserPunishService userPunishService,
     BanPruneService banPruneService,
     IDashboardAuditContext auditContext,
-    FluxerClient client) : Controller
+    FluxerClient client,
+    IBotStrings strings) : Controller
 {
     /// <summary>
     ///     Gets auto-assign role settings for normal users
@@ -1488,9 +1490,9 @@ public class AdministrationController(
     ///     Gets all commands and modules
     /// </summary>
     [HttpGet("commands")]
-    public async Task<IActionResult> GetCommandsAndModules()
+    public async Task<IActionResult> GetCommandsAndModules(ulong guildId)
     {
-        await Task.CompletedTask;
+        var prefix = await guildSettingsService.GetPrefix(client.GetGuild(guildId));
 
         var modules = commandService.Modules;
         var moduleList = modules
@@ -1512,8 +1514,8 @@ public class AdministrationController(
                         {
                             BotVersion = StatsService.BotVersion,
                             CommandName = cmd.Aliases.Any() ? cmd.Aliases[0] : cmd.Name,
-                            Description = cmd.Summary ?? "No description available",
-                            Example = cmd.Remarks?.Split('\n').ToList() ?? [],
+                            Description = cmd.RealSummary(strings, guildId, prefix),
+                            Example = cmd.RealRemarksArr(strings, guildId, prefix).ToList(),
                             GuildUserPermissions = PermissionAttributeReader.GuildPermissionOf(userPerm?.UserPermissionAttribute)?.ToString() ?? "",
                             ChannelUserPermissions =
                                 PermissionAttributeReader.ChannelPermissionOf(userPerm?.UserPermissionAttribute)?.ToString() ?? "",
