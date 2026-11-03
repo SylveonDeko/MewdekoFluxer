@@ -899,7 +899,7 @@ public partial class XpService
         try
         {
             var guild = Client.GetGuild(guildId);
-            var user = guild?.GetUser(userId);
+            var user = guild is null ? null : await guild.GetMemberAsync(userId);
 
             if (guild == null || user == null)
                 throw new ArgumentException($"User {userId} not found in guild {guildId}");

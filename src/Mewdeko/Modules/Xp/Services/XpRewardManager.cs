@@ -257,7 +257,7 @@ public class XpRewardManager : INService
             try
             {
                 var guild = client.GetGuild(notification.GuildId);
-                var user = guild?.GetUser(notification.UserId);
+                var user = guild is null ? null : await guild.GetMemberAsync(notification.UserId);
 
                 if (guild == null || user == null)
                     continue;
@@ -780,7 +780,7 @@ public class XpRewardManager : INService
                 return;
 
             var guild = client.GetGuild(eventArgs.GuildId);
-            var user = guild?.GetUser(eventArgs.UserId);
+            var user = guild is null ? null : await guild.GetMemberAsync(eventArgs.UserId);
 
             if (guild == null || user == null)
                 return;
