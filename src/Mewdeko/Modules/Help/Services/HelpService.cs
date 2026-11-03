@@ -746,9 +746,12 @@ public class HelpService : INService, IReadyExecutor
             em.AddField(genStrings.Overloads(guild?.Id ?? 0), sb.ToString());
         }
 
+        var usages = com.RealRemarksArr(strings, guild?.Id, prefix);
+        if (usages.Length == 0)
+            usages = [$"{prefix}{com.Name} {string.Join(" ", com.Parameters.Select(p => p.IsOptional ? $"[{p.Name}]" : p.Name))}".TrimEnd()];
+
         em.AddField(fb => fb.WithName(genStrings.Usage(guild.Id)).WithValue(string.Join("\n",
-                    Array.ConvertAll(com.RealRemarksArr(strings, guild?.Id, prefix),
-                        arg => Format.Code(arg))))
+                    Array.ConvertAll(usages, arg => Format.Code(arg))))
                 .WithIsInline(false))
             .WithFooter(
                 $"Module: {com.Module.GetTopLevelModule().Name} || Submodule: {com.Module.Name.Replace("Commands", "")} || Method Name: {com.MethodName()}")
