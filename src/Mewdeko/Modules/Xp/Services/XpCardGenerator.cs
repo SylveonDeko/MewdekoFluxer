@@ -661,12 +661,12 @@ public class XpCardGenerator : INService
         var templateBar = new TemplateBar
         {
             // Default values are set in the class properties
-            BarColor = "FF000000",
-            BarPointAx = 319,
-            BarPointAy = 119,
-            BarPointBx = 284,
-            BarPointBy = 250,
-            BarLength = 452,
+            BarColor = "FFFFFFFF",
+            BarPointAx = 287,
+            BarPointAy = 106,
+            BarPointBx = 253,
+            BarPointBy = 229,
+            BarLength = 443,
             BarTransparency = 90,
             BarDirection = (int)XpTemplateDirection.Right,
             ShowBar = true
@@ -675,45 +675,45 @@ public class XpCardGenerator : INService
         var templateClub = new TemplateClub
         {
             // Default values are set in the class properties
-            ClubIconX = 717,
-            ClubIconY = 37,
-            ClubIconSizeX = 49,
-            ClubIconSizeY = 49,
+            ClubIconX = 737,
+            ClubIconY = 24,
+            ClubIconSizeX = 44,
+            ClubIconSizeY = 44,
             ShowClubIcon = true,
-            ClubNameColor = "FF000000",
-            ClubNameFontSize = 32,
-            ClubNameX = 649,
-            ClubNameY = 50,
+            ClubNameColor = "FFFFFFFF",
+            ClubNameFontSize = 20,
+            ClubNameX = 595,
+            ClubNameY = 70,
             ShowClubName = true
         };
 
         var templateGuild = new TemplateGuild
         {
             // Default values are set in the class properties
-            GuildLevelColor = "FF000000",
-            GuildLevelFontSize = 27,
-            GuildLevelX = 42,
-            GuildLevelY = 206,
+            GuildLevelColor = "FFFFFFFF",
+            GuildLevelFontSize = 24,
+            GuildLevelX = 41,
+            GuildLevelY = 190,
             ShowGuildLevel = true,
-            GuildRankColor = "FF000000",
-            GuildRankFontSize = 25,
-            GuildRankX = 148,
-            GuildRankY = 211,
+            GuildRankColor = "FFFFFFFF",
+            GuildRankFontSize = 24,
+            GuildRankX = 150,
+            GuildRankY = 197,
             ShowGuildRank = true
         };
 
         var templateUser = new TemplateUser
         {
             // Default values are set in the class properties
-            TextColor = "FF000000",
-            FontSize = 50,
-            TextX = 120,
-            TextY = 70,
+            TextColor = "FFFFFFFF",
+            FontSize = 44,
+            TextX = 100,
+            TextY = 58,
             ShowText = true,
-            IconX = 27,
-            IconY = 24,
-            IconSizeX = 73,
-            IconSizeY = 74,
+            IconX = 10,
+            IconY = 5,
+            IconSizeX = 72,
+            IconSizeY = 72,
             ShowIcon = true
         };
 
@@ -729,13 +729,13 @@ public class XpCardGenerator : INService
             GuildId = guildId,
 
             // Set the default values for Template
-            OutputSizeX = 797,
-            OutputSizeY = 279,
+            OutputSizeX = 800,
+            OutputSizeY = 246,
             TimeOnLevelFormat = "{0}d{1}h{2}m",
-            TimeOnLevelX = 50,
-            TimeOnLevelY = 204,
-            TimeOnLevelFontSize = 20,
-            TimeOnLevelColor = "FF000000",
+            TimeOnLevelX = 42,
+            TimeOnLevelY = 226,
+            TimeOnLevelFontSize = 18,
+            TimeOnLevelColor = "FFFFFFFF",
             ShowTimeOnLevel = true,
             AwardedX = 445,
             AwardedY = 347,
