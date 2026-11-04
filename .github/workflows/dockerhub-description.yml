@@ -20,7 +20,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: sylveondeko/mewdeko
+          repository: sylveondeko/mewdeko-fluxer
           short-description: Feature-rich, self-hostable Discord bot for PostgreSQL and Redis.
           readme-filepath: ./DOCKER.md
           enable-url-completion: true

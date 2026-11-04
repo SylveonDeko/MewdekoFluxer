@@ -26,7 +26,7 @@ services:
       retries: 5
 
   mewdeko:
-    image: sylveondeko/mewdeko:nightly
+    image: sylveondeko/mewdeko-fluxer:nightly
     restart: unless-stopped
     depends_on:
       postgres:
@@ -39,7 +39,7 @@ services:
       - mewdeko-logs:/app/logs
 
   dashboard:
-    image: sylveondeko/mewdash:nightly
+    image: sylveondeko/mewdash-fluxer:nightly
     restart: unless-stopped
     depends_on:
       - mewdeko

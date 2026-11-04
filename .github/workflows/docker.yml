@@ -42,7 +42,7 @@ jobs:
           build-args: |
             GIT_SHA=${{ github.sha }}
             BUILD_DATE=${{ github.event.head_commit.timestamp || github.event.repository.pushed_at }}
-          outputs: type=image,name=sylveondeko/mewdeko,push-by-digest=true,name-canonical=true
+          outputs: type=image,name=sylveondeko/mewdeko-fluxer,push-by-digest=true,name-canonical=true
           cache-from: type=gha,scope=${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
 
@@ -84,7 +84,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: sylveondeko/mewdeko
+          images: sylveondeko/mewdeko-fluxer
           tags: |
             type=raw,value=nightly,enable=${{ github.ref_type == 'branch' }}
             type=sha,prefix=,enable=${{ github.ref_type == 'branch' }}
@@ -96,8 +96,8 @@ jobs:
         run: |
           docker buildx imagetools create \
             $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf 'sylveondeko/mewdeko@sha256:%s ' *)
+            $(printf 'sylveondeko/mewdeko-fluxer@sha256:%s ' *)
 
       - name: Inspect image
         run: |
-          docker buildx imagetools inspect sylveondeko/mewdeko:${{ steps.meta.outputs.version }}
+          docker buildx imagetools inspect sylveondeko/mewdeko-fluxer:${{ steps.meta.outputs.version }}

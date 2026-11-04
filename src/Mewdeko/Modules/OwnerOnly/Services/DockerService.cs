@@ -72,7 +72,7 @@ public sealed class DockerService : INService, IDisposable
         get
         {
             var configured = Environment.GetEnvironmentVariable("MEWDEKO_IMAGE_REPO");
-            return string.IsNullOrWhiteSpace(configured) ? "sylveondeko/mewdeko" : configured.Trim();
+            return string.IsNullOrWhiteSpace(configured) ? "sylveondeko/mewdeko-fluxer" : configured.Trim();
         }
     }
 

@@ -1,6 +1,6 @@
 # Mewdeko Docker image
 
-`sylveondeko/mewdeko` runs the Mewdeko bot. It does not contain a Discord token, database password, API key, or any other credentials. Supply a `credentials.json` file when starting the container.
+`sylveondeko/mewdeko-fluxer` runs the Mewdeko bot. It does not contain a Discord token, database password, API key, or any other credentials. Supply a `credentials.json` file when starting the container.
 
 ## Tags
 
@@ -59,7 +59,7 @@ docker run -d \
   -v "$PWD/credentials.json:/app/credentials.json:ro" \
   -v mewdeko-data:/app/data \
   -v mewdeko-logs:/app/logs \
-  sylveondeko/mewdeko:nightly
+  sylveondeko/mewdeko-fluxer:nightly
 ```
 
 Only publish port `5001` when another service outside Docker needs the bot API. Keep it private when the dashboard runs on the same Docker network.
@@ -73,10 +73,10 @@ Bot owners get a Docker page in the dashboard's Owner Panel that lists the conta
       - /var/run/docker.sock:/var/run/docker.sock
 ```
 
-The page also shows, per registered instance, the commit it runs (stamped into the image by CI as `MEWDEKO_GIT_SHA`) against the newest `sylveondeko/mewdeko:nightly` on Docker Hub, with an Update button per bot and an Update all for the whole compose project. Compose pull, up and update run in a throwaway `docker:cli` helper container the bot creates through the socket, so they survive the bot's own container being recreated; the project's compose directory has to be mounted into the bot at the same path it has on the host for that to work. Without the socket the page just reports that Docker is not configured. Anyone the bot treats as an owner can then control every container on that machine, so keep the owner list short.
+The page also shows, per registered instance, the commit it runs (stamped into the image by CI as `MEWDEKO_GIT_SHA`) against the newest `sylveondeko/mewdeko-fluxer:nightly` on Docker Hub, with an Update button per bot and an Update all for the whole compose project. Compose pull, up and update run in a throwaway `docker:cli` helper container the bot creates through the socket, so they survive the bot's own container being recreated; the project's compose directory has to be mounted into the bot at the same path it has on the host for that to work. Without the socket the page just reports that Docker is not configured. Anyone the bot treats as an owner can then control every container on that machine, so keep the owner list short.
 
 Forks publishing under another name can point the version check elsewhere with `MEWDEKO_IMAGE_REPO` and `MEWDEKO_IMAGE_TAG`.
 
 ## Dashboard
 
-The companion image is [`sylveondeko/mewdash`](https://hub.docker.com/r/sylveondeko/mewdash). Its required environment variables and standalone launch command are documented in the [dashboard Docker guide](https://github.com/SylveonDeko/MewdekoDash/blob/main/DOCKER.md).
+The companion image is [`sylveondeko/mewdash-fluxer`](https://hub.docker.com/r/sylveondeko/mewdash-fluxer). Its required environment variables and standalone launch command are documented in the [dashboard Docker guide](https://github.com/SylveonDeko/MewdekoDash/blob/main/DOCKER.md).

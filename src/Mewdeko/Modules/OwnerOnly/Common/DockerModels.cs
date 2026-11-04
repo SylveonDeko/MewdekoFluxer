@@ -300,7 +300,7 @@ public sealed class DockerActionResult
 public sealed class DockerPublishedImage
 {
     /// <summary>
-    ///     The repository that was queried, such as sylveondeko/mewdeko.
+    ///     The repository that was queried, such as sylveondeko/mewdeko-fluxer.
     /// </summary>
     public string Repository { get; set; } = "";
 
