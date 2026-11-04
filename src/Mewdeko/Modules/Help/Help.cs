@@ -75,7 +75,8 @@ public class Help(
                             RequiredPermissions.Guild(botPerm) != null ? RequiredPermissions.Guild(botPerm)!.Value.ToString() : "",
                         ChannelBotPermissions =
                             RequiredPermissions.Channel(botPerm) != null ? RequiredPermissions.Channel(botPerm)!.Value.ToString() : "",
-                        IsDragon = isDragon is not null
+                        IsDragon = isDragon is not null,
+                        Submodule = i.IsSubmodule ? i.Name : null
                     }).ToList();
                 newList.AddOrUpdate(modulename, commands, (_, old) =>
                 {
@@ -394,4 +395,9 @@ public class Command
     ///     The guild permissions required by the bot to use the command.
     /// </summary>
     public string? GuildBotPermissions { get; set; }
+
+    /// <summary>
+    ///     The submodule the command belongs to, or null when it sits directly in its module.
+    /// </summary>
+    public string? Submodule { get; set; }
 }

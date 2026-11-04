@@ -274,7 +274,8 @@ public class PermissionsController(
                                 PermissionAttributeReader.ChannelPermissionOf(userPerm?.UserPermissionAttribute)?.ToString() ?? "",
                             GuildBotPermissions = PermissionAttributeReader.GuildPermissionOf(botPerm)?.ToString() ?? "",
                             ChannelBotPermissions = PermissionAttributeReader.ChannelPermissionOf(botPerm)?.ToString() ?? "",
-                            IsDragon = isDragon != null
+                            IsDragon = isDragon != null,
+                            Submodule = module.IsSubmodule ? module.Name : null
                         };
                     })
                     .ToList()
