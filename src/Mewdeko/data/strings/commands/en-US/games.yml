@@ -98,7 +98,7 @@ hangman_=_2:
 hangmanlist:
   args:
     - ''
-  desc: 'Lists the available hangman types in the current guild.'
+  desc: 'Lists the available hangman types in the current community.'
   params: [ ]
 hangmanstop_noparams:
   args:
@@ -360,7 +360,7 @@ polldelete:
 polllist:
   args:
     - ''
-  desc: 'Lists the polls that are still open in the server.'
+  desc: 'Lists the polls that are still open in the community.'
   params: [ ]
 pollm:
   args:
@@ -410,7 +410,7 @@ polltemplatedelete:
 polltemplates:
   args:
     - ''
-  desc: 'Lists all poll templates available in the guild.'
+  desc: 'Lists all poll templates available in the community.'
   params: [ ]
 rategirl:
   args:

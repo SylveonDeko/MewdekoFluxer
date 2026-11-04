@@ -9,7 +9,7 @@
   "mc_query_failed": "Failed to query the server. It may be offline or unreachable.",
   "mc_server_not_found": "No server found with that name. Use the server list command to see registered servers.",
   "mc_server_added": "Added Minecraft server **{0}** (`{1}:{2}`).",
-  "mc_server_exists": "A server named **{0}** already exists in this guild.",
+  "mc_server_exists": "A server named **{0}** already exists in this community.",
   "mc_server_removed": "Removed Minecraft server **{0}**.",
   "mc_no_servers": "No Minecraft servers registered. Add one first.",
   "mc_server_list_title": "Minecraft Servers",

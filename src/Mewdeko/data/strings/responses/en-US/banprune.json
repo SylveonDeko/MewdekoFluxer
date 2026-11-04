@@ -8,7 +8,7 @@
   "ban_prune_reset": "Removed {0} purge settings. Every action is back to its default.",
   "ban_prune_scope_category": "category {0}",
   "ban_prune_scope_channel": "channel {0}",
-  "ban_prune_scope_guild": "this server",
+  "ban_prune_scope_guild": "this community",
   "ban_prune_set": "Bans from {0} now purge **{1}** for {2}.",
   "ban_prune_set_all_actions": "every ban action",
   "ban_prune_days": "{0} day(s) of messages",

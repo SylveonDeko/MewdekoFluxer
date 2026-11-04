@@ -17,7 +17,7 @@ banpruneset:
       name: days
       optional: false
       type: int
-    - desc: 'A channel or category to scope the setting to, or nothing for the server default'
+    - desc: 'A channel or category to scope the setting to, or nothing for the community default'
       name: target
       optional: true
       type: channel
@@ -30,14 +30,14 @@ banpruneclear:
       name: action
       optional: false
       type: string
-    - desc: 'The channel or category the setting is on, or nothing for the server default'
+    - desc: 'The channel or category the setting is on, or nothing for the community default'
       name: target
       optional: true
       type: channel
 banprunereset:
   args:
     - ''
-  desc: 'Removes every purge setting in the server.'
+  desc: 'Removes every purge setting in the community.'
   params:
     - { }
 ban:
@@ -785,12 +785,12 @@ dehoistall:
   args:
     - false
   desc: >-
-    Dehoists all users in the guild by replacing special characters in their
+    Dehoists all users in the community by replacing special characters in their
     nicknames.
   params:
     - &ref_181
       desc: >-
-        Dehoists all users in the guild by replacing special characters in their
+        Dehoists all users in the community by replacing special characters in their
         nicknames.
       name: false
       optional: false
@@ -799,11 +799,11 @@ dehoistall_=:
   args:
     - false
   desc: >-
-    Dehoists all users in the guild by replacing special characters in their
+    Dehoists all users in the community by replacing special characters in their
     nicknames.
   params:
     - desc: >-
-        Dehoists all users in the guild by replacing special characters in their
+        Dehoists all users in the community by replacing special characters in their
         nicknames.
       name: false
       optional: false
@@ -812,11 +812,11 @@ dehoistall_=_1:
   args:
     - false
   desc: >-
-    Dehoists all users in the guild by replacing special characters in their
+    Dehoists all users in the community by replacing special characters in their
     nicknames.
   params:
     - desc: >-
-        Dehoists all users in the guild by replacing special characters in their
+        Dehoists all users in the community by replacing special characters in their
         nicknames.
       name: false
       optional: false
@@ -825,11 +825,11 @@ dehoistall_=_2:
   args:
     - false
   desc: >-
-    Dehoists all users in the guild by replacing special characters in their
+    Dehoists all users in the community by replacing special characters in their
     nicknames.
   params:
     - desc: >-
-        Dehoists all users in the guild by replacing special characters in their
+        Dehoists all users in the community by replacing special characters in their
         nicknames.
       name: false
       optional: false
@@ -1242,9 +1242,9 @@ mute_StoopidTime_IGuildUser_=_3:
 muterole:
   args:
     - '[@role]'
-  desc: 'Sets the mute role for the guild.'
+  desc: 'Sets the mute role for the community.'
   params:
-    - desc: 'Sets the mute role for the guild.'
+    - desc: 'Sets the mute role for the community.'
       name: role
       optional: true
       type: role
@@ -2313,7 +2313,7 @@ sanitizeall:
   args:
     - ''
   desc: >-
-    Sanitizes all users in the guild by replacing special characters in their
+    Sanitizes all users in the community by replacing special characters in their
     usernames.
   params: [ ]
 setmwarnchannel:
@@ -2356,9 +2356,9 @@ setmwarnchannel_ITextChannel_2:
 setwarnchannel:
   args:
     - channel
-  desc: 'Sets the warnlog channel for the guild.'
+  desc: 'Sets the warnlog channel for the community.'
   params:
-    - desc: 'Sets the warnlog channel for the guild.'
+    - desc: 'Sets the warnlog channel for the community.'
       name: channel
       optional: false
       type: ITextChannel
@@ -2781,7 +2781,7 @@ unmute_IGuildUser_=_2:
 unmuteall:
   args:
     - '[reason]'
-  desc: 'Unmutes all users in the guild. DANGEROUS!!!!!!!!!!!!!!!!'
+  desc: 'Unmutes all users in the community. DANGEROUS!!!!!!!!!!!!!!!!'
   params:
     - desc: 'The reason you would want to commit such an atrocity!'
       name: reason
@@ -3415,5 +3415,5 @@ warnpunish_int_PunishmentAction_=_3:
 warnpunishlist:
   args:
     - ''
-  desc: 'Lists the warn punishments for the guild.'
+  desc: 'Lists the warn punishments for the community.'
   params: [ ]

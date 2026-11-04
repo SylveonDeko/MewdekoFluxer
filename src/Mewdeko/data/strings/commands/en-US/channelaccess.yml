@@ -23,7 +23,7 @@ channelaccessapprove:
       type: string
 channelaccessblacklist:
   args: [ ]
-  desc: 'Lists everyone blocked from applying in this server'
+  desc: 'Lists everyone blocked from applying in this community'
   params: [ ]
 channelaccessblacklistadd:
   args:
@@ -106,7 +106,7 @@ channelaccesshistory:
       type: IGuildUser
 channelaccesslist:
   args: [ ]
-  desc: 'Lists every gate in the server with its current thresholds'
+  desc: 'Lists every gate in the community with its current thresholds'
   params: [ ]
 channelaccesspanel:
   args:

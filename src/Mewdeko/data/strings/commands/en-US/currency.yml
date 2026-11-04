@@ -551,7 +551,7 @@ scratchcard:
 setdaily:
   args:
     - number time
-  desc: 'Sets the daily reward amount and cooldown time for the guild.'
+  desc: 'Sets the daily reward amount and cooldown time for the community.'
   params:
     - &ref_499
       desc: 'The amount of the daily reward.'
@@ -566,7 +566,7 @@ setdaily:
 setdaily_int_StoopidTime:
   args:
     - number time
-  desc: 'Sets the daily reward amount and cooldown time for the guild.'
+  desc: 'Sets the daily reward amount and cooldown time for the community.'
   params:
     - desc: 'The amount of the daily reward.'
       name: amount
@@ -579,7 +579,7 @@ setdaily_int_StoopidTime:
 setdaily_int_StoopidTime_1:
   args:
     - number time
-  desc: 'Sets the daily reward amount and cooldown time for the guild.'
+  desc: 'Sets the daily reward amount and cooldown time for the community.'
   params:
     - desc: 'The amount of the daily reward.'
       name: amount
@@ -592,7 +592,7 @@ setdaily_int_StoopidTime_1:
 setdaily_int_StoopidTime_2:
   args:
     - number time
-  desc: 'Sets the daily reward amount and cooldown time for the guild.'
+  desc: 'Sets the daily reward amount and cooldown time for the community.'
   params:
     - desc: 'The amount of the daily reward.'
       name: amount
@@ -678,7 +678,7 @@ wheelfortune:
 work:
   args:
     - ''
-  desc: 'Works a shift for a random payout, on a cooldown the server sets.'
+  desc: 'Works a shift for a random payout, on a cooldown the community sets.'
   params: [ ]
 crime:
   args:
@@ -697,7 +697,7 @@ rob:
 pay:
   args:
     - '@user <amount>'
-  desc: 'Sends currency to another user, minus any transfer tax the server charges.'
+  desc: 'Sends currency to another user, minus any transfer tax the community charges.'
   params:
     - desc: 'The user to send currency to.'
       name: target
@@ -738,12 +738,12 @@ withdraw:
 shop:
   args:
     - ''
-  desc: 'Lists everything the server currently sells.'
+  desc: 'Lists everything the community currently sells.'
   params: [ ]
 buy:
   args:
     - '<item name>'
-  desc: 'Buys an item from the server shop.'
+  desc: 'Buys an item from the community shop.'
   params:
     - desc: 'The name of the item to buy.'
       name: name
@@ -877,7 +877,7 @@ economyreset:
 economystats:
   args:
     - ''
-  desc: 'Reports the size and concentration of the server''s money supply.'
+  desc: 'Reports the size and concentration of the community''s money supply.'
   params: [ ]
 economyflow:
   args:

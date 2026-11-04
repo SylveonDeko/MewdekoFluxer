@@ -1,5 +1,5 @@
 {
-  "confessions_blacklisted": "You are blacklisted from confessions in that server!",
+  "confessions_blacklisted": "You are blacklisted from confessions in that community!",
   "confessions_blacklisted_added": "Added {0} to the confession blacklist!!",
   "confessions_blacklisted_already": "This user is already blacklisted!",
   "confessions_blacklisted_not": "This user is not blacklisted!",
@@ -10,13 +10,13 @@
   "confessions_invalid_perms": "I don't have proper perms there! Please make sure to enable EmbedLinks and SendMessages in that channel for me!",
   "confessions_logging_disabled": "Confessions logging disabled",
   "confessions_missing_invite": "Unable to get invite due to missing permissions or no available invites.",
-  "confessions_none": "This server does not have confessions enabled!",
-  "confessions_none_any": "You aren't in any servers that have my confessions enabled!",
+  "confessions_none": "This community does not have confessions enabled!",
+  "confessions_none_any": "You aren't in any communities that have my confessions enabled!",
   "confessions_report": "report",
   "confessions_report_received": "Confessions Abuse Report Received",
   "confessions_report_sent": "Report sent. If you want to join and add on to it use the link below.",
   "confessions_report_user": "report user",
-  "confessions_server_id": "Server Id",
-  "confessions_server_invite": "Server Invite",
+  "confessions_server_id": "Community Id",
+  "confessions_server_invite": "Community Invite",
   "confessions_spleen": "Set {0} as the confession log channel."
 }

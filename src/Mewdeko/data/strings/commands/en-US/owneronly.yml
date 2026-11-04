@@ -10,7 +10,7 @@ acadd:
 topserversupdate:
   args:
     - ''
-  desc: Updates the top guilds list. Can only be run on the master instance.
+  desc: Updates the top communities list. Can only be run on the master instance.
 aclist:
   args:
     - ''
@@ -101,7 +101,7 @@ addplaying_ActivityType_string_2:
 autocommandadd:
   args:
     - number text
-  desc: 'Adds an auto command to be executed periodically in the specified guild.'
+  desc: 'Adds an auto command to be executed periodically in the specified community.'
   params:
     - &ref_91
       desc: 'The interval in seconds at which the command should be executed. Must be 5 seconds or more.'
@@ -116,7 +116,7 @@ autocommandadd:
 autocommandadd_int_string:
   args:
     - number text
-  desc: 'Adds an auto command to be executed periodically in the specified guild.'
+  desc: 'Adds an auto command to be executed periodically in the specified community.'
   params:
     - desc: 'The interval in seconds at which the command should be executed. Must be 5 seconds or more.'
       name: interval
@@ -129,7 +129,7 @@ autocommandadd_int_string:
 autocommandadd_int_string_1:
   args:
     - number text
-  desc: 'Adds an auto command to be executed periodically in the specified guild.'
+  desc: 'Adds an auto command to be executed periodically in the specified community.'
   params:
     - desc: 'The interval in seconds at which the command should be executed. Must be 5 seconds or more.'
       name: interval
@@ -142,7 +142,7 @@ autocommandadd_int_string_1:
 autocommandadd_int_string_2:
   args:
     - number text
-  desc: 'Adds an auto command to be executed periodically in the specified guild.'
+  desc: 'Adds an auto command to be executed periodically in the specified community.'
   params:
     - desc: 'The interval in seconds at which the command should be executed. Must be 5 seconds or more.'
       name: interval
@@ -193,37 +193,37 @@ autocommandremove_int_2:
 autocommandslist:
   args:
     - 1
-  desc: 'Lists the auto commands configured for the guild.'
+  desc: 'Lists the auto commands configured for the community.'
   params:
     - &ref_95
-      desc: 'Lists the auto commands configured for the guild.'
+      desc: 'Lists the auto commands configured for the community.'
       name: 1
       optional: false
       type: '='
 autocommandslist_=:
   args:
     - 1
-  desc: 'Lists the auto commands configured for the guild.'
+  desc: 'Lists the auto commands configured for the community.'
   params:
-    - desc: 'Lists the auto commands configured for the guild.'
+    - desc: 'Lists the auto commands configured for the community.'
       name: 1
       optional: false
       type: '='
 autocommandslist_=_1:
   args:
     - 1
-  desc: 'Lists the auto commands configured for the guild.'
+  desc: 'Lists the auto commands configured for the community.'
   params:
-    - desc: 'Lists the auto commands configured for the guild.'
+    - desc: 'Lists the auto commands configured for the community.'
       name: 1
       optional: false
       type: '='
 autocommandslist_=_2:
   args:
     - 1
-  desc: 'Lists the auto commands configured for the guild.'
+  desc: 'Lists the auto commands configured for the community.'
   params:
-    - desc: 'Lists the auto commands configured for the guild.'
+    - desc: 'Lists the auto commands configured for the community.'
       name: 1
       optional: false
       type: '='
@@ -276,28 +276,28 @@ commandstats:
   args:
     - ''
   desc: >-
-    Retrieves and displays statistics on the most used command, module, guild,
+    Retrieves and displays statistics on the most used command, module, community,
     and user.
   params: [ ]
 commandstats_noparams:
   args:
     - ''
   desc: >-
-    Retrieves and displays statistics on the most used command, module, guild,
+    Retrieves and displays statistics on the most used command, module, community,
     and user.
   params: [ ]
 commandstats_noparams_1:
   args:
     - ''
   desc: >-
-    Retrieves and displays statistics on the most used command, module, guild,
+    Retrieves and displays statistics on the most used command, module, community,
     and user.
   params: [ ]
 commandstats_noparams_2:
   args:
     - ''
   desc: >-
-    Retrieves and displays statistics on the most used command, module, guild,
+    Retrieves and displays statistics on the most used command, module, community,
     and user.
   params: [ ]
 config:
@@ -411,7 +411,7 @@ instancestatus_int:
 retentionpending:
   args:
     - ''
-  desc: 'Lists servers the bot has left whose data is waiting to be purged, soonest first.'
+  desc: 'Lists communities the bot has left whose data is waiting to be purged, soonest first.'
   params: [ ]
 retentionrecent:
   args:
@@ -421,80 +421,80 @@ retentionrecent:
 retentioncancel:
   args:
     - 123456789012345678
-  desc: 'Removes a server from the purge queue so its data is kept.'
+  desc: 'Removes a community from the purge queue so its data is kept.'
   params:
-    - desc: 'The server to keep.'
+    - desc: 'The community tokeep.'
       name: guildId
       optional: false
       type: ulong
 retentionpurge:
   args:
     - 123456789012345678
-  desc: 'Purges a server''s data immediately instead of waiting for the grace period. Refuses while the bot is still in it.'
+  desc: 'Purges a community''s data immediately instead of waiting for the grace period. Refuses while the bot is still in it.'
   params:
-    - desc: 'The server to purge.'
+    - desc: 'The community topurge.'
       name: guildId
       optional: false
       type: ulong
 retentionpurgeall:
   args:
     - ''
-  desc: 'Purges every pending server right now, ignoring the grace period. Servers the bot has rejoined are skipped.'
+  desc: 'Purges every pending community right now, ignoring the grace period. Communities the bot has rejoined are skipped.'
   params: [ ]
 bothells:
   args:
     - ''
-  desc: 'Lists servers littered with bots, based on the bot count and bot percentage thresholds in bot config.'
+  desc: 'Lists communities littered with bots, based on the bot count and bot percentage thresholds in bot config.'
   params: [ ]
 bothellcheck:
   args:
     - ''
     - 123456789012345678
-  desc: 'Checks a single server against the bot hell thresholds after downloading its full member list.'
+  desc: 'Checks a single community against the bot hell thresholds after downloading its full member list.'
   params:
-    - desc: 'The server to check, or the current one when omitted.'
+    - desc: 'The community tocheck, or the current one when omitted.'
       name: guildId
       optional: true
       type: ulong
 retentionscan:
   args:
     - ''
-  desc: 'Scans every guild scoped table for servers the bot is no longer in and queues them for purging after the grace period.'
+  desc: 'Scans every community-scoped table for communities the bot is no longer in and queues them for purging after the grace period.'
   params: [ ]
 leaveserver:
   args:
     - text
-  desc: 'Commands the bot to leave a server.'
+  desc: 'Commands the bot to leave a community.'
   params:
     - &ref_269
-      desc: 'The identifier or name of the guild to leave.'
+      desc: 'The identifier or name of the community to leave.'
       name: guildStr
       optional: false
       type: string
 leaveserver_string:
   args:
     - text
-  desc: 'Commands the bot to leave a server.'
+  desc: 'Commands the bot to leave a community.'
   params:
-    - desc: 'The identifier or name of the guild to leave.'
+    - desc: 'The identifier or name of the community to leave.'
       name: guildStr
       optional: false
       type: string
 leaveserver_string_1:
   args:
     - text
-  desc: 'Commands the bot to leave a server.'
+  desc: 'Commands the bot to leave a community.'
   params:
-    - desc: 'The identifier or name of the guild to leave.'
+    - desc: 'The identifier or name of the community to leave.'
       name: guildStr
       optional: false
       type: string
 leaveserver_string_2:
   args:
     - text
-  desc: 'Commands the bot to leave a server.'
+  desc: 'Commands the bot to leave a community.'
   params:
-    - desc: 'The identifier or name of the guild to leave.'
+    - desc: 'The identifier or name of the community to leave.'
       name: guildStr
       optional: false
       type: string
@@ -511,7 +511,7 @@ listplaying:
 listservers:
   args:
     - ''
-  desc: 'Lists all servers the bot is currently in.'
+  desc: 'Lists all communities the bot is currently in.'
   params: [ ]
 redisexec:
   args:
@@ -980,7 +980,7 @@ shardstats:
   args:
     - ''
   desc: >-
-    Shows the shard this instance runs, with its connection state, server count
+    Shows the shard this instance runs, with its connection state, community count
     and member count.
   params: [ ]
 sqlexec:
@@ -1069,14 +1069,14 @@ startupcommandremove:
 startupcommandsclear:
   args:
     - ''
-  desc: 'Clears all startup commands for the guild.'
+  desc: 'Clears all startup commands for the community.'
   params: [ ]
 startupcommandslist:
   args:
     - 1
-  desc: 'Lists the startup commands configured for the guild.'
+  desc: 'Lists the startup commands configured for the community.'
   params:
-    - desc: 'Lists the startup commands configured for the guild.'
+    - desc: 'Lists the startup commands configured for the community.'
       name: 1
       optional: false
       type: '='
@@ -1088,10 +1088,10 @@ stringsreload:
 sudo:
   args:
     - '@user text'
-  desc: 'Executes a command as if it were sent by the owner of the guild.'
+  desc: 'Executes a command as if it were sent by the owner of the community.'
   params:
     - &ref_580
-      desc: 'Executes a command as if it were sent by the owner of the guild.'
+      desc: 'Executes a command as if it were sent by the owner of the community.'
       name: user
       optional: false
       type: IGuildUser
@@ -1103,9 +1103,9 @@ sudo:
 sudo_IGuildUser_string:
   args:
     - '@user text'
-  desc: 'Executes a command as if it were sent by the owner of the guild.'
+  desc: 'Executes a command as if it were sent by the owner of the community.'
   params:
-    - desc: 'Executes a command as if it were sent by the owner of the guild.'
+    - desc: 'Executes a command as if it were sent by the owner of the community.'
       name: user
       optional: false
       type: IGuildUser
@@ -1116,9 +1116,9 @@ sudo_IGuildUser_string:
 sudo_IGuildUser_string_1:
   args:
     - '@user text'
-  desc: 'Executes a command as if it were sent by the owner of the guild.'
+  desc: 'Executes a command as if it were sent by the owner of the community.'
   params:
-    - desc: 'Executes a command as if it were sent by the owner of the guild.'
+    - desc: 'Executes a command as if it were sent by the owner of the community.'
       name: user
       optional: false
       type: IGuildUser
@@ -1129,9 +1129,9 @@ sudo_IGuildUser_string_1:
 sudo_IGuildUser_string_2:
   args:
     - '@user text'
-  desc: 'Executes a command as if it were sent by the owner of the guild.'
+  desc: 'Executes a command as if it were sent by the owner of the community.'
   params:
-    - desc: 'Executes a command as if it were sent by the owner of the guild.'
+    - desc: 'Executes a command as if it were sent by the owner of the community.'
       name: user
       optional: false
       type: IGuildUser
@@ -1142,7 +1142,7 @@ sudo_IGuildUser_string_2:
 sudo_string:
   args:
     - text
-  desc: 'Executes a command as if it were sent by the owner of the guild.'
+  desc: 'Executes a command as if it were sent by the owner of the community.'
   params:
     - desc: 'The command string to execute, including command name and arguments.'
       name: args
@@ -1151,7 +1151,7 @@ sudo_string:
 sudo_string_1:
   args:
     - text
-  desc: 'Executes a command as if it were sent by the owner of the guild.'
+  desc: 'Executes a command as if it were sent by the owner of the community.'
   params:
     - desc: 'The command string to execute, including command name and arguments.'
       name: args
@@ -1160,7 +1160,7 @@ sudo_string_1:
 sudo_string_2:
   args:
     - text
-  desc: 'Executes a command as if it were sent by the owner of the guild.'
+  desc: 'Executes a command as if it were sent by the owner of the community.'
   params:
     - desc: 'The command string to execute, including command name and arguments.'
       name: args
@@ -1169,7 +1169,7 @@ sudo_string_2:
 sudo_string_3:
   args:
     - text
-  desc: 'Executes a command as if it were sent by the owner of the guild.'
+  desc: 'Executes a command as if it were sent by the owner of the community.'
   params:
     - desc: 'The command string to execute, including command name and arguments.'
       name: args

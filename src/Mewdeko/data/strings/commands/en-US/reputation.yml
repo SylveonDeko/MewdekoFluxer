@@ -172,7 +172,7 @@ repcommandreq:
 repcommandreqlist:
   args:
     - ''
-  desc: 'Lists all command requirements for the server.'
+  desc: 'Lists all command requirements for the community.'
   params: [ ]
 repcommandreqremove:
   args:
@@ -240,7 +240,7 @@ repdecaytype:
 repenable:
   args:
     - enabled
-  desc: 'Enables or disables the reputation system for this server.'
+  desc: 'Enables or disables the reputation system for this community.'
   params:
     - desc: True to enable, false to disable.
       name: enabled
@@ -321,7 +321,7 @@ repimport:
 replb:
   args:
     - number
-  desc: 'Shows the reputation leaderboard for the server.'
+  desc: 'Shows the reputation leaderboard for the community.'
   params:
     - &ref_436
       desc: 'The page number to display.'
@@ -331,7 +331,7 @@ replb:
 repleaderboard:
   args:
     - number
-  desc: 'Shows the reputation leaderboard for the server.'
+  desc: 'Shows the reputation leaderboard for the community.'
   params:
     - desc: 'The page number to display.'
       name: page
@@ -366,7 +366,7 @@ repminage:
 repminmembership:
   args:
     - hours
-  desc: 'Sets the minimum server membership time required to give reputation.'
+  desc: 'Sets the minimum community membership time required to give reputation.'
   params:
     - desc: Minimum membership time in hours (0-720).
       name: hours
@@ -433,7 +433,7 @@ repreactionremove:
 represet:
   args:
     - text
-  desc: 'Resets reputation for a user or all users in the server.'
+  desc: 'Resets reputation for a user or all users in the community.'
   params:
     - desc: The user to reset, or "all" to reset everyone.
       name: target
@@ -547,7 +547,7 @@ reptake:
 reptop:
   args:
     - number
-  desc: 'Shows the reputation leaderboard for the server.'
+  desc: 'Shows the reputation leaderboard for the community.'
   params:
     - desc: 'The page number to display.'
       name: page
@@ -569,7 +569,7 @@ reptypeadd:
 reptypelist:
   args:
     - ''
-  desc: 'Lists all custom reputation types for this server.'
+  desc: 'Lists all custom reputation types for this community.'
   params: [ ]
 reptyperemove:
   args:
@@ -601,7 +601,7 @@ repweeklylimit:
 toprep:
   args:
     - number
-  desc: 'Shows the reputation leaderboard for the server.'
+  desc: 'Shows the reputation leaderboard for the community.'
   params:
     - desc: 'The page number to display.'
       name: page

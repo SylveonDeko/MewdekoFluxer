@@ -680,7 +680,7 @@ ctsclear:
 ctsexport:
   args:
     - ''
-  desc: 'Exports chat trigger settings for the current guild.'
+  desc: 'Exports chat trigger settings for the current community.'
   params: [ ]
 ctsmigrate:
   args:
@@ -692,7 +692,7 @@ ctsmigrate:
 ctsimport:
   args:
     - '[input]'
-  desc: 'Imports chat trigger settings for the current guild.'
+  desc: 'Imports chat trigger settings for the current community.'
   params:
     - desc: 'The input containing the custom reaction settings.'
       name: input
@@ -825,7 +825,7 @@ ctmaxuses:
 ctminage:
   desc: 'Sets a minimum account age for a chat trigger.'
 ctminmember:
-  desc: 'Sets a minimum server-membership age for a chat trigger.'
+  desc: 'Sets a minimum community-membership age for a chat trigger.'
 cttoggle:
   desc: 'Enables or disables a chat trigger.'
 ctaddresponse:

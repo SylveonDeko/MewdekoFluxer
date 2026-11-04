@@ -1,5 +1,5 @@
 {
-  "bandm": "You have been banned from {0} server.\nReason: {1}",
+  "bandm": "You have been banned from {0} community.\nReason: {1}",
   "banmsg_default": "No ban message set. Default behavior will be used.",
   "bye_off": "Bye announcements disabled.",
   "bye_on": "Bye announcements enabled on this channel.",
@@ -16,7 +16,7 @@
   "multigreet_delete_updated_timed": "Successfully updated MultiGreet #{0} to delete after {1}",
   "multigreet_disabled_status": "MultiGreet {0} set to {1}",
   "multigreet_greet_bots": "MultiGreet #{0} {1} greet bots.",
-  "multigreet_limit_reached": "Seems like you have reached your 5 greets per channel limit or your 30 greets per guild limit! Remove a MultiGreet and try again",
+  "multigreet_limit_reached": "Seems like you have reached your 5 greets per channel limit or your 30 greets per community limit! Remove a MultiGreet and try again",
   "multigreet_message_preview_prompt": "Would you like to view this as regular text or would you like to preview how it actually looks?",
   "multigreet_message_updated": "MultiGreet Message for MultiGreet #{0} set!",
   "multigreet_none_setup": "No MultiGreets have been set up!",

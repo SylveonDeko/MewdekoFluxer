@@ -7,7 +7,7 @@ autoplay:
   args:
     - number
   desc: >-
-    Sets the autoplay amount in the guild. Uses spotify api so client secret and
+    Sets the autoplay amount in the community. Uses spotify api so client secret and
     id must be valid.
   params:
     - &ref_96
@@ -19,7 +19,7 @@ autoplay_int:
   args:
     - number
   desc: >-
-    Sets the autoplay amount in the guild. Uses spotify api so client secret and
+    Sets the autoplay amount in the community. Uses spotify api so client secret and
     id must be valid.
   params:
     - desc: 'The amount of tracks to autoplay. Max of 5'
@@ -258,12 +258,12 @@ musiclinkchannel:
 musiclinkchannels:
   args:
     - ''
-  desc: 'Lists the channels in this server where music link conversion is enabled.'
+  desc: 'Lists the channels in this community where music link conversion is enabled.'
   params: [ ]
 musicsettings:
   args:
     - ''
-  desc: 'Gets the guilds current settings for music.'
+  desc: 'Gets the community''s current settings for music.'
   params: [ ]
 nightcore:
   args:
@@ -359,7 +359,7 @@ play_string_1:
 playlists:
   args:
     - ''
-  desc: 'Lists all saved playlists for the guild.'
+  desc: 'Lists all saved playlists for the community.'
   params: [ ]
 queue:
   args:
@@ -693,7 +693,7 @@ fmalbum:
 fmwhoknows:
   args:
     - '[artist]'
-  desc: 'Ranks every linked server member by their play count for an artist.'
+  desc: 'Ranks every linked community member by their play count for an artist.'
   params:
     - desc: 'The artist to check. Defaults to your currently or last playing artist.'
       name: artist
@@ -702,7 +702,7 @@ fmwhoknows:
 fmwhoknowsalbum:
   args:
     - 'artist | album'
-  desc: 'Ranks every linked server member by their play count for an album.'
+  desc: 'Ranks every linked community member by their play count for an album.'
   params:
     - desc: 'The album to check, formatted as ''artist | album''.'
       name: query
@@ -711,7 +711,7 @@ fmwhoknowsalbum:
 fmwhoknowstrack:
   args:
     - 'artist | track'
-  desc: 'Ranks every linked server member by their play count for a track.'
+  desc: 'Ranks every linked community member by their play count for a track.'
   params:
     - desc: 'The track to check, formatted as ''artist | track''.'
       name: query
@@ -720,7 +720,7 @@ fmwhoknowstrack:
 fmcrowns:
   args:
     - '[artist]'
-  desc: 'Shows who "owns" (has the most plays for) an artist in this server.'
+  desc: 'Shows who "owns" (has the most plays for) an artist in this community.'
   params:
     - desc: 'The artist to check. Defaults to your currently or last playing artist.'
       name: artist
@@ -869,7 +869,7 @@ ttsdefaultvoice:
   args:
     - 'Brian'
     - ''
-  desc: 'Sets the default TTS voice for the guild. Use without arguments to reset to system default.'
+  desc: 'Sets the default TTS voice for the community. Use without arguments to reset to system default.'
   params:
     - desc: 'The voice name. Omit to reset.'
       name: voice
@@ -879,7 +879,7 @@ ttsdefaultvoice_string:
   args:
     - 'Brian'
     - ''
-  desc: 'Sets the default TTS voice for the guild. Use without arguments to reset to system default.'
+  desc: 'Sets the default TTS voice for the community. Use without arguments to reset to system default.'
   params:
     - desc: 'The voice name. Omit to reset.'
       name: voice
@@ -889,7 +889,7 @@ ttsvoice:
   args:
     - 'Brian'
     - ''
-  desc: 'Sets your personal TTS voice for this server. Use without arguments to reset to the server default.'
+  desc: 'Sets your personal TTS voice for this community. Use without arguments to reset to the community default.'
   params:
     - desc: 'The voice name. Omit to reset.'
       name: voice
@@ -899,7 +899,7 @@ ttsvoice_string:
   args:
     - 'Brian'
     - ''
-  desc: 'Sets your personal TTS voice for this server. Use without arguments to reset to the server default.'
+  desc: 'Sets your personal TTS voice for this community. Use without arguments to reset to the community default.'
   params:
     - desc: 'The voice name. Omit to reset.'
       name: voice
@@ -928,7 +928,7 @@ ttsvoices_string:
 ttsblock:
   args:
     - '@user'
-  desc: 'Blocks or unblocks a user from using TTS in this server. Toggles the block state.'
+  desc: 'Blocks or unblocks a user from using TTS in this community. Toggles the block state.'
   params:
     - desc: 'The user to block or unblock.'
       name: user
@@ -937,7 +937,7 @@ ttsblock:
 ttsblock_IGuildUser:
   args:
     - '@user'
-  desc: 'Blocks or unblocks a user from using TTS in this server. Toggles the block state.'
+  desc: 'Blocks or unblocks a user from using TTS in this community. Toggles the block state.'
   params:
     - desc: 'The user to block or unblock.'
       name: user
@@ -946,7 +946,7 @@ ttsblock_IGuildUser:
 ttsblocklist:
   args:
     - ''
-  desc: 'Lists all users blocked from TTS in this server.'
+  desc: 'Lists all users blocked from TTS in this community.'
   params: [ ]
 ttsrole:
   args:
@@ -1004,7 +1004,7 @@ ttsmaxqueue_int:
 ttssettings:
   args:
     - ''
-  desc: 'Shows the current TTS settings for this guild and voice channel.'
+  desc: 'Shows the current TTS settings for this community and voice channel.'
   params: [ ]
 ttsremove:
   args:

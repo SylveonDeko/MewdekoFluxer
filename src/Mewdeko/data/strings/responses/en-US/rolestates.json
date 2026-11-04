@@ -15,7 +15,7 @@
   "role_states_roles_added_success": "Successfully added those roles to {0}'s Role State!",
   "role_states_roles_removed_from_deny": "{0} Successfully removed {1} role(s) from the deny list.",
   "role_states_roles_removed_success": "Successfully removed those roles from {0}'s Role State!",
-  "role_states_saved": "Successfully saved role states for {0} users in the server.",
+  "role_states_saved": "Successfully saved role states for {0} users in the community.",
   "role_states_set_success": "Successfully set role state for {0}.",
   "role_states_settings_title": "Role States Settings",
   "role_states_transfer_failed": "Failed to transfer role states. See details below:",

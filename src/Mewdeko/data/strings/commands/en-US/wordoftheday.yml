@@ -105,7 +105,7 @@ wotdadd:
   args:
     - serendipity
     - 'petrichor The pleasant smell after rain on dry ground'
-  desc: 'Adds a word to this server''s custom word list. If no definition is given, one is looked up automatically.'
+  desc: 'Adds a word to this community''s custom word list. If no definition is given, one is looked up automatically.'
   params:
     - desc: The word to add.
       name: word
@@ -118,7 +118,7 @@ wotdadd:
 wotdremove:
   args:
     - serendipity
-  desc: 'Removes a word from this server''s custom word list.'
+  desc: 'Removes a word from this community''s custom word list.'
   params:
     - desc: The word to remove.
       name: word
@@ -127,7 +127,7 @@ wotdremove:
 wotdlist:
   args:
     - ''
-  desc: 'Lists this server''s custom words and how often each has been posted.'
+  desc: 'Lists this community''s custom words and how often each has been posted.'
   params: [ ]
 wotdhistory:
   args:
@@ -147,7 +147,7 @@ wotdpost:
 wotdreset:
   args:
     - ''
-  desc: 'Resets all word of the day settings, custom words, and history for this server.'
+  desc: 'Resets all word of the day settings, custom words, and history for this community.'
   params: [ ]
 wotdday:
   args:
@@ -229,7 +229,7 @@ wotdthreadname:
     - ''
     - 'Sentence challenge: %wotd.word%'
     - clear
-  desc: 'Sets the name template for the discussion thread. Supports %wotd.word%, %wotd.date%, %wotd.pos%, and server placeholders. Send with no text to view the current template, or "clear" to reset.'
+  desc: 'Sets the name template for the discussion thread. Supports %wotd.word%, %wotd.date%, %wotd.pos%, and community placeholders. Send with no text to view the current template, or "clear" to reset.'
   params:
     - desc: The thread name template. Omit to view, or "clear" to reset.
       name: template

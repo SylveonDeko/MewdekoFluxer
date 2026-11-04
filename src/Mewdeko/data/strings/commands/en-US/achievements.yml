@@ -26,7 +26,7 @@ achlist:
   args:
     - ''
     - '@Someone'
-  desc: 'Shows every achievement in the server with progress, page by page.'
+  desc: 'Shows every achievement in the community with progress, page by page.'
   params:
     - desc: The member to look at. Defaults to you.
       name: user
@@ -66,7 +66,7 @@ achglobal:
   args:
     - ''
     - '@Someone'
-  desc: 'Shows achievements earned across every server: total points, servers, and global achievements.'
+  desc: 'Shows achievements earned across every community: total points, communities, and global achievements.'
   params:
     - desc: The user to look at. Defaults to you.
       name: user
@@ -77,7 +77,7 @@ achleaderboard:
     - ''
     - 'unlocked'
     - 'recent'
-  desc: 'Shows who has earned the most achievements in the server. Members who hide themselves are left out.'
+  desc: 'Shows who has earned the most achievements in the community. Members who hide themselves are left out.'
   params:
     - desc: Points, Unlocked, or Recent. Defaults to Points.
       name: sort
@@ -87,7 +87,7 @@ achgloballeaderboard:
   args:
     - ''
     - 'unlocked'
-  desc: 'Shows who has earned the most achievements across every server.'
+  desc: 'Shows who has earned the most achievements across every community.'
   params:
     - desc: Points, Unlocked, or Recent. Defaults to Points.
       name: sort
@@ -107,7 +107,7 @@ achstats:
   args:
     - ''
     - '@Someone'
-  desc: 'Shows every number achievements track: messages, voice time, reactions, invites, commands, time in the server, level, and reputation.'
+  desc: 'Shows every number achievements track: messages, voice time, reactions, invites, commands, time in the community, level, and reputation.'
   params:
     - desc: The member to look at. Defaults to you.
       name: user
@@ -133,7 +133,7 @@ achicon:
     - 'voice_hours_100 :partymic:'
     - '"Event Winner" https://example.com/trophy.png'
     - '"Night Owl"'
-  desc: 'Sets the icon an achievement shows in its image, the dashboard, and the apps: an icon name like trophy, a server emoji, or an https image link. Leave the icon out to use its category''s again.'
+  desc: 'Sets the icon an achievement shows in its image, the dashboard, and the apps: an icon name like trophy, a community emoji, or an https image link. Leave the icon out to use its category''s again.'
   params:
     - desc: The achievement name or key, in quotes when it has spaces.
       name: achievement
@@ -203,7 +203,7 @@ achnotify:
   args:
     - 'dm true'
     - 'mention false'
-  desc: 'Turns unlock DMs, unlock messages in the server, or mentions in them on or off for you.'
+  desc: 'Turns unlock DMs, unlock messages in the community, or mentions in them on or off for you.'
   params:
     - desc: Dm, Message, or Mention.
       name: option
@@ -216,12 +216,12 @@ achnotify:
 achmanage:
   args:
     - ''
-  desc: 'Lists every achievement in the server with its key, whether it is on, and how many members unlocked it.'
+  desc: 'Lists every achievement in the community with its key, whether it is on, and how many members unlocked it.'
   params: [ ]
 achtoggle:
   args:
     - ''
-  desc: 'Starts or pauses earning achievements in the server. Starting it also turns on message counting, and members who already qualify get their achievements quietly.'
+  desc: 'Starts or pauses earning achievements in the community. Starting it also turns on message counting, and members who already qualify get their achievements quietly.'
   params: [ ]
 achlogchannel:
   args:
@@ -330,7 +330,7 @@ achrevoke:
 achreset:
   args:
     - '@Someone'
-  desc: 'Clears every achievement a member has in the server after asking to confirm.'
+  desc: 'Clears every achievement a member has in the community after asking to confirm.'
   params:
     - desc: The member.
       name: user
@@ -361,7 +361,7 @@ achcreate:
 achcreatephrase:
   args:
     - '"good morning" Bronze Early Bird'
-  desc: 'Makes an achievement unlocked by saying a phrase anywhere in the server.'
+  desc: 'Makes an achievement unlocked by saying a phrase anywhere in the community.'
   params:
     - desc: The phrase, in quotes when it has spaces.
       name: phrase
@@ -408,7 +408,7 @@ achcreatemanual:
 achdelete:
   args:
     - 'Pizza Fan'
-  desc: 'Deletes an achievement the server made after asking to confirm. Everyone who unlocked it loses it.'
+  desc: 'Deletes an achievement the community made after asking to confirm. Everyone who unlocked it loses it.'
   params:
     - desc: The achievement name or key.
       name: achievement

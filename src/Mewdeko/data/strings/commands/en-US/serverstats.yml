@@ -3,9 +3,9 @@ serveractivity:
     - '[days]'
     - '7'
     - '0'
-  desc: 'Shows the server''s activity summary for a window: messages, voice time, contributors, joins and leaves, and the most active member and channels. Use 0 for all time.'
+  desc: 'Shows the community''s activity summary for a window: messages, voice time, contributors, joins and leaves, and the most active member and channels. Use 0 for all time.'
   params:
-    - desc: 'The window in days, 0 for all time, or omitted for the server default.'
+    - desc: 'The window in days, 0 for all time, or omitted for the community default.'
       name: days
       optional: true
       type: int
@@ -19,7 +19,7 @@ useractivity:
       name: user
       optional: true
       type: IGuildUser
-    - desc: 'The window in days, 0 for all time, or omitted for the server default.'
+    - desc: 'The window in days, 0 for all time, or omitted for the community default.'
       name: days
       optional: true
       type: int
@@ -32,7 +32,7 @@ channelactivity:
       name: channel
       optional: true
       type: IGuildChannel
-    - desc: 'The window in days, 0 for all time, or omitted for the server default.'
+    - desc: 'The window in days, 0 for all time, or omitted for the community default.'
       name: days
       optional: true
       type: int
@@ -46,7 +46,7 @@ activitytop:
       name: kind
       optional: true
       type: StatKind
-    - desc: 'The window in days, 0 for all time, or omitted for the server default.'
+    - desc: 'The window in days, 0 for all time, or omitted for the community default.'
       name: days
       optional: true
       type: int
@@ -63,7 +63,7 @@ activitytopchannels:
       name: kind
       optional: true
       type: StatKind
-    - desc: 'The window in days, 0 for all time, or omitted for the server default.'
+    - desc: 'The window in days, 0 for all time, or omitted for the community default.'
       name: days
       optional: true
       type: int
@@ -77,7 +77,7 @@ activitychart:
       name: kind
       optional: true
       type: StatChartKind
-    - desc: 'The window in days, 1 to 90, or omitted for the server default.'
+    - desc: 'The window in days, 1 to 90, or omitted for the community default.'
       name: days
       optional: true
       type: int
@@ -90,7 +90,7 @@ activityexport:
       name: kind
       optional: true
       type: StatKind
-    - desc: 'The window in days, 0 for all time, or omitted for the server default.'
+    - desc: 'The window in days, 0 for all time, or omitted for the community default.'
       name: days
       optional: true
       type: int
@@ -169,7 +169,7 @@ statsignored:
 statsprivacy:
   args:
     - ''
-  desc: 'Opts you out of activity stats in every server, permanently deleting your recorded message and voice stats, or opts you back in.'
+  desc: 'Opts you out of activity stats in every community, permanently deleting your recorded message and voice stats, or opts you back in.'
   params: [ ]
 topgames:
   args:
@@ -177,7 +177,7 @@ topgames:
     - '30'
   desc: 'Ranks the games and apps members spend the most time in over a window, with player counts. Requires game tracking to be enabled.'
   params:
-    - desc: 'The window in days, 0 for all time, or omitted for the server default.'
+    - desc: 'The window in days, 0 for all time, or omitted for the community default.'
       name: days
       optional: true
       type: int
@@ -272,7 +272,7 @@ liveboardrefresh:
 serverreportchannel:
   args:
     - '[#channel]'
-  desc: 'Sets the channel that receives scheduled server reports and enables them. Omit the channel to disable reports.'
+  desc: 'Sets the channel that receives scheduled community reports and enables them. Omit the channel to disable reports.'
   params:
     - desc: 'The channel, or omitted to disable.'
       name: channel
@@ -281,7 +281,7 @@ serverreportchannel:
 serverreportfrequency:
   args:
     - 'Weekly'
-  desc: 'Sets how often server reports are posted: Daily, Weekly or Monthly.'
+  desc: 'Sets how often community reports are posted: Daily, Weekly or Monthly.'
   params:
     - desc: 'Daily, Weekly or Monthly.'
       name: frequency
@@ -290,7 +290,7 @@ serverreportfrequency:
 serverreportnow:
   args:
     - '[Weekly]'
-  desc: 'Posts a server report right now in the current channel, covering the given period or the configured one.'
+  desc: 'Posts a community report right now in the current channel, covering the given period or the configured one.'
   params:
     - desc: 'The period to cover, or omitted for the configured one.'
       name: frequency
@@ -299,5 +299,5 @@ serverreportnow:
 serverreportshow:
   args:
     - ''
-  desc: 'Shows whether server reports are enabled, where they are posted and how often.'
+  desc: 'Shows whether community reports are enabled, where they are posted and how often.'
   params: [ ]

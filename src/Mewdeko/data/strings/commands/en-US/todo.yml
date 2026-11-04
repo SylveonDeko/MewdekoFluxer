@@ -100,9 +100,9 @@ todocreateserverlist:
   args:
     - name
     - description
-  desc: 'Creates a new server-wide todo list (admin only)'
+  desc: 'Creates a new community-wide todo list (admin only)'
   params:
-    - desc: The name of the server todo list.
+    - desc: The name of the community todo list.
       name: name
       optional: false
       type: string
@@ -190,7 +190,7 @@ todolists:
     - includeServer
   desc: 'Lists all todo lists accessible to the user'
   params:
-    - desc: Whether to include server-wide lists.
+    - desc: Whether to include community-wide lists.
       name: includeServer
       optional: true
       type: bool

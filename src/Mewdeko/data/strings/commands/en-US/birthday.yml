@@ -27,7 +27,7 @@ birthdayconfigreset:
 birthdaylist:
   args:
     - days
-  desc: 'Shows upcoming birthdays in the server.'
+  desc: 'Shows upcoming birthdays in the community.'
   params:
     - desc: How many days to look ahead. Default is 7, max is 30.
       name: days

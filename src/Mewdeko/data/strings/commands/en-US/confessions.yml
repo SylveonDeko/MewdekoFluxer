@@ -4,7 +4,7 @@ confess:
   desc: 'Allows users to confess anonymously.'
   params:
     - &ref_139
-      desc: 'The ID of the server.'
+      desc: 'The ID of the community.'
       name: serverId
       optional: false
       type: ulong
@@ -18,7 +18,7 @@ confess_ulong_string:
     - serverid text
   desc: 'Allows users to confess anonymously.'
   params:
-    - desc: 'The ID of the server.'
+    - desc: 'The ID of the community.'
       name: serverId
       optional: false
       type: ulong
@@ -31,7 +31,7 @@ confess_ulong_string_1:
     - serverid text
   desc: 'Allows users to confess anonymously.'
   params:
-    - desc: 'The ID of the server.'
+    - desc: 'The ID of the community.'
       name: serverId
       optional: false
       type: ulong
@@ -44,7 +44,7 @@ confess_ulong_string_2:
     - serverid text
   desc: 'Allows users to confess anonymously.'
   params:
-    - desc: 'The ID of the server.'
+    - desc: 'The ID of the community.'
       name: serverId
       optional: false
       type: ulong
@@ -149,9 +149,9 @@ confesslogchannel:
 confessreport:
   args:
     - 'serverId text'
-  desc: 'Reports a server for misuse of confessions.'
+  desc: 'Reports a community for misuse of confessions.'
   params:
-    - desc: 'The ID of the server abusing confessions.'
+    - desc: 'The ID of the community abusing confessions.'
       name: serverId
       optional: false
       type: ulong

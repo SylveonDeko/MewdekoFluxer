@@ -3,7 +3,7 @@ coprmonitoradd:
     - '<ownerProject> [channel] [packages]'
     - '<ownerProject> [channel] [packages]'
     - ownerProject
-  desc: 'Adds a COPR project monitor to the server.'
+  desc: 'Adds a COPR project monitor to the community.'
   params:
     - desc: The COPR project in format owner/project (e.g., linux4switch/l4s).
       name: ownerProject
@@ -21,7 +21,7 @@ coprmonitorremove:
   args:
     - '<ownerProject> [channel]'
     - ownerProject
-  desc: 'Removes a COPR project monitor from the server.'
+  desc: 'Removes a COPR project monitor from the community.'
   params:
     - desc: The COPR project in format owner/project.
       name: ownerProject
@@ -34,7 +34,7 @@ coprmonitorremove:
 coprmonitorlist:
   args:
     - ''
-  desc: 'Lists all COPR monitors configured in the server.'
+  desc: 'Lists all COPR monitors configured in the community.'
   params: [ ]
 coprmonitortoggle:
   args:

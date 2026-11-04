@@ -1598,6 +1598,14 @@
     ],
     "onMemberConflict": "skip"
   },
+  "JoinRoleTimeoutSettings": {
+    "action": "skip",
+    "reason": "required, exempt and action roles and the log channel are ids from the other platform and have to be set up again"
+  },
+  "JoinRoleTimeoutPending": {
+    "action": "skip",
+    "reason": "countdowns belong to members of the other platform"
+  },
   "LinkFixSettings": {
     "action": "copy",
     "scope": "guild",

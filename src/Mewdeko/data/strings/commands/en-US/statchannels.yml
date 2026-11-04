@@ -1,7 +1,7 @@
 statchannelcreate:
   args:
     - 'TotalMembers [template]'
-  desc: 'Creates a new locked voice channel displaying a server stat. The bot will create and manage the channel.'
+  desc: 'Creates a new locked voice channel displaying a community stat. The bot will create and manage the channel.'
   params:
     - desc: 'The stat type to display.'
       name: type
@@ -91,7 +91,7 @@ statchannelremove:
 statchannellist:
   args:
     - ''
-  desc: 'Lists all stat channels for this server.'
+  desc: 'Lists all stat channels for this community.'
   params: [ ]
 statchanneltwitchcounter:
   args:

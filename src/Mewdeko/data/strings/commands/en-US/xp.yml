@@ -357,62 +357,62 @@ endcompetition_int_2:
 leaderboard:
   args:
     - ''
-  desc: 'Shows the XP leaderboard for the server.'
+  desc: 'Shows the XP leaderboard for the community.'
   params: [ ]
 leaderboard_=:
   args:
     - 1
-  desc: 'Shows the XP leaderboard for the server.'
+  desc: 'Shows the XP leaderboard for the community.'
   params:
     -
-      desc: 'Shows the XP leaderboard for the server.'
+      desc: 'Shows the XP leaderboard for the community.'
       name: 1
       optional: false
       type: '='
 leaderboard_=_1:
   args:
     - 1
-  desc: 'Shows the XP leaderboard for the server.'
+  desc: 'Shows the XP leaderboard for the community.'
   params:
     -
-      desc: 'Shows the XP leaderboard for the server.'
+      desc: 'Shows the XP leaderboard for the community.'
       name: 1
       optional: false
       type: '='
 leaderboard_=_2:
   args:
     - 1
-  desc: 'Shows the XP leaderboard for the server.'
+  desc: 'Shows the XP leaderboard for the community.'
   params:
     -
-      desc: 'Shows the XP leaderboard for the server.'
+      desc: 'Shows the XP leaderboard for the community.'
       name: 1
       optional: false
       type: '='
 leaderboard_=_3:
   args:
     - 1
-  desc: 'Shows the XP leaderboard for the server.'
+  desc: 'Shows the XP leaderboard for the community.'
   params:
     -
-      desc: 'Shows the XP leaderboard for the server.'
+      desc: 'Shows the XP leaderboard for the community.'
       name: 1
       optional: false
       type: '='
 leaderboard_noparams:
   args:
     - ''
-  desc: 'Shows the XP leaderboard for the server.'
+  desc: 'Shows the XP leaderboard for the community.'
   params: [ ]
 leaderboard_noparams_1:
   args:
     - ''
-  desc: 'Shows the XP leaderboard for the server.'
+  desc: 'Shows the XP leaderboard for the community.'
   params: [ ]
 leaderboard_noparams_2:
   args:
     - ''
-  desc: 'Shows the XP leaderboard for the server.'
+  desc: 'Shows the XP leaderboard for the community.'
   params: [ ]
 levelnotif:
   args:
@@ -468,7 +468,7 @@ levelupchannel:
 levelupmessages:
   args:
     - ''
-  desc: 'Lists all custom level-up messages for this server.'
+  desc: 'Lists all custom level-up messages for this community.'
   params: [ ]
 leveluppings:
   args:
@@ -1066,7 +1066,7 @@ setxpexclusive:
 setxpmultiplier:
   args:
     - number
-  desc: 'Sets the server-wide XP multiplier.'
+  desc: 'Sets the community-wide XP multiplier.'
   params:
     - &ref_538
       desc: 'The XP multiplier value.'
@@ -1076,7 +1076,7 @@ setxpmultiplier:
 setxpmultiplier_double:
   args:
     - number
-  desc: 'Sets the server-wide XP multiplier.'
+  desc: 'Sets the community-wide XP multiplier.'
   params:
     -
       desc: 'The XP multiplier value.'
@@ -1086,7 +1086,7 @@ setxpmultiplier_double:
 setxpmultiplier_double_1:
   args:
     - number
-  desc: 'Sets the server-wide XP multiplier.'
+  desc: 'Sets the community-wide XP multiplier.'
   params:
     -
       desc: 'The XP multiplier value.'
@@ -1096,7 +1096,7 @@ setxpmultiplier_double_1:
 setxpmultiplier_double_2:
   args:
     - number
-  desc: 'Sets the server-wide XP multiplier.'
+  desc: 'Sets the community-wide XP multiplier.'
   params:
     -
       desc: 'The XP multiplier value.'
@@ -1106,7 +1106,7 @@ setxpmultiplier_double_2:
 syncallxproles:
   args:
     - ''
-  desc: 'Synchronizes XP roles for all users in the guild.'
+  desc: 'Synchronizes XP roles for all users in the community.'
   params: [ ]
 syncmyxproles:
   args:
@@ -1605,5 +1605,5 @@ xpinclude_ITextChannel_3:
 xpsettings:
   args:
     - ''
-  desc: 'Shows the server''s XP settings.'
+  desc: 'Shows the community''s XP settings.'
   params: [ ]

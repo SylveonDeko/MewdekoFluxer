@@ -351,7 +351,7 @@ buttoninfo_int_4:
 checkpanels:
   args:
     - ''
-  desc: 'Checks all panels in the guild for missing messages.'
+  desc: 'Checks all panels in the community for missing messages.'
   params: [ ]
 deletebutton:
   args:
@@ -594,32 +594,32 @@ panelinfo_ulong_4:
 panellist:
   args:
     - ''
-  desc: 'Lists all ticket panels in the guild.'
+  desc: 'Lists all ticket panels in the community.'
   params: [ ]
 panellist_noparams:
   args:
     - ''
-  desc: 'Lists all ticket panels in the guild.'
+  desc: 'Lists all ticket panels in the community.'
   params: [ ]
 panellist_noparams_1:
   args:
     - ''
-  desc: 'Lists all ticket panels in the guild.'
+  desc: 'Lists all ticket panels in the community.'
   params: [ ]
 panellist_noparams_2:
   args:
     - ''
-  desc: 'Lists all ticket panels in the guild.'
+  desc: 'Lists all ticket panels in the community.'
   params: [ ]
 panellist_noparams_3:
   args:
     - ''
-  desc: 'Lists all ticket panels in the guild.'
+  desc: 'Lists all ticket panels in the community.'
   params: [ ]
 panellist_noparams_4:
   args:
     - ''
-  desc: 'Lists all ticket panels in the guild.'
+  desc: 'Lists all ticket panels in the community.'
   params: [ ]
 recreateallpanels:
   args:
@@ -1900,7 +1900,7 @@ ticketlistpanel_ulong_4:
 ticketlistpanels:
   args:
     - ''
-  desc: 'Lists all ticket panels in the guild'
+  desc: 'Lists all ticket panels in the community'
   params: [ ]
 ticketlogchannel:
   args:
@@ -2217,7 +2217,7 @@ ticketresponsetime:
 ticketstats:
   args:
     - ''
-  desc: 'Shows ticket statistics for the guild.'
+  desc: 'Shows ticket statistics for the community.'
   params: [ ]
 tickettranscriptchannel:
   args:

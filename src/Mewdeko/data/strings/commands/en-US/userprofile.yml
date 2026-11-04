@@ -7,7 +7,7 @@ greetdmoptout:
   args:
     - ''
   desc: >-
-    Allows a user to toggle opting out of greet dms. Only works if the server
+    Allows a user to toggle opting out of greet dms. Only works if the community
     they are joining uses mewdeko for dm greets.
   params: [ ]
 profile:

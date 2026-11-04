@@ -377,7 +377,7 @@ minsuggestionlength_int_2:
 setsuggestchannel:
   args:
     - '[@channel]'
-  desc: 'Sets or disables the suggestion channel for the server.'
+  desc: 'Sets or disables the suggestion channel for the community.'
   params:
     - desc: 'The text channel to set as the suggestion channel. If null, disables suggestions.'
       name: channel
@@ -423,7 +423,7 @@ suggest_string_2:
 suggestclear:
   args:
     - ''
-  desc: 'Clears all suggestions from the server.'
+  desc: 'Clears all suggestions from the community.'
   params: [ ]
 suggestinfo:
   args:

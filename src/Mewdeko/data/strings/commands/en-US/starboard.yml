@@ -17,7 +17,7 @@ createstarboard:
   args:
     - channel emote 1
     - channel emote
-  desc: 'Creates a new starboard configuration for the guild.'
+  desc: 'Creates a new starboard configuration for the community.'
   params:
     - &ref_156
       desc: 'The channel where starred messages will be posted.'
@@ -29,7 +29,7 @@ createstarboard:
       name: emote
       optional: false
       type: IEmote
-    - desc: 'Creates a new starboard configuration for the guild.'
+    - desc: 'Creates a new starboard configuration for the community.'
       name: 1
       optional: false
       type: '='
@@ -37,7 +37,7 @@ createstarboard_ITextChannel_IEmote_=:
   args:
     - channel emote 1
     - channel emote
-  desc: 'Creates a new starboard configuration for the guild.'
+  desc: 'Creates a new starboard configuration for the community.'
   params:
     - desc: 'The channel where starred messages will be posted.'
       name: channel
@@ -47,7 +47,7 @@ createstarboard_ITextChannel_IEmote_=:
       name: emote
       optional: false
       type: IEmote
-    - desc: 'Creates a new starboard configuration for the guild.'
+    - desc: 'Creates a new starboard configuration for the community.'
       name: 1
       optional: false
       type: '='
@@ -55,7 +55,7 @@ createstarboard_ITextChannel_IEmote_=_1:
   args:
     - channel emote 1
     - channel emote
-  desc: 'Creates a new starboard configuration for the guild.'
+  desc: 'Creates a new starboard configuration for the community.'
   params:
     - desc: 'The channel where starred messages will be posted.'
       name: channel
@@ -65,7 +65,7 @@ createstarboard_ITextChannel_IEmote_=_1:
       name: emote
       optional: false
       type: IEmote
-    - desc: 'Creates a new starboard configuration for the guild.'
+    - desc: 'Creates a new starboard configuration for the community.'
       name: 1
       optional: false
       type: '='
@@ -73,7 +73,7 @@ createstarboard_ITextChannel_IEmote_=_2:
   args:
     - channel emote 1
     - channel emote
-  desc: 'Creates a new starboard configuration for the guild.'
+  desc: 'Creates a new starboard configuration for the community.'
   params:
     - desc: 'The channel where starred messages will be posted.'
       name: channel
@@ -83,14 +83,14 @@ createstarboard_ITextChannel_IEmote_=_2:
       name: emote
       optional: false
       type: IEmote
-    - desc: 'Creates a new starboard configuration for the guild.'
+    - desc: 'Creates a new starboard configuration for the community.'
       name: 1
       optional: false
       type: '='
 deletestarboard:
   args:
     - number
-  desc: 'Removes a starboard configuration from the guild.'
+  desc: 'Removes a starboard configuration from the community.'
   params:
     - &ref_190
       desc: 'The ID of the starboard to remove.'
@@ -100,7 +100,7 @@ deletestarboard:
 deletestarboard_int:
   args:
     - number
-  desc: 'Removes a starboard configuration from the guild.'
+  desc: 'Removes a starboard configuration from the community.'
   params:
     - desc: 'The ID of the starboard to remove.'
       name: starboardId
@@ -109,7 +109,7 @@ deletestarboard_int:
 deletestarboard_int_1:
   args:
     - number
-  desc: 'Removes a starboard configuration from the guild.'
+  desc: 'Removes a starboard configuration from the community.'
   params:
     - desc: 'The ID of the starboard to remove.'
       name: starboardId
@@ -118,7 +118,7 @@ deletestarboard_int_1:
 deletestarboard_int_2:
   args:
     - number
-  desc: 'Removes a starboard configuration from the guild.'
+  desc: 'Removes a starboard configuration from the community.'
   params:
     - desc: 'The ID of the starboard to remove.'
       name: starboardId
@@ -127,7 +127,7 @@ deletestarboard_int_2:
 liststarboards:
   args:
     - ''
-  desc: 'Lists all starboard configurations in the guild.'
+  desc: 'Lists all starboard configurations in the community.'
   params: [ ]
 removestarboardemote:
   args:
@@ -437,7 +437,7 @@ starboardremoveonreactionsclear:
 starboardstats:
   args:
     - ''
-  desc: 'Shows starboard statistics for the guild.'
+  desc: 'Shows starboard statistics for the community.'
   params: [ ]
 starboarduserstats:
   args:

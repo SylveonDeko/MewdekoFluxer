@@ -10,7 +10,7 @@ mcstatus:
 mcadd:
   args:
     - name address
-  desc: 'Adds a Minecraft server to the guild. Prefix address with bedrock: for Bedrock servers.'
+  desc: 'Adds a Minecraft server to the community. Prefix address with bedrock: for Bedrock servers.'
   params:
     - desc: 'A label for the server.'
       name: name
@@ -23,7 +23,7 @@ mcadd:
 mcremove:
   args:
     - name
-  desc: 'Removes a Minecraft server from the guild.'
+  desc: 'Removes a Minecraft server from the community.'
   params:
     - desc: 'The name of the server to remove.'
       name: name
@@ -32,7 +32,7 @@ mcremove:
 mclist:
   args:
     - ''
-  desc: 'Lists all registered Minecraft servers for this guild.'
+  desc: 'Lists all registered Minecraft servers for this community.'
   params: [ ]
 mcdefault:
   args:

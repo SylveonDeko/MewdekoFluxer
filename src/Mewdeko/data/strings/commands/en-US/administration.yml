@@ -1,20 +1,20 @@
 adsarm:
   args:
     - ''
-  desc: 'Toggles the auto delete of server advertisement messages.'
+  desc: 'Toggles the auto delete of community advertisement messages.'
   params: [ ]
 antialt:
   args:
     - ''
   desc: >-
-    Configures the Anti-Alt protection for the guild, setting the minimum account
+    Configures the Anti-Alt protection for the community, setting the minimum account
     age and punishment action with a role-based punishment.
   params: [ ]
 antipattern:
   args:
     - ''
   desc: >-
-    Configures the Anti-Pattern protection for the guild, setting the punishment
+    Configures the Anti-Pattern protection for the community, setting the punishment
     action with a role-based punishment.
   params: [ ]
 antipattern_PunishmentAction_=:
@@ -22,7 +22,7 @@ antipattern_PunishmentAction_=:
     - '<action> [punishTime]'
     - action
   desc: >-
-    Configures the Anti-Pattern protection for the guild, setting the punishment
+    Configures the Anti-Pattern protection for the community, setting the punishment
     action with a role-based punishment.
   params:
     - desc: The punishment action to be taken against detected pattern matches.
@@ -37,7 +37,7 @@ antipattern_PunishmentAction_IRole:
   args:
     - action @role
   desc: >-
-    Configures the Anti-Pattern protection for the guild, setting the punishment
+    Configures the Anti-Pattern protection for the community, setting the punishment
     action with a role-based punishment.
   params:
     - desc: The punishment action to be taken against detected pattern matches.
@@ -51,7 +51,7 @@ antipattern_PunishmentAction_IRole:
 clearserverrecover:
   args:
     - ''
-  desc: 'Clears the stored server recovery setup after asking for confirmation.'
+  desc: 'Clears the stored community recovery setup after asking for confirmation.'
   params: [ ]
 patternadd:
   args:
@@ -112,7 +112,7 @@ antialt_StoopidTime_PunishmentAction_=:
     - '<minAge> <action> [punishTime]'
     - minage action
   desc: >-
-    Configures the Anti-Alt protection for the guild, setting the minimum account
+    Configures the Anti-Alt protection for the community, setting the minimum account
     age and punishment action with a role-based punishment.
   params:
     - desc: 'The minimum age (in minutes) for accounts to be considered as alts.'
@@ -124,7 +124,7 @@ antialt_StoopidTime_PunishmentAction_=:
       optional: false
       type: punishment
     - desc: >-
-        Configures the Anti-Alt protection for the guild, setting the minimum account
+        Configures the Anti-Alt protection for the community, setting the minimum account
         age and punishment action with a role-based punishment.
       name: punishTime
       optional: true
@@ -134,7 +134,7 @@ antialt_StoopidTime_PunishmentAction_=_1:
     - '<minAge> <action> [punishTime]'
     - minage action
   desc: >-
-    Configures the Anti-Alt protection for the guild, setting the minimum account
+    Configures the Anti-Alt protection for the community, setting the minimum account
     age and punishment action with a role-based punishment.
   params:
     - desc: 'The minimum age (in minutes) for accounts to be considered as alts.'
@@ -146,7 +146,7 @@ antialt_StoopidTime_PunishmentAction_=_1:
       optional: false
       type: punishment
     - desc: >-
-        Configures the Anti-Alt protection for the guild, setting the minimum account
+        Configures the Anti-Alt protection for the community, setting the minimum account
         age and punishment action with a role-based punishment.
       name: punishTime
       optional: true
@@ -156,7 +156,7 @@ antialt_StoopidTime_PunishmentAction_=_2:
     - '<minAge> <action> [punishTime]'
     - minage action
   desc: >-
-    Configures the Anti-Alt protection for the guild, setting the minimum account
+    Configures the Anti-Alt protection for the community, setting the minimum account
     age and punishment action with a role-based punishment.
   params:
     - desc: 'The minimum age (in minutes) for accounts to be considered as alts.'
@@ -168,7 +168,7 @@ antialt_StoopidTime_PunishmentAction_=_2:
       optional: false
       type: punishment
     - desc: >-
-        Configures the Anti-Alt protection for the guild, setting the minimum account
+        Configures the Anti-Alt protection for the community, setting the minimum account
         age and punishment action with a role-based punishment.
       name: punishTime
       optional: true
@@ -178,7 +178,7 @@ antialt_StoopidTime_PunishmentAction_=_3:
     - '<minAge> <action> [punishTime]'
     - minage action
   desc: >-
-    Configures the Anti-Alt protection for the guild, setting the minimum account
+    Configures the Anti-Alt protection for the community, setting the minimum account
     age and punishment action with a role-based punishment.
   params:
     - desc: 'The minimum age (in minutes) for accounts to be considered as alts.'
@@ -190,7 +190,7 @@ antialt_StoopidTime_PunishmentAction_=_3:
       optional: false
       type: punishment
     - desc: >-
-        Configures the Anti-Alt protection for the guild, setting the minimum account
+        Configures the Anti-Alt protection for the community, setting the minimum account
         age and punishment action with a role-based punishment.
       name: punishTime
       optional: true
@@ -199,7 +199,7 @@ antialt_StoopidTime_PunishmentAction_IRole:
   args:
     - minage action @role
   desc: >-
-    Configures the Anti-Alt protection for the guild, setting the minimum account
+    Configures the Anti-Alt protection for the community, setting the minimum account
     age and punishment action with a role-based punishment.
   params:
     - desc: 'The minimum age (in minutes) for accounts to be considered as alts.'
@@ -219,7 +219,7 @@ antialt_StoopidTime_PunishmentAction_IRole_1:
   args:
     - minage action @role
   desc: >-
-    Configures the Anti-Alt protection for the guild, setting the minimum account
+    Configures the Anti-Alt protection for the community, setting the minimum account
     age and punishment action with a role-based punishment.
   params:
     - desc: 'The minimum age (in minutes) for accounts to be considered as alts.'
@@ -238,7 +238,7 @@ antialt_StoopidTime_PunishmentAction_IRole_2:
   args:
     - minage action @role
   desc: >-
-    Configures the Anti-Alt protection for the guild, setting the minimum account
+    Configures the Anti-Alt protection for the community, setting the minimum account
     age and punishment action with a role-based punishment.
   params:
     - desc: 'The minimum age (in minutes) for accounts to be considered as alts.'
@@ -257,7 +257,7 @@ antialt_StoopidTime_PunishmentAction_IRole_3:
   args:
     - minage action @role
   desc: >-
-    Configures the Anti-Alt protection for the guild, setting the minimum account
+    Configures the Anti-Alt protection for the community, setting the minimum account
     age and punishment action with a role-based punishment.
   params:
     - desc: 'The minimum age (in minutes) for accounts to be considered as alts.'
@@ -276,28 +276,28 @@ antialt_noparams:
   args:
     - ''
   desc: >-
-    Configures the Anti-Alt protection for the guild, setting the minimum account
+    Configures the Anti-Alt protection for the community, setting the minimum account
     age and punishment action with a role-based punishment.
   params: [ ]
 antialt_noparams_1:
   args:
     - ''
   desc: >-
-    Configures the Anti-Alt protection for the guild, setting the minimum account
+    Configures the Anti-Alt protection for the community, setting the minimum account
     age and punishment action with a role-based punishment.
   params: [ ]
 antialt_noparams_2:
   args:
     - ''
   desc: >-
-    Configures the Anti-Alt protection for the guild, setting the minimum account
+    Configures the Anti-Alt protection for the community, setting the minimum account
     age and punishment action with a role-based punishment.
   params: [ ]
 antimassmention:
   args:
     - ''
   desc: >-
-    Configures the Anti-Mass-Mention protection for the guild, setting the
+    Configures the Anti-Mass-Mention protection for the community, setting the
     mention threshold for a single message, the time window for mention tracking,
     the maximum allowed mentions in the time window, and the punishment action
     with a role-based punishment.
@@ -307,7 +307,7 @@ antimassmention_int_int_int_bool_PunishmentAction_=:
     - '<mentionThreshold> <timeWindowSeconds> <maxMentionsInTimeWindow> <ignoreBots> <action> [punishTime]'
     - number number number true|false action
   desc: >-
-    Configures the Anti-Mass-Mention protection for the guild, setting the
+    Configures the Anti-Mass-Mention protection for the community, setting the
     mention threshold for a single message, the time window for mention tracking,
     the maximum allowed mentions in the time window, and the punishment action
     with a role-based punishment.
@@ -333,7 +333,7 @@ antimassmention_int_int_int_bool_PunishmentAction_=:
       optional: false
       type: punishment
     - desc: >-
-        Configures the Anti-Mass-Mention protection for the guild, setting the
+        Configures the Anti-Mass-Mention protection for the community, setting the
         mention threshold for a single message, the time window for mention tracking,
         the maximum allowed mentions in the time window, and the punishment action
         with a role-based punishment.
@@ -345,7 +345,7 @@ antimassmention_int_int_int_bool_PunishmentAction_=_1:
     - '<mentionThreshold> <timeWindowSeconds> <maxMentionsInTimeWindow> <ignoreBots> <action> [punishTime]'
     - number number number true|false action
   desc: >-
-    Configures the Anti-Mass-Mention protection for the guild, setting the
+    Configures the Anti-Mass-Mention protection for the community, setting the
     mention threshold for a single message, the time window for mention tracking,
     the maximum allowed mentions in the time window, and the punishment action
     with a role-based punishment.
@@ -371,7 +371,7 @@ antimassmention_int_int_int_bool_PunishmentAction_=_1:
       optional: false
       type: punishment
     - desc: >-
-        Configures the Anti-Mass-Mention protection for the guild, setting the
+        Configures the Anti-Mass-Mention protection for the community, setting the
         mention threshold for a single message, the time window for mention tracking,
         the maximum allowed mentions in the time window, and the punishment action
         with a role-based punishment.
@@ -383,7 +383,7 @@ antimassmention_int_int_int_bool_PunishmentAction_=_2:
     - '<mentionThreshold> <timeWindowSeconds> <maxMentionsInTimeWindow> <ignoreBots> <action> [punishTime]'
     - number number number true|false action
   desc: >-
-    Configures the Anti-Mass-Mention protection for the guild, setting the
+    Configures the Anti-Mass-Mention protection for the community, setting the
     mention threshold for a single message, the time window for mention tracking,
     the maximum allowed mentions in the time window, and the punishment action
     with a role-based punishment.
@@ -409,7 +409,7 @@ antimassmention_int_int_int_bool_PunishmentAction_=_2:
       optional: false
       type: punishment
     - desc: >-
-        Configures the Anti-Mass-Mention protection for the guild, setting the
+        Configures the Anti-Mass-Mention protection for the community, setting the
         mention threshold for a single message, the time window for mention tracking,
         the maximum allowed mentions in the time window, and the punishment action
         with a role-based punishment.
@@ -421,7 +421,7 @@ antimassmention_int_int_int_bool_PunishmentAction_=_3:
     - '<mentionThreshold> <timeWindowSeconds> <maxMentionsInTimeWindow> <ignoreBots> <action> [punishTime]'
     - number number number true|false action
   desc: >-
-    Configures the Anti-Mass-Mention protection for the guild, setting the
+    Configures the Anti-Mass-Mention protection for the community, setting the
     mention threshold for a single message, the time window for mention tracking,
     the maximum allowed mentions in the time window, and the punishment action
     with a role-based punishment.
@@ -447,7 +447,7 @@ antimassmention_int_int_int_bool_PunishmentAction_=_3:
       optional: false
       type: punishment
     - desc: >-
-        Configures the Anti-Mass-Mention protection for the guild, setting the
+        Configures the Anti-Mass-Mention protection for the community, setting the
         mention threshold for a single message, the time window for mention tracking,
         the maximum allowed mentions in the time window, and the punishment action
         with a role-based punishment.
@@ -458,7 +458,7 @@ antimassmention_int_int_int_bool_PunishmentAction_IRole:
   args:
     - number number number true|false action @role
   desc: >-
-    Configures the Anti-Mass-Mention protection for the guild, setting the
+    Configures the Anti-Mass-Mention protection for the community, setting the
     mention threshold for a single message, the time window for mention tracking,
     the maximum allowed mentions in the time window, and the punishment action
     with a role-based punishment.
@@ -492,7 +492,7 @@ antimassmention_int_int_int_bool_PunishmentAction_IRole_1:
   args:
     - number number number true|false action @role
   desc: >-
-    Configures the Anti-Mass-Mention protection for the guild, setting the
+    Configures the Anti-Mass-Mention protection for the community, setting the
     mention threshold for a single message, the time window for mention tracking,
     the maximum allowed mentions in the time window, and the punishment action
     with a role-based punishment.
@@ -525,7 +525,7 @@ antimassmention_int_int_int_bool_PunishmentAction_IRole_2:
   args:
     - number number number true|false action @role
   desc: >-
-    Configures the Anti-Mass-Mention protection for the guild, setting the
+    Configures the Anti-Mass-Mention protection for the community, setting the
     mention threshold for a single message, the time window for mention tracking,
     the maximum allowed mentions in the time window, and the punishment action
     with a role-based punishment.
@@ -558,7 +558,7 @@ antimassmention_int_int_int_bool_PunishmentAction_IRole_3:
   args:
     - number number number true|false action @role
   desc: >-
-    Configures the Anti-Mass-Mention protection for the guild, setting the
+    Configures the Anti-Mass-Mention protection for the community, setting the
     mention threshold for a single message, the time window for mention tracking,
     the maximum allowed mentions in the time window, and the punishment action
     with a role-based punishment.
@@ -591,7 +591,7 @@ antimassmention_noparams:
   args:
     - ''
   desc: >-
-    Configures the Anti-Mass-Mention protection for the guild, setting the
+    Configures the Anti-Mass-Mention protection for the community, setting the
     mention threshold for a single message, the time window for mention tracking,
     the maximum allowed mentions in the time window, and the punishment action
     with a role-based punishment.
@@ -600,7 +600,7 @@ antimassmention_noparams_1:
   args:
     - ''
   desc: >-
-    Configures the Anti-Mass-Mention protection for the guild, setting the
+    Configures the Anti-Mass-Mention protection for the community, setting the
     mention threshold for a single message, the time window for mention tracking,
     the maximum allowed mentions in the time window, and the punishment action
     with a role-based punishment.
@@ -609,7 +609,7 @@ antimassmention_noparams_2:
   args:
     - ''
   desc: >-
-    Configures the Anti-Mass-Mention protection for the guild, setting the
+    Configures the Anti-Mass-Mention protection for the community, setting the
     mention threshold for a single message, the time window for mention tracking,
     the maximum allowed mentions in the time window, and the punishment action
     with a role-based punishment.
@@ -618,14 +618,14 @@ antiraid:
   args:
     - ''
   desc: >-
-    Configures the Anti-Raid protection for the guild, setting the user
+    Configures the Anti-Raid protection for the community, setting the user
     threshold, detection time window, and punishment action.
   params: [ ]
 antiraid_int_int_PunishmentAction:
   args:
     - number number action
   desc: >-
-    Configures the Anti-Raid protection for the guild, setting the user
+    Configures the Anti-Raid protection for the community, setting the user
     threshold, detection time window, and punishment action.
   params:
     - &ref_76
@@ -647,7 +647,7 @@ antiraid_int_int_PunishmentAction_1:
   args:
     - number number action
   desc: >-
-    Configures the Anti-Raid protection for the guild, setting the user
+    Configures the Anti-Raid protection for the community, setting the user
     threshold, detection time window, and punishment action.
   params:
     - desc: 'The threshold of users that triggers the detection of a raid.'
@@ -666,7 +666,7 @@ antiraid_int_int_PunishmentAction_2:
   args:
     - number number action
   desc: >-
-    Configures the Anti-Raid protection for the guild, setting the user
+    Configures the Anti-Raid protection for the community, setting the user
     threshold, detection time window, and punishment action.
   params:
     - desc: 'The threshold of users that triggers the detection of a raid.'
@@ -685,7 +685,7 @@ antiraid_int_int_PunishmentAction_3:
   args:
     - number number action
   desc: >-
-    Configures the Anti-Raid protection for the guild, setting the user
+    Configures the Anti-Raid protection for the community, setting the user
     threshold, detection time window, and punishment action.
   params:
     - desc: 'The threshold of users that triggers the detection of a raid.'
@@ -704,7 +704,7 @@ antiraid_int_int_PunishmentAction_StoopidTime:
   args:
     - number number action time
   desc: >-
-    Configures the Anti-Raid protection for the guild, setting the user
+    Configures the Anti-Raid protection for the community, setting the user
     threshold, detection time window, and punishment action.
   params:
     - desc: 'The threshold of users that triggers the detection of a raid.'
@@ -721,7 +721,7 @@ antiraid_int_int_PunishmentAction_StoopidTime:
       type: PunishmentAction
     - &ref_79
       desc: >-
-        Configures the Anti-Raid protection for the guild, setting the user
+        Configures the Anti-Raid protection for the community, setting the user
         threshold, detection time window, and punishment action.
       name: punishTime
       optional: false
@@ -730,7 +730,7 @@ antiraid_int_int_PunishmentAction_StoopidTime_1:
   args:
     - number number action time
   desc: >-
-    Configures the Anti-Raid protection for the guild, setting the user
+    Configures the Anti-Raid protection for the community, setting the user
     threshold, detection time window, and punishment action.
   params:
     - desc: 'The threshold of users that triggers the detection of a raid.'
@@ -746,7 +746,7 @@ antiraid_int_int_PunishmentAction_StoopidTime_1:
       optional: false
       type: PunishmentAction
     - desc: >-
-        Configures the Anti-Raid protection for the guild, setting the user
+        Configures the Anti-Raid protection for the community, setting the user
         threshold, detection time window, and punishment action.
       name: punishTime
       optional: false
@@ -755,7 +755,7 @@ antiraid_int_int_PunishmentAction_StoopidTime_2:
   args:
     - number number action time
   desc: >-
-    Configures the Anti-Raid protection for the guild, setting the user
+    Configures the Anti-Raid protection for the community, setting the user
     threshold, detection time window, and punishment action.
   params:
     - desc: 'The threshold of users that triggers the detection of a raid.'
@@ -771,7 +771,7 @@ antiraid_int_int_PunishmentAction_StoopidTime_2:
       optional: false
       type: PunishmentAction
     - desc: >-
-        Configures the Anti-Raid protection for the guild, setting the user
+        Configures the Anti-Raid protection for the community, setting the user
         threshold, detection time window, and punishment action.
       name: punishTime
       optional: false
@@ -780,7 +780,7 @@ antiraid_int_int_PunishmentAction_StoopidTime_3:
   args:
     - number number action time
   desc: >-
-    Configures the Anti-Raid protection for the guild, setting the user
+    Configures the Anti-Raid protection for the community, setting the user
     threshold, detection time window, and punishment action.
   params:
     - desc: 'The threshold of users that triggers the detection of a raid.'
@@ -796,7 +796,7 @@ antiraid_int_int_PunishmentAction_StoopidTime_3:
       optional: false
       type: PunishmentAction
     - desc: >-
-        Configures the Anti-Raid protection for the guild, setting the user
+        Configures the Anti-Raid protection for the community, setting the user
         threshold, detection time window, and punishment action.
       name: punishTime
       optional: false
@@ -805,35 +805,35 @@ antiraid_noparams:
   args:
     - ''
   desc: >-
-    Configures the Anti-Raid protection for the guild, setting the user
+    Configures the Anti-Raid protection for the community, setting the user
     threshold, detection time window, and punishment action.
   params: [ ]
 antiraid_noparams_1:
   args:
     - ''
   desc: >-
-    Configures the Anti-Raid protection for the guild, setting the user
+    Configures the Anti-Raid protection for the community, setting the user
     threshold, detection time window, and punishment action.
   params: [ ]
 antiraid_noparams_2:
   args:
     - ''
   desc: >-
-    Configures the Anti-Raid protection for the guild, setting the user
+    Configures the Anti-Raid protection for the community, setting the user
     threshold, detection time window, and punishment action.
   params: [ ]
 antispam:
   args:
     - ''
   desc: >-
-    Configures the Anti-Spam protection for the guild, setting the message count
+    Configures the Anti-Spam protection for the community, setting the message count
     threshold and punishment action.
   params: [ ]
 antispam_int_PunishmentAction:
   args:
     - number action
   desc: >-
-    Configures the Anti-Spam protection for the guild, setting the message count
+    Configures the Anti-Spam protection for the community, setting the message count
     threshold and punishment action.
   params:
     - &ref_80
@@ -850,7 +850,7 @@ antispam_int_PunishmentAction_1:
   args:
     - number action
   desc: >-
-    Configures the Anti-Spam protection for the guild, setting the message count
+    Configures the Anti-Spam protection for the community, setting the message count
     threshold and punishment action.
   params:
     - desc: 'The threshold of messages that triggers the detection of spam.'
@@ -866,7 +866,7 @@ antispam_int_PunishmentAction_2:
   args:
     - number action
   desc: >-
-    Configures the Anti-Spam protection for the guild, setting the message count
+    Configures the Anti-Spam protection for the community, setting the message count
     threshold and punishment action.
   params:
     - desc: 'The threshold of messages that triggers the detection of spam.'
@@ -881,7 +881,7 @@ antispam_int_PunishmentAction_3:
   args:
     - number action
   desc: >-
-    Configures the Anti-Spam protection for the guild, setting the message count
+    Configures the Anti-Spam protection for the community, setting the message count
     threshold and punishment action.
   params:
     - desc: 'The threshold of messages that triggers the detection of spam.'
@@ -896,7 +896,7 @@ antispam_int_PunishmentAction_IRole:
   args:
     - number action @role
   desc: >-
-    Configures the Anti-Spam protection for the guild, setting the message count
+    Configures the Anti-Spam protection for the community, setting the message count
     threshold and punishment action.
   params:
     - desc: 'The threshold of messages that triggers the detection of spam.'
@@ -909,7 +909,7 @@ antispam_int_PunishmentAction_IRole:
       type: PunishmentAction
     - &ref_83
       desc: >-
-        Configures the Anti-Spam protection for the guild, setting the message count
+        Configures the Anti-Spam protection for the community, setting the message count
         threshold and punishment action.
       name: role
       optional: false
@@ -918,7 +918,7 @@ antispam_int_PunishmentAction_IRole_1:
   args:
     - number action @role
   desc: >-
-    Configures the Anti-Spam protection for the guild, setting the message count
+    Configures the Anti-Spam protection for the community, setting the message count
     threshold and punishment action.
   params:
     - desc: 'The threshold of messages that triggers the detection of spam.'
@@ -930,7 +930,7 @@ antispam_int_PunishmentAction_IRole_1:
       optional: false
       type: PunishmentAction
     - desc: >-
-        Configures the Anti-Spam protection for the guild, setting the message count
+        Configures the Anti-Spam protection for the community, setting the message count
         threshold and punishment action.
       name: role
       optional: false
@@ -939,7 +939,7 @@ antispam_int_PunishmentAction_IRole_2:
   args:
     - number action @role
   desc: >-
-    Configures the Anti-Spam protection for the guild, setting the message count
+    Configures the Anti-Spam protection for the community, setting the message count
     threshold and punishment action.
   params:
     - desc: 'The threshold of messages that triggers the detection of spam.'
@@ -951,7 +951,7 @@ antispam_int_PunishmentAction_IRole_2:
       optional: false
       type: PunishmentAction
     - desc: >-
-        Configures the Anti-Spam protection for the guild, setting the message count
+        Configures the Anti-Spam protection for the community, setting the message count
         threshold and punishment action.
       name: role
       optional: false
@@ -960,7 +960,7 @@ antispam_int_PunishmentAction_IRole_3:
   args:
     - number action @role
   desc: >-
-    Configures the Anti-Spam protection for the guild, setting the message count
+    Configures the Anti-Spam protection for the community, setting the message count
     threshold and punishment action.
   params:
     - desc: 'The threshold of messages that triggers the detection of spam.'
@@ -972,7 +972,7 @@ antispam_int_PunishmentAction_IRole_3:
       optional: false
       type: PunishmentAction
     - desc: >-
-        Configures the Anti-Spam protection for the guild, setting the message count
+        Configures the Anti-Spam protection for the community, setting the message count
         threshold and punishment action.
       name: role
       optional: false
@@ -981,7 +981,7 @@ antispam_int_PunishmentAction_StoopidTime:
   args:
     - number action time
   desc: >-
-    Configures the Anti-Spam protection for the guild, setting the message count
+    Configures the Anti-Spam protection for the community, setting the message count
     threshold and punishment action.
   params:
     - desc: 'The threshold of messages that triggers the detection of spam.'
@@ -994,7 +994,7 @@ antispam_int_PunishmentAction_StoopidTime:
       type: PunishmentAction
     - &ref_84
       desc: >-
-        Configures the Anti-Spam protection for the guild, setting the message count
+        Configures the Anti-Spam protection for the community, setting the message count
         threshold and punishment action.
       name: punishTime
       optional: false
@@ -1003,7 +1003,7 @@ antispam_int_PunishmentAction_StoopidTime_1:
   args:
     - number action time
   desc: >-
-    Configures the Anti-Spam protection for the guild, setting the message count
+    Configures the Anti-Spam protection for the community, setting the message count
     threshold and punishment action.
   params:
     - desc: 'The threshold of messages that triggers the detection of spam.'
@@ -1015,7 +1015,7 @@ antispam_int_PunishmentAction_StoopidTime_1:
       optional: false
       type: PunishmentAction
     - desc: >-
-        Configures the Anti-Spam protection for the guild, setting the message count
+        Configures the Anti-Spam protection for the community, setting the message count
         threshold and punishment action.
       name: punishTime
       optional: false
@@ -1024,7 +1024,7 @@ antispam_int_PunishmentAction_StoopidTime_2:
   args:
     - number action time
   desc: >-
-    Configures the Anti-Spam protection for the guild, setting the message count
+    Configures the Anti-Spam protection for the community, setting the message count
     threshold and punishment action.
   params:
     - desc: 'The threshold of messages that triggers the detection of spam.'
@@ -1036,7 +1036,7 @@ antispam_int_PunishmentAction_StoopidTime_2:
       optional: false
       type: PunishmentAction
     - desc: >-
-        Configures the Anti-Spam protection for the guild, setting the message count
+        Configures the Anti-Spam protection for the community, setting the message count
         threshold and punishment action.
       name: punishTime
       optional: false
@@ -1045,7 +1045,7 @@ antispam_int_PunishmentAction_StoopidTime_3:
   args:
     - number action time
   desc: >-
-    Configures the Anti-Spam protection for the guild, setting the message count
+    Configures the Anti-Spam protection for the community, setting the message count
     threshold and punishment action.
   params:
     - desc: 'The threshold of messages that triggers the detection of spam.'
@@ -1057,7 +1057,7 @@ antispam_int_PunishmentAction_StoopidTime_3:
       optional: false
       type: PunishmentAction
     - desc: >-
-        Configures the Anti-Spam protection for the guild, setting the message count
+        Configures the Anti-Spam protection for the community, setting the message count
         threshold and punishment action.
       name: punishTime
       optional: false
@@ -1066,21 +1066,21 @@ antispam_noparams:
   args:
     - ''
   desc: >-
-    Configures the Anti-Spam protection for the guild, setting the message count
+    Configures the Anti-Spam protection for the community, setting the message count
     threshold and punishment action.
   params: [ ]
 antispam_noparams_1:
   args:
     - ''
   desc: >-
-    Configures the Anti-Spam protection for the guild, setting the message count
+    Configures the Anti-Spam protection for the community, setting the message count
     threshold and punishment action.
   params: [ ]
 antispam_noparams_2:
   args:
     - ''
   desc: >-
-    Configures the Anti-Spam protection for the guild, setting the message count
+    Configures the Anti-Spam protection for the community, setting the message count
     threshold and punishment action.
   params: [ ]
 asar:
@@ -1194,7 +1194,7 @@ autoassignbotrole:
     - '@role'
   desc: >-
     Displays the list of roles eligible for auto-assigning to bots when they join
-    the guild.
+    the community.
   params:
     - &ref_87
       desc: 'The role to enable or disable auto-assigning'
@@ -1206,7 +1206,7 @@ autoassignbotrole_IRole:
     - '@role'
   desc: >-
     Displays the list of roles eligible for auto-assigning to bots when they join
-    the guild.
+    the community.
   params:
     - desc: 'The role to enable or disable auto-assigning'
       name: role
@@ -1217,7 +1217,7 @@ autoassignbotrole_IRole_1:
     - '@role'
   desc: >-
     Displays the list of roles eligible for auto-assigning to bots when they join
-    the guild.
+    the community.
   params:
     - desc: 'The role to enable or disable auto-assigning'
       name: role
@@ -1228,7 +1228,7 @@ autoassignbotrole_IRole_2:
     - '@role'
   desc: >-
     Displays the list of roles eligible for auto-assigning to bots when they join
-    the guild.
+    the community.
   params:
     - desc: 'The role to enable or disable auto-assigning'
       name: role
@@ -1239,35 +1239,35 @@ autoassignbotrole_noparams:
     - ''
   desc: >-
     Displays the list of roles eligible for auto-assigning to bots when they join
-    the guild.
+    the community.
   params: [ ]
 autoassignbotrole_noparams_1:
   args:
     - ''
   desc: >-
     Displays the list of roles eligible for auto-assigning to bots when they join
-    the guild.
+    the community.
   params: [ ]
 autoassignbotrole_noparams_2:
   args:
     - ''
   desc: >-
     Displays the list of roles eligible for auto-assigning to bots when they join
-    the guild.
+    the community.
   params: [ ]
 autoassignbotrole_noparams_3:
   args:
     - ''
   desc: >-
     Displays the list of roles eligible for auto-assigning to bots when they join
-    the guild.
+    the community.
   params: [ ]
 autoassignrole:
   args:
     - '@role'
   desc: >-
     Displays the list of roles eligible for auto-assigning when users join the
-    guild.
+    community.
   params:
     - desc: 'The role to enable or disable auto-assigning'
       name: role
@@ -1278,7 +1278,7 @@ autoassignrole_IRole:
     - '@role'
   desc: >-
     Displays the list of roles eligible for auto-assigning when users join the
-    guild.
+    community.
   params:
     - desc: 'The role to enable or disable auto-assigning'
       name: role
@@ -1289,7 +1289,7 @@ autoassignrole_IRole_1:
     - '@role'
   desc: >-
     Displays the list of roles eligible for auto-assigning when users join the
-    guild.
+    community.
   params:
     - desc: 'The role to enable or disable auto-assigning'
       name: role
@@ -1300,7 +1300,7 @@ autoassignrole_IRole_2:
     - '@role'
   desc: >-
     Displays the list of roles eligible for auto-assigning when users join the
-    guild.
+    community.
   params:
     - desc: 'The role to enable or disable auto-assigning'
       name: role
@@ -1311,28 +1311,28 @@ autoassignrole_noparams:
     - ''
   desc: >-
     Displays the list of roles eligible for auto-assigning when users join the
-    guild.
+    community.
   params: [ ]
 autoassignrole_noparams_1:
   args:
     - ''
   desc: >-
     Displays the list of roles eligible for auto-assigning when users join the
-    guild.
+    community.
   params: [ ]
 autoassignrole_noparams_2:
   args:
     - ''
   desc: >-
     Displays the list of roles eligible for auto-assigning when users join the
-    guild.
+    community.
   params: [ ]
 autoassignrole_noparams_3:
   args:
     - ''
   desc: >-
     Displays the list of roles eligible for auto-assigning when users join the
-    guild.
+    community.
   params: [ ]
 autobanroleadd:
   args:
@@ -1374,7 +1374,7 @@ autobanroleadd_IRole_2:
 autobanrolelist:
   args:
     - ''
-  desc: 'Lists all roles in the AutoBanRole list for the current guild.'
+  desc: 'Lists all roles in the AutoBanRole list for the current community.'
   params: [ ]
 autobanroleremove:
   args:
@@ -1525,14 +1525,14 @@ banunder:
     - '<time> [option] [time1]'
     - time
   desc: >-
-    Allows you to ban users that have been in the server for a certain amount of
+    Allows you to ban users that have been in the community for a certain amount of
     time.
   params:
     - desc: 'The amount of time. Formatted as {0}mo{1}d{2}h{3}m{4}s'
       name: time
       optional: false
       type: duration
-    - desc: 'Allows you to specify -accage to check account age rather than server age, or -p to preview the users to ban.'
+    - desc: 'Allows you to specify -accage to check account age rather than community age, or -p to preview the users to ban.'
       name: option
       optional: true
       type: string
@@ -1545,14 +1545,14 @@ banunder_StoopidTime_=_=:
     - '<time> [option] [time1]'
     - time
   desc: >-
-    Allows you to ban users that have been in the server for a certain amount of
+    Allows you to ban users that have been in the community for a certain amount of
     time.
   params:
     - desc: 'The amount of time. Formatted as {0}mo{1}d{2}h{3}m{4}s'
       name: time
       optional: false
       type: duration
-    - desc: 'Allows you to specify -accage to check account age rather than server age, or -p to preview the users to ban.'
+    - desc: 'Allows you to specify -accage to check account age rather than community age, or -p to preview the users to ban.'
       name: option
       optional: true
       type: string
@@ -1565,14 +1565,14 @@ banunder_StoopidTime_=_=_1:
     - '<time> [option] [time1]'
     - time
   desc: >-
-    Allows you to ban users that have been in the server for a certain amount of
+    Allows you to ban users that have been in the community for a certain amount of
     time.
   params:
     - desc: 'The amount of time. Formatted as {0}mo{1}d{2}h{3}m{4}s'
       name: time
       optional: false
       type: duration
-    - desc: 'Allows you to specify -accage to check account age rather than server age, or -p to preview the users to ban.'
+    - desc: 'Allows you to specify -accage to check account age rather than community age, or -p to preview the users to ban.'
       name: option
       optional: true
       type: string
@@ -1585,14 +1585,14 @@ banunder_StoopidTime_=_=_2:
     - '<time> [option] [time1]'
     - time
   desc: >-
-    Allows you to ban users that have been in the server for a certain amount of
+    Allows you to ban users that have been in the community for a certain amount of
     time.
   params:
     - desc: 'The amount of time. Formatted as {0}mo{1}d{2}h{3}m{4}s'
       name: time
       optional: false
       type: duration
-    - desc: 'Allows you to specify -accage to check account age rather than server age, or -p to preview the users to ban.'
+    - desc: 'Allows you to specify -accage to check account age rather than community age, or -p to preview the users to ban.'
       name: option
       optional: true
       type: string
@@ -1775,7 +1775,7 @@ creatxtchanl_string_2:
 deafen:
   args:
     - '@user'
-  desc: 'Deafens specified users in the guild.'
+  desc: 'Deafens specified users in the community.'
   params:
     - &ref_177
       desc: 'The users to deafen'
@@ -1785,7 +1785,7 @@ deafen:
 deafen_IGuildUser[]:
   args:
     - '@user'
-  desc: 'Deafens specified users in the guild.'
+  desc: 'Deafens specified users in the community.'
   params:
     - desc: 'The users to deafen'
       name: users
@@ -1794,7 +1794,7 @@ deafen_IGuildUser[]:
 deafen_IGuildUser[]_1:
   args:
     - '@user'
-  desc: 'Deafens specified users in the guild.'
+  desc: 'Deafens specified users in the community.'
   params:
     - desc: 'The users to deafen'
       name: users
@@ -1803,7 +1803,7 @@ deafen_IGuildUser[]_1:
 deafen_IGuildUser[]_2:
   args:
     - '@user'
-  desc: 'Deafens specified users in the guild.'
+  desc: 'Deafens specified users in the community.'
   params:
     - desc: 'The users to deafen'
       name: users
@@ -1956,7 +1956,7 @@ delete_ulong_=_2:
 deleteguildstatsdata:
   args:
     - ''
-  desc: 'Allows you to delete all stats data for the guild.'
+  desc: 'Allows you to delete all stats data for the community.'
   params: [ ]
 deleterole:
   args:
@@ -2344,7 +2344,7 @@ discordpermoverride:
   args:
     - cmd perms
     - cmd
-  desc: 'Overrides the required permissions for a specific command in the current guild.'
+  desc: 'Overrides the required permissions for a specific command in the current community.'
   params:
     - &ref_201
       desc: 'The command for which the permissions will be overridden'
@@ -2360,7 +2360,7 @@ discordpermoverride_CommandOrCrInfo_GuildPermission[]:
   args:
     - cmd perms
     - cmd
-  desc: 'Overrides the required permissions for a specific command in the current guild.'
+  desc: 'Overrides the required permissions for a specific command in the current community.'
   params:
     - desc: 'The command for which the permissions will be overridden'
       name: cmd
@@ -2374,7 +2374,7 @@ discordpermoverride_CommandOrCrInfo_GuildPermission[]_1:
   args:
     - cmd perms
     - cmd
-  desc: 'Overrides the required permissions for a specific command in the current guild.'
+  desc: 'Overrides the required permissions for a specific command in the current community.'
   params:
     - desc: 'The command for which the permissions will be overridden'
       name: cmd
@@ -2388,7 +2388,7 @@ discordpermoverride_CommandOrCrInfo_GuildPermission[]_2:
   args:
     - cmd perms
     - cmd
-  desc: 'Overrides the required permissions for a specific command in the current guild.'
+  desc: 'Overrides the required permissions for a specific command in the current community.'
   params:
     - desc: 'The command for which the permissions will be overridden'
       name: cmd
@@ -2401,12 +2401,12 @@ discordpermoverride_CommandOrCrInfo_GuildPermission[]_2:
 discordpermoverridelist:
   args:
     - ''
-  desc: 'Lists all command permission overrides in the current guild.'
+  desc: 'Lists all command permission overrides in the current community.'
   params: [ ]
 discordpermoverridereset:
   args:
     - ''
-  desc: 'Resets all command permission overrides in the current guild.'
+  desc: 'Resets all command permission overrides in the current community.'
   params: [ ]
 dpo:
   args:
@@ -2579,7 +2579,7 @@ greetdmtest:
 guildstatsoptout:
   args:
     - ''
-  desc: 'Allows you to opt the entire guild out of stats tracking.'
+  desc: 'Allows you to opt the entire community out of stats tracking.'
   params: [ ]
 iam:
   args:
@@ -2659,7 +2659,7 @@ kickunder:
   args:
     - '<time> [option]'
     - time
-  desc: 'Kicks users who have been in the server for less than a specified time.'
+  desc: 'Kicks users who have been in the community for less than a specified time.'
   params:
     - desc: 'Time duration in a custom format'
       name: time
@@ -2673,7 +2673,7 @@ kickunder_StoopidTime_=:
   args:
     - '<time> [option]'
     - time
-  desc: 'Kicks users who have been in the server for less than a specified time.'
+  desc: 'Kicks users who have been in the community for less than a specified time.'
   params:
     - desc: 'Time duration in a custom format'
       name: time
@@ -2687,7 +2687,7 @@ kickunder_StoopidTime_=_1:
   args:
     - '<time> [option]'
     - time
-  desc: 'Kicks users who have been in the server for less than a specified time.'
+  desc: 'Kicks users who have been in the community for less than a specified time.'
   params:
     - desc: 'Time duration in a custom format'
       name: time
@@ -2701,7 +2701,7 @@ kickunder_StoopidTime_=_2:
   args:
     - '<time> [option]'
     - time
-  desc: 'Kicks users who have been in the server for less than a specified time.'
+  desc: 'Kicks users who have been in the community for less than a specified time.'
   params:
     - desc: 'Time duration in a custom format'
       name: time
@@ -2714,7 +2714,7 @@ kickunder_StoopidTime_=_2:
 langsetdefault:
   args:
     - language
-  desc: Sets the default language for the server.
+  desc: Sets the default language for the community.
   params:
     - desc: The language code to set as default.
       name: language
@@ -2723,7 +2723,7 @@ langsetdefault:
 languageset:
   args:
     - text
-  desc: 'Sets the language for the current guild.'
+  desc: 'Sets the language for the current community.'
   params:
     - &ref_264
       desc: 'The name of the language or "default" to reset to the default language.'
@@ -2733,7 +2733,7 @@ languageset:
 languageset_string:
   args:
     - text
-  desc: 'Sets the language for the current guild.'
+  desc: 'Sets the language for the current community.'
   params:
     - desc: 'The name of the language or "default" to reset to the default language.'
       name: name
@@ -2742,7 +2742,7 @@ languageset_string:
 languageset_string_1:
   args:
     - text
-  desc: 'Sets the language for the current guild.'
+  desc: 'Sets the language for the current community.'
   params:
     - desc: 'The name of the language or "default" to reset to the default language.'
       name: name
@@ -2751,7 +2751,7 @@ languageset_string_1:
 languageset_string_2:
   args:
     - text
-  desc: 'Sets the language for the current guild.'
+  desc: 'Sets the language for the current community.'
   params:
     - desc: 'The name of the language or "default" to reset to the default language.'
       name: name
@@ -3165,7 +3165,7 @@ logcategory_LogCommandService_LogCategoryTypes_=_2:
 logevents:
   args:
     - ''
-  desc: 'Displays the current logging events configuration for the guild.'
+  desc: 'Displays the current logging events configuration for the community.'
   params: [ ]
 logignore:
   args:
@@ -3186,12 +3186,12 @@ logignorelist:
 lsar:
   args:
     - ''
-  desc: 'Lists the auto-self-assignable roles configured for the guild.'
+  desc: 'Lists the auto-self-assignable roles configured for the community.'
   params: [ ]
 memberrole:
   args:
     - '@role'
-  desc: 'Sets the member role for the server. Currently unused.'
+  desc: 'Sets the member role for the community. Currently unused.'
   params:
     - &ref_292
       desc: 'The role that members will have.'
@@ -3201,7 +3201,7 @@ memberrole:
 memberrole_IRole:
   args:
     - '@role'
-  desc: 'Sets the member role for the server. Currently unused.'
+  desc: 'Sets the member role for the community. Currently unused.'
   params:
     - desc: 'The role that members will have.'
       name: role
@@ -3210,7 +3210,7 @@ memberrole_IRole:
 memberrole_IRole_1:
   args:
     - '@role'
-  desc: 'Sets the member role for the server. Currently unused.'
+  desc: 'Sets the member role for the community. Currently unused.'
   params:
     - desc: 'The role that members will have.'
       name: role
@@ -3219,7 +3219,7 @@ memberrole_IRole_1:
 memberrole_IRole_2:
   args:
     - '@role'
-  desc: 'Sets the member role for the server. Currently unused.'
+  desc: 'Sets the member role for the community. Currently unused.'
   params:
     - desc: 'The role that members will have.'
       name: role
@@ -3287,16 +3287,16 @@ prefix:
 prefixcommand:
   args:
     - ''
-  desc: 'Sets the command prefix for the guild.'
+  desc: 'Sets the command prefix for the community.'
   params: [ ]
 prefixcommand_Set_string:
   args:
     - set text
     - set
-  desc: 'Sets the command prefix for the guild.'
+  desc: 'Sets the command prefix for the community.'
   params:
     - &ref_353
-      desc: 'Sets the command prefix for the guild.'
+      desc: 'Sets the command prefix for the community.'
       name: _
       optional: false
       type: Set
@@ -3309,9 +3309,9 @@ prefixcommand_Set_string_1:
   args:
     - set text
     - set
-  desc: 'Sets the command prefix for the guild.'
+  desc: 'Sets the command prefix for the community.'
   params:
-    - desc: 'Sets the command prefix for the guild.'
+    - desc: 'Sets the command prefix for the community.'
       name: _
       optional: false
       type: Set
@@ -3323,9 +3323,9 @@ prefixcommand_Set_string_2:
   args:
     - set text
     - set
-  desc: 'Sets the command prefix for the guild.'
+  desc: 'Sets the command prefix for the community.'
   params:
-    - desc: 'Sets the command prefix for the guild.'
+    - desc: 'Sets the command prefix for the community.'
       name: _
       optional: false
       type: Set
@@ -3337,9 +3337,9 @@ prefixcommand_Set_string_3:
   args:
     - set text
     - set
-  desc: 'Sets the command prefix for the guild.'
+  desc: 'Sets the command prefix for the community.'
   params:
-    - desc: 'Sets the command prefix for the guild.'
+    - desc: 'Sets the command prefix for the community.'
       name: _
       optional: false
       type: Set
@@ -3350,22 +3350,22 @@ prefixcommand_Set_string_3:
 prefixcommand_noparams:
   args:
     - ''
-  desc: 'Sets the command prefix for the guild.'
+  desc: 'Sets the command prefix for the community.'
   params: [ ]
 prefixcommand_noparams_1:
   args:
     - ''
-  desc: 'Sets the command prefix for the guild.'
+  desc: 'Sets the command prefix for the community.'
   params: [ ]
 prefixcommand_noparams_2:
   args:
     - ''
-  desc: 'Sets the command prefix for the guild.'
+  desc: 'Sets the command prefix for the community.'
   params: [ ]
 prefixcommand_string:
   args:
     - text
-  desc: 'Sets the command prefix for the guild.'
+  desc: 'Sets the command prefix for the community.'
   params:
     - desc: 'The new command prefix to set.'
       name: prefix
@@ -3374,7 +3374,7 @@ prefixcommand_string:
 prefixcommand_string_1:
   args:
     - text
-  desc: 'Sets the command prefix for the guild.'
+  desc: 'Sets the command prefix for the community.'
   params:
     - desc: 'The new command prefix to set.'
       name: prefix
@@ -3383,7 +3383,7 @@ prefixcommand_string_1:
 prefixcommand_string_2:
   args:
     - text
-  desc: 'Sets the command prefix for the guild.'
+  desc: 'Sets the command prefix for the community.'
   params:
     - desc: 'The new command prefix to set.'
       name: prefix
@@ -3392,7 +3392,7 @@ prefixcommand_string_2:
 prefixcommand_string_3:
   args:
     - text
-  desc: 'Sets the command prefix for the guild.'
+  desc: 'Sets the command prefix for the community.'
   params:
     - desc: 'The new command prefix to set.'
       name: prefix
@@ -3696,7 +3696,7 @@ reactionroles_ulong_string[]_2:
 reactionroleslist:
   args:
     - ''
-  desc: 'Displays a list of reaction roles configured in the server.'
+  desc: 'Displays a list of reaction roles configured in the community.'
   params: [ ]
 reactionrolesremove:
   args:
@@ -4265,12 +4265,12 @@ sargn_int_=_2:
 serverrecover:
   args:
     - ''
-  desc: 'Starts the server recovery setup for the owner, or recovers admin access with the recovery key and a 2FA code. Everything secret is exchanged in your DMs.'
+  desc: 'Starts the community recovery setup for the owner, or recovers admin access with the recovery key and a 2FA code. Everything secret is exchanged in your DMs.'
   params: [ ]
 setguildavatar:
   args:
     - text
-  desc: 'Sets the bot''s guild-specific avatar.'
+  desc: 'Sets the bot''s community-specific avatar.'
   params:
     - &ref_676
       desc: 'URL to the avatar image (optional if attachment is provided)'
@@ -4280,7 +4280,7 @@ setguildavatar:
 setguildavatar_string:
   args:
     - text
-  desc: 'Sets the bot''s guild-specific avatar.'
+  desc: 'Sets the bot''s community-specific avatar.'
   params:
     - desc: 'URL to the avatar image (optional if attachment is provided)'
       name: avatarUrl
@@ -4289,7 +4289,7 @@ setguildavatar_string:
 setguildbanner:
   args:
     - text
-  desc: 'Sets the bot''s guild-specific banner.'
+  desc: 'Sets the bot''s community-specific banner.'
   params:
     - &ref_677
       desc: 'URL to the banner image (optional if attachment is provided)'
@@ -4299,7 +4299,7 @@ setguildbanner:
 setguildbanner_string:
   args:
     - text
-  desc: 'Sets the bot''s guild-specific banner.'
+  desc: 'Sets the bot''s community-specific banner.'
   params:
     - desc: 'URL to the banner image (optional if attachment is provided)'
       name: bannerUrl
@@ -4308,7 +4308,7 @@ setguildbanner_string:
 setguildbio:
   args:
     - text
-  desc: 'Sets the bot''s guild-specific bio.'
+  desc: 'Sets the bot''s community-specific bio.'
   params:
     - &ref_678
       desc: 'Bio text'
@@ -4318,7 +4318,7 @@ setguildbio:
 setguildbio_string:
   args:
     - text
-  desc: 'Sets the bot''s guild-specific bio.'
+  desc: 'Sets the bot''s community-specific bio.'
   params:
     - desc: 'Bio text'
       name: bio
@@ -4703,7 +4703,7 @@ togglexclsar:
 undeafen:
   args:
     - '@user'
-  desc: 'Undeafens specified users in the guild.'
+  desc: 'Undeafens specified users in the community.'
   params:
     - desc: 'The users to undeafen'
       name: users
@@ -4820,7 +4820,7 @@ vcrole_SocketGuildChannel_=_2:
 vcrolelist:
   args:
     - ''
-  desc: 'List all voice channel roles for this guild.'
+  desc: 'List all voice channel roles for this community.'
   params: [ ]
 vcrolerm:
   args:
@@ -4867,12 +4867,12 @@ timezones:
 antimasspost:
   args:
     - ''
-  desc: 'Disables the Anti-Mass-Post protection for the guild, or with arguments configures it.'
+  desc: 'Disables the Anti-Mass-Post protection for the community, or with arguments configures it.'
   params: [ ]
 antipostchannel:
   args:
     - ''
-  desc: 'Disables the Anti-Post-Channel protection for the guild, or with arguments configures it.'
+  desc: 'Disables the Anti-Post-Channel protection for the community, or with arguments configures it.'
   params: [ ]
 antipostchanneladd:
   args:
@@ -4923,7 +4923,7 @@ blockimage:
     Blocks an image so that anyone re-posting it is actioned, including resized,
     recompressed, mirrored, and bordered copies. Attach the image, reply to a
     message containing it, or pass its URL. An action given before the label
-    overrides the guild default for this image only.
+    overrides the community default for this image only.
   params: [ ]
 unblockimage:
   args:

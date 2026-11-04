@@ -22,7 +22,7 @@ patreonch:
 patreonconfig:
   args:
     - ''
-  desc: 'Shows the current Patreon configuration for this server.'
+  desc: 'Shows the current Patreon configuration for this community.'
   params: [ ]
 patreonday:
   args:
@@ -38,7 +38,7 @@ patreonday:
 patreondisable:
   args:
     - ''
-  desc: 'Disables Patreon announcements for this server.'
+  desc: 'Disables Patreon announcements for this community.'
   params: [ ]
 patreonhelp:
   args:

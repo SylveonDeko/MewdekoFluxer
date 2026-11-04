@@ -108,7 +108,7 @@ allchnlmdls_PermissionAction_ITextChannel_2:
 allcmdcooldowns:
   args:
     - ''
-  desc: 'Displays all commands with active cooldowns in the guild.'
+  desc: 'Displays all commands with active cooldowns in the community.'
   params: [ ]
 allrolemdls:
   args:
@@ -166,7 +166,7 @@ allrolemdls_PermissionAction_IRole_2:
 allsrvrmdls:
   args:
     - action
-  desc: 'Adds or removes permissions for all modules for the entire server.'
+  desc: 'Adds or removes permissions for all modules for the entire community.'
   params:
     - desc: 'The action to perform (enable/disable).'
       name: action
@@ -228,7 +228,7 @@ allusrmdls_PermissionAction_IUser_2:
 autobanword:
   args:
     - text
-  desc: 'Toggles a word on or off the automatic ban list for the current guild.'
+  desc: 'Toggles a word on or off the automatic ban list for the current community.'
   params:
     - &ref_89
       desc: 'The word to toggle on the auto ban list.'
@@ -238,7 +238,7 @@ autobanword:
 autobanword_string:
   args:
     - text
-  desc: 'Toggles a word on or off the automatic ban list for the current guild.'
+  desc: 'Toggles a word on or off the automatic ban list for the current community.'
   params:
     - desc: 'The word to toggle on the auto ban list.'
       name: word
@@ -247,7 +247,7 @@ autobanword_string:
 autobanword_string_1:
   args:
     - text
-  desc: 'Toggles a word on or off the automatic ban list for the current guild.'
+  desc: 'Toggles a word on or off the automatic ban list for the current community.'
   params:
     - desc: 'The word to toggle on the auto ban list.'
       name: word
@@ -256,7 +256,7 @@ autobanword_string_1:
 autobanword_string_2:
   args:
     - text
-  desc: 'Toggles a word on or off the automatic ban list for the current guild.'
+  desc: 'Toggles a word on or off the automatic ban list for the current community.'
   params:
     - desc: 'The word to toggle on the auto ban list.'
       name: word
@@ -267,28 +267,28 @@ autobanwordlist:
     - ''
   desc: >-
     Displays a paginated list of all words on the automatic ban list for the
-    current guild.
+    current community.
   params: [ ]
 autobanwordlist_noparams:
   args:
     - ''
   desc: >-
     Displays a paginated list of all words on the automatic ban list for the
-    current guild.
+    current community.
   params: [ ]
 autobanwordlist_noparams_1:
   args:
     - ''
   desc: >-
     Displays a paginated list of all words on the automatic ban list for the
-    current guild.
+    current community.
   params: [ ]
 autobanwordlist_noparams_2:
   args:
     - ''
   desc: >-
     Displays a paginated list of all words on the automatic ban list for the
-    current guild.
+    current community.
   params: [ ]
 catcmd:
   args:
@@ -557,7 +557,7 @@ cmdcooldown:
   args:
     - '<command> [time]'
     - command
-  desc: 'Sets or clears the cooldown for a specified command in the guild.'
+  desc: 'Sets or clears the cooldown for a specified command in the community.'
   params:
     - desc: 'The command to set the cooldown for.'
       name: command
@@ -571,7 +571,7 @@ cmdcooldown_CommandOrCrInfo_=:
   args:
     - '<command> [time]'
     - command
-  desc: 'Sets or clears the cooldown for a specified command in the guild.'
+  desc: 'Sets or clears the cooldown for a specified command in the community.'
   params:
     - desc: 'The command to set the cooldown for.'
       name: command
@@ -585,7 +585,7 @@ cmdcooldown_CommandOrCrInfo_=_1:
   args:
     - '<command> [time]'
     - command
-  desc: 'Sets or clears the cooldown for a specified command in the guild.'
+  desc: 'Sets or clears the cooldown for a specified command in the community.'
   params:
     - desc: 'The command to set the cooldown for.'
       name: command
@@ -599,7 +599,7 @@ cmdcooldown_CommandOrCrInfo_=_2:
   args:
     - '<command> [time]'
     - command
-  desc: 'Sets or clears the cooldown for a specified command in the guild.'
+  desc: 'Sets or clears the cooldown for a specified command in the community.'
   params:
     - desc: 'The command to set the cooldown for.'
       name: command
@@ -612,7 +612,7 @@ cmdcooldown_CommandOrCrInfo_=_2:
 filterword:
   args:
     - text
-  desc: 'Adds or removes a word from the filtered words list in the current guild.'
+  desc: 'Adds or removes a word from the filtered words list in the current community.'
   params:
     - &ref_218
       desc: 'The word to toggle on the filtered words list.'
@@ -622,7 +622,7 @@ filterword:
 filterword_string:
   args:
     - text
-  desc: 'Adds or removes a word from the filtered words list in the current guild.'
+  desc: 'Adds or removes a word from the filtered words list in the current community.'
   params:
     - desc: 'The word to toggle on the filtered words list.'
       name: word
@@ -631,7 +631,7 @@ filterword_string:
 filterword_string_1:
   args:
     - text
-  desc: 'Adds or removes a word from the filtered words list in the current guild.'
+  desc: 'Adds or removes a word from the filtered words list in the current community.'
   params:
     - desc: 'The word to toggle on the filtered words list.'
       name: word
@@ -640,7 +640,7 @@ filterword_string_1:
 filterword_string_2:
   args:
     - text
-  desc: 'Adds or removes a word from the filtered words list in the current guild.'
+  desc: 'Adds or removes a word from the filtered words list in the current community.'
   params:
     - desc: 'The word to toggle on the filtered words list.'
       name: word
@@ -649,7 +649,7 @@ filterword_string_2:
 fwarn:
   args:
     - text
-  desc: 'Enables or disables warnings for filtered words in the current guild.'
+  desc: 'Enables or disables warnings for filtered words in the current community.'
   params:
     - &ref_219
       desc: 'A string indicating whether to enable ("y") or disable ("n") the warning.'
@@ -659,7 +659,7 @@ fwarn:
 fwarn_string:
   args:
     - text
-  desc: 'Enables or disables warnings for filtered words in the current guild.'
+  desc: 'Enables or disables warnings for filtered words in the current community.'
   params:
     - desc: 'A string indicating whether to enable ("y") or disable ("n") the warning.'
       name: yesnt
@@ -668,7 +668,7 @@ fwarn_string:
 fwarn_string_1:
   args:
     - text
-  desc: 'Enables or disables warnings for filtered words in the current guild.'
+  desc: 'Enables or disables warnings for filtered words in the current community.'
   params:
     - desc: 'A string indicating whether to enable ("y") or disable ("n") the warning.'
       name: yesnt
@@ -677,7 +677,7 @@ fwarn_string_1:
 fwarn_string_2:
   args:
     - text
-  desc: 'Enables or disables warnings for filtered words in the current guild.'
+  desc: 'Enables or disables warnings for filtered words in the current community.'
   params:
     - desc: 'A string indicating whether to enable ("y") or disable ("n") the warning.'
       name: yesnt
@@ -686,7 +686,7 @@ fwarn_string_2:
 fwclear:
   args:
     - ''
-  desc: 'Clears all filtered words for the current guild.'
+  desc: 'Clears all filtered words for the current community.'
   params: [ ]
 globalcommand:
   args:
@@ -785,7 +785,7 @@ globalpermlist_noparams_2:
 invwarn:
   args:
     - text
-  desc: 'Enables or disables warnings for invite links posted in the current guild.'
+  desc: 'Enables or disables warnings for invite links posted in the current community.'
   params:
     - desc: 'A string indicating whether to enable ("y") or disable ("n") the warning.'
       name: yesnt
@@ -794,12 +794,12 @@ invwarn:
 listperms:
   args:
     - ''
-  desc: 'Lists the permissions for the guild.'
+  desc: 'Lists the permissions for the community.'
   params: [ ]
 lstfilterwords:
   args:
     - ''
-  desc: 'Lists all words currently on the filtered words list for the current guild.'
+  desc: 'Lists all words currently on the filtered words list for the current community.'
   params: [ ]
 manualblacklistcheck:
   args:
@@ -978,7 +978,7 @@ resetglobalperms:
 resetperms:
   args:
     - ''
-  desc: 'Resets the permissions for the guild.'
+  desc: 'Resets the permissions for the community.'
   params: [ ]
 rolecmd:
   args:
@@ -1019,7 +1019,7 @@ serverblacklist:
     - action id text
     - action id
   desc: >-
-    Blacklists or unblacklists a server by its guild object, with an optional
+    Blacklists or unblacklists a community by its ID, with an optional
     reason.
   params:
     - desc: 'Specifies whether to add or remove from the blacklist.'
@@ -1027,7 +1027,7 @@ serverblacklist:
       optional: false
       type: AddRemove
     - desc: >-
-        Blacklists or unblacklists a server by its guild object, with an optional
+        Blacklists or unblacklists a community by its ID, with an optional
         reason.
       name: id
       optional: false
@@ -1041,7 +1041,7 @@ serverblacklist_AddRemove_IGuild_string:
     - action guild text
     - action guild
   desc: >-
-    Blacklists or unblacklists a server by its guild object, with an optional
+    Blacklists or unblacklists a community by its ID, with an optional
     reason.
   params:
     - desc: 'Specifies whether to add or remove from the blacklist.'
@@ -1049,7 +1049,7 @@ serverblacklist_AddRemove_IGuild_string:
       optional: false
       type: AddRemove
     - &ref_485
-      desc: 'The guild object.'
+      desc: 'The community object.'
       name: guild
       optional: false
       type: IGuild
@@ -1062,14 +1062,14 @@ serverblacklist_AddRemove_IGuild_string_1:
     - action guild text
     - action guild
   desc: >-
-    Blacklists or unblacklists a server by its guild object, with an optional
+    Blacklists or unblacklists a community by its ID, with an optional
     reason.
   params:
     - desc: 'Specifies whether to add or remove from the blacklist.'
       name: action
       optional: false
       type: AddRemove
-    - desc: 'The guild object.'
+    - desc: 'The community object.'
       name: guild
       optional: false
       type: IGuild
@@ -1082,14 +1082,14 @@ serverblacklist_AddRemove_IGuild_string_2:
     - action guild text
     - action guild
   desc: >-
-    Blacklists or unblacklists a server by its guild object, with an optional
+    Blacklists or unblacklists a community by its ID, with an optional
     reason.
   params:
     - desc: 'Specifies whether to add or remove from the blacklist.'
       name: action
       optional: false
       type: AddRemove
-    - desc: 'The guild object.'
+    - desc: 'The community object.'
       name: guild
       optional: false
       type: IGuild
@@ -1102,14 +1102,14 @@ serverblacklist_AddRemove_IGuild_string_3:
     - action guild text
     - action guild
   desc: >-
-    Blacklists or unblacklists a server by its guild object, with an optional
+    Blacklists or unblacklists a community by its ID, with an optional
     reason.
   params:
     - desc: 'Specifies whether to add or remove from the blacklist.'
       name: action
       optional: false
       type: AddRemove
-    - desc: 'The guild object.'
+    - desc: 'The community object.'
       name: guild
       optional: false
       type: IGuild
@@ -1122,7 +1122,7 @@ serverblacklist_AddRemove_ulong_string:
     - action id text
     - action id
   desc: >-
-    Blacklists or unblacklists a server by its guild object, with an optional
+    Blacklists or unblacklists a community by its ID, with an optional
     reason.
   params:
     - desc: 'Specifies whether to add or remove from the blacklist.'
@@ -1130,7 +1130,7 @@ serverblacklist_AddRemove_ulong_string:
       optional: false
       type: AddRemove
     - desc: >-
-        Blacklists or unblacklists a server by its guild object, with an optional
+        Blacklists or unblacklists a community by its ID, with an optional
         reason.
       name: id
       optional: false
@@ -1144,7 +1144,7 @@ serverblacklist_AddRemove_ulong_string_1:
     - action id text
     - action id
   desc: >-
-    Blacklists or unblacklists a server by its guild object, with an optional
+    Blacklists or unblacklists a community by its ID, with an optional
     reason.
   params:
     - desc: 'Specifies whether to add or remove from the blacklist.'
@@ -1152,7 +1152,7 @@ serverblacklist_AddRemove_ulong_string_1:
       optional: false
       type: AddRemove
     - desc: >-
-        Blacklists or unblacklists a server by its guild object, with an optional
+        Blacklists or unblacklists a community by its ID, with an optional
         reason.
       name: id
       optional: false
@@ -1166,7 +1166,7 @@ serverblacklist_AddRemove_ulong_string_2:
     - action id text
     - action id
   desc: >-
-    Blacklists or unblacklists a server by its guild object, with an optional
+    Blacklists or unblacklists a community by its ID, with an optional
     reason.
   params:
     - desc: 'Specifies whether to add or remove from the blacklist.'
@@ -1174,7 +1174,7 @@ serverblacklist_AddRemove_ulong_string_2:
       optional: false
       type: AddRemove
     - desc: >-
-        Blacklists or unblacklists a server by its guild object, with an optional
+        Blacklists or unblacklists a community by its ID, with an optional
         reason.
       name: id
       optional: false
@@ -1186,7 +1186,7 @@ serverblacklist_AddRemove_ulong_string_2:
 srvrcmd:
   args:
     - command action
-  desc: 'Enables or disables a command in the server.'
+  desc: 'Enables or disables a command in the community.'
   params:
     - &ref_556
       desc: 'The command to run an action on'
@@ -1201,7 +1201,7 @@ srvrcmd:
 srvrcmd_CommandOrCrInfo_PermissionAction:
   args:
     - command action
-  desc: 'Enables or disables a command in the server.'
+  desc: 'Enables or disables a command in the community.'
   params:
     - desc: 'The command to run an action on'
       name: command
@@ -1214,7 +1214,7 @@ srvrcmd_CommandOrCrInfo_PermissionAction:
 srvrcmd_CommandOrCrInfo_PermissionAction_1:
   args:
     - command action
-  desc: 'Enables or disables a command in the server.'
+  desc: 'Enables or disables a command in the community.'
   params:
     - desc: 'The command to run an action on'
       name: command
@@ -1227,7 +1227,7 @@ srvrcmd_CommandOrCrInfo_PermissionAction_1:
 srvrcmd_CommandOrCrInfo_PermissionAction_2:
   args:
     - command action
-  desc: 'Enables or disables a command in the server.'
+  desc: 'Enables or disables a command in the community.'
   params:
     - desc: 'The command to run an action on'
       name: command
@@ -1240,22 +1240,22 @@ srvrcmd_CommandOrCrInfo_PermissionAction_2:
 srvrfilterinv:
   args:
     - ''
-  desc: 'Toggles the server-wide invite link filter on or off.'
+  desc: 'Toggles the community-wide invite link filter on or off.'
   params: [ ]
 srvrfilterlin:
   args:
     - ''
-  desc: 'Toggles the server-wide link filter on or off.'
+  desc: 'Toggles the community-wide link filter on or off.'
   params: [ ]
 srvrfilterwords:
   args:
     - ''
-  desc: 'Toggles the server-wide word filter on or off.'
+  desc: 'Toggles the community-wide word filter on or off.'
   params: [ ]
 srvrmdl:
   args:
     - module action
-  desc: 'Adds or removes server-level permissions for a specific module.'
+  desc: 'Adds or removes community-level permissions for a specific module.'
   params:
     - desc: 'The module to set permissions for.'
       name: module

@@ -2,7 +2,7 @@ twitchset:
   args:
     - twitchChannel
     - prefix
-  desc: 'Sets the Twitch channel the bot joins for this server.'
+  desc: 'Sets the Twitch channel the bot joins for this community.'
   params:
     - desc: 'The Twitch channel name, with or without the # prefix.'
       name: twitchChannel
@@ -15,12 +15,12 @@ twitchset:
 twitchremove:
   args:
     - ''
-  desc: 'Removes the Twitch channel setup of this server and leaves the channel.'
+  desc: 'Removes the Twitch channel setup of this community and leaves the channel.'
   params: [ ]
 twitchenable:
   args:
     - ''
-  desc: 'Enables the Twitch integration of this server.'
+  desc: 'Enables the Twitch integration of this community.'
   params: [ ]
 twitchdisable:
   args:
@@ -30,7 +30,7 @@ twitchdisable:
 twitchconfig:
   args:
     - ''
-  desc: 'Shows the Twitch configuration of this server.'
+  desc: 'Shows the Twitch configuration of this community.'
   params: [ ]
 twitchstatus:
   args:
@@ -49,7 +49,7 @@ twitchprefix:
 twitchlanguage:
   args:
     - languageTag
-  desc: 'Sets the language of Twitch chat responses, overriding the server locale. Leave empty to reset.'
+  desc: 'Sets the language of Twitch chat responses, overriding the community locale. Leave empty to reset.'
   params:
     - desc: 'A language tag such as en-US or de-DE.'
       name: languageTag
@@ -100,7 +100,7 @@ twitchunlink:
 twitchlinks:
   args:
     - ''
-  desc: 'Lists the member to Twitch account links of this server.'
+  desc: 'Lists the member to Twitch account links of this community.'
   params: [ ]
 twitchclaim:
   args:

@@ -339,7 +339,7 @@ rolestatesremovedenyuser_IGuildUser[]_2:
 saveallrolestates:
   args:
     - ''
-  desc: 'Saves role states for all users in the server.'
+  desc: 'Saves role states for all users in the community.'
   params: [ ]
 setuserrolestate:
   args:
@@ -421,44 +421,44 @@ togglerolestatesskipautoassign:
 transferrolestates:
   args:
     - serverid
-  desc: 'Transfers role states from the current server to another server.'
+  desc: 'Transfers role states from the current community to another community.'
   params:
     - &ref_627
-      desc: 'The ID of the target server.'
+      desc: 'The ID of the target community.'
       name: serverId
       optional: false
       type: ulong
 transferrolestates_ulong:
   args:
     - serverid
-  desc: 'Transfers role states from the current server to another server.'
+  desc: 'Transfers role states from the current community to another community.'
   params:
-    - desc: 'The ID of the target server.'
+    - desc: 'The ID of the target community.'
       name: serverId
       optional: false
       type: ulong
 transferrolestates_ulong_1:
   args:
     - serverid
-  desc: 'Transfers role states from the current server to another server.'
+  desc: 'Transfers role states from the current community to another community.'
   params:
-    - desc: 'The ID of the target server.'
+    - desc: 'The ID of the target community.'
       name: serverId
       optional: false
       type: ulong
 transferrolestates_ulong_2:
   args:
     - serverid
-  desc: 'Transfers role states from the current server to another server.'
+  desc: 'Transfers role states from the current community to another community.'
   params:
-    - desc: 'The ID of the target server.'
+    - desc: 'The ID of the target community.'
       name: serverId
       optional: false
       type: ulong
 viewrolestates:
   args:
     - ''
-  desc: Views all user role states in the server.
+  desc: Views all user role states in the community.
   params: [ ]
 viewrolestatessettings:
   args:

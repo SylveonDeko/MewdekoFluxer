@@ -304,7 +304,7 @@ rolegreetlist:
   args:
     - ''
   desc: >-
-    Lists all role greets set up in the guild, providing detailed information for
+    Lists all role greets set up in the community, providing detailed information for
     each.
   params: [ ]
 rolegreetmessage:

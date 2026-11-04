@@ -1,7 +1,7 @@
 rolemenus:
   args:
     - ''
-  desc: 'Lists every role menu in this server with its channel, number of options, and status.'
+  desc: 'Lists every role menu in this community with its channel, number of options, and status.'
   params: [ ]
 rolemenuinfo:
   args:

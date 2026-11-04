@@ -114,7 +114,7 @@ addemote:
   args:
     - '<name> [url]'
     - text
-  desc: 'Adds a new emote to the server.'
+  desc: 'Adds a new emote to the community.'
   params:
     - desc: 'The name of the emote.'
       name: name
@@ -128,7 +128,7 @@ addemote_string_=:
   args:
     - '<name> [url]'
     - text
-  desc: 'Adds a new emote to the server.'
+  desc: 'Adds a new emote to the community.'
   params:
     - desc: 'The name of the emote.'
       name: name
@@ -294,44 +294,44 @@ addthenremove_IRole_IRole_2:
 addtoall:
   args:
     - '@role'
-  desc: 'Adds a specified role to all server members.'
+  desc: 'Adds a specified role to all community members.'
   params:
     - &ref_35
-      desc: 'The role to be added to all server members.'
+      desc: 'The role to be added to all community members.'
       name: role
       optional: false
       type: IRole
 addtoall_IRole:
   args:
     - '@role'
-  desc: 'Adds a specified role to all server members.'
+  desc: 'Adds a specified role to all community members.'
   params:
-    - desc: 'The role to be added to all server members.'
+    - desc: 'The role to be added to all community members.'
       name: role
       optional: false
       type: IRole
 addtoall_IRole_1:
   args:
     - '@role'
-  desc: 'Adds a specified role to all server members.'
+  desc: 'Adds a specified role to all community members.'
   params:
-    - desc: 'The role to be added to all server members.'
+    - desc: 'The role to be added to all community members.'
       name: role
       optional: false
       type: IRole
 addtoall_IRole_2:
   args:
     - '@role'
-  desc: 'Adds a specified role to all server members.'
+  desc: 'Adds a specified role to all community members.'
   params:
-    - desc: 'The role to be added to all server members.'
+    - desc: 'The role to be added to all community members.'
       name: role
       optional: false
       type: IRole
 addtoallbots:
   args:
     - '@role'
-  desc: 'Adds a specified role to all bots in the server.'
+  desc: 'Adds a specified role to all bots in the community.'
   params:
     - &ref_36
       desc: 'The role to be added to all bots.'
@@ -341,7 +341,7 @@ addtoallbots:
 addtoallbots_IRole:
   args:
     - '@role'
-  desc: 'Adds a specified role to all bots in the server.'
+  desc: 'Adds a specified role to all bots in the community.'
   params:
     - desc: 'The role to be added to all bots.'
       name: role
@@ -350,7 +350,7 @@ addtoallbots_IRole:
 addtoallbots_IRole_1:
   args:
     - '@role'
-  desc: 'Adds a specified role to all bots in the server.'
+  desc: 'Adds a specified role to all bots in the community.'
   params:
     - desc: 'The role to be added to all bots.'
       name: role
@@ -359,7 +359,7 @@ addtoallbots_IRole_1:
 addtoallbots_IRole_2:
   args:
     - '@role'
-  desc: 'Adds a specified role to all bots in the server.'
+  desc: 'Adds a specified role to all bots in the community.'
   params:
     - desc: 'The role to be added to all bots.'
       name: role
@@ -368,7 +368,7 @@ addtoallbots_IRole_2:
 addtoallusers:
   args:
     - '@role'
-  desc: 'Adds a specified role to all human users in the server, excluding bots.'
+  desc: 'Adds a specified role to all human users in the community, excluding bots.'
   params:
     - &ref_37
       desc: 'The role to be added to all human users.'
@@ -378,7 +378,7 @@ addtoallusers:
 addtoallusers_IRole:
   args:
     - '@role'
-  desc: 'Adds a specified role to all human users in the server, excluding bots.'
+  desc: 'Adds a specified role to all human users in the community, excluding bots.'
   params:
     - desc: 'The role to be added to all human users.'
       name: role
@@ -387,7 +387,7 @@ addtoallusers_IRole:
 addtoallusers_IRole_1:
   args:
     - '@role'
-  desc: 'Adds a specified role to all human users in the server, excluding bots.'
+  desc: 'Adds a specified role to all human users in the community, excluding bots.'
   params:
     - desc: 'The role to be added to all human users.'
       name: role
@@ -396,7 +396,7 @@ addtoallusers_IRole_1:
 addtoallusers_IRole_2:
   args:
     - '@role'
-  desc: 'Adds a specified role to all human users in the server, excluding bots.'
+  desc: 'Adds a specified role to all human users in the community, excluding bots.'
   params:
     - desc: 'The role to be added to all human users.'
       name: role
@@ -406,11 +406,11 @@ addtousersover:
   args:
     - time @role
   desc: >-
-    Adds a specified role to all users who have been a server member for longer
+    Adds a specified role to all users who have been a community member for longer
     than a specified duration.
   params:
     - &ref_38
-      desc: 'The minimum duration a user must have been a member of the server to receive the role.'
+      desc: 'The minimum duration a user must have been a member of the community to receive the role.'
       name: time
       optional: false
       type: StoopidTime
@@ -423,10 +423,10 @@ addtousersover_StoopidTime_IRole:
   args:
     - time @role
   desc: >-
-    Adds a specified role to all users who have been a server member for longer
+    Adds a specified role to all users who have been a community member for longer
     than a specified duration.
   params:
-    - desc: 'The minimum duration a user must have been a member of the server to receive the role.'
+    - desc: 'The minimum duration a user must have been a member of the community to receive the role.'
       name: time
       optional: false
       type: StoopidTime
@@ -438,10 +438,10 @@ addtousersover_StoopidTime_IRole_1:
   args:
     - time @role
   desc: >-
-    Adds a specified role to all users who have been a server member for longer
+    Adds a specified role to all users who have been a community member for longer
     than a specified duration.
   params:
-    - desc: 'The minimum duration a user must have been a member of the server to receive the role.'
+    - desc: 'The minimum duration a user must have been a member of the community to receive the role.'
       name: time
       optional: false
       type: StoopidTime
@@ -453,10 +453,10 @@ addtousersover_StoopidTime_IRole_2:
   args:
     - time @role
   desc: >-
-    Adds a specified role to all users who have been a server member for longer
+    Adds a specified role to all users who have been a community member for longer
     than a specified duration.
   params:
-    - desc: 'The minimum duration a user must have been a member of the server to receive the role.'
+    - desc: 'The minimum duration a user must have been a member of the community to receive the role.'
       name: time
       optional: false
       type: StoopidTime
@@ -468,11 +468,11 @@ addtousersunder:
   args:
     - time @role
   desc: >-
-    Adds a specified role to all users who have been a server member for shorter
+    Adds a specified role to all users who have been a community member for shorter
     than a specified duration.
   params:
     - &ref_40
-      desc: 'The maximum duration a user can have been a member of the server to receive the role.'
+      desc: 'The maximum duration a user can have been a member of the community to receive the role.'
       name: time
       optional: false
       type: StoopidTime
@@ -484,10 +484,10 @@ addtousersunder_StoopidTime_IRole:
   args:
     - time @role
   desc: >-
-    Adds a specified role to all users who have been a server member for shorter
+    Adds a specified role to all users who have been a community member for shorter
     than a specified duration.
   params:
-    - desc: 'The maximum duration a user can have been a member of the server to receive the role.'
+    - desc: 'The maximum duration a user can have been a member of the community to receive the role.'
       name: time
       optional: false
       type: StoopidTime
@@ -499,10 +499,10 @@ addtousersunder_StoopidTime_IRole_1:
   args:
     - time @role
   desc: >-
-    Adds a specified role to all users who have been a server member for shorter
+    Adds a specified role to all users who have been a community member for shorter
     than a specified duration.
   params:
-    - desc: 'The maximum duration a user can have been a member of the server to receive the role.'
+    - desc: 'The maximum duration a user can have been a member of the community to receive the role.'
       name: time
       optional: false
       type: StoopidTime
@@ -514,10 +514,10 @@ addtousersunder_StoopidTime_IRole_2:
   args:
     - time @role
   desc: >-
-    Adds a specified role to all users who have been a server member for shorter
+    Adds a specified role to all users who have been a community member for shorter
     than a specified duration.
   params:
-    - desc: 'The maximum duration a user can have been a member of the server to receive the role.'
+    - desc: 'The maximum duration a user can have been a member of the community to receive the role.'
       name: time
       optional: false
       type: StoopidTime
@@ -746,7 +746,7 @@ ccvc:
 createcatandtxtchannels:
   args:
     - text text
-  desc: 'Creates a category and the specified channels in a server.'
+  desc: 'Creates a category and the specified channels in a community.'
   params:
     - &ref_148
       desc: 'The name of the category to create'
@@ -761,7 +761,7 @@ createcatandtxtchannels:
 createcatandtxtchannels_string_string[]:
   args:
     - text text
-  desc: 'Creates a category and the specified channels in a server.'
+  desc: 'Creates a category and the specified channels in a community.'
   params:
     - desc: 'The name of the category to create'
       name: catName
@@ -774,7 +774,7 @@ createcatandtxtchannels_string_string[]:
 createcatandtxtchannels_string_string[]_1:
   args:
     - text text
-  desc: 'Creates a category and the specified channels in a server.'
+  desc: 'Creates a category and the specified channels in a community.'
   params:
     - desc: 'The name of the category to create'
       name: catName
@@ -787,7 +787,7 @@ createcatandtxtchannels_string_string[]_1:
 createcatandtxtchannels_string_string[]_2:
   args:
     - text text
-  desc: 'Creates a category and the specified channels in a server.'
+  desc: 'Creates a category and the specified channels in a community.'
   params:
     - desc: 'The name of the category to create'
       name: catName
@@ -961,7 +961,7 @@ createcatvcchans_ICategoryChannel_string[]_2:
 createroles:
   args:
     - text
-  desc: 'Creates multiple roles within the guild based on a provided list of role names.'
+  desc: 'Creates multiple roles within the community based on a provided list of role names.'
   params:
     - &ref_155
       desc: 'A space-separated list of role names to create.'
@@ -971,7 +971,7 @@ createroles:
 createroles_string:
   args:
     - text
-  desc: 'Creates multiple roles within the guild based on a provided list of role names.'
+  desc: 'Creates multiple roles within the community based on a provided list of role names.'
   params:
     - desc: 'A space-separated list of role names to create.'
       name: roles
@@ -980,7 +980,7 @@ createroles_string:
 createroles_string_1:
   args:
     - text
-  desc: 'Creates multiple roles within the guild based on a provided list of role names.'
+  desc: 'Creates multiple roles within the community based on a provided list of role names.'
   params:
     - desc: 'A space-separated list of role names to create.'
       name: roles
@@ -989,7 +989,7 @@ createroles_string_1:
 createroles_string_2:
   args:
     - text
-  desc: 'Creates multiple roles within the guild based on a provided list of role names.'
+  desc: 'Creates multiple roles within the community based on a provided list of role names.'
   params:
     - desc: 'A space-separated list of role names to create.'
       name: roles
@@ -1070,7 +1070,7 @@ createwebhook_ITextChannel_string_=_2:
 deleteroles:
   args:
     - '@role'
-  desc: 'Deletes a list of roles from the guild.'
+  desc: 'Deletes a list of roles from the community.'
   params:
     - &ref_189
       desc: 'An array of roles to delete.'
@@ -1080,7 +1080,7 @@ deleteroles:
 deleteroles_IRole[]:
   args:
     - '@role'
-  desc: 'Deletes a list of roles from the guild.'
+  desc: 'Deletes a list of roles from the community.'
   params:
     - desc: 'An array of roles to delete.'
       name: roles
@@ -1089,7 +1089,7 @@ deleteroles_IRole[]:
 deleteroles_IRole[]_1:
   args:
     - '@role'
-  desc: 'Deletes a list of roles from the guild.'
+  desc: 'Deletes a list of roles from the community.'
   params:
     - desc: 'An array of roles to delete.'
       name: roles
@@ -1098,7 +1098,7 @@ deleteroles_IRole[]_1:
 deleteroles_IRole[]_2:
   args:
     - '@role'
-  desc: 'Deletes a list of roles from the guild.'
+  desc: 'Deletes a list of roles from the community.'
   params:
     - desc: 'An array of roles to delete.'
       name: roles
@@ -1216,24 +1216,24 @@ lockdown:
   args:
     - lockdowntype.readonly punishmentaction.ban false
   desc: >-
-    Locks down the server based on the specified lockdown type (Joins, Readonly,
+    Locks down the community based on the specified lockdown type (Joins, Readonly,
     Full).
   params:
     - desc: >-
-        Locks down the server based on the specified lockdown type (Joins, Readonly,
+        Locks down the community based on the specified lockdown type (Joins, Readonly,
         Full).
       name: LockdownType.Readonly
       optional: false
       type: '='
     - &ref_281
       desc: >-
-        Locks down the server based on the specified lockdown type (Joins, Readonly,
+        Locks down the community based on the specified lockdown type (Joins, Readonly,
         Full).
       name: PunishmentAction.Ban
       optional: false
       type: '='
     - desc: >-
-        Locks down the server based on the specified lockdown type (Joins, Readonly,
+        Locks down the community based on the specified lockdown type (Joins, Readonly,
         Full).
       name: false
       optional: false
@@ -1242,23 +1242,23 @@ lockdown_=_=_=:
   args:
     - lockdowntype.readonly punishmentaction.ban false
   desc: >-
-    Locks down the server based on the specified lockdown type (Joins, Readonly,
+    Locks down the community based on the specified lockdown type (Joins, Readonly,
     Full).
   params:
     - desc: >-
-        Locks down the server based on the specified lockdown type (Joins, Readonly,
+        Locks down the community based on the specified lockdown type (Joins, Readonly,
         Full).
       name: LockdownType.Readonly
       optional: false
       type: '='
     - desc: >-
-        Locks down the server based on the specified lockdown type (Joins, Readonly,
+        Locks down the community based on the specified lockdown type (Joins, Readonly,
         Full).
       name: PunishmentAction.Ban
       optional: false
       type: '='
     - desc: >-
-        Locks down the server based on the specified lockdown type (Joins, Readonly,
+        Locks down the community based on the specified lockdown type (Joins, Readonly,
         Full).
       name: false
       optional: false
@@ -1267,23 +1267,23 @@ lockdown_=_=_=_1:
   args:
     - lockdowntype.readonly punishmentaction.ban false
   desc: >-
-    Locks down the server based on the specified lockdown type (Joins, Readonly,
+    Locks down the community based on the specified lockdown type (Joins, Readonly,
     Full).
   params:
     - desc: >-
-        Locks down the server based on the specified lockdown type (Joins, Readonly,
+        Locks down the community based on the specified lockdown type (Joins, Readonly,
         Full).
       name: LockdownType.Readonly
       optional: false
       type: '='
     - desc: >-
-        Locks down the server based on the specified lockdown type (Joins, Readonly,
+        Locks down the community based on the specified lockdown type (Joins, Readonly,
         Full).
       name: PunishmentAction.Ban
       optional: false
       type: '='
     - desc: >-
-        Locks down the server based on the specified lockdown type (Joins, Readonly,
+        Locks down the community based on the specified lockdown type (Joins, Readonly,
         Full).
       name: false
       optional: false
@@ -1292,23 +1292,23 @@ lockdown_=_=_=_2:
   args:
     - lockdowntype.readonly punishmentaction.ban false
   desc: >-
-    Locks down the server based on the specified lockdown type (Joins, Readonly,
+    Locks down the community based on the specified lockdown type (Joins, Readonly,
     Full).
   params:
     - desc: >-
-        Locks down the server based on the specified lockdown type (Joins, Readonly,
+        Locks down the community based on the specified lockdown type (Joins, Readonly,
         Full).
       name: LockdownType.Readonly
       optional: false
       type: '='
     - desc: >-
-        Locks down the server based on the specified lockdown type (Joins, Readonly,
+        Locks down the community based on the specified lockdown type (Joins, Readonly,
         Full).
       name: PunishmentAction.Ban
       optional: false
       type: '='
     - desc: >-
-        Locks down the server based on the specified lockdown type (Joins, Readonly,
+        Locks down the community based on the specified lockdown type (Joins, Readonly,
         Full).
       name: false
       optional: false
@@ -1678,7 +1678,7 @@ removeblacklistedrole:
 removeemote:
   args:
     - text
-  desc: 'Removes an emote from the server.'
+  desc: 'Removes an emote from the community.'
   params:
     - &ref_394
       desc: 'Placeholder parameter to satisfy command signature requirements.'
@@ -1688,7 +1688,7 @@ removeemote:
 removeemote_string:
   args:
     - text
-  desc: 'Removes an emote from the server.'
+  desc: 'Removes an emote from the community.'
   params:
     - desc: 'Placeholder parameter to satisfy command signature requirements.'
       name: _
@@ -1697,44 +1697,44 @@ removeemote_string:
 removefromall:
   args:
     - '@role'
-  desc: 'Removes a specified role from all server members.'
+  desc: 'Removes a specified role from all community members.'
   params:
     - &ref_395
-      desc: 'The role to be removed from all server members.'
+      desc: 'The role to be removed from all community members.'
       name: role
       optional: false
       type: IRole
 removefromall_IRole:
   args:
     - '@role'
-  desc: 'Removes a specified role from all server members.'
+  desc: 'Removes a specified role from all community members.'
   params:
-    - desc: 'The role to be removed from all server members.'
+    - desc: 'The role to be removed from all community members.'
       name: role
       optional: false
       type: IRole
 removefromall_IRole_1:
   args:
     - '@role'
-  desc: 'Removes a specified role from all server members.'
+  desc: 'Removes a specified role from all community members.'
   params:
-    - desc: 'The role to be removed from all server members.'
+    - desc: 'The role to be removed from all community members.'
       name: role
       optional: false
       type: IRole
 removefromall_IRole_2:
   args:
     - '@role'
-  desc: 'Removes a specified role from all server members.'
+  desc: 'Removes a specified role from all community members.'
   params:
-    - desc: 'The role to be removed from all server members.'
+    - desc: 'The role to be removed from all community members.'
       name: role
       optional: false
       type: IRole
 removefromallbots:
   args:
     - '@role'
-  desc: 'Removes a specified role from all bots in the server.'
+  desc: 'Removes a specified role from all bots in the community.'
   params:
     - &ref_396
       desc: 'The role to be removed from all bots.'
@@ -1744,7 +1744,7 @@ removefromallbots:
 removefromallbots_IRole:
   args:
     - '@role'
-  desc: 'Removes a specified role from all bots in the server.'
+  desc: 'Removes a specified role from all bots in the community.'
   params:
     - desc: 'The role to be removed from all bots.'
       name: role
@@ -1753,7 +1753,7 @@ removefromallbots_IRole:
 removefromallbots_IRole_1:
   args:
     - '@role'
-  desc: 'Removes a specified role from all bots in the server.'
+  desc: 'Removes a specified role from all bots in the community.'
   params:
     - desc: 'The role to be removed from all bots.'
       name: role
@@ -1762,7 +1762,7 @@ removefromallbots_IRole_1:
 removefromallbots_IRole_2:
   args:
     - '@role'
-  desc: 'Removes a specified role from all bots in the server.'
+  desc: 'Removes a specified role from all bots in the community.'
   params:
     - desc: 'The role to be removed from all bots.'
       name: role
@@ -2000,7 +2000,7 @@ removewhitelisteduser:
 renameemote:
   args:
     - text text
-  desc: 'Renames an existing emote on the server.'
+  desc: 'Renames an existing emote on the community.'
   params:
     - &ref_421
       desc: 'The existing emote to rename.'
@@ -2015,7 +2015,7 @@ renameemote:
 renameemote_string_string:
   args:
     - text text
-  desc: 'Renames an existing emote on the server.'
+  desc: 'Renames an existing emote on the community.'
   params:
     - desc: 'The existing emote to rename.'
       name: emote
@@ -2038,32 +2038,32 @@ rolejobs:
   args:
     - ''
   desc: >-
-    Lists all ongoing mass role operations within the server, providing details
+    Lists all ongoing mass role operations within the community, providing details
     about each.
   params: [ ]
 setbanner:
   args:
     - text
-  desc: 'Sets the banner of the server.'
+  desc: 'Sets the banner of the community.'
   params:
     - &ref_489
-      desc: 'The URL of the new server banner.'
+      desc: 'The URL of the new communitybanner.'
       name: img
       optional: false
       type: string
 setbanner_string:
   args:
     - text
-  desc: 'Sets the banner of the server.'
+  desc: 'Sets the banner of the community.'
   params:
-    - desc: 'The URL of the new server banner.'
+    - desc: 'The URL of the new communitybanner.'
       name: img
       optional: false
       type: string
 setdefaultpunishment:
   args:
     - punishmentaction
-  desc: 'Sets the default punishment action for the guild.'
+  desc: 'Sets the default punishment action for the community.'
   params:
     - &ref_501
       desc: 'The default punishment action to set.'
@@ -2073,7 +2073,7 @@ setdefaultpunishment:
 setdefaultpunishment_PunishmentAction:
   args:
     - punishmentaction
-  desc: 'Sets the default punishment action for the guild.'
+  desc: 'Sets the default punishment action for the community.'
   params:
     - desc: 'The default punishment action to set.'
       name: punishmentAction
@@ -2082,7 +2082,7 @@ setdefaultpunishment_PunishmentAction:
 setdefaultpunishment_PunishmentAction_1:
   args:
     - punishmentaction
-  desc: 'Sets the default punishment action for the guild.'
+  desc: 'Sets the default punishment action for the community.'
   params:
     - &ref_502
       desc: 'The default punishment action to set.'
@@ -2092,7 +2092,7 @@ setdefaultpunishment_PunishmentAction_1:
 setdefaultpunishment_PunishmentAction_2:
   args:
     - punishmentaction
-  desc: 'Sets the default punishment action for the guild.'
+  desc: 'Sets the default punishment action for the community.'
   params:
     - desc: 'The default punishment action to set.'
       name: punishmentAction
@@ -2101,19 +2101,19 @@ setdefaultpunishment_PunishmentAction_2:
 seticon:
   args:
     - text
-  desc: 'Sets the icon of the server.'
+  desc: 'Sets the icon of the community.'
   params:
     - &ref_525
-      desc: 'The URL of the new server icon.'
+      desc: 'The URL of the new communityicon.'
       name: img
       optional: false
       type: string
 seticon_string:
   args:
     - text
-  desc: 'Sets the icon of the server.'
+  desc: 'Sets the icon of the community.'
   params:
-    - desc: 'The URL of the new server icon.'
+    - desc: 'The URL of the new communityicon.'
       name: img
       optional: false
       type: string
@@ -2192,16 +2192,16 @@ setroles_IGuildUser_StoopidTime_IRole[]:
 setservername:
   args:
     - text
-  desc: 'Sets the name of the server.'
+  desc: 'Sets the name of the community.'
   params:
-    - desc: 'The new name for the server.'
+    - desc: 'The new name for the community.'
       name: name
       optional: false
       type: string
 setsplash:
   args:
     - text
-  desc: 'Sets the splash image of the server.'
+  desc: 'Sets the splash image of the community.'
   params:
     - desc: The URL of the new splash image.
       name: img
@@ -2210,9 +2210,9 @@ setsplash:
 setsplash_string:
   args:
     - text
-  desc: 'Sets the splash image of the server.'
+  desc: 'Sets the splash image of the community.'
   params:
-    - desc: 'Sets the splash image of the server.'
+    - desc: 'Sets the splash image of the community.'
       name: time
       optional: false
       type: StoopidTime
@@ -2424,7 +2424,7 @@ slowmode_noparams_3:
 steal:
   args:
     - emotes
-  desc: Steals emotes from other servers.
+  desc: Steals emotes from other communities.
   params:
     - desc: Space-separated list of emote URLs or emote names.
       name: e
@@ -2435,7 +2435,7 @@ stealemotes:
     - ''
     - text
     - https://web.fluxer.app/channels/123/456/789
-  desc: 'Adds emotes to the server from the text, a message link or ID, or the message you reply to.'
+  desc: 'Adds emotes to the community from the text, a message link or ID, or the message you reply to.'
   params:
     - &ref_565
       desc: 'Emotes, or a message link or ID. Leave it out when replying to a message.'
@@ -2447,7 +2447,7 @@ stealemotes_string:
     - ''
     - text
     - https://web.fluxer.app/channels/123/456/789
-  desc: 'Adds emotes to the server from the text, a message link or ID, or the message you reply to.'
+  desc: 'Adds emotes to the community from the text, a message link or ID, or the message you reply to.'
   params:
     - desc: 'Emotes, or a message link or ID. Leave it out when replying to a message.'
       name: e
@@ -2495,10 +2495,10 @@ syncroletoall:
     - '@role'
   desc: >-
     Synchronizes a role's permissions to all text channels and categories within
-    the guild.
+    the community.
   params:
     - &ref_593
-      desc: 'The role to synchronize across the guild.'
+      desc: 'The role to synchronize across the community.'
       name: role
       optional: false
       type: IRole
@@ -2507,9 +2507,9 @@ syncroletoall_IRole:
     - '@role'
   desc: >-
     Synchronizes a role's permissions to all text channels and categories within
-    the guild.
+    the community.
   params:
-    - desc: 'The role to synchronize across the guild.'
+    - desc: 'The role to synchronize across the community.'
       name: role
       optional: false
       type: IRole
@@ -2518,9 +2518,9 @@ syncroletoall_IRole_1:
     - '@role'
   desc: >-
     Synchronizes a role's permissions to all text channels and categories within
-    the guild.
+    the community.
   params:
-    - desc: 'The role to synchronize across the guild.'
+    - desc: 'The role to synchronize across the community.'
       name: role
       optional: false
       type: IRole
@@ -2529,16 +2529,16 @@ syncroletoall_IRole_2:
     - '@role'
   desc: >-
     Synchronizes a role's permissions to all text channels and categories within
-    the guild.
+    the community.
   params:
-    - desc: 'The role to synchronize across the guild.'
+    - desc: 'The role to synchronize across the community.'
       name: role
       optional: false
       type: IRole
 syncroletoallcategories:
   args:
     - '@role'
-  desc: 'Synchronizes a role''s permissions to all categories within the guild.'
+  desc: 'Synchronizes a role''s permissions to all categories within the community.'
   params:
     - &ref_594
       desc: 'The role to synchronize across categories.'
@@ -2548,7 +2548,7 @@ syncroletoallcategories:
 syncroletoallcategories_IRole:
   args:
     - '@role'
-  desc: 'Synchronizes a role''s permissions to all categories within the guild.'
+  desc: 'Synchronizes a role''s permissions to all categories within the community.'
   params:
     - desc: 'The role to synchronize across categories.'
       name: role
@@ -2557,7 +2557,7 @@ syncroletoallcategories_IRole:
 syncroletoallcategories_IRole_1:
   args:
     - '@role'
-  desc: 'Synchronizes a role''s permissions to all categories within the guild.'
+  desc: 'Synchronizes a role''s permissions to all categories within the community.'
   params:
     - desc: 'The role to synchronize across categories.'
       name: role
@@ -2566,7 +2566,7 @@ syncroletoallcategories_IRole_1:
 syncroletoallcategories_IRole_2:
   args:
     - '@role'
-  desc: 'Synchronizes a role''s permissions to all categories within the guild.'
+  desc: 'Synchronizes a role''s permissions to all categories within the community.'
   params:
     - desc: 'The role to synchronize across categories.'
       name: role
@@ -2575,7 +2575,7 @@ syncroletoallcategories_IRole_2:
 syncroletoallchannels:
   args:
     - '@role'
-  desc: 'Synchronizes a role''s permissions to all text channels within the guild.'
+  desc: 'Synchronizes a role''s permissions to all text channels within the community.'
   params:
     - &ref_595
       desc: 'The role to synchronize across text channels.'
@@ -2585,7 +2585,7 @@ syncroletoallchannels:
 syncroletoallchannels_IRole:
   args:
     - '@role'
-  desc: 'Synchronizes a role''s permissions to all text channels within the guild.'
+  desc: 'Synchronizes a role''s permissions to all text channels within the community.'
   params:
     - desc: 'The role to synchronize across text channels.'
       name: role
@@ -2594,7 +2594,7 @@ syncroletoallchannels_IRole:
 syncroletoallchannels_IRole_1:
   args:
     - '@role'
-  desc: 'Synchronizes a role''s permissions to all text channels within the guild.'
+  desc: 'Synchronizes a role''s permissions to all text channels within the community.'
   params:
     - desc: 'The role to synchronize across text channels.'
       name: role
@@ -2603,7 +2603,7 @@ syncroletoallchannels_IRole_1:
 syncroletoallchannels_IRole_2:
   args:
     - '@role'
-  desc: 'Synchronizes a role''s permissions to all text channels within the guild.'
+  desc: 'Synchronizes a role''s permissions to all text channels within the community.'
   params:
     - desc: 'The role to synchronize across text channels.'
       name: role
@@ -2621,5 +2621,5 @@ unlock:
 unlockdown:
   args:
     - ''
-  desc: 'Unlocks the server by allowing @everyone to send messages again.'
+  desc: 'Unlocks the community by allowing @everyone to send messages again.'
   params: [ ]

@@ -1,44 +1,44 @@
 activitygraph:
   args:
     - graphtype.days
-  desc: 'Displays a graph of the busiest hours and days in the server.'
+  desc: 'Displays a graph of the busiest hours and days in the community.'
   params:
     - &ref_4
-      desc: 'Displays a graph of the busiest hours and days in the server.'
+      desc: 'Displays a graph of the busiest hours and days in the community.'
       name: GraphType.Days
       optional: false
       type: '='
 activitygraph_=:
   args:
     - graphtype.days
-  desc: 'Displays a graph of the busiest hours and days in the server.'
+  desc: 'Displays a graph of the busiest hours and days in the community.'
   params:
-    - desc: 'Displays a graph of the busiest hours and days in the server.'
+    - desc: 'Displays a graph of the busiest hours and days in the community.'
       name: GraphType.Days
       optional: false
       type: '='
 activitygraph_=_1:
   args:
     - graphtype.days
-  desc: 'Displays a graph of the busiest hours and days in the server.'
+  desc: 'Displays a graph of the busiest hours and days in the community.'
   params:
-    - desc: 'Displays a graph of the busiest hours and days in the server.'
+    - desc: 'Displays a graph of the busiest hours and days in the community.'
       name: GraphType.Days
       optional: false
       type: '='
 activitygraph_=_2:
   args:
     - graphtype.days
-  desc: 'Displays a graph of the busiest hours and days in the server.'
+  desc: 'Displays a graph of the busiest hours and days in the community.'
   params:
-    - desc: 'Displays a graph of the busiest hours and days in the server.'
+    - desc: 'Displays a graph of the busiest hours and days in the community.'
       name: GraphType.Days
       optional: false
       type: '='
 addautopublish:
   args:
     - channel
-  desc: 'Enables auto-publishing for a specified news channel within the guild.'
+  desc: 'Enables auto-publishing for a specified news channel within the community.'
   params:
     - &ref_5
       desc: 'The news channel to enable auto-publishing for.'
@@ -48,7 +48,7 @@ addautopublish:
 addautopublish_ITextChannel:
   args:
     - channel
-  desc: 'Enables auto-publishing for a specified news channel within the guild.'
+  desc: 'Enables auto-publishing for a specified news channel within the community.'
   params:
     - desc: 'The news channel to enable auto-publishing for.'
       name: channel
@@ -57,7 +57,7 @@ addautopublish_ITextChannel:
 addautopublish_ITextChannel_1:
   args:
     - channel
-  desc: 'Enables auto-publishing for a specified news channel within the guild.'
+  desc: 'Enables auto-publishing for a specified news channel within the community.'
   params:
     - desc: 'The news channel to enable auto-publishing for.'
       name: channel
@@ -66,7 +66,7 @@ addautopublish_ITextChannel_1:
 addautopublish_ITextChannel_2:
   args:
     - channel
-  desc: 'Enables auto-publishing for a specified news channel within the guild.'
+  desc: 'Enables auto-publishing for a specified news channel within the community.'
   params:
     - desc: 'The news channel to enable auto-publishing for.'
       name: channel
@@ -347,7 +347,7 @@ aiprompt_string_2:
 aiwebhook:
   args:
     - '[name] [avatar]'
-  desc: 'Sets the webhook for AI responses in this guild.'
+  desc: 'Sets the webhook for AI responses in this community.'
   params:
     - desc: 'The name of the webhook. If null, disables the webhook.'
       name: name
@@ -434,19 +434,19 @@ alias_string_=_2:
 aliasesclear:
   args:
     - ''
-  desc: 'Clears all command aliases for the guild.'
+  desc: 'Clears all command aliases for the community.'
   params: [ ]
 aliaslist:
   args:
     - ''
-  desc: 'Lists all command aliases currently set for the guild.'
+  desc: 'Lists all command aliases currently set for the community.'
   params: [ ]
 avatar:
   args:
     - '[@usr]'
   desc: >-
     Displays the avatar of a specified user or the command invoker. Has a button
-    to view the guild avatar if available.
+    to view the community avatar if available.
   params:
     - desc: 'Optional. The user whose avatar to display.'
       name: usr
@@ -1150,7 +1150,7 @@ emotelist:
   args:
     - '[emotetype]'
   desc: >-
-    Gets the emotes in a guild. If an emote type is specified, only the emotes of
+    Gets the emotes in a community. If an emote type is specified, only the emotes of
     that type will be listed.
   params:
     - desc: 'The type of emotes to list (animated or nonanimated).'
@@ -1388,7 +1388,7 @@ graph_string_=_=_2:
 guildembeddelete:
   args:
     - name
-  desc: 'Deletes a guild embed template (requires ManageMessages permission).'
+  desc: 'Deletes a community embed template (requires ManageMessages permission).'
   params:
     - desc: The name of the embed template to delete.
       name: name
@@ -1397,13 +1397,13 @@ guildembeddelete:
 guildembedlist:
   args:
     - ''
-  desc: 'Lists all guild embed templates.'
+  desc: 'Lists all community embed templates.'
   params: [ ]
 guildembedsave:
   args:
     - name
     - embedJson
-  desc: 'Saves an embed template for guild use (requires ManageMessages permission).'
+  desc: 'Saves an embed template for community use (requires ManageMessages permission).'
   params:
     - desc: The name of the embed template.
       name: name
@@ -1509,7 +1509,7 @@ invite:
     - ''
   desc: >-
     Gets the bots invite link. As well as showing the website, docs, and support
-    server.
+    community.
   params: [ ]
 invitedusers:
   args:
@@ -1546,12 +1546,12 @@ invites_=:
 invitesettings:
   args:
     - ''
-  desc: 'Displays the current invite settings for the guild.'
+  desc: 'Displays the current invite settings for the community.'
   params: [ ]
 joinstats:
   args:
     - ''
-  desc: 'Generates and sends a graph displaying the join statistics of the server.'
+  desc: 'Generates and sends a graph displaying the join statistics of the community.'
   params: [ ]
 joinstatscolor:
   args:
@@ -1671,7 +1671,7 @@ joinstatscolor_noparams_3:
 leavestats:
   args:
     - ''
-  desc: 'Generates and sends a graph displaying the leave statistics of the server.'
+  desc: 'Generates and sends a graph displaying the leave statistics of the community.'
   params: [ ]
 leavestatscolor:
   args:
@@ -1792,12 +1792,12 @@ listquotes:
   args:
     - ordertype.keyword
   desc: >-
-    Lists quotes in the guild on a specific page. Quotes can be ordered by
+    Lists quotes in the community on a specific page. Quotes can be ordered by
     keyword or date added.
   params:
     - &ref_279
       desc: >-
-        Lists quotes in the guild on a specific page. Quotes can be ordered by
+        Lists quotes in the community on a specific page. Quotes can be ordered by
         keyword or date added.
       name: OrderType.Keyword
       optional: false
@@ -1806,11 +1806,11 @@ listquotes_=:
   args:
     - ordertype.keyword
   desc: >-
-    Lists quotes in the guild on a specific page. Quotes can be ordered by
+    Lists quotes in the community on a specific page. Quotes can be ordered by
     keyword or date added.
   params:
     - desc: >-
-        Lists quotes in the guild on a specific page. Quotes can be ordered by
+        Lists quotes in the community on a specific page. Quotes can be ordered by
         keyword or date added.
       name: OrderType.Keyword
       optional: false
@@ -1819,11 +1819,11 @@ listquotes_=_1:
   args:
     - ordertype.keyword
   desc: >-
-    Lists quotes in the guild on a specific page. Quotes can be ordered by
+    Lists quotes in the community on a specific page. Quotes can be ordered by
     keyword or date added.
   params:
     - desc: >-
-        Lists quotes in the guild on a specific page. Quotes can be ordered by
+        Lists quotes in the community on a specific page. Quotes can be ordered by
         keyword or date added.
       name: OrderType.Keyword
       optional: false
@@ -1832,11 +1832,11 @@ listquotes_=_2:
   args:
     - ordertype.keyword
   desc: >-
-    Lists quotes in the guild on a specific page. Quotes can be ordered by
+    Lists quotes in the community on a specific page. Quotes can be ordered by
     keyword or date added.
   params:
     - desc: >-
-        Lists quotes in the guild on a specific page. Quotes can be ordered by
+        Lists quotes in the community on a specific page. Quotes can be ordered by
         keyword or date added.
       name: OrderType.Keyword
       optional: false
@@ -1845,17 +1845,17 @@ listquotes_=_=:
   args:
     - 1 ordertype.keyword
   desc: >-
-    Lists quotes in the guild on a specific page. Quotes can be ordered by
+    Lists quotes in the community on a specific page. Quotes can be ordered by
     keyword or date added.
   params:
     - desc: >-
-        Lists quotes in the guild on a specific page. Quotes can be ordered by
+        Lists quotes in the community on a specific page. Quotes can be ordered by
         keyword or date added.
       name: 1
       optional: false
       type: '='
     - desc: >-
-        Lists quotes in the guild on a specific page. Quotes can be ordered by
+        Lists quotes in the community on a specific page. Quotes can be ordered by
         keyword or date added.
       name: OrderType.Keyword
       optional: false
@@ -1864,17 +1864,17 @@ listquotes_=_=_1:
   args:
     - 1 ordertype.keyword
   desc: >-
-    Lists quotes in the guild on a specific page. Quotes can be ordered by
+    Lists quotes in the community on a specific page. Quotes can be ordered by
     keyword or date added.
   params:
     - desc: >-
-        Lists quotes in the guild on a specific page. Quotes can be ordered by
+        Lists quotes in the community on a specific page. Quotes can be ordered by
         keyword or date added.
       name: 1
       optional: false
       type: '='
     - desc: >-
-        Lists quotes in the guild on a specific page. Quotes can be ordered by
+        Lists quotes in the community on a specific page. Quotes can be ordered by
         keyword or date added.
       name: OrderType.Keyword
       optional: false
@@ -1883,17 +1883,17 @@ listquotes_=_=_2:
   args:
     - 1 ordertype.keyword
   desc: >-
-    Lists quotes in the guild on a specific page. Quotes can be ordered by
+    Lists quotes in the community on a specific page. Quotes can be ordered by
     keyword or date added.
   params:
     - desc: >-
-        Lists quotes in the guild on a specific page. Quotes can be ordered by
+        Lists quotes in the community on a specific page. Quotes can be ordered by
         keyword or date added.
       name: 1
       optional: false
       type: '='
     - desc: >-
-        Lists quotes in the guild on a specific page. Quotes can be ordered by
+        Lists quotes in the community on a specific page. Quotes can be ordered by
         keyword or date added.
       name: OrderType.Keyword
       optional: false
@@ -1902,17 +1902,17 @@ listquotes_=_=_3:
   args:
     - 1 ordertype.keyword
   desc: >-
-    Lists quotes in the guild on a specific page. Quotes can be ordered by
+    Lists quotes in the community on a specific page. Quotes can be ordered by
     keyword or date added.
   params:
     - desc: >-
-        Lists quotes in the guild on a specific page. Quotes can be ordered by
+        Lists quotes in the community on a specific page. Quotes can be ordered by
         keyword or date added.
       name: 1
       optional: false
       type: '='
     - desc: >-
-        Lists quotes in the guild on a specific page. Quotes can be ordered by
+        Lists quotes in the community on a specific page. Quotes can be ordered by
         keyword or date added.
       name: OrderType.Keyword
       optional: false
@@ -2046,7 +2046,7 @@ plot:
 previewlinks:
   args:
     - text
-  desc: 'Toggles link previews on or off for the server.'
+  desc: 'Toggles link previews on or off for the community.'
   params:
     - &ref_355
       desc: '"yes" to enable link previews, literally anything else to disable.'
@@ -2056,7 +2056,7 @@ previewlinks:
 previewlinks_string:
   args:
     - text
-  desc: 'Toggles link previews on or off for the server.'
+  desc: 'Toggles link previews on or off for the community.'
   params:
     - desc: '"yes" to enable link previews, literally anything else to disable.'
       name: yesnt
@@ -2065,7 +2065,7 @@ previewlinks_string:
 previewlinks_string_1:
   args:
     - text
-  desc: 'Toggles link previews on or off for the server.'
+  desc: 'Toggles link previews on or off for the community.'
   params:
     - desc: '"yes" to enable link previews, literally anything else to disable.'
       name: yesnt
@@ -2074,7 +2074,7 @@ previewlinks_string_1:
 previewlinks_string_2:
   args:
     - text
-  desc: 'Toggles link previews on or off for the server.'
+  desc: 'Toggles link previews on or off for the community.'
   params:
     - desc: '"yes" to enable link previews, literally anything else to disable.'
       name: yesnt
@@ -2173,7 +2173,7 @@ quotedelete_int_2:
       type: int
 quoteexport:
   args: [ ]
-  desc: 'Exports all quotes from the guild in JSON format.'
+  desc: 'Exports all quotes from the community in JSON format.'
   params: [ ]
 quoteid:
   args:
@@ -2476,7 +2476,7 @@ remindlist:
 removeautopublish:
   args:
     - channel
-  desc: 'Disables auto-publishing for a specified news channel within the guild.'
+  desc: 'Disables auto-publishing for a specified news channel within the community.'
   params:
     - &ref_393
       desc: 'The news channel to disable auto-publishing for.'
@@ -2486,7 +2486,7 @@ removeautopublish:
 removeautopublish_ITextChannel:
   args:
     - channel
-  desc: 'Disables auto-publishing for a specified news channel within the guild.'
+  desc: 'Disables auto-publishing for a specified news channel within the community.'
   params:
     - desc: 'The news channel to disable auto-publishing for.'
       name: channel
@@ -2495,7 +2495,7 @@ removeautopublish_ITextChannel:
 removeautopublish_ITextChannel_1:
   args:
     - channel
-  desc: 'Disables auto-publishing for a specified news channel within the guild.'
+  desc: 'Disables auto-publishing for a specified news channel within the community.'
   params:
     - desc: 'The news channel to disable auto-publishing for.'
       name: channel
@@ -2504,7 +2504,7 @@ removeautopublish_ITextChannel_1:
 removeautopublish_ITextChannel_2:
   args:
     - channel
-  desc: 'Disables auto-publishing for a specified news channel within the guild.'
+  desc: 'Disables auto-publishing for a specified news channel within the community.'
   params:
     - desc: 'The news channel to disable auto-publishing for.'
       name: channel
@@ -2981,7 +2981,7 @@ repeatinvoke_int_2:
 repeatlist:
   args:
     - ''
-  desc: 'Lists all active repeaters in the guild.'
+  desc: 'Lists all active repeaters in the community.'
   params: [ ]
 repeatmessage:
   args:
@@ -3286,7 +3286,7 @@ resetmessagecounts_ITextChannel_3:
 rinfo:
   args:
     - '@role'
-  desc: 'Displays information about a specified role within the guild.'
+  desc: 'Displays information about a specified role within the community.'
   params:
     - &ref_442
       desc: 'The role to gather information about.'
@@ -3296,7 +3296,7 @@ rinfo:
 rinfo_IRole:
   args:
     - '@role'
-  desc: 'Displays information about a specified role within the guild.'
+  desc: 'Displays information about a specified role within the community.'
   params:
     - desc: 'The role to gather information about.'
       name: role
@@ -3305,7 +3305,7 @@ rinfo_IRole:
 rinfo_IRole_1:
   args:
     - '@role'
-  desc: 'Displays information about a specified role within the guild.'
+  desc: 'Displays information about a specified role within the community.'
   params:
     - desc: 'The role to gather information about.'
       name: role
@@ -3314,7 +3314,7 @@ rinfo_IRole_1:
 rinfo_IRole_2:
   args:
     - '@role'
-  desc: 'Displays information about a specified role within the guild.'
+  desc: 'Displays information about a specified role within the community.'
   params:
     - desc: 'The role to gather information about.'
       name: role
@@ -3455,7 +3455,7 @@ roles:
   args:
     - '[@target]'
   desc: >-
-    Gets a list of roles in the current server. Shows a user's roles if a user is
+    Gets a list of roles in the current community. Shows a user's roles if a user is
     specified.
   params:
     - desc: 'The user to get the roles of.'
@@ -3709,21 +3709,21 @@ say_ITextChannel_string_2:
 serverid_noparams:
   args:
     - ''
-  desc: 'Gets the server id of the current server.'
+  desc: 'Gets the community id of the current community.'
   params: [ ]
 serverinfo:
   args:
     - '[guildName]'
-  desc: 'Displays detailed information about the server.'
+  desc: 'Displays detailed information about the community.'
   params:
-    - desc: 'Optional. The name of the guild to display information about.'
+    - desc: 'Optional. The name of the community to display information about.'
       name: guildName
       optional: true
       type: string
 servermessages:
   args:
     - ''
-  desc: 'Retrieves message statistics for the entire server.'
+  desc: 'Retrieves message statistics for the entire community.'
   params: [ ]
 setminaccountage:
   args:
@@ -4215,7 +4215,7 @@ stats:
   params: [ ]
   args:
     - '@role @role'
-  desc: 'Disables the stream role feature in the server.'
+  desc: 'Disables the stream role feature in the community.'
   params:
     - desc: 'The role to monitor for streaming activity.'
       name: fromRole
@@ -4227,7 +4227,7 @@ stats:
       type: IRole
   args:
     - '@role @role'
-  desc: 'Disables the stream role feature in the server.'
+  desc: 'Disables the stream role feature in the community.'
   params:
     - desc: 'The role to monitor for streaming activity.'
       name: fromRole
@@ -4239,11 +4239,11 @@ stats:
       type: IRole
   args:
     - ''
-  desc: 'Disables the stream role feature in the server.'
+  desc: 'Disables the stream role feature in the community.'
   params: [ ]
   args:
     - ''
-  desc: 'Disables the stream role feature in the server.'
+  desc: 'Disables the stream role feature in the community.'
   params: [ ]
   args:
     - action @user
@@ -4330,12 +4330,12 @@ symbolic_string_2:
 toggleinvitetracking:
   args:
     - ''
-  desc: 'Toggles invite tracking for the guild.'
+  desc: 'Toggles invite tracking for the community.'
   params: [ ]
 togglemessagecount:
   args:
     - ''
-  desc: 'Toggles message counting in the server'
+  desc: 'Toggles message counting in the community'
   params: [ ]
 togglemsgcount:
   args:
@@ -4345,7 +4345,7 @@ togglemsgcount:
 toggleremoveinviteonleave:
   args:
     - ''
-  desc: 'Toggles whether invites should be removed when a user leaves the guild.'
+  desc: 'Toggles whether invites should be removed when a user leaves the community.'
   params: [ ]
 topusers:
   args:
@@ -4439,7 +4439,7 @@ vote_noparams:
 whoinvited:
   args:
     - '[@user]'
-  desc: 'Displays who invited a specific user to the guild.'
+  desc: 'Displays who invited a specific user to the community.'
   params:
     - desc: 'The user to check. If null, checks for the command user.'
       name: user
@@ -4469,7 +4469,7 @@ vote:
 serverid:
   args:
     - ''
-  desc: 'Gets the server id of the current server.'
+  desc: 'Gets the community id of the current community.'
   params: [ ]
 invites:
   args:
@@ -4644,7 +4644,7 @@ resetinvites:
     - '@user'
     - 'Server'
     - 'LeftMembers'
-  desc: 'Resets invites for one user, for everyone in the server, or only for inviters who have since left.'
+  desc: 'Resets invites for one user, for everyone in the community, or only for inviters who have since left.'
   params:
     - desc: 'The user to reset.'
       name: user
@@ -4666,7 +4666,7 @@ syncinvites:
 deleteinvite:
   args:
     - 'abc123'
-  desc: 'Deletes an invite code from the server.'
+  desc: 'Deletes an invite code from the community.'
   params:
     - desc: 'The invite code or URL.'
       name: code
@@ -4776,7 +4776,7 @@ invitedexport:
 invitemassban:
   args:
     - '@user [reason]'
-  desc: 'Bans every member who is still in the server and was invited by a user. Asks for confirmation first.'
+  desc: 'Bans every member who is still in the community and was invited by a user. Asks for confirmation first.'
   params:
     - desc: 'The inviter.'
       name: inviter
@@ -4789,7 +4789,7 @@ invitemassban:
 invitemassbancode:
   args:
     - 'abc123 [reason]'
-  desc: 'Bans every member who is still in the server and joined through an invite code. Asks for confirmation first.'
+  desc: 'Bans every member who is still in the community and joined through an invite code. Asks for confirmation first.'
   params:
     - desc: 'The invite code or URL.'
       name: code

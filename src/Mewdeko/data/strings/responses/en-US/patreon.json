@@ -56,7 +56,7 @@
   "patreon_role_sync_disabled": "Patreon role synchronization disabled.",
   "patreon_role_sync_enabled": "Patreon role synchronization enabled!",
   "patreon_roles_title": "Patreon Tier Role Mappings",
-  "patreon_setup_footer": "This setup is required only once per server",
+  "patreon_setup_footer": "This setup is required only once per community",
   "patreon_stats_average": "Average Support",
   "patreon_stats_creator": "Campaign Creator",
   "patreon_stats_linked": "Linked to Discord",

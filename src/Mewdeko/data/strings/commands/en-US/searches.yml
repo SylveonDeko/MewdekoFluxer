@@ -486,7 +486,7 @@ feedadd:
   args:
     - '<url> [@channel]'
     - text
-  desc: 'Adds a new RSS feed to the guild''s feed list.'
+  desc: 'Adds a new RSS feed to the community''s feed list.'
   params:
     - desc: 'The URL of the RSS feed.'
       name: url
@@ -500,7 +500,7 @@ feedadd_string_=:
   args:
     - '<url> [@channel]'
     - text
-  desc: 'Adds a new RSS feed to the guild''s feed list.'
+  desc: 'Adds a new RSS feed to the community''s feed list.'
   params:
     - desc: 'The URL of the RSS feed.'
       name: url
@@ -514,7 +514,7 @@ feedadd_string_=_1:
   args:
     - '<url> [@channel]'
     - text
-  desc: 'Adds a new RSS feed to the guild''s feed list.'
+  desc: 'Adds a new RSS feed to the community''s feed list.'
   params:
     - desc: 'The URL of the RSS feed.'
       name: url
@@ -528,7 +528,7 @@ feedadd_string_=_2:
   args:
     - '<url> [@channel]'
     - text
-  desc: 'Adds a new RSS feed to the guild''s feed list.'
+  desc: 'Adds a new RSS feed to the community''s feed list.'
   params:
     - desc: 'The URL of the RSS feed.'
       name: url
@@ -541,7 +541,7 @@ feedadd_string_=_2:
 feedlist:
   args:
     - ''
-  desc: 'Lists all RSS feeds added to the guild.'
+  desc: 'Lists all RSS feeds added to the community.'
   params: [ ]
 feedmessage:
   args:
@@ -600,7 +600,7 @@ feedmessage_int_string_2:
 feedremove:
   args:
     - number
-  desc: 'Removes an RSS feed from the guild''s feed list.'
+  desc: 'Removes an RSS feed from the community''s feed list.'
   params:
     - desc: 'The index of the feed in the list.'
       name: index
@@ -908,12 +908,12 @@ mal:
     - text
   desc: >-
     Retrieves and displays information about a MyAnimeList profile for a
-    specified user in the current guild.
+    specified user in the current community.
   params:
     - &ref_288
       desc: >-
         Retrieves and displays information about a MyAnimeList profile for a
-        specified user in the current guild.
+        specified user in the current community.
       name: name
       optional: true
       type: string
@@ -922,7 +922,7 @@ mal_IGuildUser:
     - '@user'
   desc: >-
     Retrieves and displays information about a MyAnimeList profile for a
-    specified user in the current guild.
+    specified user in the current community.
   params:
     - &ref_287
       desc: 'The user for whom to retrieve the MyAnimeList profile information.'
@@ -934,7 +934,7 @@ mal_IGuildUser_1:
     - '@user'
   desc: >-
     Retrieves and displays information about a MyAnimeList profile for a
-    specified user in the current guild.
+    specified user in the current community.
   params:
     - desc: 'The user for whom to retrieve the MyAnimeList profile information.'
       name: usr
@@ -945,7 +945,7 @@ mal_IGuildUser_2:
     - '@user'
   desc: >-
     Retrieves and displays information about a MyAnimeList profile for a
-    specified user in the current guild.
+    specified user in the current community.
   params:
     - desc: 'The user for whom to retrieve the MyAnimeList profile information.'
       name: usr
@@ -956,7 +956,7 @@ mal_IGuildUser_3:
     - '@user'
   desc: >-
     Retrieves and displays information about a MyAnimeList profile for a
-    specified user in the current guild.
+    specified user in the current community.
   params:
     - desc: 'The user for whom to retrieve the MyAnimeList profile information.'
       name: usr
@@ -967,11 +967,11 @@ mal_string:
     - text
   desc: >-
     Retrieves and displays information about a MyAnimeList profile for a
-    specified user in the current guild.
+    specified user in the current community.
   params:
     - desc: >-
         Retrieves and displays information about a MyAnimeList profile for a
-        specified user in the current guild.
+        specified user in the current community.
       name: name
       optional: true
       type: string
@@ -980,11 +980,11 @@ mal_string_1:
     - text
   desc: >-
     Retrieves and displays information about a MyAnimeList profile for a
-    specified user in the current guild.
+    specified user in the current community.
   params:
     - desc: >-
         Retrieves and displays information about a MyAnimeList profile for a
-        specified user in the current guild.
+        specified user in the current community.
       name: name
       optional: true
       type: string
@@ -993,11 +993,11 @@ mal_string_2:
     - text
   desc: >-
     Retrieves and displays information about a MyAnimeList profile for a
-    specified user in the current guild.
+    specified user in the current community.
   params:
     - desc: >-
         Retrieves and displays information about a MyAnimeList profile for a
-        specified user in the current guild.
+        specified user in the current community.
       name: name
       optional: true
       type: string
@@ -1978,7 +1978,7 @@ steam_string_2:
 streamadd:
   args:
     - text
-  desc: 'Adds a new stream to the notification list for the current guild.'
+  desc: 'Adds a new stream to the notification list for the current community.'
   params:
     - &ref_571
       desc: 'The link to the stream to be added.'
@@ -1988,7 +1988,7 @@ streamadd:
 streamadd_string:
   args:
     - text
-  desc: 'Adds a new stream to the notification list for the current guild.'
+  desc: 'Adds a new stream to the notification list for the current community.'
   params:
     - desc: 'The link to the stream to be added.'
       name: link
@@ -1997,7 +1997,7 @@ streamadd_string:
 streamadd_string_1:
   args:
     - text
-  desc: 'Adds a new stream to the notification list for the current guild.'
+  desc: 'Adds a new stream to the notification list for the current community.'
   params:
     - desc: 'The link to the stream to be added.'
       name: link
@@ -2006,7 +2006,7 @@ streamadd_string_1:
 streamadd_string_2:
   args:
     - text
-  desc: 'Adds a new stream to the notification list for the current guild.'
+  desc: 'Adds a new stream to the notification list for the current community.'
   params:
     - desc: 'The link to the stream to be added.'
       name: link
@@ -2052,13 +2052,13 @@ streamcheck_string_2:
 streamlist:
   args:
     - ''
-  desc: 'Lists all streams currently followed by the guild.'
+  desc: 'Lists all streams currently followed by the community.'
   params: [ ]
 streammessage:
   args:
     - number text
   desc: >-
-    Sets a custom notification message for a specific stream in the guild's
+    Sets a custom notification message for a specific stream in the community's
     notification list.
   params:
     - &ref_573
@@ -2075,7 +2075,7 @@ streammessage_int_string:
   args:
     - number text
   desc: >-
-    Sets a custom notification message for a specific stream in the guild's
+    Sets a custom notification message for a specific stream in the community's
     notification list.
   params:
     - desc: 'The 1-based index of the stream to set the message for.'
@@ -2090,7 +2090,7 @@ streammessage_int_string_1:
   args:
     - number text
   desc: >-
-    Sets a custom notification message for a specific stream in the guild's
+    Sets a custom notification message for a specific stream in the community's
     notification list.
   params:
     - desc: 'The 1-based index of the stream to set the message for.'
@@ -2105,7 +2105,7 @@ streammessage_int_string_2:
   args:
     - number text
   desc: >-
-    Sets a custom notification message for a specific stream in the guild's
+    Sets a custom notification message for a specific stream in the community's
     notification list.
   params:
     - desc: 'The 1-based index of the stream to set the message for.'
@@ -2119,7 +2119,7 @@ streammessage_int_string_2:
 streamoffline:
   args:
     - ''
-  desc: 'Toggles the setting for notifying the guild when a followed stream goes offline.'
+  desc: 'Toggles the setting for notifying the community when a followed stream goes offline.'
   params: [ ]
 streamofflinemessage:
   args:
@@ -2175,14 +2175,14 @@ streamremove_int_2:
 streamsclear:
   args:
     - ''
-  desc: 'Clears all streams from the guild''s notification list.'
+  desc: 'Clears all streams from the community''s notification list.'
   params: [ ]
 streamtemplate:
   args:
     - text
   desc: >-
     Sets or shows the custom stream notification message template for all streams
-    in the guild.
+    in the community.
   params:
     - desc: >-
         The custom message template with placeholders. Leave empty to show
