@@ -36,5 +36,8 @@
   "stat_role_grant_list": "Gaining The Role",
   "stat_role_remove_list": "Losing The Role",
   "stat_role_applied": "Applied",
-  "stat_role_applied_value": "Granted **{0}**, removed **{1}**, failed **{2}**."
+  "stat_role_applied_value": "Granted **{0}**, removed **{1}**, failed **{2}**.",
+  "new_member_role_name": "New member",
+  "new_member_role_created": "Members now get {0} when they join and lose it after {1} days. It's stat role **#{2}**.",
+  "new_member_role_failed": "I couldn't create the role. Check that the icon is a single emoji."
 }

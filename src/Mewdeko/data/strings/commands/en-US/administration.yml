@@ -4088,6 +4088,21 @@ rolehoist:
       name: role
       optional: false
       type: IRole
+roleicon:
+  args:
+    - '@role 🌱'
+    - '@role https://example.com/icon.png'
+    - '@role none'
+  desc: 'Sets a role''s icon to an emoji, one of this community''s emojis, an image link or an attached image. Use none to remove it.'
+  params:
+    - desc: 'The role to change.'
+      name: role
+      optional: false
+      type: IRole
+    - desc: 'The emoji, image link or none. Leave it empty to use an attached image.'
+      name: icon
+      optional: true
+      type: string
 rolehoist_IRole:
   args:
     - '@role'

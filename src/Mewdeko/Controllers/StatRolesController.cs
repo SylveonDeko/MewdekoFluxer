@@ -143,6 +143,25 @@ public class StatRolesController : Controller
     }
 
     /// <summary>
+    ///     Creates a role with an emoji icon that members hold for their first days in the community.
+    /// </summary>
+    [HttpPost("new-member")]
+    public async Task<IActionResult> CreateNewMember(ulong guildId, [FromBody] NewMemberRoleRequest? request)
+    {
+        if (client.GetGuild(guildId) is not { } guild)
+            return NotFound("Community not found");
+
+        var created = await service.CreateNewMemberRoleAsync(guild,
+            string.IsNullOrWhiteSpace(request?.Name) ? "New member" : request.Name.Trim(),
+            request?.Days ?? 7, string.IsNullOrWhiteSpace(request?.Icon) ? "🌱" : request.Icon.Trim());
+        if (created == null)
+            return BadRequest("Fluxer refused the role. Check that the icon is a single emoji.");
+
+        auditContext.RecordAfter(created);
+        return Ok(Shape(created));
+    }
+
+    /// <summary>
     ///     Updates a stat role.
     /// </summary>
     [HttpPut("{id:int}")]
@@ -238,6 +257,21 @@ public class StatRolesController : Controller
             result.Removed,
             result.Failed
         };
+    }
+
+    /// <summary>
+    ///     A new member role to create.
+    /// </summary>
+    public class NewMemberRoleRequest
+    {
+        /// <summary>The role name.</summary>
+        public string? Name { get; set; }
+
+        /// <summary>How many days a member counts as new.</summary>
+        public int? Days { get; set; }
+
+        /// <summary>The emoji icon.</summary>
+        public string? Icon { get; set; }
     }
 
     /// <summary>

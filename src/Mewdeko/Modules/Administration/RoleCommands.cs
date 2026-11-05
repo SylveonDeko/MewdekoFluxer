@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.Http;
+using System.Text.RegularExpressions;
 using DataModel;
 using Humanizer;
 using Mewdeko.Common.Attributes.TextCommands;
@@ -18,11 +20,13 @@ public partial class Administration
     /// <param name="intserv">Interactive service used for paginated embeds.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     /// <param name="muteService">Service for managing timed roles and mutes.</param>
+    /// <param name="httpFactory">The HTTP client factory used to download role icons.</param>
     public class RoleCommands(
         IServiceProvider services,
         InteractiveService intserv,
         ILogger<RoleCommands> logger,
-        MuteService muteService)
+        MuteService muteService,
+        IHttpClientFactory httpFactory)
         : MewdekoSubmodule<RoleCommandsService>
     {
         /// <summary>
@@ -698,6 +702,108 @@ public partial class Administration
             {
                 await ReplyConfirmAsync(Strings.RolehoistDisabled(ctx.Guild.Id, Format.Bold(role.Name)))
                     .ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        ///     Sets a role's icon to an emoji, one of the community's emojis, an image link or an attached image, or
+        ///     removes it with "none".
+        /// </summary>
+        /// <param name="role">The role to change.</param>
+        /// <param name="icon">The emoji, image link or "none". Leave empty to use an attached image.</param>
+        [Cmd]
+        [Aliases]
+        [RequireContext(ContextType.Guild)]
+        [UserPerm(GuildPermission.ManageRoles)]
+        [BotPerm(GuildPermission.ManageRoles)]
+        public async Task RoleIcon(SocketRole role, [Remainder] string? icon = null)
+        {
+            var guild = (SocketGuild)ctx.Guild;
+            if (role.Position >= guild.CurrentUser.Hierarchy)
+            {
+                await ReplyErrorAsync(Strings.RoleIconHierarchy(ctx.Guild.Id, Format.Bold(role.Name)))
+                    .ConfigureAwait(false);
+                return;
+            }
+
+            icon = icon?.Trim();
+            var request = new UpdateGuildRoleRequest();
+            var removing = icon is not null && icon.ToLowerInvariant() is "none" or "remove" or "clear";
+            if (removing)
+            {
+                request.IconBase64 = null;
+                request.UnicodeEmoji = null;
+            }
+            else if (RoleIconSource(guild, icon) is { } url)
+            {
+                var data = await DownloadIconAsync(url).ConfigureAwait(false);
+                if (data == null)
+                {
+                    await ReplyErrorAsync(Strings.RoleIconDownloadFailed(ctx.Guild.Id)).ConfigureAwait(false);
+                    return;
+                }
+
+                request.UnicodeEmoji = null;
+                request.IconBase64 = data;
+            }
+            else if (!string.IsNullOrEmpty(icon) && icon.Length <= 16 && !icon.Any(char.IsAsciiLetterOrDigit))
+            {
+                request.IconBase64 = null;
+                request.UnicodeEmoji = icon;
+            }
+            else
+            {
+                await ReplyErrorAsync(Strings.RoleIconUsage(ctx.Guild.Id)).ConfigureAwait(false);
+                return;
+            }
+
+            try
+            {
+                await role.ModifyAsync(request).ConfigureAwait(false);
+                await ReplyConfirmAsync(removing
+                    ? Strings.RoleIconRemoved(ctx.Guild.Id, Format.Bold(role.Name))
+                    : Strings.RoleIconSet(ctx.Guild.Id, Format.Bold(role.Name))).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Could not set the icon of role {RoleId} in {GuildId}", role.Id, ctx.Guild.Id);
+                await ReplyErrorAsync(Strings.RoleIconFailed(ctx.Guild.Id)).ConfigureAwait(false);
+            }
+        }
+
+        private string? RoleIconSource(SocketGuild guild, string? icon)
+        {
+            if (string.IsNullOrEmpty(icon))
+                return ctx.Message.Attachments.FirstOrDefault()?.Url;
+
+            var custom = Regex.Match(icon, @"^<a?:\w+:(\d+)>$");
+            if (custom.Success && ulong.TryParse(custom.Groups[1].Value, out var emojiId))
+                return guild.Emotes.FirstOrDefault(e => e.Id == emojiId)?.GetEmojiUrl();
+
+            return Uri.TryCreate(icon, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https"
+                ? icon
+                : null;
+        }
+
+        private async Task<string?> DownloadIconAsync(string url)
+        {
+            try
+            {
+                using var http = httpFactory.CreateClient();
+                using var response = await http.GetAsync(url).ConfigureAwait(false);
+                var type = response.Content.Headers.ContentType?.MediaType;
+                if (!response.IsSuccessStatusCode || type is null || !type.StartsWith("image/"))
+                    return null;
+
+                var bytes = await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
+                return bytes.Length is 0 or > 2 * 1024 * 1024
+                    ? null
+                    : $"data:{type};base64,{Convert.ToBase64String(bytes)}";
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Could not download role icon {Url}", url);
+                return null;
             }
         }
 

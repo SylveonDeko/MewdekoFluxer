@@ -48,14 +48,16 @@ public class StatRoleService : INService, IReadyExecutor, IDisposable
     /// <param name="stats">The stats query service.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     /// <param name="collector">The analytics collector.</param>
+    /// <param name="eventHandler">The event handler for member joins.</param>
     public StatRoleService(FluxerClient client, IDataConnectionFactory dbFactory, ServerStatsService stats,
-        ILogger<StatRoleService> logger, IAnalyticsCollector collector)
+        ILogger<StatRoleService> logger, IAnalyticsCollector collector, EventHandler eventHandler)
     {
         this.client = client;
         this.dbFactory = dbFactory;
         this.stats = stats;
         this.logger = logger;
         this.collector = collector;
+        eventHandler.UserJoined.Subscribe("StatRoleService", OnUserJoined);
     }
 
     /// <inheritdoc />
@@ -203,6 +205,43 @@ public class StatRoleService : INService, IReadyExecutor, IDisposable
         return await db.StatRoles.Where(x => x.GuildId == guildId && x.Id == id).DeleteAsync() > 0;
     }
 
+    /// <summary>
+    ///     Creates a role with an emoji icon and a stat role that gives it to members for their first days.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="name">The role name.</param>
+    /// <param name="days">How many days a member counts as new.</param>
+    /// <param name="icon">The emoji icon.</param>
+    /// <returns>The created stat role, or null when Fluxer refused the role.</returns>
+    public async Task<StatRole?> CreateNewMemberRoleAsync(SocketGuild guild, string name, int days, string icon)
+    {
+        days = Math.Clamp(days, 1, 365);
+        Role role;
+        try
+        {
+            role = await guild.CreateRoleAsync(new CreateGuildRoleRequest
+            {
+                Name = name, UnicodeEmoji = icon
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not create a new member role in {GuildId}", guild.Id);
+            return null;
+        }
+
+        return await CreateAsync(new StatRole
+        {
+            GuildId = guild.Id,
+            RoleId = role.Id,
+            Name = role.Name,
+            StatType = (int)StatRoleStat.JoinedDays,
+            LimitType = (int)StatRoleLimit.Threshold,
+            Minimum = 0,
+            Maximum = days - 1
+        });
+    }
+
     private static void Normalize(StatRole role)
     {
         role.IntervalMinutes = Math.Max(MinimumIntervalMinutes, role.IntervalMinutes);
@@ -290,6 +329,46 @@ public class StatRoleService : INService, IReadyExecutor, IDisposable
         catch (Exception ex)
         {
             logger.LogError(ex, "Stat role scheduler tick failed");
+        }
+    }
+
+    private async Task OnUserJoined(SocketGuildMember user)
+    {
+        try
+        {
+            var guild = user.Guild;
+            if (!guild.CurrentUser.GuildPermissions.ManageRoles)
+                return;
+
+            await using var db = await dbFactory.CreateConnectionAsync();
+            var roles = await db.StatRoles
+                .Where(x => x.GuildId == guild.Id && x.Enabled && x.LimitType == (int)StatRoleLimit.Threshold &&
+                            (x.StatType == (int)StatRoleStat.JoinedDays ||
+                             x.StatType == (int)StatRoleStat.AccountDays))
+                .ToListAsync();
+            if (roles.Count == 0)
+                return;
+
+            var qualifying = new Dictionary<int, Dictionary<ulong, StatRoleMember>>();
+            foreach (var role in roles)
+                qualifying[role.Id] = await EvaluateAsync(guild, role, [user]);
+            ApplyGroups(roles, qualifying);
+
+            foreach (var role in roles)
+            {
+                if (!qualifying[role.Id].TryGetValue(user.Id, out var member) ||
+                    user.Roles.Any(r => r.Id == role.RoleId) ||
+                    guild.GetRole(role.RoleId) is not { } discordRole ||
+                    discordRole.Position >= guild.CurrentUser.Hierarchy)
+                    continue;
+
+                await user.AddRoleAsync(discordRole);
+                await NotifyAsync(guild, role, discordRole, user, StatRoleAction.Granted, member.Value);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not apply join stat roles to {UserId} in {GuildId}", user.Id, user.Guild.Id);
         }
     }
 

@@ -2438,6 +2438,9 @@ rolegreetwebhook:
 rolehoist:
   - rolehoist
   - rh
+roleicon:
+  - roleicon
+  - rolei
 roleid:
   - roleid
   - rid
@@ -4015,6 +4018,9 @@ statsactivityfilters:
   - statsactivityfilters
   - activityfilters
   - gamefilters
+newmemberrole:
+  - newmemberrole
+  - nmr
 statroleadd:
   - statroleadd
   - sradd

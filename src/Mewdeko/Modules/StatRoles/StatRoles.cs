@@ -134,6 +134,31 @@ public class StatRoles : MewdekoModuleBase<StatRoleService>
         }, role);
     }
 
+    /// <summary>
+    ///     Creates a "New member" role with an icon that members get when they join and lose after the given number of
+    ///     days.
+    /// </summary>
+    /// <param name="days">How many days a member counts as new.</param>
+    /// <param name="icon">The emoji shown next to new members.</param>
+    [Cmd]
+    [Aliases]
+    [RequireContext(ContextType.Guild)]
+    [UserPerm(GuildPermission.ManageRoles)]
+    [BotPerm(GuildPermission.ManageRoles)]
+    public async Task NewMemberRole(int days = 7, string icon = "🌱")
+    {
+        var created = await Service.CreateNewMemberRoleAsync((SocketGuild)ctx.Guild,
+            Strings.NewMemberRoleName(ctx.Guild.Id), days, icon);
+        if (created == null)
+        {
+            await ReplyErrorAsync(Strings.NewMemberRoleFailed(ctx.Guild.Id));
+            return;
+        }
+
+        await ReplyConfirmAsync(Strings.NewMemberRoleCreated(ctx.Guild.Id, $"<@&{created.RoleId}>",
+            created.Maximum + 1, created.Id));
+    }
+
     private async Task CreateAsync(StatRole statRole, SocketRole role)
     {
         if (role.Position >= ((SocketGuild)ctx.Guild).CurrentUser.Hierarchy)

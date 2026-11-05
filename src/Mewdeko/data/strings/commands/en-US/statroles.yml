@@ -1,3 +1,18 @@
+newmemberrole:
+  args:
+    - ''
+    - '14'
+    - '7 👋'
+  desc: 'Creates a "New member" role with an emoji icon. Members get it when they join and lose it after the given number of days.'
+  params:
+    - desc: 'How many days a member counts as new.'
+      name: days
+      optional: true
+      type: int
+    - desc: 'The emoji shown next to new members.'
+      name: icon
+      optional: true
+      type: string
 statroleadd:
   args:
     - '@role Messages 500 [lookbackDays] [name]'

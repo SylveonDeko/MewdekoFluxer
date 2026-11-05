@@ -225,5 +225,11 @@
   "user_voice_muted": "{0} has been voice muted.",
   "user_voice_state_desc": "{0}\n`Channel:` {1}",
   "user_voice_undeafened": "User Voice UnDeafened",
-  "user_voice_unmuted": "{0} has been voice unmuted."
+  "user_voice_unmuted": "{0} has been voice unmuted.",
+  "role_icon_set": "Updated the icon of {0}.",
+  "role_icon_removed": "Removed the icon from {0}.",
+  "role_icon_hierarchy": "I can't edit {0} because it's above my highest role.",
+  "role_icon_download_failed": "I couldn't download that image. Use a PNG, JPG, GIF or WebP under 2 MB.",
+  "role_icon_usage": "Give an emoji, one of this community's emojis, an image link, an attached image, or none.",
+  "role_icon_failed": "Fluxer didn't accept that icon."
 }
