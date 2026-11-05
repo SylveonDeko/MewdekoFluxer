@@ -1818,7 +1818,7 @@ public class Xp(
                 "`%xp.rank%` - Current rank\n" +
                 "`%xp.rank.ordinal%` - Rank in words (first, second)\n" +
                 "`%xp.rank.suffix%` - Rank suffix (st, nd, rd, th)\n" +
-                "`%xp.guild.name%` - Server name\n" +
+                "`%xp.guild.name%` - Community name\n" +
                 "`%xp.time%` - Current time\n" +
                 "`%xp.timestamp%` - Fluxer timestamp")
             .AddField(Strings.LevelUpPlaceholdersLegacy(ctx.Guild.Id),

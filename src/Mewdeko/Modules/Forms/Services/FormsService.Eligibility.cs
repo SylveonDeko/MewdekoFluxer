@@ -54,7 +54,7 @@ public partial class FormsService
 
         var guild = client.GetGuild(form.GuildId);
         if (guild == null)
-            return Eligibility.No("This server is not reachable right now, try again shortly");
+            return Eligibility.No("This community is not reachable right now, try again shortly");
 
         if (form.MinAccountAgeDays is > 0)
         {
@@ -98,7 +98,7 @@ public partial class FormsService
         if (form.RequiredRoleId is { } requiredRoleId)
         {
             if (member == null)
-                return Eligibility.No("You must be a member of this server to submit this form");
+                return Eligibility.No("You must be a member of this community to submit this form");
 
             if (!member.Roles.Any(r => r.Id == requiredRoleId))
             {
@@ -112,9 +112,9 @@ public partial class FormsService
             FormType.BanAppeal => await CheckAppealEligibilityAsync(form, userId, guild, history),
             FormType.JoinApplication => member == null
                 ? Eligibility.Allowed
-                : Eligibility.No("You are already a member of this server"),
+                : Eligibility.No("You are already a member of this community"),
             _ => !form.AllowExternalUsers && member == null
-                ? Eligibility.No("You must be a member of this server to submit this form")
+                ? Eligibility.No("You must be a member of this community to submit this form")
                 : Eligibility.Allowed
         };
     }
@@ -142,7 +142,7 @@ public partial class FormsService
         }
 
         if (ban == null)
-            return Eligibility.No("You are not banned from this server");
+            return Eligibility.No("You are not banned from this community");
 
         if (form.AppealDelayDays is > 0)
         {
@@ -165,7 +165,7 @@ public partial class FormsService
             return Eligibility.Allowed;
 
         if (form.BlockReappealAfterRejection)
-            return Eligibility.No("Your appeal was rejected and this server does not accept further appeals");
+            return Eligibility.No("Your appeal was rejected and this community does not accept further appeals");
 
         if (form.MaxAppealAttempts is { } maxAttempts && rejections.Count >= maxAttempts)
             return Eligibility.No($"You have used all {maxAttempts} of your appeals");

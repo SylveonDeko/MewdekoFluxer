@@ -34,7 +34,7 @@ public class MigrationController(FluxerClient client, DiscordMigrationService se
     public async Task<IActionResult> Export(ulong guildId, [FromBody] MigrationExportRequest request)
     {
         if (await AdministratorAsync(guildId) is null)
-            return StatusCode(403, "Only the server owner or an administrator can bring a server over.");
+            return StatusCode(403, "Only the community owner or an administrator can bring a community over.");
 
         var (code, error) = await service.ExportFromDiscordAsync(request.DiscordUserId, request.DiscordGuildId,
             request.BotId);
@@ -99,7 +99,7 @@ public class MigrationController(FluxerClient client, DiscordMigrationService se
             return NotFound("Guild not found.");
 
         if (await AdministratorAsync(guildId) is not { } userId)
-            return StatusCode(403, "Only the server owner or an administrator can bring a server over.");
+            return StatusCode(403, "Only the community owner or an administrator can bring a community over.");
 
         var (plan, problem) = await service.PrepareAsync(guild, request.Code, request.ChannelOverrides,
             request.RoleOverrides);
@@ -108,7 +108,7 @@ public class MigrationController(FluxerClient client, DiscordMigrationService se
 
         return service.StartApply(plan, userId, request.CopyExpressions)
             ? Accepted(new { started = true })
-            : Conflict("A move into this server is already running.");
+            : Conflict("A move into this community is already running.");
     }
 
     /// <summary>

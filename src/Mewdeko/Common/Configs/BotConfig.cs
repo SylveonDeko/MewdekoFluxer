@@ -168,8 +168,8 @@ public sealed class BotConfig
              Keep in mind this might break some of your embeds - for example if you have %user.avatar% in the thumbnail,
              it will become invalid, as it will resolve to a list of avatars of grouped users.
              note: This setting is primarily used if you're afraid of raids, or you're running medium/large bots where some
-                   servers might get hundreds of people join at once. This is used to prevent the bot from getting ratelimited,
-                   and (slightly) reduce the greet spam in those servers.
+                   communities might get hundreds of people join at once. This is used to prevent the bot from getting ratelimited,
+                   and (slightly) reduce the greet spam in those communities.
              """)]
     public bool GroupGreets { get; set; }
 
@@ -193,7 +193,7 @@ public sealed class BotConfig
     ///     Gets or sets the channel ID that server joins and leaves get posted to.
     /// </summary>
     [Comment("""
-             Channel that the bot joining and leaving servers gets posted to.
+             Channel that the bot joining and leaving communities gets posted to.
              Set to 0 to turn it off.
              """)]
     public ulong GuildJoinsChannel { get; set; }
@@ -220,8 +220,8 @@ public sealed class BotConfig
     ///     Gets or sets whether the owner of a guild gets a dm asking why the bot was removed.
     /// </summary>
     [Comment("""
-             Whether the owner of a server gets a dm asking why the bot was removed,
-             right after the bot leaves or is kicked from their server.
+             Whether the owner of a community gets a dm asking why the bot was removed,
+             right after the bot leaves or is kicked from their community.
              Off by default: bot directories treat it as an unsolicited dm.
              """)]
     public bool LeaveFeedbackEnabled { get; set; }
@@ -230,7 +230,7 @@ public sealed class BotConfig
     ///     Gets or sets whether the person who invited the bot gets a dm with setup instructions.
     /// </summary>
     [Comment("""
-             Whether the person who added the bot to a server gets a dm with setup instructions.
+             Whether the person who added the bot to a community gets a dm with setup instructions.
              Off by default: bot directories treat it as an unsolicited dm.
              """)]
     public bool WelcomeDmEnabled { get; set; }
@@ -275,8 +275,8 @@ public sealed class BotConfig
     ///     Gets or sets whether data for servers the bot has left is purged automatically.
     /// </summary>
     [Comment("""
-             Whether stored data for servers the bot has left gets purged automatically
-             once the grace period below has passed. Servers that re-add the bot before
+             Whether stored data for communities the bot has left gets purged automatically
+             once the grace period below has passed. Communities that re-add the bot before
              then keep their data.
              """)]
     public bool GuildDataRetentionEnabled { get; set; }
@@ -284,29 +284,29 @@ public sealed class BotConfig
     /// <summary>
     ///     Gets or sets how many days after leaving a server its data is kept before being purged.
     /// </summary>
-    [Comment("Days a server's data is kept after the bot leaves it before being purged.")]
+    [Comment("Days a community's data is kept after the bot leaves it before being purged.")]
     public int GuildDataRetentionDays { get; set; }
 
     /// <summary>
     ///     Gets or sets the member count a server needs before it is considered for bot hell detection.
     /// </summary>
     [Comment("""
-             Servers with fewer members than this are never flagged as bot hells.
-             A bot hell is a server littered with bots, checked on join and via the bothells command.
+             Communities with fewer members than this are never flagged as bot hells.
+             A bot hell is a community littered with bots, checked on join and via the bothells command.
              """)]
     public int BotHellMinMembers { get; set; }
 
     /// <summary>
     ///     Gets or sets the number of bots at or above which a server is flagged as a bot hell.
     /// </summary>
-    [Comment("A server with this many bots or more is flagged as a bot hell. Set to 0 to disable the count check.")]
+    [Comment("A community with this many bots or more is flagged as a bot hell. Set to 0 to disable the count check.")]
     public int BotHellBotCount { get; set; }
 
     /// <summary>
     ///     Gets or sets the percentage of members that are bots at or above which a server is flagged as a bot hell.
     /// </summary>
     [Comment("""
-             A server where this percentage of members or more are bots is flagged as a bot hell.
+             A community where this percentage of members or more are bots is flagged as a bot hell.
              Set to 0 to disable the ratio check.
              """)]
     public int BotHellBotPercent { get; set; }
@@ -314,7 +314,7 @@ public sealed class BotConfig
     /// <summary>
     ///     Gets or sets whether the bot leaves servers that are flagged as bot hells when it joins them.
     /// </summary>
-    [Comment("Whether the bot automatically leaves a server flagged as a bot hell right after joining it.")]
+    [Comment("Whether the bot automatically leaves a community flagged as a bot hell right after joining it.")]
     public bool BotHellAutoLeave { get; set; }
 
     /// <summary>
@@ -360,7 +360,7 @@ public sealed class BotConfig
     /// <summary>
     ///     Gets or sets the support server invite on Mewdeko.
     /// </summary>
-    [Comment("Used to set the support server invite on Mewdeko")]
+    [Comment("Used to set the support community invite on Mewdeko")]
     public string SupportServer { get; set; }
 
     /// <summary>
@@ -383,11 +383,11 @@ public sealed class BotConfig
     public bool AllowPrivateMinecraftAddresses { get; set; }
 
     /// <summary>
-    ///     Gets or sets whether console logs are written when a blacklisted user, server, or channel attempts to use
+    ///     Gets or sets whether console logs are written when a blacklisted user, community, or channel attempts to use
     ///     the bot.
     /// </summary>
     [Comment("""
-             Whether to write a console log line every time a blacklisted user, server, or channel
+             Whether to write a console log line every time a blacklisted user, community, or channel
              attempts to use the bot. Disable this if blacklist attempts are spamming your console.
              """)]
     public bool LogBlacklistedAttempts { get; set; }
@@ -438,7 +438,7 @@ public sealed class BotConfig
     [Comment("""
              Whether to write a console log line every time a user levels up and receives an XP reward
              (currency, role sync, or level-up notification). Disable this if XP reward logs are
-             spamming your console on active leveling servers.
+             spamming your console on active leveling communities.
              """)]
     public bool LogXpRewards { get; set; }
 }

@@ -41,6 +41,7 @@ public class HelpService : INService, IReadyExecutor
             ["MultiGreets"] = "serversetup",
             ["RoleGreets"] = "serversetup",
             ["Starboard"] = "serversetup",
+            ["Bridge"] = "serversetup",
             ["StatChannels"] = "serversetup",
             ["ServerStats"] = "serversetup",
             ["LiveBoardCommands"] = "serversetup",
@@ -223,7 +224,7 @@ public class HelpService : INService, IReadyExecutor
         embed.WithOkColor();
         embed.WithDescription(
             genStrings.HelpCategoriesDescription(guildId, prefix) +
-            $"\n\n[Documentation](https://mewdeko.tech) | [Support Server]({bss.Data.SupportServer}) | [Invite Me]({FluxerContext.WebUrl}/oauth2/authorize?client_id={bot.Client.CurrentUser.Id}&scope=bot&permissions=66186303) | [Donate!](https://ko-fi.com/mewdeko)");
+            $"\n\n[Documentation](https://mewdeko.tech) | [Support Community]({bss.Data.SupportServer}) | [Invite Me]({FluxerContext.WebUrl}/oauth2/authorize?client_id={bot.Client.CurrentUser.Id}&scope=bot&permissions=66186303) | [Donate!](https://ko-fi.com/mewdeko)");
 
         var categories = GetPopulatedCategories();
 
@@ -560,7 +561,7 @@ public class HelpService : INService, IReadyExecutor
                 var eb = new EmbedBuilder();
                 eb.WithOkColor();
                 eb.WithDescription(
-                    $"Hi there! To see my command categories do `{prefix}cmds`\nMy current Prefix is `{prefix}`\nIf you need help using the bot feel free to join the [Support Server]({bss.Data.SupportServer})!\n**Please support me! While this bot is free it's not free to run! https://ko-fi.com/mewdeko**\n\n I hope you have a great day!");
+                    $"Hi there! To see my command categories do `{prefix}cmds`\nMy current Prefix is `{prefix}`\nIf you need help using the bot feel free to join the [Support Community]({bss.Data.SupportServer})!\n**Please support me! While this bot is free it's not free to run! https://ko-fi.com/mewdeko**\n\n I hope you have a great day!");
                 eb.WithFooter(new EmbedFooterBuilder().WithText(client.CurrentUser.Username)
                     .WithIconUrl(client.CurrentUser.RealAvatarUrl().ToString()));
 
@@ -583,14 +584,14 @@ public class HelpService : INService, IReadyExecutor
         var eb = new EmbedBuilder
         {
             Description =
-                $"Hi, thanks for inviting Mewdeko! The quickest way to get set up is the dashboard, which walks you through the features most servers want. Everything is also available from commands, using the `{px}` prefix."
+                $"Hi, thanks for inviting Mewdeko! The quickest way to get set up is the dashboard, which walks you through the features most communities want. Everything is also available from commands, using the `{px}` prefix."
         };
         eb.AddField("Set up in your browser",
             $"[Open the setup wizard]({setupUrl}) to configure greetings, moderation, logging and the rest without learning any commands.");
         eb.AddField("Prefer commands?",
             $"1) `{px}cmds` lists the categories\n2) `{px}cmds mod` shows the commands in one\n3) `{px}h purge` explains a single command");
         eb.AddField("Need a hand?",
-            $"Support Server: {bss.Data.SupportServer}");
+            $"Support Community: {bss.Data.SupportServer}");
         eb.WithOkColor();
 
         var inviter = await ResolveInviter(guild).ConfigureAwait(false);
@@ -1076,12 +1077,12 @@ public class HelpService : INService, IReadyExecutor
 
     private static string GetPreconditionString(ChannelPermission perm)
     {
-        return (perm + " Channel Permission").Replace("Guild", "Server", StringComparison.InvariantCulture);
+        return (perm + " Channel Permission").Replace("Guild", "Community", StringComparison.InvariantCulture);
     }
 
     private static string GetPreconditionString(GuildPermission perm)
     {
-        return (perm + " Server Permission").Replace("Guild", "Server", StringComparison.InvariantCulture);
+        return (perm + " Community Permission").Replace("Guild", "Community", StringComparison.InvariantCulture);
     }
 
     private string? GetText(string? text, SocketGuild? guild, params object?[] replacements)

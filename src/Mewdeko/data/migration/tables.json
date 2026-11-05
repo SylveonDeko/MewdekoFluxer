@@ -1598,6 +1598,18 @@
     ],
     "onMemberConflict": "skip"
   },
+  "ChannelBridges": {
+    "action": "skip",
+    "reason": "bridges point at channels on the other platform and have to be set up again"
+  },
+  "BridgePairs": {
+    "action": "skip",
+    "reason": "pairs link communities on the other platform and have to be set up again"
+  },
+  "BridgeProposals": {
+    "action": "skip",
+    "reason": "proposals belong to pairs, which have to be set up again"
+  },
   "JoinRoleTimeoutSettings": {
     "action": "skip",
     "reason": "required, exempt and action roles and the log channel are ids from the other platform and have to be set up again"

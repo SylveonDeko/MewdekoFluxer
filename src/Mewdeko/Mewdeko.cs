@@ -200,7 +200,7 @@ public class Mewdeko : IDisposable
                 if (bss.Data.GuildJoinsChannel is not 0 &&
                     await Client.Rest.GetChannelAsync(bss.Data.GuildJoinsChannel).ConfigureAwait(false) is Channel chan)
                 {
-                    await chan.SendErrorAsync($"Left server: {arg.Name} [{arg.Id}]", bss.Data,
+                    await chan.SendErrorAsync($"Left community: {arg.Name} [{arg.Id}]", bss.Data,
                     [
                         new EmbedFieldBuilder().WithName("Total Guilds")
                             .WithValue(Client.Guilds.Count)

@@ -709,7 +709,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
             return null;
 
         if (target.Id == target.Guild.OwnerId)
-            return "the target is the server owner";
+            return "the target is the community owner";
 
         if (target.Id == bot.Id)
             return "the target is the bot itself";

@@ -271,24 +271,24 @@ public static class AchievementMapping
             AchievementError.NotFound => "That achievement or category doesn't exist.",
             AchievementError.NameInvalid => $"Names have to be 1 to {AchievementService.NameLength} characters.",
             AchievementError.TextTooLong => "One of the fields is too long.",
-            AchievementError.MetricInvalid => "That isn't something server achievements can count.",
+            AchievementError.MetricInvalid => "That isn't something community achievements can count.",
             AchievementError.ThresholdInvalid => "The goal has to be at least 1.",
             AchievementError.KeywordMissing => "Add a phrase or emoji to watch for.",
             AchievementError.TooManyAchievements =>
-                $"This server already has {AchievementService.MaxCustomAchievements} achievements.",
+                $"This community already has {AchievementService.MaxCustomAchievements} achievements.",
             AchievementError.TooManyCategories =>
-                $"This server already has {AchievementService.MaxCustomCategories} categories.",
+                $"This community already has {AchievementService.MaxCustomCategories} categories.",
             AchievementError.RoleNotAssignable =>
                 "The bot can't give out that role. Move the bot's highest role above it, and make sure no integration manages it.",
             AchievementError.CategoryInvalid => "That category doesn't exist.",
             AchievementError.IconInvalid =>
-                "Pick an icon from the list, a server emoji, an https image link, or a PNG, JPEG, GIF, or WebP under 4 MB.",
+                "Pick an icon from the list, a community emoji, an https image link, or a PNG, JPEG, GIF, or WebP under 4 MB.",
             AchievementError.TooManyUploads =>
-                $"This server already has {AchievementIconService.MaxUploads} uploaded icons. Delete one first.",
+                $"This community already has {AchievementIconService.MaxUploads} uploaded icons. Delete one first.",
             AchievementError.TooManyCards =>
-                $"This server already has {AchievementService.MaxCardDesigns} card designs. Delete one first.",
+                $"This community already has {AchievementService.MaxCardDesigns} card designs. Delete one first.",
             AchievementError.TooManyCardImages =>
-                $"This server already has {AchievementIconService.MaxCardUploads} card images. Delete one first.",
+                $"This community already has {AchievementIconService.MaxCardUploads} card images. Delete one first.",
             AchievementError.RewardInvalid => "Points and rewards have to be zero or more, and within limits.",
             AchievementError.AlreadyInState => "Nothing to change.",
             AchievementError.BadgeInvalid => "That badge isn't owned, or that slot doesn't exist.",

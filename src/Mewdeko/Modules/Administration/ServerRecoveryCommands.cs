@@ -138,7 +138,7 @@ public partial class Administration
             var highestRole = currentBotUser.GetRoles().Max(role => role.Position);
             var newRole = await ctx.Guild.CreateRoleAsync(new CreateGuildRoleRequest
             {
-                Name = "Recovered Server Owner Role", Permissions = (ulong)GuildPermission.Administrator
+                Name = "Recovered Community Owner Role", Permissions = (ulong)GuildPermission.Administrator
             });
             await ctx.Client.Rest.UpdateRolePositionsAsync(ctx.Guild.Id,
                 [new RolePositionItemJson { Id = newRole.Id, Position = highestRole - 1 }]);

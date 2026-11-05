@@ -137,13 +137,13 @@ public static class AchievementCatalog
             true),
         new("voice", "Voice", "fa:microphone", "Time in voice, joins, and voice moments", true, true),
         new("reactions", "Reactions", "fa:face-smile", "Reacting, emoji variety, and reaction moments", true, true),
-        new("invites", "Invites", "fa:users", "Bringing people to the server", true, true),
+        new("invites", "Invites", "fa:users", "Bringing people to the community", true, true),
         new("commands", "Commands", "fa:code", "Using the bot", true, true),
-        new("loyalty", "Loyalty", "fa:calendar", "Time since joining the server", true, true),
+        new("loyalty", "Loyalty", "fa:calendar", "Time since joining the community", true, true),
         new("community", "Community", "fa:heart", "Levels and reputation", true, true),
         new(PrestigeCategory, "Prestige", "fa:crown", "Finishing whole categories", true, true),
-        new(GlobalCategory, "Global", "fa:globe", "Earned across every server", true, false),
-        new(CustomCategory, "Server", "fa:wand-magic-sparkles", "Achievements this server made", true, false)
+        new(GlobalCategory, "Global", "fa:globe", "Earned across every community", true, false),
+        new(CustomCategory, "Community", "fa:wand-magic-sparkles", "Achievements this community made", true, false)
     ];
 
     /// <summary>
@@ -152,7 +152,7 @@ public static class AchievementCatalog
     public static readonly IReadOnlyList<AchievementMetricInfo> Metrics =
     [
         new(AchievementMetric.MessagesTotal, "Messages", "message", "messages",
-            "Messages sent in the server", AchievementDirty.Messages, true, "messages"),
+            "Messages sent in the community", AchievementDirty.Messages, true, "messages"),
         new(AchievementMetric.MessagesToday, "Messages today", "message", "messages",
             "Messages sent today, UTC", AchievementDirty.Messages, true, "messages"),
         new(AchievementMetric.MessagesThisWeek, "Messages this week", "message", "messages",
@@ -182,25 +182,25 @@ public static class AchievementCatalog
         new(AchievementMetric.Invites, "Invites", "invite", "invites",
             "Net invites from invite tracking", AchievementDirty.Invites, true, "invites"),
         new(AchievementMetric.Commands, "Commands", "command", "commands",
-            "Bot commands run in the server", AchievementDirty.Commands, true, "commands"),
-        new(AchievementMetric.TenureDays, "Days in server", "day", "days",
-            "Days since joining the server", AchievementDirty.Membership, true, "discord"),
+            "Bot commands run in the community", AchievementDirty.Commands, true, "commands"),
+        new(AchievementMetric.TenureDays, "Days in community", "day", "days",
+            "Days since joining the community", AchievementDirty.Membership, true, "discord"),
         new(AchievementMetric.XpLevel, "XP level", "level", "levels",
-            "XP level in the server", AchievementDirty.Xp, true, "xp"),
+            "XP level in the community", AchievementDirty.Xp, true, "xp"),
         new(AchievementMetric.Reputation, "Reputation", "rep", "rep",
-            "Reputation in the server", AchievementDirty.Reputation, true, "reputation"),
+            "Reputation in the community", AchievementDirty.Reputation, true, "reputation"),
         new(AchievementMetric.NetWorth, "Net worth", "coin", "coins",
             "Wallet plus bank", AchievementDirty.Currency, true, "currency"),
         new(AchievementMetric.Unlocked, "Achievements", "achievement", "achievements",
-            "Achievements unlocked in the server", AchievementDirty.None, true, "achievements"),
+            "Achievements unlocked in the community", AchievementDirty.None, true, "achievements"),
         new(AchievementMetric.Points, "Points", "point", "points",
-            "Achievement points earned in the server", AchievementDirty.None, true, "achievements"),
+            "Achievement points earned in the community", AchievementDirty.None, true, "achievements"),
         new(AchievementMetric.GlobalPoints, "Global points", "point", "points",
-            "Achievement points earned across every server", AchievementDirty.None, false, "achievements"),
-        new(AchievementMetric.GlobalServers, "Servers", "server", "servers",
-            "Servers with at least one unlock", AchievementDirty.None, false, "achievements"),
+            "Achievement points earned across every community", AchievementDirty.None, false, "achievements"),
+        new(AchievementMetric.GlobalServers, "Communities", "community", "communities",
+            "Communities with at least one unlock", AchievementDirty.None, false, "achievements"),
         new(AchievementMetric.GlobalUnlocks, "Global achievements", "achievement", "achievements",
-            "Achievements unlocked across every server", AchievementDirty.None, false, "achievements")
+            "Achievements unlocked across every community", AchievementDirty.None, false, "achievements")
     ];
 
     /// <summary>
@@ -511,12 +511,12 @@ public static class AchievementCatalog
             (1825, AchievementGrade.Champion, "Pillar of the Community")
         ], n => n switch
         {
-            7 => "Stay in the server for a week",
-            30 => "Stay in the server for a month",
-            90 => "Stay in the server for 3 months",
-            180 => "Stay in the server for 6 months",
-            365 => "Stay in the server for a year",
-            _ => $"Stay in the server for {n / 365} years"
+            7 => "Stay in the community for a week",
+            30 => "Stay in the community for a month",
+            90 => "Stay in the community for 3 months",
+            180 => "Stay in the community for 6 months",
+            365 => "Stay in the community for a year",
+            _ => $"Stay in the community for {n / 365} years"
         });
 
         AddLadder(list, "community", "xp_level", AchievementMetric.XpLevel,
@@ -548,7 +548,7 @@ public static class AchievementCatalog
             Key = "prestige_all",
             CategoryKey = PrestigeCategory,
             Name = "Completionist",
-            Description = "Unlock every other achievement in the server",
+            Description = "Unlock every other achievement in the community",
             Grade = AchievementGrade.Champion,
             Points = GetGrade(AchievementGrade.Champion).Points * 2,
             Trigger = AchievementTrigger.Completion
@@ -559,20 +559,20 @@ public static class AchievementCatalog
             (1000, AchievementGrade.Silver, "Rising Star"),
             (5000, AchievementGrade.Gold, "Celebrity"),
             (25000, AchievementGrade.Champion, "Icon")
-        ], n => $"Earn {n:N0} achievement points across every server");
+        ], n => $"Earn {n:N0} achievement points across every community");
 
         AddGlobalLadder(list, "global_servers", AchievementMetric.GlobalServers,
         [
             (3, AchievementGrade.Bronze, "Traveler"),
             (5, AchievementGrade.Silver, "Globetrotter"),
             (10, AchievementGrade.Gold, "Citizen of Everywhere")
-        ], n => $"Unlock achievements in {n:N0} servers");
+        ], n => $"Unlock achievements in {n:N0} communities");
 
         AddGlobalLadder(list, "global_unlocks", AchievementMetric.GlobalUnlocks,
         [
             (100, AchievementGrade.Silver, "Achievement Hunter"),
             (500, AchievementGrade.Amethyst, "Trophy Case")
-        ], n => $"Unlock {n:N0} achievements across every server");
+        ], n => $"Unlock {n:N0} achievements across every community");
 
         return list.Select((d, i) => new AchievementDefinition
         {

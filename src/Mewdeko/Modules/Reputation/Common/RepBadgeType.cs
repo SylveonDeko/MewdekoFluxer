@@ -130,7 +130,7 @@ public static class RepBadgeType
             SeasonalParticipant => ("🎊", "Event Participant", "Participated in a seasonal event"),
             WeeklyChallenger => ("🎯", "Weekly Warrior", "Completed a weekly challenge"),
             MonthlyChallenger => ("🏅", "Monthly Master", "Completed a monthly challenge"),
-            ChallengeChampion => ("🥇", "Challenge Champion", "Top contributor in server challenge"),
+            ChallengeChampion => ("🥇", "Challenge Champion", "Top contributor in community challenge"),
             YearStreak => ("🌟", "Eternal Flame", "Maintained a 365-day streak"),
             _ => ("❓", "Unknown", "Unknown badge type")
         };

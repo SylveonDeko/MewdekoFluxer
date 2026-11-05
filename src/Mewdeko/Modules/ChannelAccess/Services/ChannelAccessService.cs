@@ -406,7 +406,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
         {
             var joined = user.JoinedAt.UtcDateTime;
             if ((DateTime.UtcNow - joined).TotalDays < config.MinServerAgeDays)
-                return (false, $"You must have been in this server for {config.MinServerAgeDays} days to apply.");
+                return (false, $"You must have been in this community for {config.MinServerAgeDays} days to apply.");
         }
 
         await using var db = await dbFactory.CreateConnectionAsync();
@@ -1273,7 +1273,7 @@ public class ChannelAccessService : INService, IReadyExecutor, IDisposable
                 embed.AddField("Account created",
                     $"<t:{applicant.CreatedAt.ToUnixTimeSeconds()}:R>", true);
                 if (applicant.JoinedAt is { } joined)
-                    embed.AddField("Joined server", $"<t:{joined.ToUnixTimeSeconds()}:R>", true);
+                    embed.AddField("Joined community", $"<t:{joined.ToUnixTimeSeconds()}:R>", true);
             }
         }
 

@@ -1,11 +1,11 @@
 # Mewdeko Docker image
 
-`sylveondeko/mewdeko-fluxer` runs the Mewdeko bot. It does not contain a Discord token, database password, API key, or any other credentials. Supply a `credentials.json` file when starting the container.
+`sylveondeko/mewdeko-fluxer` runs the Mewdeko bot for Fluxer. It does not contain a bot token, database password, API key, or any other credentials. Supply a `credentials.json` file when starting the container.
 
 ## Tags
 
 - `nightly`: newest successful build from `main`
-- `sha-<commit>`: immutable build from a specific commit
+- `<commit>`: immutable build from a specific commit, tagged with its short hash
 - `latest` and a version tag: published for a versioned release
 
 The image supports `linux/amd64` and `linux/arm64`.
@@ -15,9 +15,9 @@ The image supports `linux/amd64` and `linux/arm64`.
 This is the recommended setup. It starts PostgreSQL, Redis, the bot, and the optional dashboard on one private Docker network.
 
 ```bash
-curl -O https://raw.githubusercontent.com/SylveonDeko/Mewdeko/main/docker-compose.example.yml
-curl -O https://raw.githubusercontent.com/SylveonDeko/Mewdeko/main/credentials.docker.example.json
-curl -O https://raw.githubusercontent.com/SylveonDeko/Mewdeko/main/dashboard.docker.env.example
+curl -O https://raw.githubusercontent.com/SylveonDeko/MewdekoFluxer/main/docker-compose.example.yml
+curl -O https://raw.githubusercontent.com/SylveonDeko/MewdekoFluxer/main/credentials.docker.example.json
+curl -O https://raw.githubusercontent.com/SylveonDeko/MewdekoFluxer/main/dashboard.docker.env.example
 
 mv credentials.docker.example.json credentials.json
 mv dashboard.docker.env.example dashboard.env
@@ -31,14 +31,15 @@ docker compose up -d
 docker compose logs -f mewdeko
 ```
 
-The dashboard is available at `http://localhost:3000`. For production, place it behind an HTTPS reverse proxy and register that public URL as a Discord OAuth redirect.
+The dashboard is available at `http://localhost:3000`. For production, place it behind an HTTPS reverse proxy and register that public URL's `/api/auth/callback` as a redirect on your Fluxer OAuth2 application.
 
 ## Required bot credentials
 
 | `credentials.json` key | Purpose |
 | --- | --- |
-| `Token` | Discord bot token. Never commit or publish it. |
-| `OwnerIds` | Discord user IDs allowed to use owner-only commands. |
+| `Token` | Fluxer bot token. Never commit or publish it. |
+| `OwnerIds` | Fluxer user IDs allowed to use owner-only commands. |
+| `FluxerInstanceUrl` | API URL of a self-hosted Fluxer instance. Leave empty for fluxer.app. |
 | `PsqlConnectionString` | PostgreSQL connection string. The Compose template uses the `postgres` service hostname. |
 | `RedisConnections` | Redis address. The Compose template uses `redis:6379`. |
 | `IsApiEnabled` | Must be `true` when using the dashboard. |
@@ -47,6 +48,15 @@ The dashboard is available at `http://localhost:3000`. For production, place it 
 | `JwtSecret` | Shared secret for dashboard user JWTs. Must equal dashboard `BOT_JWT_SECRET`. |
 
 Generate independent secrets with `openssl rand -hex 32`.
+
+## Self-hosted Fluxer instances
+
+To run Mewdeko on your own Fluxer instance instead of fluxer.app, set its API URL, such as `https://api.example.org`, in two places:
+
+- `FluxerInstanceUrl` in `credentials.json`, or the `Mewdeko_FluxerInstanceUrl` environment variable on the bot container
+- `FLUXER_INSTANCE_URL` in `dashboard.env`
+
+Both read the instance's `/.well-known/fluxer` document for its gateway, sign in page and media hosts, so nothing else needs changing. The bot account and the OAuth2 application have to be created on that instance.
 
 ## Bot-only deployment
 
@@ -79,4 +89,4 @@ Forks publishing under another name can point the version check elsewhere with `
 
 ## Dashboard
 
-The companion image is [`sylveondeko/mewdash-fluxer`](https://hub.docker.com/r/sylveondeko/mewdash-fluxer). Its required environment variables and standalone launch command are documented in the [dashboard Docker guide](https://github.com/SylveonDeko/MewdekoDash/blob/main/DOCKER.md).
+The companion image is [`sylveondeko/mewdash-fluxer`](https://hub.docker.com/r/sylveondeko/mewdash-fluxer). Its required environment variables and standalone launch command are documented in the [dashboard Docker guide](https://github.com/SylveonDeko/MewdekoDashFluxer/blob/main/DOCKER.md).

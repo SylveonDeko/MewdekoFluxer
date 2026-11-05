@@ -1158,7 +1158,7 @@ public partial class ServerManagement
             else
                 jobId = Service.Jobslist.FirstOrDefault().JobId + 1;
             await Service.AddToList(ctx.Guild, ctx.Member, jobId, count,
-                    $"Adding a role to server members that have been here for {time.Time.Humanize()}", role)
+                    $"Adding a role to community members that have been here for {time.Time.Humanize()}", role)
                 .ConfigureAwait(false);
             var count2 = 0;
             await ctx.Channel.SendConfirmAsync(
@@ -1258,7 +1258,7 @@ public partial class ServerManagement
             else
                 jobId = Service.Jobslist.FirstOrDefault().JobId + 1;
             await Service.AddToList(ctx.Guild, ctx.Member, jobId, count,
-                    $"Adding a role to server members that have been here for {time.Time.Humanize()} or less", role)
+                    $"Adding a role to community members that have been here for {time.Time.Humanize()} or less", role)
                 .ConfigureAwait(false);
             var count2 = 0;
             await ctx.Channel.SendConfirmAsync(
@@ -1352,7 +1352,7 @@ public partial class ServerManagement
             else
                 jobId = Service.Jobslist.FirstOrDefault().JobId + 1;
             await Service.AddToList(ctx.Guild, ctx.Member, jobId, count,
-                "Removing a role from all server members", role).ConfigureAwait(false);
+                "Removing a role from all community members", role).ConfigureAwait(false);
             var count2 = 0;
             await ctx.Channel.SendConfirmAsync(
                     Strings.MassroleRemoving(ctx.Guild.Id, role.Mention, count, TimeSpan.FromSeconds(users.Count()).Humanize()))

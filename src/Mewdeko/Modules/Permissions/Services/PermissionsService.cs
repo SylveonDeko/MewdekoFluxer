@@ -372,7 +372,7 @@ public class PermissionService : ILateBlocker, INService, IReadyExecutor
             PrimaryPermissionType.User => $"<@{id}>",
             PrimaryPermissionType.Channel => $"<#{id}>",
             PrimaryPermissionType.Role => $"<@&{id}>",
-            PrimaryPermissionType.Server => "This Server",
+            PrimaryPermissionType.Server => "This Community",
             PrimaryPermissionType.Category => $"<#{id}>",
             _ =>
                 "An unexpected type input error occurred in `PermissionsService.cs#MentionPerm(PrimaryPermissionType, ulong)`. Please contact a developer at https://fluxer.gg/GQuFOiBV with a screenshot of this message for more information."

@@ -382,7 +382,7 @@ public class FeatureRequestService : INService
                 .AddField("Submitted By", $"{record.UserName} `{record.UserId}`", true);
 
             if (record.GuildId is { } guildId)
-                eb.AddField("From Server", $"{record.GuildName ?? "Unknown"} `{guildId}`", true);
+                eb.AddField("From Community", $"{record.GuildName ?? "Unknown"} `{guildId}`", true);
             if (!string.IsNullOrWhiteSpace(record.OwnerNote))
                 eb.AddField("Owner Note", record.OwnerNote.TrimTo(1024));
             if (record.DateAdded is { } added)

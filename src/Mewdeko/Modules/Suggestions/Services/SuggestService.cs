@@ -225,7 +225,7 @@ public class SuggestionsService : INService
                 try
                 {
                     await guser.User.SendErrorAsync(
-                            $"Cannot send this suggestion as its over the max length `({await GetMaxLength(guild.Id)})` of this server!")
+                            $"Cannot send this suggestion as its over the max length `({await GetMaxLength(guild.Id)})` of this community!")
                         .ConfigureAwait(false);
                     spamCheck.Remove(chan.Id);
                 }
@@ -252,7 +252,7 @@ public class SuggestionsService : INService
                 try
                 {
                     await guser.User.SendErrorAsync(
-                            $"Cannot send this suggestion as its under the minimum length `({await GetMinLength(guild.Id)})` of this server!")
+                            $"Cannot send this suggestion as its under the minimum length `({await GetMinLength(guild.Id)})` of this community!")
                         .ConfigureAwait(false);
                     spamCheck.Remove(chan.Id);
                 }

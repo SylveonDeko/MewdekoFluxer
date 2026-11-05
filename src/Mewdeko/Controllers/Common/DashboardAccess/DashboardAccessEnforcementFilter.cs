@@ -48,7 +48,7 @@ public sealed class DashboardAccessEnforcementFilter(
         var guildUser = guild == null ? null : guild.GetUser(userId) ?? await guild.TryGetUserAsync(userId);
         if (guild == null || guildUser == null)
         {
-            context.Result = new ObjectResult("You are not a member of this server.")
+            context.Result = new ObjectResult("You are not a member of this community.")
             {
                 StatusCode = StatusCodes.Status403Forbidden
             };

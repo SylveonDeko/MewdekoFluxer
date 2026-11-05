@@ -379,7 +379,7 @@ public partial class UserProfileService : INService
         else
             eb.AddField("Birthday", "Unspecified");
 
-        eb.AddField("Mutual Bot Servers", FluxerContext.Client.Guilds.Count(g => g.Members.ContainsKey(user.Id)));
+        eb.AddField("Mutual Bot Communities", FluxerContext.Client.Guilds.Count(g => g.Members.ContainsKey(user.Id)));
 
         if (!dbUser.SwitchFriendCode.IsNullOrWhiteSpace())
             eb.AddField("Switch Friend Code", dbUser.SwitchFriendCode);

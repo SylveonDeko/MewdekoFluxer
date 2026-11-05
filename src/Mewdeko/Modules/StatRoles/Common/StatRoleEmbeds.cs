@@ -25,7 +25,7 @@ public static class StatRoleEmbeds
             StatRoleStat.Messages => "messages",
             StatRoleStat.VoiceMinutes => "voice minutes",
             StatRoleStat.Invites => "invites",
-            StatRoleStat.JoinedDays => "days in server",
+            StatRoleStat.JoinedDays => "days in community",
             StatRoleStat.ActivityMinutes => $"minutes in {activity}",
             _ => "days on Fluxer"
         };

@@ -527,7 +527,7 @@ public class GuildDataRetentionService : INService, IReadyExecutor
             var eb = new EmbedBuilder()
                 .WithOkColor()
                 .WithTitle(strings.RetentionPurgedTitle(null))
-                .AddField("Servers", batch.Count, true)
+                .AddField("Communities", batch.Count, true)
                 .AddField("Rows Removed", rows, true)
                 .AddField("Sources", string.Join(", ", batch.GroupBy(x => x.Source)
                     .Select(g => $"{g.Key} {g.Count()}")), true);

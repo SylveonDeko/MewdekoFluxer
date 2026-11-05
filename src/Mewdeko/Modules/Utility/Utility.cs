@@ -1345,7 +1345,7 @@ public partial class Utility(
     {
         await ctx.Channel.EmbedAsync(new EmbedBuilder().WithOkColor()
                 .WithDescription(
-                    "Vote here for Mewdeko!\n[Vote Link](https://top.gg/bot/752236274261426212)\nMake sure to join the support server! \n[Link](https://mewdeko.tech/support)"))
+                    "Vote here for Mewdeko!\n[Vote Link](https://top.gg/bot/752236274261426212)\nMake sure to join the support community!\n[Link](https://mewdeko.tech/support)"))
             .ConfigureAwait(false);
     }
 
@@ -1745,7 +1745,7 @@ public partial class Utility(
                     $"{stats.Heap} MB resident\n{stats.ManagedHeap} MB managed\n{stats.CommittedHeap} MB committed\n{stats.GcMode}")
                 .AddField("Cache", stats.CacheCounts)
                 .AddField(Strings.Uptime(ctx.Guild.Id), stats.GetUptimeString("\n"))
-                .AddField("Servers", $"{client.Guilds.Count} Servers"));
+                .AddField("Communities", $"{client.Guilds.Count} Communities"));
     }
 
     /// <summary>

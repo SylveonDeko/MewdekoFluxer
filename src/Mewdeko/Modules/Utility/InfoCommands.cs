@@ -256,7 +256,7 @@ public partial class Utility
 
             embed.AddField("User Id", user.Id)
                 .AddField("User Type", serverUserType)
-                .AddField("Joined Server", TimestampTag.FromDateTimeOffset(user.JoinedAt))
+                .AddField("Joined Community", TimestampTag.FromDateTimeOffset(user.JoinedAt))
                 .AddField("Joined Fluxer", TimestampTag.FromDateTimeOffset(user.CreatedAt))
                 .AddField("Role Count", user.Roles.Count(r => r.Id != r.Guild.EveryoneRole.Id));
 
@@ -292,7 +292,7 @@ public partial class Utility
 
                 embed.AddField("Deafened", user.IsDeaf);
                 embed.AddField("Is VC Muted", user.IsMute);
-                embed.AddField("Is Server Muted",
+                embed.AddField("Is Community Muted",
                     muteService.FindMuteRole(ctx.Guild) is { } muteRole && user.Roles.Contains(muteRole));
                 await msg.ModifyAsync(x => x.Embed = embed.Build()).ConfigureAwait(false);
             }

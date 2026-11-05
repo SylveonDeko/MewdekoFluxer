@@ -598,7 +598,7 @@ public class WizardController : Controller
 
         if (configuredFeatures.Contains(WizardFeatures.MultiGreets))
         {
-            steps.Add("Test your welcome messages by having someone join the server");
+            steps.Add("Test your welcome messages by having someone join the community");
         }
 
         if (configuredFeatures.Contains(WizardFeatures.Moderation))
@@ -611,8 +611,8 @@ public class WizardController : Controller
             steps.Add("Check XP settings and configure role rewards");
         }
 
-        steps.Add("Explore other dashboard features to customize your server further");
-        steps.Add("Join our support server if you need help with advanced configuration");
+        steps.Add("Explore other dashboard features to customize your community further");
+        steps.Add("Join our support community if you need help with advanced configuration");
 
         return steps.ToArray();
     }
@@ -632,7 +632,7 @@ public class WizardController : Controller
             GuildPermission.AddReactions => "Required for interactive features and starboard",
             GuildPermission.EmbedLinks => "Required to display rich embeds and formatted messages",
             GuildPermission.AttachFiles => "Required to send images and files",
-            GuildPermission.UseExternalEmojis => "Required to use custom emojis from other servers",
+            GuildPermission.UseExternalEmojis => "Required to use custom emojis from other communities",
             GuildPermission.MentionEveryone => "Required for certain notification features",
             _ => "Required for various bot features"
         };

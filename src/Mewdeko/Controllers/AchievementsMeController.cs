@@ -174,7 +174,7 @@ public class AchievementsMeController : Controller
 
         var guild = client.GetGuild(guildId);
         if (guild?.GetUser(userId) is null)
-            return (null, StatusCode(403, "You are not a member of this server."));
+            return (null, StatusCode(403, "You are not a member of this community."));
         return (guild, null);
     }
 

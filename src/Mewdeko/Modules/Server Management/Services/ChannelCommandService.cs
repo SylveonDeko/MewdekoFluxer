@@ -255,12 +255,12 @@ public class ChannelCommandService : INService, IReadyExecutor
             switch (action)
             {
                 case PunishmentAction.Kick:
-                    await user.KickAsync("Server is in lockdown").ConfigureAwait(false);
+                    await user.KickAsync("Community is in lockdown").ConfigureAwait(false);
                     break;
                 case PunishmentAction.Ban:
                     var pruneDays = await banPrune
                         .GetPruneDaysAsync(user.Guild.Id, BanPruneAction.Lockdown).ConfigureAwait(false);
-                    await user.Guild.AddBanAsync(user.Id, pruneDays, "Server is in lockdown").ConfigureAwait(false);
+                    await user.Guild.AddBanAsync(user.Id, pruneDays, "Community is in lockdown").ConfigureAwait(false);
                     break;
             }
         }

@@ -10,7 +10,7 @@ public class LbOpts : IMewdekoCommandOptions
     /// <summary>
     ///     Gets or sets a value indicating whether to only show users who are on the server.
     /// </summary>
-    [Option('c', "clean", Default = false, HelpText = "Only show users who are on the server.")]
+    [Option('c', "clean", Default = false, HelpText = "Only show users who are in the community.")]
     public bool Clean { get; set; }
 
     /// <summary>

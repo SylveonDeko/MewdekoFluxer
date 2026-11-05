@@ -763,7 +763,7 @@ public class TwitchService : INService, IReadyExecutor
     {
         var config = await GetConfigAsync(guildId);
         if (config is null)
-            throw new InvalidOperationException("No Twitch configuration exists for this server.");
+            throw new InvalidOperationException("No Twitch configuration exists for this community.");
 
         await SendGoLiveNotificationAsync(new TwitchStreamOnlineArgs
         {
@@ -786,7 +786,7 @@ public class TwitchService : INService, IReadyExecutor
     {
         var config = await GetConfigAsync(guildId);
         if (config is null)
-            throw new InvalidOperationException("No Twitch configuration exists for this server.");
+            throw new InvalidOperationException("No Twitch configuration exists for this community.");
 
         await SendSubNotificationAsync(new TwitchNewSubArgs
         {
@@ -806,7 +806,7 @@ public class TwitchService : INService, IReadyExecutor
     {
         var config = await GetConfigAsync(guildId);
         if (config is null)
-            throw new InvalidOperationException("No Twitch configuration exists for this server.");
+            throw new InvalidOperationException("No Twitch configuration exists for this community.");
 
         await SendRaidNotificationAsync(new TwitchRaidArgs
         {
@@ -1458,7 +1458,7 @@ public class TwitchService : INService, IReadyExecutor
         var redemptionCount = await conn.TwitchRedemptionActions.CountAsync(x => x.GuildId == guildId && x.Enabled);
 
         if (config is null)
-            return "No Twitch configuration exists for this server.";
+            return "No Twitch configuration exists for this community.";
 
         var eventSubState = config.UseEventSub ? "enabled" : "disabled";
         var lastEvent = config.LastEventAt.HasValue ? $"{config.LastEventAt.Value:u}" : "never";

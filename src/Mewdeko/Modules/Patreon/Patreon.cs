@@ -256,7 +256,7 @@ public class Patreon(IBotCredentials creds, PatreonApiClient patreonApiClient, I
             .WithColor(Mewdeko.OkColor)
             .AddField(Strings.PatreonHelpPlaceholders(ctx.Guild.Id),
                 "**Basic Placeholders:**\n" +
-                "`%server.name%` - Server name\n" +
+                "`%server.name%` - Community name\n" +
                 "`%channel.name%` - Channel name\n" +
                 "`%month%` - Current month name\n" +
                 "`%year%` - Current year\n" +

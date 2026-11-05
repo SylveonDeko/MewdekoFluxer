@@ -206,7 +206,7 @@ public class BotHellService : INService, IReadyExecutor
             var guild = client.GetGuild(id);
             if (guild is null)
             {
-                failed[id] = "The bot is not in that server";
+                failed[id] = "The bot is not in that community";
                 continue;
             }
 
@@ -324,12 +324,12 @@ public class BotHellService : INService, IReadyExecutor
             var eb = new EmbedBuilder()
                 .WithErrorColor()
                 .WithTitle(strings.BotHellDetectedTitle(null))
-                .AddField("Server", $"{verdict.GuildName} `{verdict.GuildId}`")
+                .AddField("Community", $"{verdict.GuildName} `{verdict.GuildId}`")
                 .AddField("Members", verdict.Total, true)
                 .AddField("Humans", verdict.Humans, true)
                 .AddField("Bots", $"{verdict.Bots} ({verdict.Percent}%)", true)
                 .AddField("Trigger", verdict.TriggerDescription, true)
-                .AddField("Action", left ? "Left the server" : "Stayed", true);
+                .AddField("Action", left ? "Left the community" : "Stayed", true);
 
             await channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
         }

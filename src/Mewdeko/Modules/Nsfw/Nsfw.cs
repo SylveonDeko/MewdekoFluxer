@@ -101,7 +101,7 @@ public class Nsfw(
         {
             await msg.DeleteAsync();
             await ctx.Channel.SendErrorAsync(
-                    $"Hey guys stop spamming the command! The api can only take so much man. Wait at least a few mins before trying again. If theres an issue join the support server in {await guildSettings.GetPrefix(ctx.Guild)}vote.",
+                    $"Hey guys stop spamming the command! The api can only take so much man. Wait at least a few mins before trying again. If theres an issue join the support community in {await guildSettings.GetPrefix(ctx.Guild)}vote.",
                     Config)
                 .ConfigureAwait(false);
         }

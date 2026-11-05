@@ -93,7 +93,7 @@ public class RoleMenusController : Controller
 
         var actor = await ResolveActorAsync(guild);
         if (actor is null)
-            return StatusCode(403, "You are not a member of this server.");
+            return StatusCode(403, "You are not a member of this community.");
 
         try
         {
@@ -129,7 +129,7 @@ public class RoleMenusController : Controller
 
         var actor = await ResolveActorAsync(guild);
         if (actor is null)
-            return StatusCode(403, "You are not a member of this server.");
+            return StatusCode(403, "You are not a member of this community.");
 
         try
         {
@@ -168,7 +168,7 @@ public class RoleMenusController : Controller
 
         var actor = await ResolveActorAsync(guild);
         if (actor is null)
-            return StatusCode(403, "You are not a member of this server.");
+            return StatusCode(403, "You are not a member of this community.");
 
         try
         {
@@ -207,7 +207,7 @@ public class RoleMenusController : Controller
 
         var actor = await ResolveActorAsync(guild);
         if (actor is null)
-            return StatusCode(403, "You are not a member of this server.");
+            return StatusCode(403, "You are not a member of this community.");
 
         try
         {
@@ -247,7 +247,7 @@ public class RoleMenusController : Controller
 
         var actor = await ResolveActorAsync(guild);
         if (actor is null)
-            return StatusCode(403, "You are not a member of this server.");
+            return StatusCode(403, "You are not a member of this community.");
 
         try
         {
@@ -287,7 +287,7 @@ public class RoleMenusController : Controller
 
         var actor = await ResolveActorAsync(guild);
         if (actor is null)
-            return StatusCode(403, "You are not a member of this server.");
+            return StatusCode(403, "You are not a member of this community.");
 
         try
         {
@@ -447,7 +447,7 @@ public class RoleMenusController : Controller
 
         var actor = await ResolveActorAsync(guild);
         if (actor is null)
-            return StatusCode(403, "You are not a member of this server.");
+            return StatusCode(403, "You are not a member of this community.");
 
         try
         {
@@ -594,7 +594,7 @@ public class RoleMenusController : Controller
         {
             RoleMenuError.NotFound => NotFound("Role menu not found."),
             RoleMenuError.TooManyMenus =>
-                BadRequest($"This server already has {RoleMenuService.MaxMenusPerGuild} role menus."),
+                BadRequest($"This community already has {RoleMenuService.MaxMenusPerGuild} role menus."),
             RoleMenuError.NameInvalid => BadRequest("Menu names have to be 1 to 100 characters."),
             RoleMenuError.NoOptions => BadRequest("A menu needs at least one option."),
             RoleMenuError.TooManyOptions => BadRequest("A menu can have at most 25 options."),

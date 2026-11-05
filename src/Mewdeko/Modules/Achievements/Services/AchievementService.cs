@@ -622,7 +622,7 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
         var qualifier = label == info.Unit || label == info.UnitPlural ? string.Empty : $" ({label})";
         return metric switch
         {
-            AchievementMetric.TenureDays => $"Stay in the server for {threshold:N0} {unit}",
+            AchievementMetric.TenureDays => $"Stay in the community for {threshold:N0} {unit}",
             AchievementMetric.XpLevel => $"Reach XP level {threshold:N0}",
             AchievementMetric.NetWorth => $"Have a net worth of {threshold:N0}",
             _ => $"Reach {threshold:N0} {unit}{qualifier}"

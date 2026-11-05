@@ -470,14 +470,14 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
             var eb = new EmbedBuilder()
                 .WithOkColor()
                 .WithTitle(strings.LeaveFeedbackLogTitle(null))
-                .AddField("Server", $"{record.GuildName} `{record.GuildId}`")
+                .AddField("Community", $"{record.GuildName} `{record.GuildId}`")
                 .AddField("Members", record.MemberCount, true)
                 .AddField("Owner", $"{responder} `{record.OwnerId}`", true)
                 .AddField("Reason",
                     record.Reason is null ? "Not selected" : GetReasonLabel(record.Reason, record.GuildId));
 
             if (record.JoinedAt.HasValue)
-                eb.AddField("Was In Server Since", TimestampTag.FromDateTime(record.JoinedAt.Value), true);
+                eb.AddField("Was In Community Since", TimestampTag.FromDateTime(record.JoinedAt.Value), true);
 
             if (!string.IsNullOrWhiteSpace(record.Comment))
                 eb.AddField("Comment", record.Comment.TrimTo(1024));

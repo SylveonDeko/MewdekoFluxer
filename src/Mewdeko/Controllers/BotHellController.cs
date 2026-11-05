@@ -76,7 +76,7 @@ public class BotHellController(BotHellService service, FluxerClient client, BotC
     public async Task<IActionResult> Leave([FromBody] BotHellBulkRequest request)
     {
         if (request.GuildIds.Count == 0)
-            return BadRequest("No servers were given.");
+            return BadRequest("No communities were given.");
 
         var (left, failed) = await service.LeaveAsync(request.GuildIds);
         return Ok(new BotHellLeaveResponse

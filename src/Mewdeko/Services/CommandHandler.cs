@@ -429,7 +429,7 @@ public class CommandHandler : INService
         var logBuilder = new StringBuilder()
             .AppendLine(success ? "Command Executed" : "Command Errored")
             .AppendLine($"User: {usrMsg.Author} [{usrMsg.Author.Id}]")
-            .AppendLine($"Server: {(channel == null ? "PRIVATE" : $"{channel.Guild.Name} [{channel.Guild.Id}]")}")
+            .AppendLine($"Community: {(channel == null ? "PRIVATE" : $"{channel.Guild.Name} [{channel.Guild.Id}]")}")
             .AppendLine($"Channel: {(channel == null ? "PRIVATE" : $"{channel.Name} [{channel.Id}]")}")
             .AppendLine($"Message: {usrMsg.Content}")
             .AppendLine($"Execution Time: {executionTime}ms");
