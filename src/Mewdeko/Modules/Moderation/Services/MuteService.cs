@@ -64,6 +64,8 @@ public class MuteService : INService, IReadyExecutor, IDisposable
             .With(ChannelPermission.CreatePublicThreads, PermValue.Deny);
 
     private readonly ConcurrentDictionary<TimerKey, Timer> activeTimers = new();
+    private readonly ConcurrentDictionary<ulong, SemaphoreSlim> muteRoleLocks = new();
+    private readonly ConcurrentDictionary<(ulong RoleId, ulong ChannelId), byte> muteOverwritesSet = new();
 
     private readonly BanPruneService banPrune;
 
@@ -847,45 +849,60 @@ public class MuteService : INService, IReadyExecutor, IDisposable
 
         const string defaultMuteRoleName = "Mewdeko-mute";
 
-        var muteRoleName = GuildMuteRoles.GetOrAdd(guild.Id, defaultMuteRoleName);
-
-        var muteRole = guild.RoleList.FirstOrDefault(r => r.Name == muteRoleName);
-        if (muteRole == null)
+        var gate = muteRoleLocks.GetOrAdd(guild.Id, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync().ConfigureAwait(false);
+        try
         {
-            //if it doesn't exist, create it
-            try
-            {
-                muteRole = await CreateMuteRoleAsync(guild, muteRoleName).ConfigureAwait(false);
-            }
-            catch
-            {
-                //if creations fails,  maybe the name != correct, find default one, if doesn't work, create default one
-                muteRole = guild.RoleList.FirstOrDefault(r => r.Name == muteRoleName) ??
-                           await CreateMuteRoleAsync(guild, defaultMuteRoleName).ConfigureAwait(false);
-            }
-        }
+            var muteRoleName = GuildMuteRoles.GetOrAdd(guild.Id, defaultMuteRoleName);
 
-        foreach (var toOverwrite in await guild.GetTextChannelsAsync().ConfigureAwait(false))
+            var muteRole = guild.RoleList.FirstOrDefault(r => r.Name == muteRoleName);
+            if (muteRole == null)
+            {
+                //if it doesn't exist, create it
+                try
+                {
+                    muteRole = await CreateMuteRoleAsync(guild, muteRoleName).ConfigureAwait(false);
+                }
+                catch
+                {
+                    //if creations fails,  maybe the name != correct, find default one, if doesn't work, create default one
+                    muteRole = guild.RoleList.FirstOrDefault(r => r.Name == muteRoleName) ??
+                               await CreateMuteRoleAsync(guild, defaultMuteRoleName).ConfigureAwait(false);
+                }
+            }
+
+            foreach (var toOverwrite in await guild.GetTextChannelsAsync().ConfigureAwait(false))
+            {
+                try
+                {
+                    if (toOverwrite.ThreadMetadata != null)
+                        continue;
+                    if (muteOverwritesSet.ContainsKey((muteRole.Id, toOverwrite.Id)))
+                        continue;
+                    if (toOverwrite.GetPermissionOverwrite(muteRole) != null)
+                    {
+                        muteOverwritesSet.TryAdd((muteRole.Id, toOverwrite.Id), 0);
+                        continue;
+                    }
+
+                    await toOverwrite.AddPermissionOverwriteAsync(muteRole, DenyOverwrite)
+                        .ConfigureAwait(false);
+                    muteOverwritesSet.TryAdd((muteRole.Id, toOverwrite.Id), 0);
+
+                    await Task.Delay(200).ConfigureAwait(false);
+                }
+                catch
+                {
+                    // ignored
+                }
+            }
+
+            return muteRole;
+        }
+        finally
         {
-            try
-            {
-                if (toOverwrite.ThreadMetadata != null)
-                    continue;
-                if (toOverwrite.GetPermissionOverwrite(muteRole) != null)
-                    continue;
-
-                await toOverwrite.AddPermissionOverwriteAsync(muteRole, DenyOverwrite)
-                    .ConfigureAwait(false);
-
-                await Task.Delay(200).ConfigureAwait(false);
-            }
-            catch
-            {
-                // ignored
-            }
+            gate.Release();
         }
-
-        return muteRole;
     }
 
     /// <summary>

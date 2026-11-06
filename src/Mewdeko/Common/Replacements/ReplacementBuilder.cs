@@ -426,6 +426,7 @@ public partial class ReplacementBuilder
     /// <returns>The built Replacer instance.</returns>
     public Replacer Build()
     {
+        WithGifs();
         return new Replacer(reps.Select(x => (x.Key, x.Value)).ToArray(),
             regex.Select(x => (x.Key, x.Value)).ToArray());
     }
