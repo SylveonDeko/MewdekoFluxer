@@ -1,5 +1,6 @@
 using DataModel;
 using Mewdeko.Common.Attributes.TextCommands;
+using Mewdeko.Modules.ServerStats.Services;
 using Mewdeko.Modules.StatRoles.Common;
 using Mewdeko.Modules.StatRoles.Services;
 
@@ -65,6 +66,34 @@ public class StatRoles : MewdekoModuleBase<StatRoleService>
             TopStart = 1,
             TopEnd = topEnd,
             LookbackDays = lookbackDays
+        }, role);
+    }
+
+    /// <summary>
+    ///     Creates a daily top stat role: the most active member since midnight UTC gets the role, and it moves when
+    ///     someone passes them or the day resets.
+    /// </summary>
+    /// <param name="role">The role to manage.</param>
+    /// <param name="stat">What to measure.</param>
+    /// <param name="name">A display name.</param>
+    [Cmd]
+    [Aliases]
+    [RequireContext(ContextType.Guild)]
+    [UserPerm(GuildPermission.ManageRoles)]
+    [BotPerm(GuildPermission.ManageRoles)]
+    public async Task StatRoleDaily(SocketRole role, StatRoleStat stat = StatRoleStat.Messages,
+        [Remainder] string? name = null)
+    {
+        await CreateAsync(new StatRole
+        {
+            GuildId = ctx.Guild.Id,
+            RoleId = role.Id,
+            Name = name ?? role.Name,
+            StatType = (int)stat,
+            LimitType = (int)StatRoleLimit.TopRank,
+            TopStart = 1,
+            TopEnd = 1,
+            LookbackDays = ServerStatsService.TodayLookback
         }, role);
     }
 
