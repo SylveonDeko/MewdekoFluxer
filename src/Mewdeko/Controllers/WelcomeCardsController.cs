@@ -77,7 +77,7 @@ public class WelcomeCardsController(
     {
         return Ok(WelcomeCardTemplates.Starters.Select(s => new WelcomeCardStarterResponse
         {
-            Id = s.Id, Name = s.Name, Template = s.Build()
+            Id = s.Id, Name = s.Name, Template = s.Build(target)
         }).ToList());
     }
 
@@ -271,7 +271,7 @@ public class WelcomeCardsController(
         {
             Placement = setting.Placement,
             Template = template,
-            BuiltIn = WelcomeCardTemplates.Classic(),
+            BuiltIn = WelcomeCardTemplates.Classic(target),
             Images = images.Select(ImageResponse).ToList(),
             Placeholders = WelcomeCardTemplates.Placeholders.ToList(),
             Palette = new Dictionary<string, string>
