@@ -5,6 +5,7 @@ using Humanizer;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.ModuleBehaviors;
+using Mewdeko.Modules.MultiGreets.Services;
 using Mewdeko.Services.Analytics;
 using Mewdeko.Services.Settings;
 using Mewdeko.Services.Strings;
@@ -31,6 +32,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
     private readonly SemaphoreSlim messageUpdateSemaphore = new(5, 5); // Rate limit protection
     private readonly ConcurrentDictionary<ulong, DateTime> recentlyProcessedMessages = new();
     private readonly GeneratedBotStrings strings;
+    private readonly WelcomeCardService welcomeCards;
     private bool isDisposed;
     private bool isInitialized;
 
@@ -54,8 +56,10 @@ public class AfkService : INService, IReadyExecutor, IDisposable
         GuildSettingsService guildSettings,
         EventHandler eventHandler,
         BotConfigService config,
-        GeneratedBotStrings strings, ILogger<AfkService> logger, IAnalyticsCollector collector)
+        GeneratedBotStrings strings, ILogger<AfkService> logger, IAnalyticsCollector collector,
+        WelcomeCardService welcomeCards)
     {
+        this.welcomeCards = welcomeCards;
         this.collector = collector;
         this.cache = cache;
         this.guildSettings = guildSettings;
@@ -733,7 +737,9 @@ public class AfkService : INService, IReadyExecutor, IDisposable
                             .WithOkColor(user.Guild.Id)
                             .Build();
 
-                        var sentMsg = await msg.Channel.SendAsync(embed: embed);
+                        var (files, withCard) = await welcomeCards.TryAttachAsync(user.GuildId,
+                            WelcomeCardTarget.Afk, 0, mentionedGuildUser.User, [embed]);
+                        var sentMsg = await msg.Channel.SendAsync(embeds: withCard, attachments: files);
                         if (afkDeleteTime > 0) sentMsg.DeleteAfter(afkDeleteTime);
                     }
                     else
@@ -756,12 +762,17 @@ public class AfkService : INService, IReadyExecutor, IDisposable
 
                         if (SmartEmbed.TryParse(parsedMessage, user.GuildId, out var embed, out var plainText))
                         {
-                            var sentMsg = await msg.Channel.SendAsync(plainText, embeds: embed);
+                            var (files, withCard) = await welcomeCards.TryAttachAsync(user.GuildId,
+                                WelcomeCardTarget.Afk, 0, mentionedGuildUser.User, embed);
+                            var sentMsg = await msg.Channel.SendAsync(plainText, embeds: withCard, attachments: files);
                             if (afkDeleteTime > 0) sentMsg.DeleteAfter(afkDeleteTime);
                         }
                         else
                         {
-                            var sentMsg = await msg.Channel.SendAsync(parsedMessage.SanitizeMentions(true));
+                            var (files, withCard) = await welcomeCards.TryAttachAsync(user.GuildId,
+                                WelcomeCardTarget.Afk, 0, mentionedGuildUser.User, null);
+                            var sentMsg = await msg.Channel.SendAsync(parsedMessage.SanitizeMentions(true),
+                                embeds: withCard, attachments: files);
                             if (afkDeleteTime > 0) sentMsg.DeleteAfter(afkDeleteTime);
                         }
                     }
