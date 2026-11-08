@@ -29,6 +29,8 @@ namespace DataModel
 		[Column("CategoryId"                                                                                             )] public ulong?   CategoryId           { get; set; } // numeric(20,0)
 		[Column("ArchiveCategoryId"                                                                                      )] public ulong?   ArchiveCategoryId    { get; set; } // numeric(20,0)
 		[Column("ThreadChannelId"                                                                                        )] public ulong?   ThreadChannelId      { get; set; } // numeric(20,0)
+		[Column("ClaimedCategoryId"                                                                                      )] public ulong?   ClaimedCategoryId    { get; set; } // numeric(20,0)
+		[Column("DmTranscript"                                                                                           )] public bool     DmTranscript         { get; set; } // boolean
         // Public storage as long[] for database compatibility (must be public for linq2db)
         [Column("SupportRoles")]
         public long[] _supportRoles { get; set; } = [];

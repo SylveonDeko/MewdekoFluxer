@@ -1,7 +1,9 @@
-﻿using System.Threading.Channels;
+﻿using System.IO;
+using System.Threading.Channels;
 using Channel = Fluxer.Net.Channel;
 using DataModel;
 using LinqToDB.Async;
+using Mewdeko.Modules.MultiGreets.Services;
 using Mewdeko.Modules.Utility.Services;
 using Mewdeko.Services.Analytics;
 
@@ -25,6 +27,7 @@ public class GreetSettingsService : INService
     private readonly GuildSettingsService gss;
     private readonly InviteCountService inviteCountService;
     private readonly ILogger<GreetSettingsService> logger;
+    private readonly WelcomeCardService welcomeCards;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="GreetSettingsService" /> class, setting up event handlers for user
@@ -41,10 +44,12 @@ public class GreetSettingsService : INService
     /// <param name="logger">The logger instance for structured logging.</param>
     /// <param name="collector">The analytics collector.</param>
     /// <param name="inviteCountService">Supplies inviter placeholders for greet and leave messages.</param>
+    /// <param name="welcomeCards">The service drawing welcome cards.</param>
     public GreetSettingsService(FluxerClient client, GuildSettingsService gss, IDataConnectionFactory dbFactory,
         EventHandler eventHandler, ILogger<GreetSettingsService> logger, IAnalyticsCollector collector,
-        InviteCountService inviteCountService)
+        InviteCountService inviteCountService, WelcomeCardService welcomeCards)
     {
+        this.welcomeCards = welcomeCards;
         this.collector = collector;
         this.dbFactory = dbFactory;
         this.logger = logger;
@@ -99,11 +104,16 @@ public class GreetSettingsService : INService
         var rep = new ReplacementBuilder()
             .WithDefault(user, chan, user.Guild, client)
             .Build();
-        if (SmartEmbed.TryParse(rep.Replace(conf.BoostMessage), user.Guild?.Id, out var embed, out var plainText))
+        var parsed = SmartEmbed.TryParse(rep.Replace(conf.BoostMessage), user.Guild?.Id, out var embed,
+            out var plainText);
+        var (files, embeds) = await welcomeCards.TryAttachAsync(user.Guild.Id, WelcomeCardTarget.Boost, 0, user.User,
+            embed);
+        embed = embeds;
+        if (parsed)
         {
             try
             {
-                var toDelete = await chan.SendAsync(plainText, embeds: embed)
+                var toDelete = await chan.SendAsync(plainText, embeds: embed, attachments: files)
                     .ConfigureAwait(false);
                 if (conf.BoostMessageDeleteAfter > 0) toDelete.DeleteAfter(conf.BoostMessageDeleteAfter);
             }
@@ -117,7 +127,7 @@ public class GreetSettingsService : INService
             var msg = rep.Replace(conf.BoostMessage);
             try
             {
-                var toDelete = await chan.SendAsync(msg).ConfigureAwait(false);
+                var toDelete = await chan.SendAsync(msg, embeds: embed, attachments: files).ConfigureAwait(false);
 
                 if (conf.BoostMessageDeleteAfter > 0) toDelete.DeleteAfter(conf.BoostMessageDeleteAfter);
             }
@@ -220,7 +230,7 @@ public class GreetSettingsService : INService
         conf.BoostMessageChannelId = channelId;
         await gss.UpdateGuildConfig(guildId, conf);
 
-        return !conf.SendBoostMessage;
+        return conf.SendBoostMessage;
     }
 
     /// <summary>
@@ -270,16 +280,21 @@ public class GreetSettingsService : INService
             await inviteCountService.ApplyLeavePlaceholdersAsync(channel.Guild, userList[0], builder);
         var rep = builder.Build();
         var lh = await GetLeaveHook(channel.GuildId);
+        var parsed = SmartEmbed.TryParse(rep.Replace(conf.ChannelByeMessageText), channel.GuildId, out var embed,
+            out var plainText);
+        List<AttachmentRequest>? files = null;
+        if (userList.Count == 1)
+            (files, embed) = await welcomeCards.TryAttachAsync(channel.Guild.Id, WelcomeCardTarget.Bye, 0,
+                userList[0], embed);
 
-        if (SmartEmbed.TryParse(rep.Replace(conf.ChannelByeMessageText), channel.GuildId, out var embed,
-                out var plainText))
+        if (parsed)
         {
             try
             {
                 if (string.IsNullOrEmpty(lh) || lh == 0.ToString())
                 {
                     var toDelete = await channel
-                        .SendAsync(plainText, embeds: embed)
+                        .SendAsync(plainText, embeds: embed, attachments: files)
                         .ConfigureAwait(false);
                     if (conf.AutoDeleteByeMessagesTimer > 0) toDelete.DeleteAfter(conf.AutoDeleteByeMessagesTimer);
                 }
@@ -287,7 +302,7 @@ public class GreetSettingsService : INService
                 {
                     var webhook = new FluxerWebhookClient(await GetLeaveHook(channel.GuildId));
                     var toDelete = await webhook
-                        .SendAsync(plainText, embeds: embed)
+                        .SendAsync(plainText, embeds: embed, attachments: files)
                         .ConfigureAwait(false);
                     if (conf.AutoDeleteByeMessagesTimer > 0)
                     {
@@ -307,19 +322,21 @@ public class GreetSettingsService : INService
         else
         {
             var msg = rep.Replace(conf.ChannelByeMessageText);
-            if (string.IsNullOrWhiteSpace(msg))
+            if (string.IsNullOrWhiteSpace(msg) && files is null)
                 return;
             try
             {
                 if (string.IsNullOrEmpty(lh) || lh == 0.ToString())
                 {
-                    var toDelete = await channel.SendAsync(msg.SanitizeMentions()).ConfigureAwait(false);
+                    var toDelete = await channel.SendAsync(msg.SanitizeMentions(), embeds: embed, attachments: files)
+                        .ConfigureAwait(false);
                     if (conf.AutoDeleteByeMessagesTimer > 0) toDelete.DeleteAfter(conf.AutoDeleteByeMessagesTimer);
                 }
                 else
                 {
                     var webhook = new FluxerWebhookClient(await GetLeaveHook(channel.GuildId));
-                    var toDel = await webhook.SendAsync(msg.SanitizeMentions()).ConfigureAwait(false);
+                    var toDel = await webhook.SendAsync(msg.SanitizeMentions(), embeds: embed, attachments: files)
+                        .ConfigureAwait(false);
                     if (conf.AutoDeleteByeMessagesTimer > 0)
                     {
                         var msg2 = await channel.GetMessageAsync(toDel).ConfigureAwait(false) as Message;
@@ -365,12 +382,17 @@ public class GreetSettingsService : INService
             .WithDefault(user, channel, (SocketGuild)user.Guild, client);
         await inviteCountService.ApplyGreetPlaceholdersAsync(user, builder);
         var rep = builder.Build();
+        var parsed = SmartEmbed.TryParse(rep.Replace(conf.DmGreetMessageText), user.GuildId, out var embed,
+            out var plainText);
+        var (files, embeds) = await welcomeCards.TryAttachAsync(user.GuildId, WelcomeCardTarget.DmGreet, 0, user.User,
+            embed);
+        embed = embeds;
 
-        if (SmartEmbed.TryParse(rep.Replace(conf.DmGreetMessageText), user.GuildId, out var embed, out var plainText))
+        if (parsed)
         {
             try
             {
-                await channel.SendAsync(plainText, embeds: embed)
+                await channel.SendAsync(plainText, embeds: embed, attachments: files)
                     .ConfigureAwait(false);
             }
             catch
@@ -382,10 +404,13 @@ public class GreetSettingsService : INService
         else
         {
             var msg = rep.Replace(conf.DmGreetMessageText);
-            if (string.IsNullOrWhiteSpace(msg)) return true;
+            if (string.IsNullOrWhiteSpace(msg) && files is null) return true;
             try
             {
-                await channel.SendConfirmAsync(msg).ConfigureAwait(false);
+                if (files is null)
+                    await channel.SendConfirmAsync(msg).ConfigureAwait(false);
+                else
+                    await channel.SendAsync(msg, embeds: embed, attachments: files).ConfigureAwait(false);
             }
             catch
             {

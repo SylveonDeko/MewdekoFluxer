@@ -68,7 +68,6 @@
   "ticket_created_notification": "A new ticket has been created in {0}",
   "ticket_creation_failed": "Failed to complete ticket creation.",
   "ticket_deletion_warning": "This channel will be automatically deleted in {0} minutes.",
-  "ticket_info_prompt": "Please provide the following information:",
   "ticket_limit_reached": "You already have the maximum of {0} active tickets of this type.",
   "ticket_link_failed": "Failed to link ticket to case",
   "ticket_linked_to_case": "Ticket linked to case #{0}",
@@ -138,5 +137,7 @@
   "ticket_thread_channel_threads": "Tickets from button {0} now open as private threads in {1}.",
   "ticket_thread_channel_forum": "Tickets from button {0} now open as posts in {1}. Anyone who can see that forum can see them.",
   "ticket_thread_channel_removed": "Tickets from button {0} now open in their own channels again.",
-  "ticket_thread_channel_invalid": "Pick a text or forum channel in this community."
+  "ticket_thread_channel_invalid": "Pick a text or forum channel in this community.",
+  "ticket_transcript_dm_title": "Ticket #{0} in {1} was closed",
+  "ticket_transcript_dm_link": "View the transcript"
 }

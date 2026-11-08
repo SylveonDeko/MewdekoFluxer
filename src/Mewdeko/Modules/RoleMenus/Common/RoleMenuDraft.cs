@@ -1,4 +1,5 @@
 using DataModel;
+using Mewdeko.Modules.RoleMenus.Services;
 
 namespace Mewdeko.Modules.RoleMenus.Common;
 
@@ -43,7 +44,32 @@ public class RoleMenuDraft
     public ulong? RequiredRoleId { get; set; }
 
     /// <summary>
-    ///     Private confirmation or no confirmation.
+    ///     Roles that stop a member from using the menu.
+    /// </summary>
+    public List<ulong> BlockedRoleIds { get; set; } = [];
+
+    /// <summary>
+    ///     Seconds a role from this menu lasts before it is taken back. Zero means it stays.
+    /// </summary>
+    public int TempRoleSeconds { get; set; }
+
+    /// <summary>
+    ///     When the menu deletes its message and turns itself off, in UTC. Null means never.
+    /// </summary>
+    public DateTime? ExpiresAt { get; set; }
+
+    /// <summary>
+    ///     Group this menu is linked into. Null means the menu stands alone.
+    /// </summary>
+    public int? GroupId { get; set; }
+
+    /// <summary>
+    ///     RGB colour of the default embed. Null means the bot's usual colour.
+    /// </summary>
+    public int? AccentColor { get; set; }
+
+    /// <summary>
+    ///     Short note or no note.
     /// </summary>
     public RoleMenuReplyMode ReplyMode { get; set; }
 
@@ -73,6 +99,11 @@ public class RoleMenuDraft
             MinRoles = menu.MinRoles,
             MaxRoles = menu.MaxRoles,
             RequiredRoleId = menu.RequiredRoleId,
+            BlockedRoleIds = RoleMenuService.ParseRoleIds(menu.BlockedRoleIds),
+            TempRoleSeconds = menu.TempRoleSeconds,
+            ExpiresAt = menu.ExpiresAt,
+            GroupId = menu.GroupId,
+            AccentColor = menu.AccentColor,
             ReplyMode = (RoleMenuReplyMode)menu.ReplyMode,
             Enabled = menu.Enabled,
             Options = menu.Options
@@ -84,7 +115,9 @@ public class RoleMenuDraft
                     RoleId = x.RoleId,
                     Label = x.Label,
                     Emoji = x.Emoji,
-                    Description = x.Description
+                    Description = x.Description,
+                    TempRoleSeconds = x.TempRoleSeconds,
+                    MaxHolders = x.MaxHolders
                 })
                 .ToList()
         };
@@ -121,6 +154,15 @@ public class RoleMenuOptionDraft
     /// </summary>
     public string? Description { get; set; }
 
+    /// <summary>
+    ///     Seconds this role lasts before it is taken back. Zero uses the menu's setting.
+    /// </summary>
+    public int TempRoleSeconds { get; set; }
+
+    /// <summary>
+    ///     Most members who can hold this role through the menu. Zero means no limit.
+    /// </summary>
+    public int MaxHolders { get; set; }
 }
 
 /// <summary>

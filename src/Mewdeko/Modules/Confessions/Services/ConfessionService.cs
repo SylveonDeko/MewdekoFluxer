@@ -61,11 +61,11 @@ public class ConfessionService(
                     return;
                 }
 
-                var eb = new EmbedBuilder().WithOkColor()
+                var eb = new EmbedBuilder().WithOkColor(guild.Id)
                     .WithAuthor(strings.AnonymousConfession(guild.Id, current.ConfessNumber + 1), guild.IconUrl)
                     .WithDescription(confession)
                     .WithFooter(
-                        strings.ConfessionFooter(guild.Id, guild.Id))
+                        strings.ConfessionFooter(guild.Id, guild.Id, await guildSettings.GetPrefix(guild)))
                     .WithCurrentTimestamp();
                 if (imageUrl != null)
                     eb.WithImageUrl(imageUrl);
@@ -120,11 +120,11 @@ public class ConfessionService(
                     return;
                 }
 
-                var eb = new EmbedBuilder().WithOkColor()
+                var eb = new EmbedBuilder().WithOkColor(guild.Id)
                     .WithAuthor(strings.AnonymousConfession(guild.Id, 1), guild.IconUrl)
                     .WithDescription(confession)
                     .WithFooter(
-                        strings.ConfessionFooter(guild.Id, guild.Id))
+                        strings.ConfessionFooter(guild.Id, guild.Id, await guildSettings.GetPrefix(guild)))
                     .WithCurrentTimestamp();
                 if (imageUrl != null)
                     eb.WithImageUrl(imageUrl);
@@ -212,6 +212,25 @@ public class ConfessionService(
 
         guildConfig.SetConfessionBlacklists(blacklists);
         await guildSettings.UpdateGuildConfig(guildId, guildConfig);
+    }
+
+    /// <summary>
+    ///     Checks whether a user is blocked from confessing, either by their own ID or by one of their roles.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild.</param>
+    /// <param name="userId">The ID of the user.</param>
+    /// <returns>True if the user or one of their roles is blacklisted.</returns>
+    public async Task<bool> IsBlacklistedAsync(ulong guildId, ulong userId)
+    {
+        var blacklist = (await guildSettings.GetGuildConfig(guildId)).GetConfessionBlacklists();
+        if (blacklist.Count == 0)
+            return false;
+
+        if (blacklist.Contains(userId))
+            return true;
+
+        var member = client.GetGuild(guildId)?.GetUser(userId);
+        return member is not null && member.RoleIds.Any(roleId => blacklist.Contains(roleId));
     }
 
     /// <summary>

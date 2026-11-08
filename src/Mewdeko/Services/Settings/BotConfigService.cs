@@ -68,6 +68,8 @@ public sealed class BotConfigService : ConfigServiceBase<BotConfig>
         AddParsedProp("botHellBotCount", bs => bs.BotHellBotCount, int.TryParse, ConfigPrinters.ToString);
         AddParsedProp("botHellBotPercent", bs => bs.BotHellBotPercent, int.TryParse, ConfigPrinters.ToString);
         AddParsedProp("botHellAutoLeave", bs => bs.BotHellAutoLeave, bool.TryParse, ConfigPrinters.ToString);
+        AddParsedProp("cardPresetBaseUrl", bs => bs.CardPresetBaseUrl, ConfigParsers.String,
+            ConfigPrinters.ToString);
         AddParsedProp("botHellReportChannel", bs => bs.BotHellReportChannel, ulong.TryParse,
             ConfigPrinters.ToString);
         AddParsedProp("successemote", bs => bs.SuccessEmote, ConfigParsers.String, ConfigPrinters.ToString);

@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.Json;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Modules.Tickets.Common;
 using Mewdeko.Modules.Tickets.Services;
@@ -10,11 +9,11 @@ namespace Mewdeko.Modules.Tickets;
 public partial class Tickets : MewdekoModuleBase<TicketService>
 {
     /// <summary>
-    ///     Provides configuration commands for managing ticket panels, buttons, and select menus.
+    ///     Provides configuration commands for managing ticket panels and ticket types.
     /// </summary>
     /// <remarks>
     ///     This submodule contains commands for server administrators to manage their ticket system,
-    ///     including creating and modifying panels, buttons, and select menus.
+    ///     including creating and modifying panels and ticket types.
     /// </remarks>
     [Group]
     public class TicketConfig : MewdekoSubmodule<TicketService>
@@ -38,7 +37,7 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
         /// </summary>
         /// <remarks>
         ///     Displays a paginated list of all ticket panels, showing their locations
-        ///     and the number of components (buttons/select menus) they contain.
+        ///     and the number of ticket types they contain.
         /// </remarks>
         [Cmd]
         [Aliases]
@@ -74,13 +73,11 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                 {
                     var channel = await ctx.Guild.GetTextChannelAsync(panel.ChannelId);
                     var buttonCount = panel.PanelButtons?.Count() ?? 0;
-                    var menuCount = panel.PanelSelectMenus?.Count() ?? 0;
 
                     pageBuilder.AddField(
                         $"Panel ID: {panel.MessageId}",
                         $"Channel: {(channel == null ? "Deleted" : channel.Mention)}\n" +
-                        $"Buttons: {buttonCount}\n" +
-                        $"Select Menus: {menuCount}");
+                        $"Ticket types: {buttonCount}");
                 }
 
                 return pageBuilder;
@@ -116,79 +113,6 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
             else
             {
                 await ctx.Channel.SendErrorAsync(Strings.FailedDeleteButton(ctx.Guild.Id), Config);
-            }
-        }
-
-        /// <summary>
-        ///     Deletes a select menu from a panel.
-        /// </summary>
-        /// <param name="menuId">The ID of the select menu to delete.</param>
-        /// <remarks>
-        ///     This command removes the specified select menu and all its options from the panel.
-        ///     The menu ID can be found using the panel info command.
-        /// </remarks>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.Administrator)]
-        public async Task DeleteSelectMenu(int menuId)
-        {
-            var menu = await Service.GetSelectMenuAsync(menuId.ToString());
-            if (menu == null || menu.Panel.GuildId != ctx.Guild.Id)
-            {
-                await ctx.Channel.SendErrorAsync(Strings.SelectMenuNotFound(ctx.Guild.Id), Config);
-                return;
-            }
-
-            var success = await Service.DeleteSelectMenuAsync(ctx.Guild, menuId);
-            if (success)
-            {
-                await ctx.Channel.SendConfirmAsync(Strings.SelectMenuDeletedSuccess(ctx.Guild.Id, menu.Placeholder));
-            }
-            else
-            {
-                await ctx.Channel.SendErrorAsync(Strings.FailedDeleteSelectMenu(ctx.Guild.Id), Config);
-            }
-        }
-
-        /// <summary>
-        ///     Deletes a specific option from a select menu.
-        /// </summary>
-        /// <param name="optionId">The ID of the option to delete.</param>
-        /// <remarks>
-        ///     This command removes a single option from a select menu.
-        ///     At least one option must remain in each select menu.
-        /// </remarks>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.Administrator)]
-        public async Task DeleteSelectOption(int optionId)
-        {
-            var option = await Service.GetSelectOptionAsync(optionId);
-            if (option == null || option.SelectMenu.Panel.GuildId != ctx.Guild.Id)
-            {
-                await ctx.Channel.SendErrorAsync(Strings.SelectMenuOptionNotFound(ctx.Guild.Id), Config);
-                return;
-            }
-
-            // Check if this is the last option
-            var optionCount = await Service.GetSelectMenuOptionCountAsync(option.SelectMenuId);
-            if (optionCount <= 1)
-            {
-                await ctx.Channel.SendErrorAsync(
-                    Strings.CannotDeleteLastSelectOption(ctx.Guild.Id), Config);
-                return;
-            }
-
-            var success = await Service.DeleteSelectOptionAsync(ctx.Guild, optionId);
-            if (success)
-            {
-                await ctx.Channel.SendConfirmAsync(Strings.SuccessfullyDeletedOption(ctx.Guild.Id, option.Label));
-            }
-            else
-            {
-                await ctx.Channel.SendErrorAsync(Strings.FailedDeleteSelectMenuOption(ctx.Guild.Id), Config);
             }
         }
 
@@ -234,253 +158,6 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
         }
 
         /// <summary>
-        ///     Adds a select menu to a ticket panel.
-        /// </summary>
-        /// <param name="panelId">The ID of the panel to add the menu to</param>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.Administrator)]
-        public async Task AddSelectMenu(ulong panelId)
-        {
-            var panel = await Service.GetPanelAsync(panelId);
-            if (panel == null || panel.GuildId != ctx.Guild.Id)
-            {
-                await ctx.Channel.SendErrorAsync(Strings.PanelNotFound(ctx.Guild.Id), Config);
-                return;
-            }
-
-            // Get all required information first
-            var embed = new EmbedBuilder()
-                .WithTitle(Strings.SelectMenuSetup(ctx.Guild.Id))
-                .WithDescription(Strings.TicketInfoPrompt(ctx.Guild.Id))
-                .AddField("1. Placeholder", "The heading shown above this group of options on the panel")
-                .AddField("2. First Option Label", "The name shown beside the first option reaction")
-                .AddField("3. First Option Description", "Optional description for the first option")
-                .AddField("4. First Option Emoji", "Optional emoji members react with, numbered if skipped")
-                .WithFooter("Type your response for #1 (Placeholder)")
-                .WithOkColor();
-
-            var setupMsg = await ctx.Channel.SendAsync(embed: embed.Build());
-
-            var placeholder = await NextMessageAsync(ctx.Channel.Id, ctx.User.Id);
-            if (string.IsNullOrEmpty(placeholder))
-            {
-                await ctx.Channel.SendErrorAsync(Strings.SetupCancelledNoPlaceholder(ctx.Guild.Id), Config);
-                return;
-            }
-
-            embed.Fields[0].Value += $" ✓ {placeholder}";
-            embed.Footer.Text = "Type your response for #2 (First Option Label)";
-            await setupMsg.ModifyAsync(x => x.Embed = embed.Build());
-
-            var label = await NextMessageAsync(ctx.Channel.Id, ctx.User.Id);
-            if (string.IsNullOrEmpty(label))
-            {
-                await ctx.Channel.SendErrorAsync(Strings.SetupCancelledNoLabel(ctx.Guild.Id), Config);
-                return;
-            }
-
-            embed.Fields[1].Value += $" ✓ {label}";
-            embed.Footer.Text = "Type your response for #3 (Description) or type 'skip'";
-            await setupMsg.ModifyAsync(x => x.Embed = embed.Build());
-
-            var description = await NextMessageAsync(ctx.Channel.Id, ctx.User.Id);
-            description = description?.Equals("skip", StringComparison.OrdinalIgnoreCase) == true ? null : description;
-
-            embed.Fields[2].Value += description == null ? " ✓ Skipped" : $" ✓ {description}";
-            embed.Footer.Text = "Type your response for #4 (Emoji) or type 'skip'";
-            await setupMsg.ModifyAsync(x => x.Embed = embed.Build());
-
-            var emoji = await NextMessageAsync(ctx.Channel.Id, ctx.User.Id);
-            emoji = emoji?.Equals("skip", StringComparison.OrdinalIgnoreCase) == true ? null : emoji;
-
-            try
-            {
-                var menu = await Service.AddSelectMenuAsync(
-                    panel,
-                    placeholder,
-                    label,
-                    description,
-                    emoji);
-
-                if (menu == null)
-                {
-                    await ctx.Channel.SendErrorAsync(Strings.TicketPanelFull(ctx.Guild.Id), Config);
-                    return;
-                }
-
-                var confirmEmbed = new EmbedBuilder()
-                    .WithTitle(Strings.SelectMenuCreated(ctx.Guild.Id))
-                    .WithDescription(Strings.SelectMenuCreatedSuccess(ctx.Guild.Id))
-                    .AddField("Placeholder", placeholder)
-                    .AddField("First Option",
-                        $"Label: {label}\n" +
-                        $"Description: {description ?? "None"}\n" +
-                        $"Emoji: {emoji ?? "None"}")
-                    .AddField("Note",
-                        $"Use `{Config.Prefix}addoption {menu.Id} <label>` to add more options.")
-                    .WithOkColor();
-
-                await ctx.Channel.SendAsync(embed: confirmEmbed.Build());
-            }
-            catch (Exception ex)
-            {
-                logger.LogError($"Error creating select menu: {ex}");
-                await ctx.Channel.SendErrorAsync(Strings.SelectMenuCreateFailed(ctx.Guild.Id), Config);
-            }
-        }
-
-        /// <summary>
-        ///     Adds an option to an existing select menu
-        /// </summary>
-        /// <param name="menuId">The ID of the menu to add the option to</param>
-        /// <param name="label">The label shown to users</param>
-        /// <param name="description">Optional description shown under the label</param>
-        /// <param name="emoji">Optional emoji shown next to the label</param>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.Administrator)]
-        public async Task AddOption(
-            string menuId,
-            string label,
-            string description = null,
-            string emoji = null)
-        {
-            var menu = await Service.GetSelectMenuAsync(menuId);
-            if (menu == null || menu.Panel.GuildId != ctx.Guild.Id)
-            {
-                await ctx.Channel.SendErrorAsync(Strings.SelectMenuNotFound(ctx.Guild.Id), Config);
-                return;
-            }
-
-            try
-            {
-                var option = await Service.AddSelectOptionAsync(
-                    menu,
-                    label,
-                    $"option_{Guid.NewGuid():N}",
-                    description,
-                    emoji);
-
-                if (option == null)
-                {
-                    await ctx.Channel.SendErrorAsync(Strings.TicketPanelFull(ctx.Guild.Id), Config);
-                    return;
-                }
-
-                var embed = new EmbedBuilder()
-                    .WithTitle(Strings.OptionAdded(ctx.Guild.Id))
-                    .WithDescription(Strings.OptionAddedSuccess(ctx.Guild.Id, label))
-                    .AddField("Details",
-                        $"Label: {label}\n" +
-                        $"Description: {description ?? "None"}\n" +
-                        $"Emoji: {emoji ?? "None"}")
-                    .WithOkColor();
-
-                await ctx.Channel.SendAsync(embed: embed.Build());
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error adding select menu option");
-                await ctx.Channel.SendErrorAsync(Strings.OptionAddFailed(ctx.Guild.Id), Config);
-            }
-        }
-
-        /// <summary>
-        ///     Lists all options in a select menu
-        /// </summary>
-        /// <param name="menuId">The ID of the menu to view</param>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.Administrator)]
-        public async Task ListOptions(string menuId)
-        {
-            var menu = await Service.GetSelectMenuAsync(menuId);
-            if (menu == null || menu.Panel.GuildId != ctx.Guild.Id)
-            {
-                await ctx.Channel.SendErrorAsync(Strings.SelectMenuNotFound(ctx.Guild.Id), Config);
-                return;
-            }
-
-            var embed = new EmbedBuilder()
-                .WithTitle(Strings.SelectMenuOptions(ctx.Guild.Id))
-                .WithDescription(Strings.SelectMenuPlaceholder(ctx.Guild.Id, menu.Placeholder))
-                .WithOkColor();
-
-            foreach (var option in menu.SelectMenuOptions)
-            {
-                embed.AddField(option.Label,
-                    $"Value: {option.Value}\n" +
-                    $"Description: {option.Description ?? "None"}\n" +
-                    $"Emoji: {option.Emoji ?? "None"}");
-            }
-
-            await ctx.Channel.SendAsync(embed: embed.Build());
-        }
-
-        /// <summary>
-        ///     Removes an option from a select menu
-        /// </summary>
-        /// <param name="menuId">The ID of the menu</param>
-        /// <param name="optionValue">The value of the option to remove</param>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.Administrator)]
-        public async Task RemoveOption(string menuId, string optionValue)
-        {
-            var menu = await Service.GetSelectMenuAsync(menuId);
-            if (menu == null || menu.Panel.GuildId != ctx.Guild.Id)
-            {
-                await ctx.Channel.SendErrorAsync(Strings.SelectMenuNotFound(ctx.Guild.Id), Config);
-                return;
-            }
-
-            var option = menu.SelectMenuOptions.FirstOrDefault(o => o.Value == optionValue);
-            if (option == null)
-            {
-                await ctx.Channel.SendErrorAsync(Strings.OptionNotFound(ctx.Guild.Id), Config);
-                return;
-            }
-
-            if (menu.SelectMenuOptions.Count() <= 1)
-            {
-                await ctx.Channel.SendErrorAsync(Strings.CannotRemoveLastOption(ctx.Guild.Id), Config);
-                return;
-            }
-
-            // Here you would need to add a service method to remove the option
-            // await Service.RemoveSelectOptionAsync(menu, optionValue);
-
-            await ctx.Channel.SendConfirmAsync(Strings.OptionRemoved(ctx.Guild.Id, option.Label));
-        }
-
-        /// <summary>
-        ///     Updates the placeholder text for a select menu
-        /// </summary>
-        /// <param name="menuId">The ID of the menu</param>
-        /// <param name="placeholder">The new placeholder text</param>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.Administrator)]
-        public async Task SetPlaceholder(string menuId, [Remainder] string placeholder)
-        {
-            var menu = await Service.GetSelectMenuAsync(menuId);
-            if (menu == null || menu.Panel.GuildId != ctx.Guild.Id)
-            {
-                await ctx.Channel.SendErrorAsync(Strings.SelectMenuNotFound(ctx.Guild.Id), Config);
-                return;
-            }
-
-            await Service.UpdateSelectMenuAsync(menu, m => m.Placeholder = placeholder);
-            await ctx.Channel.SendConfirmAsync(Strings.PlaceholderUpdated(ctx.Guild.Id, placeholder));
-        }
-
-        /// <summary>
         ///     Sets the required response time for tickets created by a button.
         /// </summary>
         /// <param name="buttonId">The ID of the button to modify.</param>
@@ -516,8 +193,7 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
         /// </summary>
         /// <param name="panelId">The ID of the panel to view.</param>
         /// <remarks>
-        ///     Shows information about the panel's location, buttons,
-        ///     select menus, and their configurations.
+        ///     Shows information about the panel's location and ticket types.
         /// </remarks>
         [Cmd]
         [Aliases]
@@ -538,25 +214,13 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                 .WithDescription(Strings.ChannelDeletedOrExists(ctx.Guild.Id,
                     channel == null ? "Deleted" : channel.Mention))
                 .AddField("Message ID", panel.MessageId, true)
-                .AddField("Buttons", panel.PanelButtons?.Count() ?? 0, true)
-                .AddField("Select Menus", panel.PanelSelectMenus?.Count() ?? 0, true);
+                .AddField("Ticket types", panel.PanelButtons?.Count() ?? 0, true);
 
             if (panel.PanelButtons?.Any() == true)
             {
                 var buttonInfo = string.Join("\n", panel.PanelButtons.Select(b =>
                     $"• {b.Label} (ID: {b.Id})"));
-                embed.AddField("Button Details", buttonInfo);
-            }
-
-            if (panel.PanelSelectMenus?.Any() == true)
-            {
-                foreach (var menu in panel.PanelSelectMenus)
-                {
-                    var optionInfo = string.Join("\n", menu.SelectMenuOptions.Select(o =>
-                        $"• {o.Label} ({o.Value})"));
-                    embed.AddField($"Select Menu {menu.Id}",
-                        $"Placeholder: {menu.Placeholder}\nOptions:\n{optionInfo}");
-                }
+                embed.AddField("Ticket type details", buttonInfo);
             }
 
             await ctx.Channel.SendAsync(embed: embed.Build());
@@ -603,7 +267,7 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
         /// </summary>
         /// <param name="buttonId">The ID of the button to view.</param>
         /// <remarks>
-        ///     Shows all configuration settings for the button including style,
+        ///     Shows all configuration settings for the button including
         ///     transcript settings, categories, and role permissions.
         /// </remarks>
         [Cmd]
@@ -666,221 +330,14 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
         }
 
         /// <summary>
-        ///     Sets the title shown above the questions asked in a ticket opened with a button
-        /// </summary>
-        /// <param name="buttonId">The ID of the button to configure</param>
-        /// <param name="title">The title to show above each question</param>
-        /// <remarks>
-        ///     When a member opens a ticket with this button, the bot asks the questions in the new ticket channel.
-        ///     The default title is "Create Ticket" if none is set.
-        /// </remarks>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.Administrator)]
-        public async Task SetModalTitle(int buttonId, [Remainder] string title)
-        {
-            var button = await Service.GetButtonAsync(buttonId);
-            if (button == null || button.Panel.GuildId != ctx.Guild.Id)
-            {
-                await ctx.Channel.SendErrorAsync(Strings.ButtonNotFound(ctx.Guild.Id), Config);
-                return;
-            }
-
-            var modalConfig = ParseQuestions(button.ModalJson);
-            modalConfig.Title = title;
-
-            await Service.UpdateButtonSettingsAsync(ctx.Guild, buttonId, new Dictionary<string, object>
-            {
-                {
-                    "modalJson", JsonSerializer.Serialize(modalConfig)
-                }
-            });
-
-            await ctx.Channel.SendConfirmAsync(Strings.ModalTitleSet(ctx.Guild.Id, title));
-        }
-
-        /// <summary>
-        ///     Adds a question to the ones asked when a ticket is opened with a button
-        /// </summary>
-        /// <param name="buttonId">The ID of the button to configure</param>
-        /// <param name="label">The question to ask</param>
-        /// <param name="fieldConfig">Optional configuration options</param>
-        /// <remarks>
-        ///     Configuration options (comma-separated):
-        ///     - optional: Lets the member skip the question by replying skip
-        ///     - min:X: Sets minimum answer length (0-4000)
-        ///     - max:X: Sets maximum answer length (0-4000)
-        /// </remarks>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.Administrator)]
-        public async Task AddModalField(int buttonId, string label, [Remainder] string fieldConfig = null)
-        {
-            var button = await Service.GetButtonAsync(buttonId);
-            if (button == null || button.Panel.GuildId != ctx.Guild.Id)
-            {
-                await ctx.Channel.SendErrorAsync(Strings.ButtonNotFound(ctx.Guild.Id), Config);
-                return;
-            }
-
-            var modalConfig = ParseQuestions(button.ModalJson);
-
-            var fieldSettings = new ModalFieldConfig
-            {
-                Label = label,
-                Required = true,
-                MinLength = 1,
-                MaxLength = 1000
-            };
-
-            if (!string.IsNullOrWhiteSpace(fieldConfig))
-            {
-                var options = fieldConfig.Split(',')
-                    .Select(o => o.Trim().ToLower())
-                    .ToList();
-
-                foreach (var option in options)
-                {
-                    switch (option)
-                    {
-                        case "optional":
-                            fieldSettings.Required = false;
-                            break;
-                        default:
-                        {
-                            if (option.StartsWith("min:") && int.TryParse(option[4..], out var min))
-                                fieldSettings.MinLength = Math.Max(0, Math.Min(min, 4000));
-                            else if (option.StartsWith("max:") && int.TryParse(option[4..], out var max))
-                                fieldSettings.MaxLength = Math.Max(fieldSettings.MinLength ?? 0, Math.Min(max, 4000));
-                            break;
-                        }
-                    }
-                }
-            }
-
-            var fieldId = label.ToLower().Replace(" ", "_");
-            modalConfig.Fields[fieldId] = fieldSettings;
-
-            await Service.UpdateButtonSettingsAsync(ctx.Guild, buttonId, new Dictionary<string, object>
-            {
-                {
-                    "modalJson", JsonSerializer.Serialize(modalConfig)
-                }
-            });
-
-            var embed = new EmbedBuilder()
-                .WithTitle(Strings.ModalFieldAdded(ctx.Guild.Id))
-                .WithDescription(Strings.ModalFieldAddedSuccess(ctx.Guild.Id, label))
-                .AddField("Field ID", fieldId, true)
-                .AddField("Required", fieldSettings.Required, true)
-                .AddField("Length Limits",
-                    $"Min: {fieldSettings.MinLength ?? 0}, Max: {fieldSettings.MaxLength ?? 4000}",
-                    true)
-                .WithOkColor();
-
-            await ctx.Channel.SendAsync(embed: embed.Build());
-        }
-
-        /// <summary>
-        ///     Removes a question from the ones asked when a ticket is opened with a button
-        /// </summary>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.Administrator)]
-        public async Task RemoveModalField(int buttonId, string fieldId)
-        {
-            var button = await Service.GetButtonAsync(buttonId);
-            if (button == null || button.Panel.GuildId != ctx.Guild.Id)
-            {
-                await ctx.Channel.SendErrorAsync(Strings.ButtonNotFound(ctx.Guild.Id), Config);
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(button.ModalJson))
-            {
-                await ctx.Channel.SendErrorAsync(Strings.NoModalConfiguration(ctx.Guild.Id), Config);
-                return;
-            }
-
-            var modalConfig = ParseQuestions(button.ModalJson);
-            if (!modalConfig.Fields.Remove(fieldId))
-            {
-                await ctx.Channel.SendErrorAsync(Strings.FieldNotFoundInModal(ctx.Guild.Id), Config);
-                return;
-            }
-
-            await Service.UpdateButtonSettingsAsync(ctx.Guild, buttonId, new Dictionary<string, object>
-            {
-                {
-                    "modalJson", modalConfig.Fields.Any() ? JsonSerializer.Serialize(modalConfig) : null
-                }
-            });
-
-            await ctx.Channel.SendConfirmAsync(Strings.ModalFieldRemoved(ctx.Guild.Id, fieldId));
-        }
-
-        /// <summary>
-        ///     Lists the questions asked when a ticket is opened with a button
-        /// </summary>
-        [Cmd]
-        [Aliases]
-        [RequireContext(ContextType.Guild)]
-        [UserPerm(GuildPermission.Administrator)]
-        public async Task ListModalFields(int buttonId)
-        {
-            var button = await Service.GetButtonAsync(buttonId);
-            if (button == null || button.Panel.GuildId != ctx.Guild.Id)
-            {
-                await ctx.Channel.SendErrorAsync(Strings.ButtonNotFound(ctx.Guild.Id), Config);
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(button.ModalJson))
-            {
-                await ctx.Channel.SendErrorAsync(Strings.NoModalConfiguration(ctx.Guild.Id), Config);
-                return;
-            }
-
-            var embed = new EmbedBuilder()
-                .WithTitle(Strings.ModalFieldsForButton(ctx.Guild.Id, button.Label))
-                .WithOkColor();
-
-            foreach (var (fieldId, config) in ParseQuestions(button.ModalJson).Fields)
-            {
-                embed.AddField(fieldId,
-                    $"Label: {config.Label}\n" +
-                    $"Required: {config.Required}\n" +
-                    $"Length: {config.MinLength ?? 0}-{config.MaxLength ?? 4000}");
-            }
-
-            await ctx.Channel.SendAsync(embed: embed.Build());
-        }
-
-        private static ModalConfiguration ParseQuestions(string? json)
-        {
-            try
-            {
-                return ModalConfiguration.Parse(json);
-            }
-            catch (JsonException)
-            {
-                return new ModalConfiguration();
-            }
-        }
-
-
-        /// <summary>
-        ///     Lists all components of a specific ticket panel
+        ///     Lists all ticket types of a specific ticket panel
         /// </summary>
         /// <param name="panelId">The message ID of the panel to inspect</param>
         /// <remarks>
-        ///     Shows detailed information about a panel's buttons and select menus, including:
-        ///     - Component IDs and custom IDs
+        ///     Shows detailed information about a panel's ticket types, including:
+        ///     - IDs and custom IDs
         ///     - Labels and emoji
-        ///     - Question and custom message configurations
+        ///     - Custom message configuration
         ///     - Category and role settings
         /// </remarks>
         [Cmd]
@@ -892,7 +349,6 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
             try
             {
                 var buttons = await Service.GetPanelButtonsAsync(panelId);
-                var menus = await Service.GetPanelSelectMenusAsync(panelId);
 
                 var embed = new EmbedBuilder()
                     .WithTitle(Strings.PanelComponents(ctx.Guild.Id))
@@ -903,11 +359,10 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                     var buttonText = new StringBuilder();
                     foreach (var button in buttons)
                     {
-                        buttonText.AppendLine($"**Button ID: {button.Id}**")
+                        buttonText.AppendLine($"**Ticket type ID: {button.Id}**")
                             .AppendLine($"└ Label: {button.Label}")
                             .AppendLine($"└ Emoji: {(string.IsNullOrEmpty(button.Emoji) ? "Auto" : button.Emoji)}")
                             .AppendLine($"└ Custom ID: {button.CustomId}")
-                            .AppendLine($"└ Has Questions: {(button.HasModal ? "Yes" : "No")}")
                             .AppendLine($"└ Has Custom Open Message: {(button.HasCustomOpenMessage ? "Yes" : "No")}")
                             .AppendLine(
                                 $"└ Category: {(button.CategoryId.HasValue ? $"<#{button.CategoryId}>" : "None")}")
@@ -920,41 +375,9 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                             .AppendLine();
                     }
 
-                    embed.AddField("Buttons", buttonText.ToString());
+                    embed.AddField("Ticket types", buttonText.ToString());
                 }
-
-                if (menus.Any())
-                {
-                    var menuText = new StringBuilder();
-                    foreach (var menu in menus)
-                    {
-                        menuText.AppendLine($"**Menu ID: {menu.Id}**")
-                            .AppendLine($"└ Custom ID: {menu.CustomId}")
-                            .AppendLine($"└ Placeholder: {menu.Placeholder}")
-                            .AppendLine("└ Options:");
-
-                        foreach (var option in menu.Options)
-                        {
-                            menuText.AppendLine($"  **Option ID: {option.Id}**")
-                                .AppendLine($"  └ Label: {option.Label}")
-                                .AppendLine($"  └ Value: {option.Value}")
-                                .AppendLine($"  └ Description: {option.Description}")
-                                .AppendLine($"  └ Has Questions: {(option.HasModal ? "Yes" : "No")}")
-                                .AppendLine(
-                                    $"  └ Has Custom Open Message: {(option.HasCustomOpenMessage ? "Yes" : "No")}")
-                                .AppendLine(
-                                    $"  └ Category: {(option.CategoryId.HasValue ? $"<#{option.CategoryId}>" : "None")}")
-                                .AppendLine(
-                                    $"  └ Archive Category: {(option.ArchiveCategoryId.HasValue ? $"<#{option.ArchiveCategoryId}>" : "None")}");
-                        }
-
-                        menuText.AppendLine();
-                    }
-
-                    embed.AddField("Select Menus", menuText.ToString());
-                }
-
-                if (!buttons.Any() && !menus.Any())
+                else
                 {
                     embed.WithDescription(Strings.NoPanelComponents(ctx.Guild.Id));
                 }
@@ -975,7 +398,7 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
         ///     Shows a paginated list of all panels in the server, including:
         ///     - Channel locations
         ///     - Message IDs
-        ///     - Button and select menu configurations
+        ///     - Ticket type configurations
         ///     - Associated categories and roles
         /// </remarks>
         [Cmd]
@@ -1021,7 +444,7 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
 
                         if (panel.Buttons.Any())
                         {
-                            fieldBuilder.AppendLine("\n**Buttons:**");
+                            fieldBuilder.AppendLine("\n**Ticket types:**");
                             foreach (var button in panel.Buttons)
                             {
                                 fieldBuilder.AppendLine($"• ID: {button.Id} | Label: {button.Label}")
@@ -1029,19 +452,6 @@ public partial class Tickets : MewdekoModuleBase<TicketService>
                                         $"  Category: {(button.CategoryId.HasValue ? $"<#{button.CategoryId}>" : "None")}")
                                     .AppendLine(
                                         $"  Support Roles: {string.Join(", ", button.SupportRoles.Select(r => $"<@&{r}>"))}");
-                            }
-                        }
-
-                        if (panel.SelectMenus.Any())
-                        {
-                            fieldBuilder.AppendLine("\n**Select Menus:**");
-                            foreach (var menu in panel.SelectMenus)
-                            {
-                                fieldBuilder.AppendLine($"• ID: {menu.Id} | Options: {menu.Options.Count}");
-                                foreach (var option in menu.Options)
-                                {
-                                    fieldBuilder.AppendLine($"  - Option ID: {option.Id} | Label: {option.Label}");
-                                }
                             }
                         }
 

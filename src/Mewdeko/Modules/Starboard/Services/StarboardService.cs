@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Text.RegularExpressions;
 using DataModel;
+using Humanizer;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.ModuleBehaviors;
@@ -49,6 +50,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
         eventHandler.MessageDeleted.Subscribe("StarboardService", OnMessageDeletedAsync);
         eventHandler.ReactionRemoved.Subscribe("StarboardService", OnReactionRemoveAsync);
         eventHandler.ReactionsCleared.Subscribe("StarboardService", OnAllReactionsClearedAsync);
+        eventHandler.MessageReceived.Subscribe("StarboardService", OnMessageReceivedAsync);
     }
 
     /// <inheritdoc />
@@ -91,6 +93,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
         eventHandler.MessageDeleted.Unsubscribe("StarboardService", OnMessageDeletedAsync);
         eventHandler.ReactionRemoved.Unsubscribe("StarboardService", OnReactionRemoveAsync);
         eventHandler.ReactionsCleared.Unsubscribe("StarboardService", OnAllReactionsClearedAsync);
+        eventHandler.MessageReceived.Unsubscribe("StarboardService", OnMessageReceivedAsync);
         return Task.CompletedTask;
     }
 
@@ -157,6 +160,317 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
         return true;
     }
 
+    private void ThrowIfEmoteInUse(ulong guildId, string emote)
+    {
+        var emotes = ParseEmotes(emote);
+        foreach (var existingStarboard in GetStarboards(guildId))
+        {
+            var collision = emotes.Intersect(ParseEmotes(existingStarboard.Emote)).FirstOrDefault();
+            if (collision != null)
+                throw new InvalidOperationException(
+                    $"Emote {collision} is already used by another starboard in this guild.");
+        }
+    }
+
+    /// <summary>
+    ///     Creates a starboard together with a read-only channel for its posts.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="name">The name of the channel to create.</param>
+    /// <param name="emote">The emote to use for this starboard.</param>
+    /// <param name="threshold">The number of reactions required.</param>
+    /// <returns>The channel and starboard ID, or null when the channel could not be created.</returns>
+    public async Task<(Channel Channel, int StarboardId)?> CreateStarboardWithChannel(SocketGuild guild, string name,
+        string emote, int threshold)
+    {
+        ThrowIfEmoteInUse(guild.Id, emote);
+
+        Channel channel;
+        try
+        {
+            channel = await guild.CreateTextChannelAsync(new CreateTextChannelRequest
+            {
+                Name = name,
+                PermissionOverwrites =
+                [
+                    OverwritePermissions.ToRequest(guild.Id, OverwriteRequestType.Role,
+                        OverwritePermissions.InheritAll.Modify(
+                            viewChannel: PermValue.Allow,
+                            readMessageHistory: PermValue.Allow,
+                            addReactions: PermValue.Allow,
+                            sendMessages: PermValue.Deny)),
+                    OverwritePermissions.ToRequest(client.CurrentUser.Id, OverwriteRequestType.Member,
+                        OverwritePermissions.InheritAll.Modify(
+                            viewChannel: PermValue.Allow,
+                            sendMessages: PermValue.Allow,
+                            embedLinks: PermValue.Allow,
+                            attachFiles: PermValue.Allow,
+                            addReactions: PermValue.Allow,
+                            readMessageHistory: PermValue.Allow,
+                            manageMessages: PermValue.Allow))
+                ]
+            });
+        }
+        catch (FluxerApiException ex)
+        {
+            logger.LogWarning(ex, "Could not create a starboard channel in {GuildId}", guild.Id);
+            return null;
+        }
+
+        var id = await CreateStarboard(guild, channel.Id, emote, threshold);
+        return (channel, id);
+    }
+
+    private async Task<bool> UpdateConfigAsync(SocketGuild guild, int starboardId, Action<DataModel.Starboard> change)
+    {
+        var config = starboardConfigs.FirstOrDefault(x => x.Id == starboardId && x.GuildId == guild.Id);
+        if (config == null)
+            return false;
+
+        change(config);
+        await using var db = await dbFactory.CreateConnectionAsync();
+        await db.UpdateAsync(config);
+        return true;
+    }
+
+    /// <summary>
+    ///     Turns a starboard on or off.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="starboardId">The ID of the starboard configuration.</param>
+    /// <param name="enabled">Whether the starboard is on.</param>
+    /// <returns>True if the setting was updated, false if the starboard wasn't found.</returns>
+    public Task<bool> SetEnabled(SocketGuild guild, int starboardId, bool enabled)
+        => UpdateConfigAsync(guild, starboardId, x => x.Enabled = enabled);
+
+    /// <summary>
+    ///     Sets which emotes the bot reacts with on its own posts.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="starboardId">The ID of the starboard configuration.</param>
+    /// <param name="mode">The auto react mode.</param>
+    /// <returns>True if the setting was updated, false if the starboard wasn't found.</returns>
+    public Task<bool> SetAutoReact(SocketGuild guild, int starboardId, StarboardAutoReact mode)
+        => UpdateConfigAsync(guild, starboardId, x => x.AutoReact = (int)mode);
+
+    /// <summary>
+    ///     Sets whether one member's stars on several of the starboard's emotes all count.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="starboardId">The ID of the starboard configuration.</param>
+    /// <param name="enabled">Whether every reaction counts.</param>
+    /// <returns>True if the setting was updated, false if the starboard wasn't found.</returns>
+    public Task<bool> SetCountMultipleReactions(SocketGuild guild, int starboardId, bool enabled)
+        => UpdateConfigAsync(guild, starboardId, x => x.CountMultipleReactions = enabled);
+
+    /// <summary>
+    ///     Sets whether stars that can't count are removed from the message.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="starboardId">The ID of the starboard configuration.</param>
+    /// <param name="enabled">Whether invalid stars are removed.</param>
+    /// <returns>True if the setting was updated, false if the starboard wasn't found.</returns>
+    public Task<bool> SetRemoveInvalidStars(SocketGuild guild, int starboardId, bool enabled)
+        => UpdateConfigAsync(guild, starboardId, x => x.RemoveInvalidStars = enabled);
+
+    /// <summary>
+    ///     Sets how old a message has to be, and how old it may be, to be starred.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="starboardId">The ID of the starboard configuration.</param>
+    /// <param name="minMinutes">The minimum age in minutes, or null to keep it.</param>
+    /// <param name="maxMinutes">The maximum age in minutes, or null to keep it.</param>
+    /// <returns>True if the setting was updated, false if the starboard wasn't found.</returns>
+    public Task<bool> SetMessageAge(SocketGuild guild, int starboardId, int? minMinutes, int? maxMinutes)
+        => UpdateConfigAsync(guild, starboardId, x =>
+        {
+            if (minMinutes.HasValue)
+                x.MinMessageAgeMinutes = Math.Max(0, minMinutes.Value);
+            if (maxMinutes.HasValue)
+                x.MaxMessageAgeMinutes = Math.Max(0, maxMinutes.Value);
+        });
+
+    /// <summary>
+    ///     Sets how long a post has to wait before it can be moved to the bottom of the starboard again.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="starboardId">The ID of the starboard configuration.</param>
+    /// <param name="minutes">The cooldown in minutes, 0 for none.</param>
+    /// <returns>True if the setting was updated, false if the starboard wasn't found.</returns>
+    public Task<bool> SetRepostCooldown(SocketGuild guild, int starboardId, int minutes)
+        => UpdateConfigAsync(guild, starboardId, x => x.RepostCooldownMinutes = Math.Max(0, minutes));
+
+    /// <summary>
+    ///     Sets whether members can star their own messages.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="starboardId">The ID of the starboard configuration.</param>
+    /// <param name="allowed">Whether self stars count.</param>
+    /// <returns>True if the setting was updated, false if the starboard wasn't found.</returns>
+    public Task<bool> SetAllowSelfStar(SocketGuild guild, int starboardId, bool allowed)
+        => UpdateConfigAsync(guild, starboardId, x => x.AllowSelfStar = allowed);
+
+    /// <summary>
+    ///     Sets whether messages from age-restricted channels can be starred into a channel that isn't.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="starboardId">The ID of the starboard configuration.</param>
+    /// <param name="allowed">Whether age-restricted messages are allowed.</param>
+    /// <returns>True if the setting was updated, false if the starboard wasn't found.</returns>
+    public Task<bool> SetAllowNsfw(SocketGuild guild, int starboardId, bool allowed)
+        => UpdateConfigAsync(guild, starboardId, x => x.AllowNsfw = allowed);
+
+    /// <summary>
+    ///     Locks a starboard until the given time.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="starboardId">The ID of the starboard configuration.</param>
+    /// <param name="until">When the lock ends, or null to unlock.</param>
+    /// <returns>True if the setting was updated, false if the starboard wasn't found.</returns>
+    public Task<bool> SetLockedUntil(SocketGuild guild, int starboardId, DateTime? until)
+        => UpdateConfigAsync(guild, starboardId, x => x.LockedUntil = until);
+
+    /// <summary>
+    ///     Toggles a role in the starboard's allowed or denied role list. A role is only ever in one of the two.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="starboardId">The ID of the starboard configuration.</param>
+    /// <param name="roleId">The role ID.</param>
+    /// <param name="deny">True for the denied list, false for the allowed list.</param>
+    /// <returns>Whether the role was added, and the starboard configuration.</returns>
+    public async Task<(bool WasAdded, DataModel.Starboard? Config)> ToggleStarRole(SocketGuild guild, int starboardId,
+        ulong roleId, bool deny)
+    {
+        var added = false;
+        DataModel.Starboard? updated = null;
+        await UpdateConfigAsync(guild, starboardId, x =>
+        {
+            var target = ParseIds(deny ? x.DeniedRoles : x.AllowedRoles);
+            var other = ParseIds(deny ? x.AllowedRoles : x.DeniedRoles);
+            added = !target.Remove(roleId);
+            if (added)
+            {
+                target.Add(roleId);
+                other.Remove(roleId);
+            }
+
+            x.DeniedRoles = string.Join(" ", deny ? target : other);
+            x.AllowedRoles = string.Join(" ", deny ? other : target);
+            updated = x;
+        });
+
+        return (added, updated);
+    }
+
+    /// <summary>
+    ///     Toggles a channel whose messages are posted to the starboard without needing stars.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="starboardId">The ID of the starboard configuration.</param>
+    /// <param name="channelId">The channel ID.</param>
+    /// <returns>Whether the channel was added, and the starboard configuration.</returns>
+    public async Task<(bool WasAdded, DataModel.Starboard? Config)> ToggleAutoStarChannel(SocketGuild guild,
+        int starboardId, ulong channelId)
+    {
+        var added = false;
+        DataModel.Starboard? updated = null;
+        await UpdateConfigAsync(guild, starboardId, x =>
+        {
+            var channels = ParseIds(x.AutoStarChannels);
+            added = !channels.Remove(channelId);
+            if (added)
+                channels.Add(channelId);
+
+            x.AutoStarChannels = string.Join(" ", channels);
+            updated = x;
+        });
+
+        return (added, updated);
+    }
+
+    private static List<ulong> ParseIds(string? value)
+    {
+        return (value ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Select(x => ulong.TryParse(x, out var id) ? id : 0)
+            .Where(x => x != 0)
+            .Distinct()
+            .ToList();
+    }
+
+    /// <summary>
+    ///     Sets the post design of a starboard.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="starboardId">The ID of the starboard configuration.</param>
+    /// <param name="design">The embed json with starboard placeholders, or null for the default layout.</param>
+    /// <returns>The outcome.</returns>
+    public async Task<StarboardDesignResult> SetPostDesign(SocketGuild guild, int starboardId, string? design)
+    {
+        if (string.IsNullOrWhiteSpace(design))
+            design = null;
+
+        if (design != null && !StarboardPostDesign.TryRender(design, SampleData(guild, "⭐"), out _, out _))
+            return StarboardDesignResult.Invalid;
+
+        return await UpdateConfigAsync(guild, starboardId, x => x.PostDesign = design)
+            ? StarboardDesignResult.Saved
+            : StarboardDesignResult.NotFound;
+    }
+
+    private static StarboardPostData SampleData(SocketGuild guild, string emote)
+        => new(guild.Id, guild.Name, 1, 1, "Sample", "", "Sample message", 1, "general",
+            "https://fluxer.app/channels/1/1/1", 3, emote, $"{emote} **3**", [], null, DateTime.UtcNow);
+
+    /// <summary>
+    ///     Finds a message to preview a design with: the given one, or the latest one from a member in the channel.
+    /// </summary>
+    /// <param name="channel">The channel to look in.</param>
+    /// <param name="messageId">The message ID, or null for a recent message.</param>
+    /// <returns>The message, or null if none was found.</returns>
+    public static async Task<Message?> FindSampleMessageAsync(Channel channel, ulong? messageId)
+    {
+        try
+        {
+            if (messageId.HasValue)
+                return await channel.GetMessageAsync(messageId.Value);
+
+            var recent = await channel.GetMessagesAsync(20);
+            return recent.FirstOrDefault(x => !x.Author.IsBot
+                                              && (!string.IsNullOrWhiteSpace(x.Content)
+                                                  || (x.Attachments ?? []).Length > 0));
+        }
+        catch (FluxerApiException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    ///     Sends a preview of a starboard's post for a sample message.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="starboardId">The ID of the starboard configuration.</param>
+    /// <param name="target">The channel to send the preview to.</param>
+    /// <param name="sample">The message to preview with.</param>
+    /// <returns>True if the preview was sent, false if the starboard wasn't found.</returns>
+    public async Task<bool> SendDesignTestAsync(SocketGuild guild, int starboardId, Channel target, Message sample)
+    {
+        var config = starboardConfigs.FirstOrDefault(x => x.Id == starboardId && x.GuildId == guild.Id);
+        if (config == null)
+            return false;
+
+        var emotes = ParseEmotes(config.Emote);
+        var count = Math.Max(1, config.Threshold);
+        var perEmote = emotes.Take(1).ToDictionary(x => x, _ => count);
+        var content = (sample.Embeds ?? []).Any() && string.IsNullOrWhiteSpace(sample.Content)
+            ? sample.Embeds.Select(x => x.Description).FirstOrDefault()
+            : sample.Content;
+
+        var (text, embeds) = await BuildPostAsync(sample, content, config, emotes, perEmote, count, guild);
+        await target.SendAsync(text, embeds: embeds, allowedMentions: AllowedMentions.None);
+        return true;
+    }
+
     /// <summary>
     ///     Gets all starboard configurations for a guild.
     /// </summary>
@@ -164,6 +478,77 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     /// <returns>A list of starboard configurations.</returns>
     public List<DataModel.Starboard> GetStarboards(ulong guildId)
         => starboardConfigs.Where(x => x.GuildId == guildId).ToList();
+
+    /// <summary>
+    ///     Converts a duration to whole minutes, rounding up. No duration is 0.
+    /// </summary>
+    /// <param name="time">The duration, or null.</param>
+    /// <returns>The minutes.</returns>
+    public static int ToMinutes(TimeSpan? time)
+        => time is { } span ? Math.Max(0, (int)Math.Ceiling(span.TotalMinutes)) : 0;
+
+    /// <summary>
+    ///     Describes the settings of a starboard that its details line does not cover.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild, for the language.</param>
+    /// <param name="starboard">The starboard configuration.</param>
+    /// <returns>The description.</returns>
+    public string DescribeExtras(ulong guildId, DataModel.Starboard starboard)
+    {
+        string Minutes(int minutes) => minutes > 0
+            ? TimeSpan.FromMinutes(minutes).Humanize(2)
+            : strings.StarboardOff(guildId);
+
+        string Roles(string ids) => ParseIds(ids) is { Count: > 0 } list
+            ? string.Join(" ", list.Select(x => $"<@&{x}>"))
+            : strings.StarboardNone(guildId);
+
+        return strings.StarboardConfigExtras(guildId, starboard.Enabled, (StarboardAutoReact)starboard.AutoReact,
+            starboard.CountMultipleReactions, starboard.AllowSelfStar, starboard.RemoveInvalidStars,
+            Roles(starboard.AllowedRoles), Roles(starboard.DeniedRoles), Minutes(starboard.MinMessageAgeMinutes),
+            Minutes(starboard.MaxMessageAgeMinutes), Minutes(starboard.RepostCooldownMinutes),
+            !string.IsNullOrWhiteSpace(starboard.PostDesign));
+    }
+
+    /// <summary>
+    ///     Gets the link to a starboard post, found by the original message's ID or the post's own ID.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <param name="messageId">The original message ID or the starboard post ID.</param>
+    /// <returns>The post's jump link, or null when nothing was starred under that ID.</returns>
+    public string? GetPostLink(ulong guildId, ulong messageId)
+    {
+        var configs = GetStarboards(guildId);
+        var post = starboardPosts.Find(x => (x.MessageId == messageId || x.PostId == messageId)
+                                            && configs.Any(c => c.Id == x.StarboardConfigId));
+
+        return post == null ? null : BuildPostLink(guildId, configs, post);
+    }
+
+    /// <summary>
+    ///     Gets the link to a random starboard post in a guild.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <param name="starboardId">Limits the pick to one starboard when set.</param>
+    /// <returns>The post's jump link, or null when nothing has been starred.</returns>
+    public string? GetRandomPostLink(ulong guildId, int? starboardId = null)
+    {
+        var configs = GetStarboards(guildId);
+        var posts = starboardPosts
+            .Where(x => starboardId.HasValue
+                ? x.StarboardConfigId == starboardId.Value
+                : configs.Any(c => c.Id == x.StarboardConfigId))
+            .Where(x => configs.Any(c => c.Id == x.StarboardConfigId))
+            .ToList();
+
+        return posts.Count == 0 ? null : BuildPostLink(guildId, configs, posts[Random.Shared.Next(posts.Count)]);
+    }
+
+    private static string BuildPostLink(ulong guildId, List<DataModel.Starboard> configs, StarboardPost post)
+    {
+        var channelId = configs.First(x => x.Id == post.StarboardConfigId).StarboardChannelId;
+        return $"{FluxerContext.WebUrl}/channels/{guildId}/{channelId}/{post.PostId}";
+    }
 
     /// <summary>
     ///     Matches a Discord message jump link and captures its channel and message ids.
@@ -823,24 +1208,38 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     ///     Builds a starboard post: the star counts as message text and an embed with the author, content, first
     ///     image, a markdown jump link and any other attachments as links.
     /// </summary>
-    private async Task<(string Stars, EmbedRequest EmbedRequest)> CreateStarboardPostAsync(Message message, string? content,
-        List<string> starboardEmotes, bool allowBots, ulong guildId)
+    private Task<(string? Text, EmbedRequest[] Embeds)> BuildPostAsync(Message message, string? content,
+        DataModel.Starboard starboard, List<string> starboardEmotes, Dictionary<string, int> perEmote, int total,
+        SocketGuild guild)
     {
-        var reactionCounts = new List<string>();
-        foreach (var emote in starboardEmotes.Select(emoteString => emoteString.ToIEmote()))
+        var stars = string.Join(" ", starboardEmotes
+            .Where(x => perEmote.TryGetValue(x, out var count) && count > 0)
+            .Select(x => $"{x.ToIEmote()} **{perEmote[x]}**"));
+
+        if (!string.IsNullOrWhiteSpace(starboard.PostDesign))
         {
-            try
-            {
-                var count = await CountStarsAsync(message, emote, allowBots);
-                if (count > 0)
-                    reactionCounts.Add($"{emote} **{count}**");
-            }
-            catch
-            {
-                // Ignore if emote can't be processed
-            }
+            var channelName = message.Channel?.Name ?? "";
+            var member = guild.GetUser(message.Author.Id);
+            var data = new StarboardPostData(guild.Id, guild.Name, message.Id, message.Author.Id,
+                member?.GetCurrentName() ?? message.Author.Username, message.Author.GetAvatarOrDefaultUrl(),
+                content ?? "", message.ChannelId, channelName, message.GetJumpUrl(), total,
+                starboardEmotes.FirstOrDefault() ?? "⭐", stars,
+                (message.Attachments ?? []).Select(x => x.Url).ToList(), FindImageUrl(message),
+                message.Timestamp.UtcDateTime);
+
+            if (StarboardPostDesign.TryRender(starboard.PostDesign, data, out var text, out var embeds))
+                return Task.FromResult((text, embeds ?? []));
+
+            logger.LogWarning("Starboard {StarboardId} has a post design that no longer renders", starboard.Id);
         }
 
+        var (defaultStars, defaultEmbed) = CreateStarboardPost(message, content, stars, guild.Id);
+        return Task.FromResult<(string?, EmbedRequest[])>((defaultStars, [defaultEmbed]));
+    }
+
+    private (string Stars, EmbedRequest EmbedRequest) CreateStarboardPost(Message message, string? content,
+        string starsText, ulong guildId)
+    {
         var embed = new EmbedBuilder()
             .WithOkColor()
             .WithAuthor(message.Author)
@@ -860,7 +1259,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
         if (otherFiles.Count > 0)
             embed.AddField(strings.StarboardAttachments(guildId), string.Join("\n", otherFiles));
 
-        var stars = reactionCounts.Count > 0 ? string.Join(" ", reactionCounts) : "✨";
+        var stars = starsText.Length > 0 ? starsText : "✨";
         return (stars, embed.Build());
     }
 
@@ -963,7 +1362,8 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
         {
             var toAdd = new StarboardPost
             {
-                MessageId = messageId, PostId = postId, StarboardConfigId = starboardId, ReactionCount = reactionCount
+                MessageId = messageId, PostId = postId, StarboardConfigId = starboardId, ReactionCount = reactionCount,
+                LastPostedAt = DateTime.UtcNow
             };
             starboardPosts.Add(toAdd);
             await dbContext.InsertAsync(toAdd);
@@ -987,6 +1387,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
         starboardPosts.Remove(post);
         post.PostId = postId;
         post.ReactionCount = reactionCount;
+        post.LastPostedAt = DateTime.UtcNow;
         await dbContext.UpdateAsync(post);
         starboardPosts.Add(post);
     }
@@ -1075,6 +1476,9 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
     {
         var textChannel = channel;
 
+        if (!starboard.Enabled)
+            return;
+
         // Check if the reaction matches any of the starboard's emotes
         var starboardEmotes = ParseEmotes(starboard.Emote);
         var matchingEmote = starboardEmotes.FirstOrDefault(e =>
@@ -1086,8 +1490,14 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
         if (matchingEmote == null)
             return;
 
+        if (starboard.LockedUntil.HasValue && starboard.LockedUntil.Value > DateTime.UtcNow)
+            return;
+
         var starboardChannel = await textChannel.Guild.GetTextChannelAsync(starboard.StarboardChannelId);
         if (starboardChannel == null)
+            return;
+
+        if (!starboard.AllowNsfw && textChannel.IsNsfw && !starboardChannel.IsNsfw)
             return;
 
         Message newMessage;
@@ -1096,7 +1506,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
         else
             newMessage = message.Value;
 
-        if (newMessage == null)
+        if (newMessage == null || starboardPosts.Exists(x => x.PostId == newMessage.Id))
             return;
 
         var gUser = await textChannel.Guild.GetUserAsync(client.CurrentUser.Id);
@@ -1145,37 +1555,40 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
         if (content is null && imageurl is null)
             return;
 
-        var reactionEmote = matchingEmote.ToIEmote();
-        var matchingCount = await CountStarsAsync(newMessage, reactionEmote, starboard.AllowBots, starboard.Threshold);
+        if (isAdd && starboard.RemoveInvalidStars
+                  && ((newMessage.Author.IsBot && !starboard.AllowBots)
+                      || IsMessageAgeRejected(starboard, newMessage)
+                      || !await CanStarAsync(starboard, textChannel.Guild, newMessage.Author.Id, reaction.User)))
+        {
+            try
+            {
+                await newMessage.RemoveReactionAsync(Emoji.From(reaction.Emoji), reaction.UserId);
+            }
+            catch (FluxerApiException)
+            {
+                // reaction already removed
+            }
+
+            return;
+        }
+
+        if (IsMessageAgeRejected(starboard, newMessage))
+            return;
+
+        var (totalStars, perEmote) = await TallyStarsAsync(newMessage, starboard, textChannel.Guild, starboardEmotes);
         var maybePost = starboardPosts.Find(x => x.MessageId == newMessage.Id && x.StarboardConfigId == starboard.Id);
 
-        // Track stats and individual reactions
-        await TrackStarboardStats(newMessage, starboard.Id, matchingEmote, matchingCount, textChannel.Id);
-        if (isAdd)
+        await TrackStarboardStats(newMessage, starboard.Id, matchingEmote, perEmote.GetValueOrDefault(matchingEmote),
+            textChannel.Id);
+        if (isAdd && await CanStarAsync(starboard, textChannel.Guild, newMessage.Author.Id, reaction.User))
         {
             await TrackStarboardReaction(newMessage.Id, starboard.Id, reaction.UserId, matchingEmote);
         }
 
-        // Calculate total stars across all emotes for this starboard
-        var totalStars = 0;
-        foreach (var emoteString in starboardEmotes)
-        {
-            var emote = emoteString.ToIEmote();
-            try
-            {
-                totalStars += emote.Matches(reactionEmote)
-                    ? matchingCount
-                    : await CountStarsAsync(newMessage, emote, starboard.AllowBots, starboard.Threshold);
-            }
-            catch
-            {
-                // Ignore if emote can't be processed
-            }
-        }
-
         if (totalStars < starboard.Threshold)
         {
-            if (maybePost != null && starboard.RemoveOnBelowThreshold)
+            if (maybePost != null && starboard.RemoveOnBelowThreshold &&
+                !ParseIds(starboard.AutoStarChannels).Contains(textChannel.Id))
             {
                 await RemoveStarboardPost(newMessage.Id, starboard.Id);
                 try
@@ -1196,7 +1609,7 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
         Message? existingPost = null;
         if (maybePost != null)
         {
-            if (starboard.RepostThreshold > 0)
+            if (starboard.RepostThreshold > 0 && RepostCooldownElapsed(starboard, maybePost))
             {
                 var recent = await starboardChannel.GetMessagesAsync(starboard.RepostThreshold).FlattenAsync();
                 existingPost = recent.FirstOrDefault(x => x.Id == maybePost.PostId) as Message;
@@ -1223,23 +1636,197 @@ public class StarboardService : INService, IReadyExecutor, IUnloadableService
             }
         }
 
-        var (stars, embed) = await CreateStarboardPostAsync(newMessage, content, starboardEmotes,
-            starboard.AllowBots, textChannel.Guild.Id);
+        var (text, embeds) = await BuildPostAsync(newMessage, content, starboard, starboardEmotes, perEmote,
+            totalStars, textChannel.Guild);
 
         if (existingPost != null)
         {
             await existingPost.ModifyAsync(x =>
             {
-                x.Content = stars;
-                x.Embed = embed;
+                x.Content = text;
+                x.Embeds = embeds;
                 x.AllowedMentions = AllowedMentions.None;
             });
             return;
         }
 
-        var sent = await starboardChannel.SendAsync(stars, embed: embed,
-            allowedMentions: AllowedMentions.None);
+        var sent = await starboardChannel.SendAsync(text, embeds: embeds, allowedMentions: AllowedMentions.None);
         await AddStarboardPost(newMessage.Id, sent.Id, starboard.Id, totalStars);
+        await AutoReactAsync(sent, starboard);
+    }
+
+    private async Task<bool> CanStarAsync(DataModel.Starboard starboard, SocketGuild guild, ulong authorId, User user)
+    {
+        if (user.IsBot)
+            return starboard.AllowBots;
+        if (!starboard.AllowSelfStar && user.Id == authorId)
+            return false;
+
+        var allowed = ParseIds(starboard.AllowedRoles);
+        var denied = ParseIds(starboard.DeniedRoles);
+        if (allowed.Count == 0 && denied.Count == 0)
+            return true;
+
+        var member = await guild.GetUserAsync(user.Id);
+        if (member == null)
+            return allowed.Count == 0;
+        if (denied.Exists(member.RoleIds.Contains))
+            return false;
+
+        return allowed.Count == 0 || allowed.Exists(member.RoleIds.Contains);
+    }
+
+    private static bool IsMessageAgeRejected(DataModel.Starboard starboard, Message message)
+    {
+        var age = DateTimeOffset.UtcNow - message.Timestamp;
+        return (starboard.MinMessageAgeMinutes > 0 && age < TimeSpan.FromMinutes(starboard.MinMessageAgeMinutes))
+               || (starboard.MaxMessageAgeMinutes > 0 && age > TimeSpan.FromMinutes(starboard.MaxMessageAgeMinutes));
+    }
+
+    private async Task<(int Total, Dictionary<string, int> PerEmote)> TallyStarsAsync(Message message,
+        DataModel.Starboard starboard, SocketGuild guild, List<string> emotes)
+    {
+        var perEmote = new Dictionary<string, int>();
+        var needsReactors = !starboard.AllowSelfStar
+                            || !string.IsNullOrWhiteSpace(starboard.AllowedRoles)
+                            || !string.IsNullOrWhiteSpace(starboard.DeniedRoles)
+                            || (emotes.Count > 1 && !starboard.CountMultipleReactions);
+
+        if (!needsReactors)
+        {
+            foreach (var emote in emotes)
+            {
+                try
+                {
+                    perEmote[emote] = await CountStarsAsync(message, emote.ToIEmote(), starboard.AllowBots,
+                        starboard.Threshold);
+                }
+                catch
+                {
+                    perEmote[emote] = 0;
+                }
+            }
+
+            return (perEmote.Values.Sum(), perEmote);
+        }
+
+        var total = 0;
+        var seen = new HashSet<ulong>();
+        foreach (var emote in emotes)
+        {
+            perEmote[emote] = 0;
+            try
+            {
+                var iemote = emote.ToIEmote();
+                var meta = message.Reactions?.FirstOrDefault(r => r.Emoji.Matches(iemote));
+                if (meta == null || meta.Count <= 0)
+                    continue;
+
+                foreach (var reactor in await message.GetReactionsForEmojiAsync(iemote))
+                {
+                    if (!await CanStarAsync(starboard, guild, message.Author.Id, reactor))
+                        continue;
+
+                    perEmote[emote]++;
+                    if (starboard.CountMultipleReactions || seen.Add(reactor.Id))
+                        total++;
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        return (total, perEmote);
+    }
+
+    private static async Task AutoReactAsync(Message post, DataModel.Starboard starboard)
+    {
+        if (starboard.AutoReact == (int)StarboardAutoReact.None)
+            return;
+
+        var emotes = ParseEmotes(starboard.Emote);
+        if (starboard.AutoReact == (int)StarboardAutoReact.First)
+            emotes = emotes.Take(1).ToList();
+
+        try
+        {
+            foreach (var emote in emotes)
+                await post.AddReactionAsync(emote.ToIEmote());
+        }
+        catch (FluxerApiException)
+        {
+            // cannot react
+        }
+    }
+
+    private static bool RepostCooldownElapsed(DataModel.Starboard starboard, StarboardPost post)
+    {
+        if (starboard.RepostCooldownMinutes <= 0)
+            return true;
+
+        var last = post.LastPostedAt ?? post.DateAdded ?? DateTime.MinValue;
+        return last.AddMinutes(starboard.RepostCooldownMinutes) <= DateTime.UtcNow;
+    }
+
+    private async Task OnMessageReceivedAsync(SocketMessage msg)
+    {
+        if (msg.Channel is not Channel { GuildId: not null } channel || channel.Guild is not { } guild)
+            return;
+
+        var matching = starboardConfigs
+            .Where(x => x.GuildId == guild.Id && ParseIds(x.AutoStarChannels).Contains(channel.Id))
+            .ToList();
+        if (matching.Count == 0)
+            return;
+
+        foreach (var starboard in matching)
+        {
+            try
+            {
+                await PostAutoStarAsync(msg, channel, guild, starboard);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Autostar post failed in {GuildId} for starboard {StarboardId}", guild.Id,
+                    starboard.Id);
+            }
+        }
+    }
+
+    private async Task PostAutoStarAsync(SocketMessage msg, Channel channel, SocketGuild guild,
+        DataModel.Starboard starboard)
+    {
+        if (msg is not Message message)
+            return;
+        if (!starboard.Enabled)
+            return;
+        if (message.Author.IsBot && !starboard.AllowBots)
+            return;
+        if (starboard.LockedUntil.HasValue && starboard.LockedUntil.Value > DateTime.UtcNow)
+            return;
+        if (string.IsNullOrWhiteSpace(message.Content) && (message.Attachments ?? []).Length == 0)
+            return;
+        if (starboardPosts.Exists(x => x.MessageId == message.Id && x.StarboardConfigId == starboard.Id))
+            return;
+
+        var starboardChannel = await guild.GetTextChannelAsync(starboard.StarboardChannelId);
+        if (starboardChannel == null)
+            return;
+        if (!starboard.AllowNsfw && channel.IsNsfw && !starboardChannel.IsNsfw)
+            return;
+
+        var botMember = await guild.GetUserAsync(client.CurrentUser.Id);
+        if (!botMember.GetPermissions(starboardChannel).Has(ChannelPermission.SendMessages))
+            return;
+
+        var emotes = ParseEmotes(starboard.Emote);
+        var (total, perEmote) = await TallyStarsAsync(message, starboard, guild, emotes);
+        var (text, embeds) = await BuildPostAsync(message, message.Content, starboard, emotes, perEmote, total, guild);
+        var post = await starboardChannel.SendAsync(text, embeds: embeds, allowedMentions: AllowedMentions.None);
+
+        await AddStarboardPost(message.Id, post.Id, starboard.Id);
+        await AutoReactAsync(post, starboard);
     }
 
     private async Task OnMessageDeletedAsync(Cacheable<Message> arg1, Channel arg2)

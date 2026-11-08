@@ -8,6 +8,7 @@ using Mewdeko.Modules.Help.Common;
 using Mewdeko.Modules.OwnerOnly.Services;
 using Mewdeko.Modules.Permissions.Common;
 using Mewdeko.Modules.Permissions.Services;
+using Mewdeko.Services;
 using Mewdeko.Services.Impl;
 using Mewdeko.Services.Settings;
 using Mewdeko.Services.strings;
@@ -221,7 +222,7 @@ public class HelpService : INService, IReadyExecutor
         embed.WithAuthor(new EmbedAuthorBuilder()
             .WithName(genStrings.HelpmenuHelptext(guildId, client.CurrentUser))
             .WithIconUrl(client.CurrentUser.RealAvatarUrl().AbsoluteUri));
-        embed.WithOkColor();
+        embed.WithOkColor(guild?.Id);
         embed.WithDescription(
             genStrings.HelpCategoriesDescription(guildId, prefix) +
             $"\n\n[Documentation](https://mewdeko.tech) | [Support Community]({bss.Data.SupportServer}) | [Invite Me]({FluxerContext.WebUrl}/oauth2/authorize?client_id={bot.Client.CurrentUser.Id}&scope=bot&permissions=66186303) | [Donate!](https://ko-fi.com/mewdeko)");
@@ -274,7 +275,7 @@ public class HelpService : INService, IReadyExecutor
         var sections = GroupBySubmodule(commands);
 
         var embed = new EmbedBuilder()
-            .WithOkColor()
+            .WithOkColor(guild?.Id)
             .WithTitle(moduleName)
             .WithDescription(genStrings.HelpModuleOverview(guildId,
                 GetModuleDescription(moduleName, guild) ?? genStrings.HelpCommandCount(guildId, commands.Count),
@@ -559,7 +560,7 @@ public class HelpService : INService, IReadyExecutor
             {
                 var prefix = await guildSettings.GetPrefix(chan.Guild);
                 var eb = new EmbedBuilder();
-                eb.WithOkColor();
+                eb.WithOkColor(chan.Guild.Id);
                 eb.WithDescription(
                     $"Hi there! To see my command categories do `{prefix}cmds`\nMy current Prefix is `{prefix}`\nIf you need help using the bot feel free to join the [Support Community]({bss.Data.SupportServer})!\n**Please support me! While this bot is free it's not free to run! https://ko-fi.com/mewdeko**\n\n I hope you have a great day!");
                 eb.WithFooter(new EmbedFooterBuilder().WithText(client.CurrentUser.Username)
@@ -592,7 +593,7 @@ public class HelpService : INService, IReadyExecutor
             $"1) `{px}cmds` lists the categories\n2) `{px}cmds mod` shows the commands in one\n3) `{px}h purge` explains a single command");
         eb.AddField("Need a hand?",
             $"Support Community: {bss.Data.SupportServer}");
-        eb.WithOkColor();
+        eb.WithOkColor(guild.Id);
 
         var inviter = await ResolveInviter(guild).ConfigureAwait(false);
         if (inviter is null)
@@ -756,7 +757,7 @@ public class HelpService : INService, IReadyExecutor
                 .WithIsInline(false))
             .WithFooter(
                 $"Module: {com.Module.GetTopLevelModule().Name} || Submodule: {com.Module.Name.Replace("Commands", "")} || Method Name: {com.MethodName()}")
-            .WithColor(Mewdeko.OkColor);
+            .WithColor(GuildEmbedColorService.OkFor(guild?.Id));
 
         var opt = ((MewdekoOptionsAttribute)com.Attributes.FirstOrDefault(x => x is MewdekoOptionsAttribute))
             ?.OptionType;

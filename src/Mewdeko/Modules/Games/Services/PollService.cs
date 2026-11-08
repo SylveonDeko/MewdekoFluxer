@@ -282,6 +282,13 @@ public class PollService : INService, IReadyExecutor
                     return (VoteResult.NotAllowed, []);
             }
 
+            if (add && settings.BlockedRoles?.Count > 0)
+            {
+                var blockedUser = client.GetGuild(poll.GuildId)?.GetUser(userId);
+                if (blockedUser == null || blockedUser.Roles.Any(r => settings.BlockedRoles.Contains(r.Id)))
+                    return (VoteResult.NotAllowed, []);
+            }
+
             var existingVote = await db.PollVotes.FirstOrDefaultAsync(v => v.PollId == pollId && v.UserId == userId);
             int[] existing;
             try
@@ -409,11 +416,158 @@ public class PollService : INService, IReadyExecutor
             }
 
             logger.LogInformation("Poll {PollId} closed by user {UserId}", pollId, closedBy);
+
+            await PostResultsMessageAsync(pollId);
             return true;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to close poll {PollId}", pollId);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Checks whether an open poll has gathered as many voters as its vote limit.
+    /// </summary>
+    /// <param name="pollId">The ID of the poll.</param>
+    /// <returns>True if the poll has a vote limit and it was reached, otherwise false.</returns>
+    public async Task<bool> ReachedMaxVotesAsync(int pollId)
+    {
+        try
+        {
+            await using var db = await dbFactory.CreateConnectionAsync();
+
+            var poll = await db.Polls.FirstOrDefaultAsync(p => p.Id == pollId);
+            if (poll is not { IsActive: true, Settings: not null })
+                return false;
+
+            var settings = JsonSerializer.Deserialize<PollSettings>(poll.Settings);
+            return settings?.MaxVotes > 0 && await db.PollVotes.CountAsync(v => v.PollId == pollId) >= settings.MaxVotes;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to check the vote limit of poll {PollId}", pollId);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Fills in the placeholders of a poll's results message.
+    /// </summary>
+    /// <param name="template">The message with poll placeholders.</param>
+    /// <param name="poll">The poll with its options loaded.</param>
+    /// <param name="stats">The poll's final vote counts.</param>
+    /// <returns>The finished message.</returns>
+    public string FormatResultsMessage(string template, Poll poll, PollStats stats)
+    {
+        var options = poll.PollOptions.OrderBy(o => o.Index).ToList();
+        var top = options.Count == 0 ? 0 : options.Max(o => stats.OptionVotes.GetValueOrDefault(o.Index, 0));
+
+        var winners = top == 0
+            ? []
+            : options.Where(o => stats.OptionVotes.GetValueOrDefault(o.Index, 0) == top).Select(o => o.Text).ToList();
+
+        var results = string.Join("\n", options.Select(o =>
+        {
+            var count = stats.OptionVotes.GetValueOrDefault(o.Index, 0);
+            var percent = stats.TotalVotes > 0 ? (double)count / stats.TotalVotes * 100 : 0;
+            return strings.PollResultsLine(poll.GuildId, o.Text, count, percent.ToString("F1"));
+        }));
+
+        return template
+            .Replace("%poll.question%", poll.Question, StringComparison.OrdinalIgnoreCase)
+            .Replace("%poll.id%", poll.Id.ToString(), StringComparison.OrdinalIgnoreCase)
+            .Replace("%poll.votes%", stats.TotalVotes.ToString(), StringComparison.OrdinalIgnoreCase)
+            .Replace("%poll.voters%", stats.UniqueVoters.ToString(), StringComparison.OrdinalIgnoreCase)
+            .Replace("%poll.winner.votes%", top.ToString(), StringComparison.OrdinalIgnoreCase)
+            .Replace("%poll.winner%",
+                winners.Count == 0 ? strings.PollNoWinner(poll.GuildId) : string.Join(", ", winners),
+                StringComparison.OrdinalIgnoreCase)
+            .Replace("%poll.results%", results, StringComparison.OrdinalIgnoreCase)
+            .Replace("%poll.link%",
+                $"{client.Config.WebUrl}/channels/{poll.GuildId}/{poll.ChannelId}/{poll.MessageId}",
+                StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task PostResultsMessageAsync(int pollId)
+    {
+        try
+        {
+            var poll = await GetPollAsync(pollId);
+
+            if (poll?.Settings is null)
+                return;
+
+            var settings = JsonSerializer.Deserialize<PollSettings>(poll.Settings);
+
+            if (string.IsNullOrWhiteSpace(settings?.ResultsMessage))
+                return;
+
+            var channel = client.GetGuild(poll.GuildId)?.GetTextChannel(poll.ChannelId);
+            var stats = await GetPollStatsAsync(pollId);
+
+            if (channel is null || stats is null)
+                return;
+
+            var message = FormatResultsMessage(settings.ResultsMessage, poll, stats);
+
+            if (SmartEmbed.TryParse(message, poll.GuildId, out var embeds, out var plainText))
+                await channel.SendAsync(plainText, embeds: embeds, allowedMentions: AllowedMentions.None);
+            else
+                await channel.SendAsync(message, allowedMentions: AllowedMentions.None);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to post the results message for poll {PollId}", pollId);
+        }
+    }
+
+    /// <summary>
+    /// Changes the extra end and vote rules of an active poll.
+    /// </summary>
+    /// <param name="pollId">The ID of the poll to change.</param>
+    /// <param name="mutate">An action applying the desired changes to the poll's settings.</param>
+    /// <returns>True if the poll was active and updated, otherwise false.</returns>
+    public async Task<bool> UpdatePollSettingsAsync(int pollId, Action<PollSettings> mutate)
+    {
+        try
+        {
+            await using var db = await dbFactory.CreateConnectionAsync();
+
+            var poll = await db.Polls.FirstOrDefaultAsync(p => p.Id == pollId);
+
+            if (poll is not { IsActive: true })
+                return false;
+
+            PollSettings settings;
+            try
+            {
+                settings = poll.Settings != null
+                    ? JsonSerializer.Deserialize<PollSettings>(poll.Settings) ?? new PollSettings()
+                    : new PollSettings();
+            }
+            catch (JsonException)
+            {
+                settings = new PollSettings();
+            }
+
+            mutate(settings);
+            poll.Settings = JsonSerializer.Serialize(settings);
+            await db.UpdateAsync(poll);
+
+            if (ActivePolls.TryGetValue(poll.GuildId, out var guildPolls))
+            {
+                var index = guildPolls.FindIndex(p => p.Id == pollId);
+                if (index >= 0)
+                    guildPolls[index] = poll;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to update the settings of poll {PollId}", pollId);
             return false;
         }
     }
@@ -541,6 +695,18 @@ public class PollService : INService, IReadyExecutor
             var allowedRolesProperty = requestType.GetProperty("AllowedRoles");
             if (allowedRolesProperty?.GetValue(request) is List<ulong> allowedRoles)
                 settings.AllowedRoles = allowedRoles;
+
+            var blockedRolesProperty = requestType.GetProperty("BlockedRoles");
+            if (blockedRolesProperty?.GetValue(request) is List<ulong> blockedRoles)
+                settings.BlockedRoles = blockedRoles;
+
+            var maxVotesProperty = requestType.GetProperty("MaxVotes");
+            if (maxVotesProperty?.GetValue(request) is int maxVotes)
+                settings.MaxVotes = maxVotes > 0 ? maxVotes : null;
+
+            var resultsMessageProperty = requestType.GetProperty("ResultsMessage");
+            if (resultsMessageProperty?.GetValue(request) is string resultsMessage)
+                settings.ResultsMessage = resultsMessage.Length == 0 ? null : resultsMessage;
 
             var colorProperty = requestType.GetProperty("Color");
             if (colorProperty?.GetValue(request) is string color)

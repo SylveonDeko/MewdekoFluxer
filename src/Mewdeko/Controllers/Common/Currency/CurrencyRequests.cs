@@ -132,6 +132,9 @@ public class ShopItemRequest
     /// <summary>Text delivered for text items.</summary>
     public string? TextContent { get; set; }
 
+    /// <summary>The card design granted for design items.</summary>
+    public int? DesignId { get; set; }
+
     /// <summary>Remaining stock, or -1 for unlimited.</summary>
     public int Stock { get; set; } = -1;
 
@@ -144,11 +147,59 @@ public class ShopItemRequest
     /// <summary>Whether the item can be used up.</summary>
     public bool Consumable { get; set; }
 
+    /// <summary>Message shown after buying, with %user%, %item% and %price% placeholders.</summary>
+    public string? BuyMessage { get; set; }
+
+    /// <summary>Message shown when the item is used, with %user%, %item% and %price% placeholders.</summary>
+    public string? UseMessage { get; set; }
+
+    /// <summary>Whether the item is used automatically when bought.</summary>
+    public bool UseOnBuy { get; set; }
+
     /// <summary>Whether the item is visible and purchasable.</summary>
     public bool Enabled { get; set; } = true;
 
     /// <summary>Ordering weight in the shop listing.</summary>
     public int SortOrder { get; set; }
+}
+
+/// <summary>
+///     Request to create or replace a scheduled earning boost.
+/// </summary>
+public class EconomyBoostRequest
+{
+    /// <summary>Display name, unique per guild.</summary>
+    public string Name { get; set; } = null!;
+
+    /// <summary>Percent added to earnings. Negative values lower them.</summary>
+    public int PercentChange { get; set; }
+
+    /// <summary>Comma separated command keys (daily, work, crime), or empty for all.</summary>
+    public string Commands { get; set; } = string.Empty;
+
+    /// <summary>One-off 0, daily 1, weekly 2 or monthly 3.</summary>
+    public int ScheduleType { get; set; }
+
+    /// <summary>When the first window opens, in UTC.</summary>
+    public DateTime StartsAt { get; set; }
+
+    /// <summary>How long each window lasts, in minutes.</summary>
+    public int DurationMinutes { get; set; } = 60;
+
+    /// <summary>Whether the boost is switched on.</summary>
+    public bool Enabled { get; set; } = true;
+}
+
+/// <summary>
+///     Request to add or take items from a member's inventory.
+/// </summary>
+public class InventoryAdjustRequest
+{
+    /// <summary>The item's name.</summary>
+    public string ItemName { get; set; } = null!;
+
+    /// <summary>How many copies.</summary>
+    public int Amount { get; set; } = 1;
 }
 
 /// <summary>
@@ -164,4 +215,22 @@ public class AdjustBalanceRequest
 
     /// <summary>Reason recorded on the ledger entry.</summary>
     public string? Reason { get; set; }
+}
+
+/// <summary>
+///     Partial update of the economy setup. Omitted fields are left alone.
+/// </summary>
+public class EconomySetupRequest
+{
+    /// <summary>The currency emoji.</summary>
+    public string? CurrencyEmoji { get; set; }
+
+    /// <summary>The daily reward amount.</summary>
+    public int? RewardAmount { get; set; }
+
+    /// <summary>Seconds between daily rewards.</summary>
+    public int? RewardTimeoutSeconds { get; set; }
+
+    /// <summary>Whether setup is finished.</summary>
+    public bool? SetupComplete { get; set; }
 }

@@ -51,6 +51,11 @@ public partial class XpService : INService, IUnloadableService
     /// </summary>
     public const int MaxVoiceXpPerMinute = 10;
 
+    /// <summary>
+    ///     How many level-ups the log keeps per guild.
+    /// </summary>
+    public const int LevelUpLogSize = 25;
+
     #endregion
 
     #region Fields
@@ -304,6 +309,21 @@ public partial class XpService : INService, IUnloadableService
 
         // Update both database and cache
         await cacheManager.UpdateGuildXpSettingsAsync(settings);
+    }
+
+    /// <summary>
+    ///     Gets the most recent level-ups in a guild, newest first.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <returns>Up to 25 level-up log entries.</returns>
+    public async Task<List<XpLevelUpLog>> GetLevelUpLogAsync(ulong guildId)
+    {
+        await using var db = await DbFactory.CreateConnectionAsync();
+        return await db.XpLevelUpLogs
+            .Where(x => x.GuildId == guildId)
+            .OrderByDescending(x => x.Id)
+            .Take(LevelUpLogSize)
+            .ToListAsync();
     }
 
     /// <summary>

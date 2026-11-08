@@ -66,7 +66,14 @@
       "UploadedBy": "user"
     },
     "required": [],
-    "onMemberConflict": "skip"
+    "onMemberConflict": "skip",
+    "skipRows": [
+      {
+        "column": "Kind",
+        "equals": 2
+      }
+    ],
+    "reason": "member design uploads are not carried over, since pending ones have not been reviewed"
   },
   "AchievementMembers": {
     "action": "copy",
@@ -89,7 +96,9 @@
     "parents": {},
     "member": null,
     "columns": {
-      "RoleRewardId": "role"
+      "RoleRewardId": "role",
+      "RoleRemoveId": "role",
+      "UnlockMessage": "text"
     },
     "required": [],
     "onMemberConflict": "skip"
@@ -308,7 +317,15 @@
     "parents": {},
     "member": null,
     "columns": {
-      "RoleId": "role"
+      "RoleId": "role",
+      "ExemptRoleIds": {
+        "list": "role",
+        "format": "space"
+      },
+      "ExemptChannelIds": {
+        "list": "channel",
+        "format": "space"
+      }
     },
     "required": [],
     "onMemberConflict": "skip"
@@ -334,7 +351,11 @@
     "parents": {},
     "member": null,
     "columns": {
-      "RoleId": "role"
+      "RoleId": "role",
+      "ExemptRoleIds": {
+        "list": "role",
+        "format": "space"
+      }
     },
     "required": [],
     "onMemberConflict": "skip"
@@ -384,6 +405,56 @@
   "AuthCodes": {
     "action": "skip",
     "reason": "bot-wide or never exported table"
+  },
+  "AutoReactionSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ManagerRoleId": "role"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "AutoReactions": {
+    "action": "skip",
+    "reason": "reactions use emojis that belong to the other platform and have to be set up again"
+  },
+  "FreeGameAlerts": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel",
+      "RoleId": "role"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "FreeGameAnnounced": {
+    "action": "skip",
+    "reason": "bot-wide bookkeeping about the bot itself"
+  },
+  "StickyTemplates": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "Content": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
   },
   "AutoBanRoles": {
     "action": "copy",
@@ -500,7 +571,8 @@
       "BirthdayChannelId": "channel",
       "BirthdayRoleId": "role",
       "BirthdayPingRoleId": "role",
-      "BirthdayMessage": "text"
+      "BirthdayMessage": "text",
+      "AgeMessage": "text"
     },
     "required": [],
     "onMemberConflict": "skip"
@@ -542,6 +614,57 @@
   "BotReviews": {
     "action": "skip",
     "reason": "user-global data, not tied to a server"
+  },
+  "CardDesignOwners": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {
+      "DesignId": "CardDesigns"
+    },
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "CardDesigns": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "UnlockRoleId": "role"
+    },
+    "required": [],
+    "onMemberConflict": "skip",
+    "skipRows": [
+      {
+        "column": "OwnerUserId",
+        "notNull": true
+      }
+    ],
+    "reason": "designs members made themselves are not carried over, since their uploads are not"
+  },
+  "CardDesignSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": null,
+    "parents": {},
+    "member": null,
+    "columns": {
+      "MemberRoleIds": {
+        "list": "role",
+        "format": "comma"
+      }
+    },
+    "required": [],
+    "onMemberConflict": "skip"
   },
   "CaseNotes": {
     "action": "skip",
@@ -670,7 +793,23 @@
       "ApplicationCommandId": "clear",
       "CrosspostingChannelId": "channel",
       "CrosspostingWebhookUrl": "clear",
-      "EventChannelId": "channel"
+      "EventChannelId": "channel",
+      "EventRoleId": "role",
+      "ReplyChannelId": "channel",
+      "AllowedChannelIds": {
+        "list": "channel",
+        "format": "@@@"
+      },
+      "DeniedChannelIds": {
+        "list": "channel",
+        "format": "@@@"
+      },
+      "DeniedRoleIds": {
+        "list": "role",
+        "format": "@@@"
+      },
+      "CreatorId": "user",
+      "PromptQuestion": "text"
     },
     "required": [],
     "onMemberConflict": "skip"
@@ -952,7 +1091,10 @@
     "member": null,
     "columns": {
       "ChannelId": "channel",
+      "TargetRoleId": "role",
       "RoleRewardId": "role",
+      "RoleRemoveId": "role",
+      "UnlockMessage": "text",
       "CreatedBy": "user"
     },
     "required": [],
@@ -972,7 +1114,11 @@
     "columns": {
       "HubVoiceChannelId": "channel",
       "ChannelCategoryId": "channel",
-      "CustomVoiceAdminRoleId": "role"
+      "CustomVoiceAdminRoleId": "role",
+      "ModeratorRoleIds": {
+        "list": "role",
+        "format": "comma"
+      }
     },
     "required": [],
     "onMemberConflict": "skip"
@@ -1114,6 +1260,21 @@
     "required": [],
     "onMemberConflict": "skip"
   },
+  "EquippedCardDesigns": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {
+      "DesignId": "CardDesigns"
+    },
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
   "FeatureRequestVotes": {
     "action": "skip",
     "reason": "bot-wide bookkeeping about the bot itself"
@@ -1204,7 +1365,8 @@
     "columns": {
       "ChannelId": "channel",
       "OnlineMessage": "text",
-      "OfflineMessage": "text"
+      "OfflineMessage": "text",
+      "VideoMessage": "text"
     },
     "required": [
       "ChannelId"
@@ -1370,6 +1532,7 @@
       "ChannelId": "channel",
       "LastMessageId": "message",
       "Message": "text",
+      "PingRoleId": "role",
       "ThreadStickyMessages": "clear",
       "ForumTagConditions": "clear"
     },
@@ -1506,6 +1669,32 @@
     "required": [],
     "onMemberConflict": "skip"
   },
+  "InviteRoleSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "InviteRoles": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "RoleId": "role"
+    },
+    "required": [
+      "RoleId"
+    ],
+    "onMemberConflict": "skip"
+  },
   "InviteCounts": {
     "action": "copy",
     "scope": "guild",
@@ -1601,6 +1790,34 @@
   "ChannelBridges": {
     "action": "skip",
     "reason": "bridges point at channels on the other platform and have to be set up again"
+  },
+  "ServerBackups": {
+    "action": "skip",
+    "reason": "backups hold ids from the other platform and cannot be restored here"
+  },
+  "ServerTemplates": {
+    "action": "skip",
+    "reason": "templates hold ids from the other platform and have to be saved again"
+  },
+  "VerificationSettings": {
+    "action": "skip",
+    "reason": "the gate's channel, roles and button message are ids from the other platform and have to be set up again"
+  },
+  "VerificationPermissionBackups": {
+    "action": "skip",
+    "reason": "saved channel overwrites hold ids from the other platform"
+  },
+  "WelcomeCardSettings": {
+    "action": "skip",
+    "reason": "card designs link to uploaded images that are not carried over and have to be designed again"
+  },
+  "WelcomeCardImages": {
+    "action": "skip",
+    "reason": "uploaded card images are not carried over"
+  },
+  "MessageCards": {
+    "action": "skip",
+    "reason": "message cards belong to greets and link to uploaded images that are not carried over, so they have to be designed again"
   },
   "BridgePairs": {
     "action": "skip",
@@ -1698,7 +1915,18 @@
       "InviteCreatedId": "channel",
       "InviteDeletedId": "channel",
       "MessagesBulkDeletedId": "channel",
-      "ReactionEventsId": "channel"
+      "ReactionEventsId": "channel",
+      "EmojiCreatedId": "channel",
+      "EmojiUpdatedId": "channel",
+      "EmojiDeletedId": "channel",
+      "StickerCreatedId": "channel",
+      "StickerUpdatedId": "channel",
+      "StickerDeletedId": "channel",
+      "UserTimedOutId": "channel",
+      "UserTimeoutRemovedId": "channel",
+      "InviteLinkPostedId": "channel",
+      "ChannelPermissionsUpdatedId": "channel",
+      "WebhookChangedId": "channel"
     },
     "required": [],
     "onMemberConflict": "skip"
@@ -1888,6 +2116,7 @@
       "Emoji": "emoji",
       "CategoryId": "channel",
       "ArchiveCategoryId": "channel",
+      "ClaimedCategoryId": "channel",
       "ThreadChannelId": "channel",
       "SupportRoles": {
         "list": "role",
@@ -2093,7 +2322,11 @@
       "ServerId": "guild",
       "ChannelId": "channel",
       "UserId": "user",
-      "Message": "text"
+      "Message": "text",
+      "Subscribers": {
+        "list": "user",
+        "format": "comma"
+      }
     },
     "required": [],
     "onMemberConflict": "skip"
@@ -2358,14 +2591,20 @@
     "scope": "guild",
     "guildColumn": "GuildId",
     "key": "Id",
-    "parents": {},
+    "parents": {
+      "GroupId": "RoleMenuGroups"
+    },
     "member": null,
     "columns": {
       "ChannelId": "channel",
       "MessageId": "message",
       "RequiredRoleId": "role",
       "CreatedBy": "user",
-      "Message": "text"
+      "Message": "text",
+      "BlockedRoleIds": {
+        "list": "role",
+        "format": "comma"
+      }
     },
     "required": [],
     "onMemberConflict": "skip"
@@ -2422,6 +2661,7 @@
       "Emoji": "emoji",
       "CategoryId": "channel",
       "ArchiveCategoryId": "channel",
+      "ClaimedCategoryId": "channel",
       "ThreadChannelId": "channel",
       "SupportRoles": {
         "list": "role",
@@ -2507,12 +2747,16 @@
     "scope": "guild",
     "guildColumn": "GuildId",
     "key": "Id",
-    "parents": {},
+    "parents": {
+      "DesignId": "CardDesigns"
+    },
     "member": null,
     "columns": {
       "RoleId": "role",
       "RequiredRoleId": "role",
-      "TextContent": "text"
+      "TextContent": "text",
+      "BuyMessage": "text",
+      "UseMessage": "text"
     },
     "required": [],
     "onMemberConflict": "skip"
@@ -2541,6 +2785,18 @@
       "Emote": "emoji",
       "CheckedChannels": {
         "list": "channel",
+        "format": "space"
+      },
+      "AutoStarChannels": {
+        "list": "channel",
+        "format": "space"
+      },
+      "AllowedRoles": {
+        "list": "role",
+        "format": "space"
+      },
+      "DeniedRoles": {
+        "list": "role",
         "format": "space"
       }
     },
@@ -2710,6 +2966,17 @@
   "SuggestVotes": {
     "action": "skip",
     "reason": "suggestions are bound to Discord messages and threads"
+  },
+  "SuggestionVoteColors": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
   },
   "Suggestions": {
     "action": "skip",
@@ -3244,6 +3511,76 @@
     "required": [],
     "onMemberConflict": "skip"
   },
+  "ModCases": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user",
+      "ModeratorId": "user",
+      "Reason": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "ModCaseSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "LogChannelId": "channel",
+      "ReportChannelId": "channel"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "ModNotes": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user",
+      "ModeratorId": "user",
+      "Note": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "ModReasonAliases": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "Reason": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "PunishDmTemplates": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "Template": "text"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
   "Warnings2": {
     "action": "copy",
     "scope": "guild",
@@ -3459,6 +3796,260 @@
       "MessageContent": "text"
     },
     "required": [],
+    "onMemberConflict": "skip"
+  },
+  "XpLevelUpLog": {
+    "action": "skip",
+    "reason": "the level-up log only holds recent activity and starts fresh"
+  },
+  "AchievementAlmostThere": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": null,
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "RoleMenuGroups": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "RoleMenuTempGrants": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {
+      "MenuId": "RoleMenus"
+    },
+    "member": "UserId",
+    "columns": {
+      "UserId": "user",
+      "RoleId": "role"
+    },
+    "required": [
+      "RoleId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "RoleMenuReverseStates": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {
+      "MenuId": "RoleMenus"
+    },
+    "member": "UserId",
+    "columns": {
+      "UserId": "user",
+      "RoleId": "role"
+    },
+    "required": [
+      "RoleId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "AutoPurgeSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "Automations": {
+    "action": "skip",
+    "reason": "the steps hold channel, role and emoji ids inside their own settings and have to be rebuilt"
+  },
+  "AutomationRuns": {
+    "action": "skip",
+    "reason": "run history belongs to automations that are not carried over"
+  },
+  "AutomodExtraSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "LogChannelId": "channel",
+      "ReviewChannelId": "channel",
+      "ExemptRoleIds": {
+        "list": "role",
+        "format": "space"
+      },
+      "ExemptChannelIds": {
+        "list": "channel",
+        "format": "space"
+      }
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "AutomodLinkLimits": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "AutomodRuleSettings": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ActionMessage": "text",
+      "ExemptRoleIds": {
+        "list": "role",
+        "format": "space"
+      },
+      "ExemptChannelIds": {
+        "list": "channel",
+        "format": "space"
+      },
+      "MediaChannelIds": {
+        "list": "channel",
+        "format": "space"
+      }
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "ChannelTimedActions": {
+    "action": "skip",
+    "reason": "live timers that hold the saved state of channels on the other platform"
+  },
+  "CommandReplyRedirects": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "DailyDiceRolls": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": "UserId",
+    "columns": {
+      "UserId": "user"
+    },
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "EconomyBoosts": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "GuildEmbedColors": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "GuildPeakOnline": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {},
+    "required": [],
+    "onMemberConflict": "skip"
+  },
+  "LockdownExemptions": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "ChannelId": "channel"
+    },
+    "required": [
+      "ChannelId"
+    ],
+    "onMemberConflict": "skip"
+  },
+  "TrackedStreamMessages": {
+    "action": "skip",
+    "reason": "tracked live messages are bound to messages on the other platform"
+  },
+  "UserXpBackgrounds": {
+    "action": "skip",
+    "reason": "user-global data, not tied to a server"
+  },
+  "VoiceTextLinks": {
+    "action": "copy",
+    "scope": "guild",
+    "guildColumn": "GuildId",
+    "key": "Id",
+    "parents": {},
+    "member": null,
+    "columns": {
+      "VoiceChannelId": "channel",
+      "TextChannelId": "channel"
+    },
+    "required": [
+      "VoiceChannelId",
+      "TextChannelId"
+    ],
     "onMemberConflict": "skip"
   },
   "XpRoleMultipliers": {

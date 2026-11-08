@@ -93,6 +93,7 @@
   "custom_voice_not_in_channel": "You must be in a voice channel to use this command.",
   "custom_voice_not_kept_alive": "Your channel is no longer set to keep-alive.",
   "custom_voice_not_owner": "You must be the owner of the voice channel to perform this action.",
+  "custom_voice_owner_locked": "The owner left recently and keeps control for another {0}.",
   "custom_voice_owner_present": "The original owner is still in the channel.",
   "custom_voice_ownership_claimed": "You are now the owner of this channel.",
   "custom_voice_preferences_desc": "These settings will be applied to any new voice channels you create.",

@@ -1,4 +1,13 @@
 {
+  "birthday_admin_none": "{0} doesn't have a birthday set.",
+  "birthday_admin_removed": "Removed the birthday for {0}.",
+  "birthday_admin_set": "Set the birthday for {0} to {1}.",
+  "birthday_age_message_cleared": "Cleared the age message.",
+  "birthday_age_message_set": "Set the age message.",
+  "birthday_forgotten": "Your birthday and birthday settings have been deleted.",
+  "birthday_hour_invalid": "The hour must be from 0 to 23.",
+  "birthday_hour_set": "Birthdays will be announced at {0}:00 in the community timezone.",
+  "birthday_year_rule_set": "Birth years are now: {0}.",
   "birthday_announcements_disabled": "🔕 Birthday announcements disabled. Your birthday will not be announced.",
   "birthday_announcements_enabled": "🎉 Birthday announcements enabled! You'll receive birthday wishes when your special day arrives.",
   "birthday_channel_set": "🎂 Birthday announcements will now be posted in {0}!",

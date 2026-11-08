@@ -23,8 +23,13 @@ public class UserPunishService : INService, IDisposable
     private readonly ILogger<UserPunishService> logger;
     private readonly Dictionary<ulong, MassNick> massNicks = new();
     private readonly MuteService mute;
+    private readonly ModCaseService cases;
     private Timer? warnExpirationTimer;
 
+    /// <summary>
+    ///     The service recording moderation cases and sending punishment DMs.
+    /// </summary>
+    public ModCaseService Cases => cases;
 
     /// <summary>
     ///     Constructs a new instance of the UserPunishService class.
@@ -35,12 +40,15 @@ public class UserPunishService : INService, IDisposable
     /// <param name="client">An instance of the FluxerClient class.</param>
     /// <param name="guildSettings">An instance of the GuildSettingsService class.</param>
     /// <param name="banPrune">The service resolving how many days of messages a ban purges.</param>
+    /// <param name="cases">The service recording moderation cases.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     public UserPunishService(MuteService mute, IDataConnectionFactory dbFactory, BlacklistService blacklistService,
         FluxerClient client,
-        GuildSettingsService guildSettings, BanPruneService banPrune, ILogger<UserPunishService> logger)
+        GuildSettingsService guildSettings, BanPruneService banPrune, ModCaseService cases,
+        ILogger<UserPunishService> logger)
     {
         this.mute = mute;
+        this.cases = cases;
         this.banPrune = banPrune;
         this.dbFactory = dbFactory;
         this.blacklistService = blacklistService;
@@ -162,8 +170,10 @@ public class UserPunishService : INService, IDisposable
     /// <param name="userId">The ID of the user to be warned.</param>
     /// <param name="mod">The user who issues the warning.</param>
     /// <param name="reason">The reason for the warning.</param>
+    /// <param name="dm">Sends the warning DM in place of the custom one, given the case number.</param>
     /// <returns>A WarningPunishment object if a punishment is applied due to the warning; otherwise, null.</returns>
-    public async Task<WarningPunishment>? Warn(SocketGuild guild, ulong userId, IUser mod, string reason)
+    public async Task<WarningPunishment>? Warn(SocketGuild guild, ulong userId, IUser mod, string reason,
+        Func<int?, Task>? dm = null)
     {
         var modName = mod.ToString();
 
@@ -196,13 +206,19 @@ public class UserPunishService : INService, IDisposable
             .CountAsync(w => w.GuildId == guildId && w.UserId == userId && !w.Forgiven);
 
         // Add the new warning to the database
-        await dbContext.InsertAsync(warn);
+        warn.Id = await dbContext.InsertWithInt32IdentityAsync(warn);
+        var entry = await cases.RecordAsync(guildId, userId, mod.Id, ModCaseAction.Warn, reason, warningId: warn.Id);
+        var user = await guild.GetUserAsync(userId).ConfigureAwait(false);
+        if (dm is not null)
+            await dm(entry?.CaseNumber).ConfigureAwait(false);
+        else if (user is not null)
+            await cases.SendPunishDmAsync(guild, user.User, mod, ModCaseAction.Warn, reason, null, entry?.CaseNumber)
+                .ConfigureAwait(false);
 
         // Find a punishment that matches the number of warnings
         var p = ps.Find(x => x.Count == warnings);
 
         if (p == null) return null;
-        var user = await guild.GetUserAsync(userId).ConfigureAwait(false);
         if (user == null)
             return null;
 
@@ -266,7 +282,8 @@ public class UserPunishService : INService, IDisposable
 
                 break;
             case PunishmentAction.Kick:
-                await user.KickAsync(reason).ConfigureAwait(false);
+                await cases.PunishAsync(guild, user.User, mod, ModCaseAction.Kick, reason, null,
+                    () => user.KickAsync(reason)).ConfigureAwait(false);
                 break;
             case PunishmentAction.Ban:
                 if (minutes == 0)
@@ -276,31 +293,39 @@ public class UserPunishService : INService, IDisposable
                     if (reason.ToLower().Contains("postchannelban"))
                         pruneDays = Math.Max(pruneDays, 1);
 
-                    await guild.AddBanAsync(user.Id, pruneDays, reason).ConfigureAwait(false);
+                    await cases.PunishAsync(guild, user.User, mod, ModCaseAction.Ban, reason, null,
+                        () => guild.AddBanAsync(user.Id, pruneDays, reason)).ConfigureAwait(false);
                 }
                 else
                 {
-                    await mute.TimedBan(user.Guild, user.User, TimeSpan.FromMinutes(minutes), reason)
+                    var length = TimeSpan.FromMinutes(minutes);
+                    await mute.TimedBan(user.Guild, user.User, length, reason,
+                            punish: act => PunishAndGetDmFailed(guild, user.User, mod, ModCaseAction.Ban, reason,
+                                length, act))
                         .ConfigureAwait(false);
                 }
 
                 break;
             case PunishmentAction.Softban:
-                await guild.AddBanAsync(user.Id,
-                    await banPrune.GetPruneDaysAsync(guild.Id, BanPruneAction.SoftBan).ConfigureAwait(false),
-                    $"Softban | {reason}").ConfigureAwait(false);
-                try
+                var softPruneDays = await banPrune.GetPruneDaysAsync(guild.Id, BanPruneAction.SoftBan)
+                    .ConfigureAwait(false);
+                await cases.PunishAsync(guild, user.User, mod, ModCaseAction.Softban, reason, null, async () =>
                 {
-                    await guild.RemoveBanAsync(user.Id).ConfigureAwait(false);
-                }
-                catch
-                {
-                    await guild.RemoveBanAsync(user.Id).ConfigureAwait(false);
-                }
-
+                    await guild.AddBanAsync(user.Id, softPruneDays, $"Softban | {reason}").ConfigureAwait(false);
+                    try
+                    {
+                        await guild.RemoveBanAsync(user.Id).ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        await guild.RemoveBanAsync(user.Id).ConfigureAwait(false);
+                    }
+                }).ConfigureAwait(false);
                 break;
             case PunishmentAction.RemoveRoles:
                 await user.RemoveRolesAsync(user.GetRoles().Where(x => x != x.Guild.EveryoneRole))
+                    .ConfigureAwait(false);
+                await cases.RecordAsync(guild.Id, user.Id, mod.Id, ModCaseAction.RemoveRoles, reason)
                     .ConfigureAwait(false);
                 break;
             case PunishmentAction.AddRole:
@@ -331,11 +356,12 @@ public class UserPunishService : INService, IDisposable
             case PunishmentAction.Timeout:
                 try
                 {
-                    await user.ModifyAsync(x =>
-                    {
-                        x.CommunicationDisabledUntil = DateTimeOffset.UtcNow + TimeSpan.FromMinutes(minutes);
-                        x.TimeoutReason = reason;
-                    }).ConfigureAwait(false);
+                    await cases.PunishAsync(guild, user.User, mod, ModCaseAction.Timeout, reason,
+                        TimeSpan.FromMinutes(minutes), () => user.ModifyAsync(x =>
+                        {
+                            x.CommunicationDisabledUntil = DateTimeOffset.UtcNow + TimeSpan.FromMinutes(minutes);
+                            x.TimeoutReason = reason;
+                        })).ConfigureAwait(false);
                 }
                 catch
                 {
@@ -345,6 +371,13 @@ public class UserPunishService : INService, IDisposable
 
                 break;
         }
+    }
+
+    private async Task<bool> PunishAndGetDmFailed(SocketGuild guild, IUser user, IUser mod, ModCaseAction action,
+        string? reason, TimeSpan? duration, Func<Task> act)
+    {
+        return (await cases.PunishAsync(guild, user, mod, action, reason, duration, act).ConfigureAwait(false))
+            .DmFailed;
     }
 
     /// <summary>
@@ -683,6 +716,41 @@ public class UserPunishService : INService, IDisposable
 
 
     /// <summary>
+    ///     Gets the custom DM set for each punishment. Bans use the ban message.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild.</param>
+    /// <returns>The custom DMs, leaving out punishments that use the default DM.</returns>
+    public async Task<Dictionary<PunishDmAction, string>> GetPunishDms(ulong guildId)
+    {
+        var custom = await cases.GetPunishDmTemplatesAsync(guildId);
+        var result = new Dictionary<PunishDmAction, string>();
+        foreach (var action in Enum.GetValues<PunishDmAction>())
+        {
+            var text = action == PunishDmAction.Ban
+                ? await GetBanTemplate(guildId)
+                : custom.GetValueOrDefault(Enum.Parse<ModCaseAction>(action.ToString()));
+            if (!string.IsNullOrWhiteSpace(text))
+                result[action] = text;
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    ///     Sets or clears the custom DM for a punishment. Bans use the ban message.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild.</param>
+    /// <param name="action">The punishment.</param>
+    /// <param name="text">The template, or null to go back to the default DM.</param>
+    public async Task SetPunishDm(ulong guildId, PunishDmAction action, string? text)
+    {
+        if (action == PunishDmAction.Ban)
+            await SetBanTemplate(guildId, string.IsNullOrWhiteSpace(text) ? null : text);
+        else
+            await cases.SetPunishDmTemplateAsync(guildId, Enum.Parse<ModCaseAction>(action.ToString()), text);
+    }
+
+    /// <summary>
     ///     Sets the dm ban message for a guild.
     /// </summary>
     /// <param name="guildId">The ID of the guild.</param>
@@ -732,10 +800,11 @@ public class UserPunishService : INService, IDisposable
     /// <param name="defaultMessage">The default message to send.</param>
     /// <param name="banReason">The reason for the ban.</param>
     /// <param name="duration">The duration of the ban.</param>
+    /// <param name="caseNumber">The number of the recorded case, if any.</param>
     /// <returns></returns>
     public Task<(EmbedRequest[]?, string?)> GetBanUserDmEmbed(ICommandContext context, SocketGuildMember? target,
         string? defaultMessage,
-        string? banReason, TimeSpan? duration)
+        string? banReason, TimeSpan? duration, int? caseNumber = null)
     {
         return GetBanUserDmEmbed(
             (FluxerClient)context.Client,
@@ -744,7 +813,8 @@ public class UserPunishService : INService, IDisposable
             target,
             defaultMessage,
             banReason,
-            duration);
+            duration,
+            caseNumber);
     }
 
     /// <summary>
@@ -757,11 +827,13 @@ public class UserPunishService : INService, IDisposable
     /// <param name="defaultMessage">The default message to send.</param>
     /// <param name="banReason">The reason for the ban.</param>
     /// <param name="duration">The duration of the ban.</param>
+    /// <param name="caseNumber">The number of the recorded case, if any.</param>
     /// <returns></returns>
     public async Task<(EmbedRequest[], string?)> GetBanUserDmEmbed(
         FluxerClient FluxerClient,
         SocketGuild guild,
-        SocketGuildMember moderator, SocketGuildMember? target, string? defaultMessage, string? banReason, TimeSpan? duration)
+        SocketGuildMember moderator, SocketGuildMember? target, string? defaultMessage, string? banReason,
+        TimeSpan? duration, int? caseNumber = null)
     {
         var template = await GetBanTemplate(guild.Id);
 
@@ -782,6 +854,7 @@ public class UserPunishService : INService, IDisposable
             .WithOverride("%reason%", () => banReason)
             .WithOverride("%ban.reason%", () => banReason)
             .WithOverride("%ban.duration%", () => duration?.ToString(@"d\.hh\:mm") ?? "perma")
+            .WithOverride("%case%", () => caseNumber?.ToString() ?? "-")
             .Build();
         EmbedRequest[] embed;
         string plainText;

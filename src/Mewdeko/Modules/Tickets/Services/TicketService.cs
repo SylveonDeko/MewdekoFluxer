@@ -9,6 +9,7 @@ using Mewdeko.Database.L2DB;
 using Mewdeko.Modules.Chat_Triggers.Common;
 using Mewdeko.Modules.Tickets.Common;
 using Mewdeko.Modules.Utility.Services;
+using Mewdeko.Services;
 using Mewdeko.Services.Analytics;
 using Mewdeko.Services.Impl;
 using Mewdeko.Services.Strings;
@@ -25,10 +26,8 @@ public class TicketService : INService
     private const string ClaimEmoji = "🤝";
     private const string CloseEmoji = "🔒";
     private const int MaxPanelEntries = 20;
-    private const int MaxQuestionAttempts = 3;
     private const int MaxThreadStaff = 25;
 
-    private static readonly TimeSpan QuestionTimeout = TimeSpan.FromMinutes(5);
     private readonly ConcurrentDictionary<(ulong GuildId, ulong UserId), byte> openingTickets = new();
     private readonly ChatLogService chatLogService;
     private readonly FluxerClient client;
@@ -164,7 +163,7 @@ public class TicketService : INService
             {
                 Title = title ?? strings.TicketPanelDefaultTitle(guildId),
                 Description = description ?? strings.TicketPanelDefaultDescription(guildId),
-                Color = Mewdeko.OkColor
+                Color = GuildEmbedColorService.OkFor(guildId)
             }
         });
     }
@@ -270,6 +269,8 @@ public class TicketService : INService
     /// <param name="maxActiveTickets">Maximum active tickets per user.</param>
     /// <param name="allowedPriorities">List of allowed priority IDs.</param>
     /// <param name="defaultPriority">Optional default priority.</param>
+    /// <param name="claimedCategoryId">Optional category tickets move to when claimed.</param>
+    /// <param name="dmTranscript">Whether closing a ticket DMs the transcript to its creator.</param>
     public async Task<PanelButton> AddButtonAsync(
         TicketPanel panel,
         string label,
@@ -285,7 +286,9 @@ public class TicketService : INService
         TimeSpan? requiredResponseTime = null,
         int maxActiveTickets = 1,
         List<string> allowedPriorities = null,
-        string defaultPriority = null)
+        string defaultPriority = null,
+        ulong? claimedCategoryId = null,
+        bool dmTranscript = false)
     {
         try
         {
@@ -317,6 +320,8 @@ public class TicketService : INService
                 MaxActiveTickets = maxActiveTickets,
                 AllowedPriorities = allowedPriorities?.ToArray() ?? [],
                 DefaultPriority = defaultPriority,
+                ClaimedCategoryId = claimedCategoryId,
+                DmTranscript = dmTranscript,
                 SaveTranscript = false
             };
 
@@ -755,7 +760,7 @@ public class TicketService : INService
                                   $"• Ticket ID: {ticket.Id}\n" +
                                   $"• Created: <t:{new DateTimeOffset(DateTime.SpecifyKind(ticket.CreatedAt, DateTimeKind.Utc)).ToUnixTimeSeconds()}:F>\n\n" +
                                   "Please describe your issue and wait for a staff member to assist you.",
-                    color = "ok", // Uses Mewdeko.OkColor
+                    color = $"#{GuildEmbedColorService.OkFor(ticket.GuildId).RawValue & 0xFFFFFF:X6}",
                     footer = new
                     {
                         text = strings.TicketControlsHint(ticket.GuildId)
@@ -925,43 +930,6 @@ public class TicketService : INService
         ticket.Id = newId;
 
         Dictionary<string, string>? modalResponses = null;
-        var questionsJson = button?.ModalJson ?? option?.ModalJson;
-        if (!string.IsNullOrWhiteSpace(questionsJson))
-        {
-            try
-            {
-                modalResponses = await AskTicketQuestionsAsync(channel, creator, questionsJson);
-            }
-            catch (Exception ex)
-            {
-                collector.Feature("ticket_open", guild.Id, false, ex.GetType().Name);
-                logger.LogError(ex, "Error asking the ticket questions");
-            }
-
-            if (modalResponses == null)
-            {
-                try
-                {
-                    await ctx.Tickets.Where(t => t.Id == newId).DeleteAsync();
-                    await channel.DeleteAsync();
-                }
-                catch (Exception cleanupEx)
-                {
-                    logger.LogError(cleanupEx, "Error during ticket cleanup");
-                }
-
-                throw new InvalidOperationException(strings.TicketQuestionsCancelled(guild.Id));
-            }
-
-            if (modalResponses.Count > 0)
-            {
-                ticket.ModalResponses = JsonSerializer.Serialize(modalResponses);
-                await ctx.Tickets
-                    .Where(t => t.Id == newId)
-                    .Set(t => t.ModalResponses, ticket.ModalResponses)
-                    .UpdateAsync();
-            }
-        }
 
         try
         {
@@ -1429,8 +1397,8 @@ public class TicketService : INService
 
 
     /// <summary>
-    ///     Lists what a panel offers in the order its reactions are added: buttons first, then the options of each
-    ///     select menu, each with the emoji members react with to open that ticket type.
+    ///     Lists a panel's ticket types in the order their reactions are added, each with the emoji members react
+    ///     with to open it.
     /// </summary>
     private async Task<List<PanelEntry>> LoadPanelEntriesAsync(int panelId)
     {
@@ -1439,29 +1407,11 @@ public class TicketService : INService
             .Where(b => b.PanelId == panelId)
             .OrderBy(b => b.Id)
             .ToListAsync();
-        var menus = await ctx.PanelSelectMenus
-            .Where(m => m.PanelId == panelId)
-            .OrderBy(m => m.Id)
-            .ToListAsync();
-        var menuIds = menus.Select(m => m.Id).ToList();
-        var options = menuIds.Count == 0
-            ? []
-            : await ctx.SelectMenuOptions
-                .Where(o => menuIds.Contains(o.SelectMenuId))
-                .OrderBy(o => o.Id)
-                .ToListAsync();
 
-        var pending = new List<(string Label, string? Description, string? Group, string? Emoji, PanelButton? Button,
-            SelectMenuOption? Option)>();
-        pending.AddRange(buttons.Select(b => (b.Label, (string?)null, (string?)null, b.Emoji, (PanelButton?)b,
-            (SelectMenuOption?)null)));
-        foreach (var menu in menus)
-        {
-            pending.AddRange(options
-                .Where(o => o.SelectMenuId == menu.Id && !string.IsNullOrWhiteSpace(o.Label))
-                .Select(o => (o.Label, o.Description, (string?)menu.Placeholder, o.Emoji, (PanelButton?)null,
-                    (SelectMenuOption?)o)));
-        }
+        var pending = buttons
+            .Select(b => (b.Label, Description: (string?)null, Group: (string?)null, b.Emoji, Button: (PanelButton?)b,
+                Option: (SelectMenuOption?)null))
+            .ToList();
 
         if (pending.Count > MaxPanelEntries)
         {
@@ -1514,42 +1464,24 @@ public class TicketService : INService
     }
 
     /// <summary>
-    ///     Builds a panel's message: its own embeds followed by one embed listing the reaction for each ticket type.
+    ///     Builds a panel's message with a reaction for each ticket type.
     /// </summary>
     private EmbedRequest[] BuildPanelEmbeds(TicketPanel panel, List<PanelEntry> entries, out string? plainText)
     {
         SmartEmbed.TryParse(panel.EmbedJson, panel.GuildId, out var parsed, out plainText);
-        var embeds = new List<EmbedRequest>(parsed ?? []);
-        if (entries.Count == 0 || embeds.Count >= 10)
-            return [.. embeds];
+        var embeds = parsed ?? [];
+        if (entries.Count == 0 || embeds.Length != 1 || !IsDefaultPanelEmbed(panel.GuildId, embeds[0]))
+            return embeds;
 
-        var legend = new StringBuilder();
-        string? group = null;
-        foreach (var entry in entries)
-        {
-            if (entry.Group != null && entry.Group != group)
-            {
-                if (legend.Length > 0)
-                    legend.AppendLine();
+        var list = string.Join("\n", entries.Select(e => $"{e.Emoji} **{e.Label}**"));
+        embeds[0].Description = $"{embeds[0].Description}\n\n{list}";
+        return embeds;
+    }
 
-                legend.AppendLine($"**{entry.Group}**");
-            }
-
-            group = entry.Group;
-            legend.Append($"{entry.Emoji} **{entry.Label}**");
-            if (!string.IsNullOrWhiteSpace(entry.Description))
-                legend.Append($" - {entry.Description}");
-
-            legend.AppendLine();
-        }
-
-        embeds.Add(new EmbedBuilder()
-            .WithTitle(strings.TicketPanelReactTitle(panel.GuildId))
-            .WithDescription(legend.ToString().TrimEnd())
-            .WithColor(Mewdeko.OkColor)
-            .Build());
-
-        return [.. embeds];
+    private bool IsDefaultPanelEmbed(ulong guildId, EmbedRequest embed)
+    {
+        return embed.Title == strings.TicketPanelDefaultTitle(guildId)
+               && embed.Description == strings.TicketPanelDefaultDescription(guildId);
     }
 
     private async Task AddPanelReactionsAsync(Message message, List<PanelEntry> entries)
@@ -2325,6 +2257,161 @@ public class TicketService : INService
 
 
     /// <summary>
+    ///     Sets whether closing a ticket DMs the transcript to its creator for every button and select option on a panel.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild.</param>
+    /// <param name="panelMessageId">The message ID of the panel.</param>
+    /// <param name="enabled">Whether to DM transcripts.</param>
+    /// <returns>True if the panel exists in the guild.</returns>
+    public async Task<bool> SetPanelDmTranscriptAsync(ulong guildId, ulong panelMessageId, bool enabled)
+    {
+        await using var ctx = await dbFactory.CreateConnectionAsync();
+        var panel = await ctx.TicketPanels.FirstOrDefaultAsync(x => x.MessageId == panelMessageId &&
+                                                                    x.GuildId == guildId);
+        if (panel == null)
+            return false;
+
+        await ctx.PanelButtons.Where(b => b.PanelId == panel.Id).Set(b => b.DmTranscript, enabled).UpdateAsync();
+        var menuIds = ctx.PanelSelectMenus.Where(m => m.PanelId == panel.Id).Select(m => m.Id);
+        await ctx.SelectMenuOptions.Where(o => menuIds.Contains(o.SelectMenuId))
+            .Set(o => o.DmTranscript, enabled)
+            .UpdateAsync();
+        return true;
+    }
+
+    /// <summary>
+    ///     Sets whether every closed ticket DMs its transcript to the ticket creator.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild.</param>
+    /// <param name="enabled">Whether the transcript is sent.</param>
+    public async Task SetDmTranscriptOnCloseAsync(ulong guildId, bool enabled)
+    {
+        try
+        {
+            await using var ctx = await dbFactory.CreateConnectionAsync();
+            var settings = await ctx.GuildTicketSettings.FirstOrDefaultAsync(x => x.GuildId == guildId);
+
+            if (settings == null)
+            {
+                await ctx.InsertAsync(new GuildTicketSetting
+                {
+                    GuildId = guildId, DmTranscriptOnClose = enabled
+                });
+            }
+            else
+            {
+                settings.DmTranscriptOnClose = enabled;
+                await ctx.UpdateAsync(settings);
+            }
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Failed to set the transcript DM option for guild {GuildId}", guildId);
+        }
+    }
+
+    /// <summary>
+    ///     Sets who gets notified when a ticket is created, claimed or unclaimed.
+    /// </summary>
+    /// <param name="guildId">The ID of the guild.</param>
+    /// <param name="enableStaffPings">Whether the notification roles are pinged when a ticket is created.</param>
+    /// <param name="enableDmNotifications">Whether a ticket's creator gets a DM when staff claim or unclaim it.</param>
+    /// <param name="notificationRoles">The roles pinged when a ticket is created.</param>
+    public async Task SetNotificationSettingsAsync(ulong guildId, bool enableStaffPings, bool enableDmNotifications,
+        IEnumerable<ulong>? notificationRoles)
+    {
+        try
+        {
+            await using var ctx = await dbFactory.CreateConnectionAsync();
+            var settings = await ctx.GuildTicketSettings.FirstOrDefaultAsync(x => x.GuildId == guildId);
+            var roles = notificationRoles?.Distinct().ToArray() ?? [];
+
+            if (settings == null)
+            {
+                await ctx.InsertAsync(new GuildTicketSetting
+                {
+                    GuildId = guildId,
+                    EnableStaffPings = enableStaffPings,
+                    EnableDmNotifications = enableDmNotifications,
+                    NotificationRoles = roles
+                });
+            }
+            else
+            {
+                settings.EnableStaffPings = enableStaffPings;
+                settings.EnableDmNotifications = enableDmNotifications;
+                settings.NotificationRoles = roles;
+                await ctx.UpdateAsync(settings);
+            }
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Failed to set the notification options for guild {GuildId}", guildId);
+        }
+    }
+
+    /// <summary>
+    ///     Gets the staff notes on a ticket, oldest first.
+    /// </summary>
+    /// <param name="ticketId">The ID of the ticket.</param>
+    /// <returns>The notes on the ticket.</returns>
+    public async Task<List<TicketNote>> GetTicketNotesAsync(int ticketId)
+    {
+        await using var ctx = await dbFactory.CreateConnectionAsync();
+        return await ctx.TicketNotes.Where(n => n.TicketId == ticketId).OrderBy(n => n.CreatedAt).ToListAsync();
+    }
+
+    private static bool WantsTranscriptDm(Ticket ticket, GuildTicketSetting? settings)
+    {
+        return ticket.Button?.DmTranscript == true || ticket.SelectOption?.DmTranscript == true ||
+               settings?.DmTranscriptOnClose == true;
+    }
+
+    private async Task MoveTicketToCategoryAsync(SocketGuild guild, Channel channel, ulong? categoryId)
+    {
+        if (categoryId is not { } id || IsThread(channel) || channel.ParentId == id)
+            return;
+
+        try
+        {
+            var category = await guild.GetCategoryChannelAsync(id);
+            if (category != null)
+                await channel.ModifyAsync(new UpdateChannelRequest { ParentId = category.Id });
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to move ticket channel {ChannelId} to category {CategoryId}", channel.Id,
+                id);
+        }
+    }
+
+    private async Task SendTranscriptDmAsync(SocketGuild guild, Ticket ticket)
+    {
+        if (string.IsNullOrEmpty(ticket.TranscriptUrl))
+            return;
+
+        try
+        {
+            var creator = await guild.GetUserAsync(ticket.CreatorId);
+            if (creator == null)
+                return;
+
+            var dmEmbed = new EmbedBuilder()
+                .WithTitle(strings.TicketTranscriptDmTitle(guild.Id, ticket.Id, guild.Name))
+                .WithDescription($"[{strings.TicketTranscriptDmLink(guild.Id)}]({ticket.TranscriptUrl})")
+                .WithOkColor(guild.Id)
+                .WithCurrentTimestamp()
+                .Build();
+
+            await creator.SendAsync(embed: dmEmbed);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to DM the transcript of ticket {TicketId}", ticket.Id);
+        }
+    }
+
+    /// <summary>
     ///     Links tickets to an existing case.
     /// </summary>
     /// <param name="caseId">The ID of the case to link tickets to.</param>
@@ -2618,129 +2705,6 @@ public class TicketService : INService
     }
 
     /// <summary>
-    ///     Asks a ticket's configured questions in its channel and collects the answers.
-    /// </summary>
-    /// <param name="channel">The new ticket channel.</param>
-    /// <param name="user">The member opening the ticket.</param>
-    /// <param name="questionsJson">The stored question configuration.</param>
-    /// <returns>The answers by field key, or null when a required question went unanswered.</returns>
-    private async Task<Dictionary<string, string>?> AskTicketQuestionsAsync(Channel channel, IUser user,
-        string questionsJson)
-    {
-        var answers = new Dictionary<string, string>();
-        var guildId = channel.GuildId;
-
-        ModalConfiguration config;
-        try
-        {
-            config = ModalConfiguration.Parse(questionsJson);
-        }
-        catch (JsonException ex)
-        {
-            logger.LogWarning(ex, "Invalid ticket questions in {GuildId}", guildId);
-            return answers;
-        }
-
-        var number = 0;
-        var timedOut = false;
-        foreach (var (key, field) in config.Fields)
-        {
-            number++;
-            if (timedOut)
-            {
-                if (field.Required)
-                    return null;
-
-                continue;
-            }
-
-            var minLength = Math.Max(field.Required ? 1 : 0, Math.Min(field.MinLength ?? 0, 4000));
-            var maxLength = Math.Max(minLength, Math.Min(field.MaxLength ?? 4000, 4000));
-            var hint = field.Required
-                ? strings.TicketQuestionRequired(guildId)
-                : strings.TicketQuestionOptional(guildId);
-
-            var question = new EmbedBuilder()
-                .WithTitle(config.Title ?? strings.CreateTicketModalTitle(guildId))
-                .WithDescription(string.IsNullOrWhiteSpace(field.Placeholder)
-                    ? $"**{field.Label}**"
-                    : $"**{field.Label}**\n{field.Placeholder}")
-                .WithFooter(strings.TicketQuestionFooter(guildId, number, config.Fields.Count, hint))
-                .WithColor(Mewdeko.OkColor)
-                .Build();
-
-            await channel.SendAsync(user.Mention, embed: question);
-
-            string? answer = null;
-            var answered = false;
-            for (var attempt = 0; attempt < MaxQuestionAttempts && !answered; attempt++)
-            {
-                var reply = (await WaitForAnswerAsync(channel.Id, user.Id))?.Trim();
-                switch (reply)
-                {
-                    case null:
-                        timedOut = true;
-                        attempt = MaxQuestionAttempts;
-                        break;
-                    case not null when !field.Required && reply.Equals("skip", StringComparison.OrdinalIgnoreCase):
-                        answer = field.Value;
-                        answered = true;
-                        break;
-                    case not null when reply.Length < minLength || reply.Length > maxLength:
-                        await channel.SendAsync(strings.TicketQuestionLength(guildId, minLength, maxLength));
-                        break;
-                    default:
-                        answer = reply;
-                        answered = true;
-                        break;
-                }
-            }
-
-            if (!answered && !timedOut)
-                answer = field.Value;
-
-            if (string.IsNullOrEmpty(answer))
-            {
-                if (field.Required)
-                    return null;
-
-                continue;
-            }
-
-            answers[key.ToLower().Replace(" ", "_")] = answer;
-        }
-
-        return answers;
-    }
-
-    /// <summary>
-    ///     Waits for a member's next message in a channel.
-    /// </summary>
-    /// <returns>The message text, or null when nothing arrived within the question timeout.</returns>
-    private async Task<string?> WaitForAnswerAsync(ulong channelId, ulong userId)
-    {
-        var answer = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
-        Func<SocketMessage, Task> handler = message =>
-        {
-            if (message.Author.Id == userId && message.Channel.Id == channelId)
-                answer.TrySetResult(message.Content);
-
-            return Task.CompletedTask;
-        };
-
-        eventHandler.MessageReceived.Subscribe("TicketService", handler);
-        try
-        {
-            var finished = await Task.WhenAny(answer.Task, Task.Delay(QuestionTimeout)).ConfigureAwait(false);
-            return finished == answer.Task ? await answer.Task.ConfigureAwait(false) : null;
-        }
-        finally
-        {
-            eventHandler.MessageReceived.Unsubscribe("TicketService", handler);
-        }
-    }
-
-    /// <summary>
     ///     Gets a ticket panel by ID.
     /// </summary>
     /// <param name="panelId">The ID of the panel to retrieve.</param>
@@ -2923,6 +2887,8 @@ public class TicketService : INService
     /// <param name="allowedPriorities">List of allowed priority IDs</param>
     /// <param name="defaultPriority">Optional default priority</param>
     /// <param name="updateComponents">Whether to update the panel components after adding the option</param>
+    /// <param name="claimedCategoryId">Optional category tickets move to when claimed</param>
+    /// <param name="dmTranscript">Whether closing a ticket DMs the transcript to its creator</param>
     /// <returns>The created select menu option</returns>
     public async Task<SelectMenuOption> AddSelectOptionAsync(
         PanelSelectMenu menu,
@@ -2941,7 +2907,8 @@ public class TicketService : INService
         TimeSpan? requiredResponseTime = null,
         int maxActiveTickets = 1,
         List<string> allowedPriorities = null,
-        string defaultPriority = null, bool updateComponents = true)
+        string defaultPriority = null, bool updateComponents = true, ulong? claimedCategoryId = null,
+        bool dmTranscript = false)
     {
         try
         {
@@ -2973,6 +2940,8 @@ public class TicketService : INService
                 MaxActiveTickets = maxActiveTickets,
                 AllowedPriorities = allowedPriorities?.ToArray() ?? [],
                 DefaultPriority = defaultPriority,
+                ClaimedCategoryId = claimedCategoryId,
+                DmTranscript = dmTranscript,
                 SaveTranscript = true,
                 RemoveCreatorOnArchive = true,
                 RemoveCreatorOnClose = true,
@@ -3145,8 +3114,13 @@ public class TicketService : INService
 
                 await channel.SendAsync(embed: embed);
 
+                var closeSettings = await ctx.GuildTicketSettings.FirstOrDefaultAsync(s => s.GuildId == guild.Id);
+                var transcriptGenerated = ticket.Button?.SaveTranscript == true ||
+                                          ticket.SelectOption?.SaveTranscript == true ||
+                                          WantsTranscriptDm(ticket, closeSettings);
+
                 // Generate transcript if enabled
-                if (ticket.Button?.SaveTranscript == true || ticket.SelectOption?.SaveTranscript == true)
+                if (transcriptGenerated)
                 {
                     await GenerateAndSaveTranscriptAsync(guild, channel, ticket);
                 }
@@ -3159,8 +3133,6 @@ public class TicketService : INService
                 if (shouldAutoArchive)
                 {
                     // Auto-archive the ticket (skip transcript since we already generated it above)
-                    var transcriptGenerated = ticket.Button?.SaveTranscript == true ||
-                                              ticket.SelectOption?.SaveTranscript == true;
                     await ArchiveTicketAsync(ticket, transcriptGenerated);
 
                     var archiveEmbed = new EmbedBuilder()
@@ -3480,10 +3452,11 @@ public class TicketService : INService
             await using var ctx = await dbFactory.CreateConnectionAsync();
             var settings = await ctx.GuildTicketSettings.FirstOrDefaultAsync(s => s.GuildId == guild.Id);
 
-            if (settings?.TranscriptChannelId == null) return;
-
-            var transcriptChannel = await guild.GetTextChannelAsync(settings.TranscriptChannelId.Value);
-            if (transcriptChannel == null) return;
+            var transcriptChannel = settings?.TranscriptChannelId is { } transcriptChannelId
+                ? await guild.GetTextChannelAsync(transcriptChannelId)
+                : null;
+            var dmCreator = WantsTranscriptDm(ticket, settings);
+            if (transcriptChannel == null && !dmCreator) return;
 
             // Fetch messages from the ticket channel
             var messages = new List<Message>();
@@ -3573,11 +3546,15 @@ public class TicketService : INService
                 .AddField("Category", (await guild.GetCategoryChannelAsync(channel.CategoryId ?? 0))?.Name ?? "None",
                     true)
                 .AddField("Messages", chatLogMessages.Count.ToString(), true)
-                .WithColor(Mewdeko.OkColor)
+                .WithColor(GuildEmbedColorService.OkFor(guild.Id))
                 .WithCurrentTimestamp()
                 .Build();
 
-            await transcriptChannel.SendAsync(embed: transcriptEmbed);
+            if (transcriptChannel != null)
+                await transcriptChannel.SendAsync(embed: transcriptEmbed);
+
+            if (dmCreator)
+                await SendTranscriptDmAsync(guild, ticket);
 
             logger.LogInformation("Saved transcript for ticket {TicketId} as ChatLog {ChatLogId}", ticket.Id,
                 chatLogId);
@@ -3630,6 +3607,9 @@ public class TicketService : INService
                     .Build();
 
                 await channel.SendAsync(embed: embed);
+
+                await MoveTicketToCategoryAsync(guild, channel,
+                    ticket.Button?.ClaimedCategoryId ?? ticket.SelectOption?.ClaimedCategoryId);
 
                 // Send DM notification to ticket creator if enabled (using existing EnableDmNotifications)
                 var settings = await ctx.GuildTicketSettings
@@ -3706,6 +3686,10 @@ public class TicketService : INService
                     .Build();
 
                 await channel.SendAsync(embed: embed);
+
+                if ((ticket.Button?.ClaimedCategoryId ?? ticket.SelectOption?.ClaimedCategoryId) != null)
+                    await MoveTicketToCategoryAsync(guild, channel,
+                        ticket.Button?.CategoryId ?? ticket.SelectOption?.CategoryId);
 
                 // Notify previous claimer if enabled (using existing EnableDmNotifications)
                 var settings = await ctx.GuildTicketSettings
@@ -5172,6 +5156,8 @@ public class TicketService : INService
                         CategoryId = sourceButton.CategoryId,
                         ArchiveCategoryId = sourceButton.ArchiveCategoryId,
                         ThreadChannelId = sourceButton.ThreadChannelId,
+                        ClaimedCategoryId = sourceButton.ClaimedCategoryId,
+                        DmTranscript = sourceButton.DmTranscript,
                         SupportRoles = [.. sourceButton.SupportRoles ?? []],
                         ViewerRoles = [.. sourceButton.ViewerRoles ?? []],
                         AutoCloseTime = sourceButton.AutoCloseTime,
@@ -5216,6 +5202,8 @@ public class TicketService : INService
                             CategoryId = sourceOption.CategoryId,
                             ArchiveCategoryId = sourceOption.ArchiveCategoryId,
                             ThreadChannelId = sourceOption.ThreadChannelId,
+                            ClaimedCategoryId = sourceOption.ClaimedCategoryId,
+                            DmTranscript = sourceOption.DmTranscript,
                             SupportRoles = [.. sourceOption.SupportRoles ?? []],
                             ViewerRoles = [.. sourceOption.ViewerRoles ?? []],
                             AutoCloseTime = sourceOption.AutoCloseTime,
@@ -5314,6 +5302,8 @@ public class TicketService : INService
                         CategoryId = originalButton.CategoryId,
                         ArchiveCategoryId = originalButton.ArchiveCategoryId,
                         ThreadChannelId = originalButton.ThreadChannelId,
+                        ClaimedCategoryId = originalButton.ClaimedCategoryId,
+                        DmTranscript = originalButton.DmTranscript,
                         SupportRoles = [.. originalButton.SupportRoles ?? []],
                         ViewerRoles = [.. originalButton.ViewerRoles ?? []],
                         AutoCloseTime = originalButton.AutoCloseTime,
@@ -5456,6 +5446,12 @@ public class TicketService : INService
                     case "threadchannelid":
                         button.ThreadChannelId = (ulong?)setting.Value;
                         break;
+                    case "claimedcategoryid":
+                        button.ClaimedCategoryId = (ulong?)setting.Value;
+                        break;
+                    case "dmtranscript":
+                        button.DmTranscript = (bool)setting.Value;
+                        break;
                     case "channelnameformat":
                         button.ChannelNameFormat = (string)setting.Value;
                         break;
@@ -5590,6 +5586,12 @@ public class TicketService : INService
                         break;
                     case "threadchannelid":
                         option.ThreadChannelId = (ulong?)setting.Value;
+                        break;
+                    case "claimedcategoryid":
+                        option.ClaimedCategoryId = (ulong?)setting.Value;
+                        break;
+                    case "dmtranscript":
+                        option.DmTranscript = (bool)setting.Value;
                         break;
                     case "channelnameformat":
                         option.ChannelNameFormat = (string)setting.Value;

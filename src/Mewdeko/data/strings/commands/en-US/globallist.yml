@@ -1,0 +1,105 @@
+reportuser:
+  args:
+    - '1234567890 Scamming Sent fake gift links https://fluxer.app/channels/1/2/3'
+  desc: 'Reports a user to the global list. Message links in the reason and attached images count as evidence, and at least one is needed.'
+  params:
+    - desc: 'The ID of the user to report.'
+      name: userId
+      optional: false
+      type: ulong
+    - desc: 'Scamming, Raiding, SpamBot, Harassment, Nsfw, Impersonation or Other.'
+      name: category
+      optional: false
+      type: GlobalListCategory
+    - desc: 'The reason, with a message link or an attached screenshot.'
+      name: reason
+      optional: false
+      type: string
+listcheck:
+  args:
+    - '1234567890'
+  desc: 'Checks whether a user is on the global list.'
+  params:
+    - desc: 'The ID of the user to check.'
+      name: userId
+      optional: false
+      type: ulong
+listappeal:
+  args:
+    - 'My account was hacked and I secured it.'
+  desc: 'Appeals your own global list entry. Send it in a DM to the bot.'
+  params:
+    - desc: 'Why the entry should be removed.'
+      name: text
+      optional: false
+      type: string
+listqueue:
+  args:
+    - ''
+  desc: 'Lists the entries and appeals waiting for review. Bot owners and reviewers only.'
+  params: []
+listapprove:
+  args:
+    - '12 Clear evidence'
+  desc: 'Approves a pending entry so it goes live. Bot owners and reviewers only.'
+  params:
+    - desc: 'The entry ID.'
+      name: entryId
+      optional: false
+      type: int
+    - desc: 'An optional note.'
+      name: note
+      optional: true
+      type: string
+listreject:
+  args:
+    - '12 Not enough evidence'
+  desc: 'Rejects a pending entry. Bot owners and reviewers only.'
+  params:
+    - desc: 'The entry ID.'
+      name: entryId
+      optional: false
+      type: int
+    - desc: 'An optional note.'
+      name: note
+      optional: true
+      type: string
+listremove:
+  args:
+    - '12 Listed by mistake'
+  desc: 'Removes a live entry from the global list. Bot owners only.'
+  params:
+    - desc: 'The entry ID.'
+      name: entryId
+      optional: false
+      type: int
+    - desc: 'An optional note.'
+      name: note
+      optional: true
+      type: string
+listappealapprove:
+  args:
+    - '4 Account recovered'
+  desc: 'Approves an appeal, which removes the entry. Bot owners and reviewers only.'
+  params:
+    - desc: 'The appeal ID.'
+      name: appealId
+      optional: false
+      type: int
+    - desc: 'An optional note.'
+      name: note
+      optional: true
+      type: string
+listappealreject:
+  args:
+    - '4 Evidence still stands'
+  desc: 'Rejects an appeal. Bot owners and reviewers only.'
+  params:
+    - desc: 'The appeal ID.'
+      name: appealId
+      optional: false
+      type: int
+    - desc: 'An optional note.'
+      name: note
+      optional: true
+      type: string

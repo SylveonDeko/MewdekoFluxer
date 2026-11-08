@@ -298,7 +298,15 @@ public static partial class Extensions
     /// <returns>Real summary of the command.</returns>
     public static string RealSummary(this CommandInfo cmd, IBotStrings strings, ulong? guildId, string? prefix)
     {
-        return string.Format(strings.GetCommandStrings(cmd.Name, guildId).Desc, prefix);
+        var desc = strings.GetCommandStrings(cmd.Name, guildId).Desc;
+        try
+        {
+            return string.Format(desc, prefix);
+        }
+        catch (FormatException)
+        {
+            return desc.Replace("{0}", prefix);
+        }
     }
 
     /// <summary>
@@ -354,6 +362,18 @@ public static partial class Extensions
     }
 
     /// <summary>
+    ///     Appends a line to the description of an embed.
+    /// </summary>
+    /// <param name="eb">Embed builder to add the line to.</param>
+    /// <param name="line">Line to append.</param>
+    /// <returns>Embed builder with the line appended.</returns>
+    public static EmbedBuilder AddDescriptionLine(this EmbedBuilder eb, string line)
+    {
+        eb.Description = string.IsNullOrEmpty(eb.Description) ? line : $"{eb.Description}\n{line}";
+        return eb;
+    }
+
+    /// <summary>
     ///     Sets the color of an embed to OK color.
     /// </summary>
     /// <param name="eb">Embed builder to set the color for.</param>
@@ -363,6 +383,16 @@ public static partial class Extensions
         return eb.WithColor(Mewdeko.OkColor);
     }
 
+    /// <summary>
+    ///     Sets the color of an embed to the OK color of a guild.
+    /// </summary>
+    /// <param name="eb">Embed builder to set the color for.</param>
+    /// <param name="guildId">The guild whose color to use, or null for the bot's default.</param>
+    /// <returns>Embed builder with the color set to the guild's OK color.</returns>
+    public static EmbedBuilder WithOkColor(this EmbedBuilder eb, ulong? guildId)
+    {
+        return eb.WithColor(GuildEmbedColorService.OkFor(guildId));
+    }
 
     /// <summary>
     ///     Sets the color of an embed to the error color.

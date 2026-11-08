@@ -23,6 +23,7 @@ public class RoleMonitorService : INService, IReadyExecutor
 
     // In-memory caches for quick access
     private readonly ConcurrentDictionary<ulong, GuildSettings> guildSettingsCache = new();
+    private readonly ModCaseService modCases;
     private readonly MuteService muteService;
     private readonly GeneratedBotStrings strings;
     private readonly UserPunishService userPunishService;
@@ -39,10 +40,12 @@ public class RoleMonitorService : INService, IReadyExecutor
     /// <param name="muteService">The mute service for handling user mutes.</param>
     /// <param name="strings">The localized strings service.</param>
     /// <param name="banPrune">The service resolving how many days of messages a ban purges</param>
+    /// <param name="modCases">The service recording moderation cases</param>
     public RoleMonitorService(FluxerClient client, EventHandler handler, IDataConnectionFactory dbFactory,
         IDataCache dataCache, UserPunishService userPunishService, BotConfigService botConfigService,
-        MuteService muteService, GeneratedBotStrings strings, BanPruneService banPrune)
+        MuteService muteService, GeneratedBotStrings strings, BanPruneService banPrune, ModCaseService modCases)
     {
+        this.modCases = modCases;
         this.banPrune = banPrune;
         this.client = client;
         this.dbFactory = dbFactory;
@@ -398,6 +401,73 @@ public class RoleMonitorService : INService, IReadyExecutor
         if (selfAssigned)
             actionDescription = $"self-assigning a prohibited role: {role.Name}";
 
+        var caseReason = $"Role monitor: {actionDescription}";
+        var cased = punishmentAction is PunishmentAction.Kick or PunishmentAction.Ban or PunishmentAction.Softban;
+        if (!cased)
+            await SendDefaultDmAsync(user, punishmentAction, actionDescription);
+
+        var dmAction = punishmentAction switch
+        {
+            PunishmentAction.Kick => ModCaseAction.Kick,
+            PunishmentAction.Ban => ModCaseAction.Ban,
+            _ => ModCaseAction.Softban
+        };
+        Func<int?, Task<bool>> dm = caseNumber => modCases.SendDmOrDefaultAsync(guild, user.User,
+            client.CurrentUser, dmAction, caseReason, null, caseNumber,
+            () => SendDefaultDmAsync(user, punishmentAction, actionDescription, true));
+
+        switch (punishmentAction)
+        {
+            case PunishmentAction.Warn:
+                await userPunishService.Warn(guild, user.Id, client.CurrentUser, actionDescription);
+                break;
+            case PunishmentAction.Kick:
+                await modCases.PunishAsync(guild, user.User, client.CurrentUser, ModCaseAction.Kick, caseReason, null,
+                    () => user.KickAsync($"Violation: {actionDescription}"), dm);
+                break;
+            case PunishmentAction.Ban:
+                var banDays = await banPrune.GetPruneDaysAsync(guild.Id, BanPruneAction.RoleMonitor);
+                await modCases.PunishAsync(guild, user.User, client.CurrentUser, ModCaseAction.Ban, caseReason, null,
+                    () => guild.AddBanAsync(user.Id, banDays, $"Violation: {actionDescription}"), dm);
+                break;
+            case PunishmentAction.Mute:
+                await muteService.MuteUser(user, client.CurrentUser, reason: actionDescription);
+                break;
+            case PunishmentAction.Softban:
+                var softDays = await banPrune.GetPruneDaysAsync(guild.Id, BanPruneAction.SoftBan);
+                await modCases.PunishAsync(guild, user.User, client.CurrentUser, ModCaseAction.Softban, caseReason,
+                    null, async () =>
+                    {
+                        await guild.AddBanAsync(user.Id, softDays, $"Violation: {actionDescription}");
+                        await guild.RemoveBanAsync(user.Id);
+                    }, dm);
+                break;
+            case PunishmentAction.RemoveRoles:
+                var removeOptions = new RequestOptions
+                {
+                    AuditLogReason = $"Violation: {actionDescription}"
+                };
+                foreach (var roleId in user.RoleIds.ToList())
+                    await user.RemoveRoleAsync(roleId, removeOptions);
+                await modCases.RecordAsync(guild.Id, user.Id, client.CurrentUser.Id, ModCaseAction.RemoveRoles,
+                    caseReason);
+                break;
+            case PunishmentAction.Timeout:
+                await user.SetTimeoutAsync(DateTimeOffset.UtcNow + TimeSpan.FromDays(28), new RequestOptions
+                {
+                    AuditLogReason = $"Violation: {actionDescription}"
+                });
+                await modCases.RecordAsync(guild.Id, user.Id, client.CurrentUser.Id, ModCaseAction.Timeout,
+                    caseReason, TimeSpan.FromDays(28));
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(punishmentAction), punishmentAction, null);
+        }
+    }
+
+    private async Task<bool> SendDefaultDmAsync(SocketGuildMember user, PunishmentAction? punishmentAction,
+        string actionDescription, bool rethrow = false)
+    {
         try
         {
             var dmChannel = await user.CreateDMChannelAsync();
@@ -413,51 +483,14 @@ public class RoleMonitorService : INService, IReadyExecutor
                 _ => "somehow forgiven..."
             };
             await dmChannel.SendErrorAsync(
-                strings.RoleActionDm(guild.Id, action, actionDescription), botConfigService.Data);
+                strings.RoleActionDm(user.Guild.Id, action, actionDescription), botConfigService.Data);
+            return true;
         }
         catch
         {
-            // User has DMs disabled or blocked the bot
-        }
-
-        switch (punishmentAction)
-        {
-            case PunishmentAction.Warn:
-                await userPunishService.Warn(guild, user.Id, client.CurrentUser, actionDescription);
-                break;
-            case PunishmentAction.Kick:
-                await user.KickAsync($"Violation: {actionDescription}");
-                break;
-            case PunishmentAction.Ban:
-                await guild.AddBanAsync(user.Id,
-                    await banPrune.GetPruneDaysAsync(guild.Id, BanPruneAction.RoleMonitor),
-                    $"Violation: {actionDescription}");
-                break;
-            case PunishmentAction.Mute:
-                await muteService.MuteUser(user, client.CurrentUser, reason: actionDescription);
-                break;
-            case PunishmentAction.Softban:
-                await guild.AddBanAsync(user.Id,
-                    await banPrune.GetPruneDaysAsync(guild.Id, BanPruneAction.SoftBan),
-                    $"Violation: {actionDescription}");
-                await guild.RemoveBanAsync(user.Id);
-                break;
-            case PunishmentAction.RemoveRoles:
-                var removeOptions = new RequestOptions
-                {
-                    AuditLogReason = $"Violation: {actionDescription}"
-                };
-                foreach (var roleId in user.RoleIds.ToList())
-                    await user.RemoveRoleAsync(roleId, removeOptions);
-                break;
-            case PunishmentAction.Timeout:
-                await user.SetTimeoutAsync(DateTimeOffset.UtcNow + TimeSpan.FromDays(28), new RequestOptions
-                {
-                    AuditLogReason = $"Violation: {actionDescription}"
-                });
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(punishmentAction), punishmentAction, null);
+            if (rethrow)
+                throw;
+            return false;
         }
     }
 

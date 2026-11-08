@@ -1,4 +1,5 @@
 using Mewdeko.Controllers.Common.Starboard;
+using Mewdeko.Modules.Starboard.Common;
 using Mewdeko.Modules.Starboard.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -229,6 +230,311 @@ public class StarboardController : Controller
         {
             wasAdded = result.WasAdded, config = result.Config
         });
+    }
+
+    /// <summary>
+    ///     Sets whether members can star their own messages
+    /// </summary>
+    [HttpPost("{starboardId}/self-star")]
+    public async Task<IActionResult> SetAllowSelfStar(ulong guildId, int starboardId, [FromBody] bool allowed)
+    {
+        var guild = client.GetGuild(guildId);
+        if (guild == null)
+            return NotFound("Guild not found");
+
+        auditContext.RecordBefore(starboardService.GetStarboards(guildId).FirstOrDefault(s => s.Id == starboardId));
+        var success = await starboardService.SetAllowSelfStar(guild, starboardId, allowed);
+        if (!success)
+            return NotFound("Starboard configuration not found");
+
+        return Ok(allowed);
+    }
+
+    /// <summary>
+    ///     Sets whether age-restricted messages can be starred into a channel that isn't
+    /// </summary>
+    [HttpPost("{starboardId}/nsfw")]
+    public async Task<IActionResult> SetAllowNsfw(ulong guildId, int starboardId, [FromBody] bool allowed)
+    {
+        var guild = client.GetGuild(guildId);
+        if (guild == null)
+            return NotFound("Guild not found");
+
+        auditContext.RecordBefore(starboardService.GetStarboards(guildId).FirstOrDefault(s => s.Id == starboardId));
+        var success = await starboardService.SetAllowNsfw(guild, starboardId, allowed);
+        if (!success)
+            return NotFound("Starboard configuration not found");
+
+        return Ok(allowed);
+    }
+
+    /// <summary>
+    ///     Locks a starboard until a given time, or unlocks it
+    /// </summary>
+    [HttpPost("{starboardId}/lock")]
+    public async Task<IActionResult> SetLockedUntil(ulong guildId, int starboardId, [FromBody] DateTime? lockedUntil)
+    {
+        var guild = client.GetGuild(guildId);
+        if (guild == null)
+            return NotFound("Guild not found");
+
+        auditContext.RecordBefore(starboardService.GetStarboards(guildId).FirstOrDefault(s => s.Id == starboardId));
+        var success = await starboardService.SetLockedUntil(guild, starboardId, lockedUntil?.ToUniversalTime());
+        if (!success)
+            return NotFound("Starboard configuration not found");
+
+        return Ok(lockedUntil);
+    }
+
+    /// <summary>
+    ///     Toggles a channel whose messages are posted without needing stars
+    /// </summary>
+    [HttpPost("{starboardId}/autostar-channel")]
+    public async Task<IActionResult> ToggleAutoStarChannel(ulong guildId, int starboardId,
+        [FromBody] ulong channelId)
+    {
+        var guild = client.GetGuild(guildId);
+        if (guild == null)
+            return NotFound("Guild not found");
+
+        auditContext.RecordBefore(starboardService.GetStarboards(guildId).FirstOrDefault(s => s.Id == starboardId));
+        var result = await starboardService.ToggleAutoStarChannel(guild, starboardId, channelId);
+        if (result.Config == null)
+            return NotFound("Starboard configuration not found");
+
+        auditContext.RecordAfter(result.Config);
+        return Ok(new
+        {
+            wasAdded = result.WasAdded, config = result.Config
+        });
+    }
+
+    /// <summary>
+    ///     Creates a starboard together with a read-only channel for its posts
+    /// </summary>
+    [HttpPost("setup")]
+    public async Task<IActionResult> SetupStarboard(ulong guildId, [FromBody] StarboardSetupRequest request)
+    {
+        var guild = client.GetGuild(guildId);
+        if (guild == null)
+            return NotFound("Guild not found");
+
+        try
+        {
+            var created = await starboardService.CreateStarboardWithChannel(guild, request.Name, request.Emote,
+                request.Threshold);
+            if (created is not { } result)
+                return BadRequest("The channel could not be created. Check the bot's Manage Channels permission.");
+
+            return Ok(new
+            {
+                starboardId = result.StarboardId, channelId = result.Channel.Id
+            });
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("already used"))
+        {
+            return BadRequest("Emote is already in use by another starboard configuration.");
+        }
+    }
+
+    /// <summary>
+    ///     Turns a starboard on or off
+    /// </summary>
+    [HttpPost("{starboardId}/enabled")]
+    public async Task<IActionResult> SetEnabled(ulong guildId, int starboardId, [FromBody] bool enabled)
+    {
+        var guild = client.GetGuild(guildId);
+        if (guild == null)
+            return NotFound("Guild not found");
+
+        auditContext.RecordBefore(starboardService.GetStarboards(guildId).FirstOrDefault(s => s.Id == starboardId));
+        var success = await starboardService.SetEnabled(guild, starboardId, enabled);
+        if (!success)
+            return NotFound("Starboard configuration not found");
+
+        return Ok(enabled);
+    }
+
+    /// <summary>
+    ///     Gets the placeholders a starboard post design can use
+    /// </summary>
+    [HttpGet("placeholders")]
+    public IActionResult GetDesignPlaceholders()
+        => Ok(StarboardPostDesign.Placeholders);
+
+    /// <summary>
+    ///     Sets the post design of a starboard, or clears it
+    /// </summary>
+    [HttpPost("{starboardId}/design")]
+    public async Task<IActionResult> SetPostDesign(ulong guildId, int starboardId, [FromBody] string? design)
+    {
+        var guild = client.GetGuild(guildId);
+        if (guild == null)
+            return NotFound("Guild not found");
+
+        auditContext.RecordBefore(starboardService.GetStarboards(guildId).FirstOrDefault(s => s.Id == starboardId));
+        switch (await starboardService.SetPostDesign(guild, starboardId, design))
+        {
+            case StarboardDesignResult.NotFound:
+                return NotFound("Starboard configuration not found");
+            case StarboardDesignResult.Invalid:
+                return BadRequest("The design is not valid embed json or shows nothing.");
+            default:
+                return Ok(design);
+        }
+    }
+
+    /// <summary>
+    ///     Sends a preview of a starboard's post design for a sample message
+    /// </summary>
+    [HttpPost("{starboardId}/design/test")]
+    public async Task<IActionResult> SendDesignTest(ulong guildId, int starboardId,
+        [FromBody] StarboardDesignTestRequest request)
+    {
+        var guild = client.GetGuild(guildId);
+        if (guild == null)
+            return NotFound("Guild not found");
+
+        if (await guild.GetTextChannelAsync(request.ChannelId) is not { } channel)
+            return NotFound("Channel not found");
+
+        var sample = await StarboardService.FindSampleMessageAsync(channel, request.MessageId);
+        if (sample == null)
+            return NotFound("No message found to preview with.");
+
+        var success = await starboardService.SendDesignTestAsync(guild, starboardId, channel, sample);
+        if (!success)
+            return NotFound("Starboard configuration not found");
+
+        return Ok();
+    }
+
+    /// <summary>
+    ///     Sets which emotes the bot reacts with on its own posts
+    /// </summary>
+    [HttpPost("{starboardId}/auto-react")]
+    public async Task<IActionResult> SetAutoReact(ulong guildId, int starboardId, [FromBody] StarboardAutoReact mode)
+    {
+        var guild = client.GetGuild(guildId);
+        if (guild == null)
+            return NotFound("Guild not found");
+
+        if (!Enum.IsDefined(mode))
+            return BadRequest("Mode must be 0, 1 or 2.");
+
+        auditContext.RecordBefore(starboardService.GetStarboards(guildId).FirstOrDefault(s => s.Id == starboardId));
+        var success = await starboardService.SetAutoReact(guild, starboardId, mode);
+        if (!success)
+            return NotFound("Starboard configuration not found");
+
+        return Ok(mode);
+    }
+
+    /// <summary>
+    ///     Sets whether one member's stars on several of the starboard's emotes all count
+    /// </summary>
+    [HttpPost("{starboardId}/multi-react")]
+    public async Task<IActionResult> SetCountMultipleReactions(ulong guildId, int starboardId,
+        [FromBody] bool enabled)
+    {
+        var guild = client.GetGuild(guildId);
+        if (guild == null)
+            return NotFound("Guild not found");
+
+        auditContext.RecordBefore(starboardService.GetStarboards(guildId).FirstOrDefault(s => s.Id == starboardId));
+        var success = await starboardService.SetCountMultipleReactions(guild, starboardId, enabled);
+        if (!success)
+            return NotFound("Starboard configuration not found");
+
+        return Ok(enabled);
+    }
+
+    /// <summary>
+    ///     Sets whether stars that can't count are removed from the message
+    /// </summary>
+    [HttpPost("{starboardId}/remove-invalid-stars")]
+    public async Task<IActionResult> SetRemoveInvalidStars(ulong guildId, int starboardId, [FromBody] bool enabled)
+    {
+        var guild = client.GetGuild(guildId);
+        if (guild == null)
+            return NotFound("Guild not found");
+
+        auditContext.RecordBefore(starboardService.GetStarboards(guildId).FirstOrDefault(s => s.Id == starboardId));
+        var success = await starboardService.SetRemoveInvalidStars(guild, starboardId, enabled);
+        if (!success)
+            return NotFound("Starboard configuration not found");
+
+        return Ok(enabled);
+    }
+
+    /// <summary>
+    ///     Toggles a role whose members' stars count, when any role is listed
+    /// </summary>
+    [HttpPost("{starboardId}/allowed-role")]
+    public Task<IActionResult> ToggleAllowedRole(ulong guildId, int starboardId, [FromBody] ulong roleId)
+        => ToggleStarRole(guildId, starboardId, roleId, false);
+
+    /// <summary>
+    ///     Toggles a role whose members' stars never count
+    /// </summary>
+    [HttpPost("{starboardId}/denied-role")]
+    public Task<IActionResult> ToggleDeniedRole(ulong guildId, int starboardId, [FromBody] ulong roleId)
+        => ToggleStarRole(guildId, starboardId, roleId, true);
+
+    private async Task<IActionResult> ToggleStarRole(ulong guildId, int starboardId, ulong roleId, bool deny)
+    {
+        var guild = client.GetGuild(guildId);
+        if (guild == null)
+            return NotFound("Guild not found");
+
+        auditContext.RecordBefore(starboardService.GetStarboards(guildId).FirstOrDefault(s => s.Id == starboardId));
+        var result = await starboardService.ToggleStarRole(guild, starboardId, roleId, deny);
+        if (result.Config == null)
+            return NotFound("Starboard configuration not found");
+
+        auditContext.RecordAfter(result.Config);
+        return Ok(new
+        {
+            wasAdded = result.WasAdded, config = result.Config
+        });
+    }
+
+    /// <summary>
+    ///     Sets how old a message has to be, and how old it may be, to be starred
+    /// </summary>
+    [HttpPost("{starboardId}/message-age")]
+    public async Task<IActionResult> SetMessageAge(ulong guildId, int starboardId,
+        [FromBody] StarboardMessageAgeRequest request)
+    {
+        var guild = client.GetGuild(guildId);
+        if (guild == null)
+            return NotFound("Guild not found");
+
+        auditContext.RecordBefore(starboardService.GetStarboards(guildId).FirstOrDefault(s => s.Id == starboardId));
+        var success = await starboardService.SetMessageAge(guild, starboardId, request.MinMinutes,
+            request.MaxMinutes);
+        if (!success)
+            return NotFound("Starboard configuration not found");
+
+        return Ok(request);
+    }
+
+    /// <summary>
+    ///     Sets how long a post waits before it can be moved to the bottom of the starboard again
+    /// </summary>
+    [HttpPost("{starboardId}/repost-cooldown")]
+    public async Task<IActionResult> SetRepostCooldown(ulong guildId, int starboardId, [FromBody] int minutes)
+    {
+        var guild = client.GetGuild(guildId);
+        if (guild == null)
+            return NotFound("Guild not found");
+
+        auditContext.RecordBefore(starboardService.GetStarboards(guildId).FirstOrDefault(s => s.Id == starboardId));
+        var success = await starboardService.SetRepostCooldown(guild, starboardId, minutes);
+        if (!success)
+            return NotFound("Starboard configuration not found");
+
+        return Ok(minutes);
     }
 
     /// <summary>

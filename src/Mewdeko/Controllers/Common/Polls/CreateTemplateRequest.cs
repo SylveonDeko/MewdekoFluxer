@@ -53,6 +53,21 @@ public class CreateTemplateRequest
     public bool ShowResults { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets the list of role IDs that cannot vote on polls made from this template.
+    /// </summary>
+    public List<ulong>? BlockedRoles { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of votes after which polls made from this template end automatically.
+    /// </summary>
+    public int? MaxVotes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the message posted when polls made from this template end.
+    /// </summary>
+    public string? ResultsMessage { get; set; }
+
+    /// <summary>
     /// Gets or sets the Discord user ID of the person creating the template.
     /// </summary>
     public ulong UserId { get; set; }

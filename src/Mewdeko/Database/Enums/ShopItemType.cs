@@ -18,5 +18,15 @@ public enum ShopItemType
     /// <summary>
     ///     Sends the buyer a block of text, such as a code or set of instructions.
     /// </summary>
-    Text = 2
+    Text = 2,
+
+    /// <summary>
+    ///     An inventory entry that can never be used, kept as a trophy or proof of purchase.
+    /// </summary>
+    Static = 3,
+
+    /// <summary>
+    ///     Grants ownership of a card design on purchase.
+    /// </summary>
+    Design = 4
 }

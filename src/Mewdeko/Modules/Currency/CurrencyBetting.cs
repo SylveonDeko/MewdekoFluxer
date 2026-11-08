@@ -68,7 +68,10 @@ public partial class Currency
 
         if (await Service.TryDebitAsync(ctx.User.Id, bet, Strings.BetPlacedTransaction(ctx.Guild.Id, gameKey),
                 CurrencyCategory.GameBet, ctx.Guild.Id, gameKey))
+        {
+            await dailyChallengeService.RecordBet(ctx.User.Id, ctx.Guild.Id, gameKey, bet);
             return true;
+        }
 
         await ErrorAsync(Strings.BetInsufficientFunds(ctx.Guild.Id, bet, emote));
         return false;
@@ -99,6 +102,8 @@ public partial class Currency
         await Service.CreditAsync(ctx.User.Id, total, Strings.BetWonTransaction(ctx.Guild.Id, gameKey),
             CurrencyCategory.GamePayout, ctx.Guild.Id, gameKey);
 
+        await dailyChallengeService.RecordPayout(ctx.User.Id, ctx.Guild.Id, stake, total);
+
         return total;
     }
 
@@ -122,12 +127,16 @@ public partial class Currency
     /// </summary>
     /// <param name="amount">The total amount to return to the player.</param>
     /// <param name="gameKey">Stable game identifier recorded on the ledger entry.</param>
+    /// <param name="stake">The amount that was wagered.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    private Task PayoutAsync(long amount, string gameKey)
+    private async Task PayoutAsync(long amount, string gameKey, long stake)
     {
-        return amount <= 0
-            ? Task.CompletedTask
-            : Service.CreditAsync(ctx.User.Id, amount, Strings.BetWonTransaction(ctx.Guild.Id, gameKey),
-                CurrencyCategory.GamePayout, ctx.Guild.Id, gameKey);
+        if (amount <= 0)
+            return;
+
+        await Service.CreditAsync(ctx.User.Id, amount, Strings.BetWonTransaction(ctx.Guild.Id, gameKey),
+            CurrencyCategory.GamePayout, ctx.Guild.Id, gameKey);
+
+        await dailyChallengeService.RecordPayout(ctx.User.Id, ctx.Guild.Id, stake, amount);
     }
 }

@@ -43,6 +43,11 @@ public class RepeaterResponse
     public bool IsEnabled { get; set; }
 
     /// <summary>
+    ///     Why the repeater turned itself off after a failure, or null when it has not failed
+    /// </summary>
+    public string? DisabledReason { get; set; }
+
+    /// <summary>
     ///     The trigger mode for the repeater
     /// </summary>
     public StickyTriggerMode TriggerMode { get; set; }

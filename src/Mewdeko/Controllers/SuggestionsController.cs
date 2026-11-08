@@ -648,6 +648,246 @@ public class SuggestionsController(
     }
 
     /// <summary>
+    ///     Gets how many votes one side has to lead by to recolour a suggestion embed
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <returns>The threshold, 0 when off</returns>
+    [HttpGet("voteColor")]
+    public async Task<IActionResult> GetVoteColor(ulong guildId)
+    {
+        return Ok(await service.GetVoteColorThreshold(guildId));
+    }
+
+    /// <summary>
+    ///     Sets how many votes one side has to lead by to recolour a suggestion embed
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <param name="threshold">The vote lead needed, 0 to turn it off</param>
+    /// <returns>An IActionResult indicating the result of the operation</returns>
+    [HttpPost("voteColor")]
+    public async Task<IActionResult> SetVoteColor(ulong guildId, [FromBody] int threshold)
+    {
+        if (threshold is < 0 or > 1000)
+            return BadRequest("Threshold must be between 0 and 1000");
+
+        await service.SetVoteColorThreshold(guildId, threshold);
+        return Ok();
+    }
+
+    /// <summary>
+    ///     Gets whether suggestions hide their author for a guild
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <returns>True if suggestions are anonymous</returns>
+    [HttpGet("anonymous")]
+    public async Task<IActionResult> GetAnonymousSuggestions(ulong guildId)
+    {
+        var guild = client.GetGuild(guildId);
+        return Ok(await service.GetAnonymousSuggestions(guild));
+    }
+
+    /// <summary>
+    ///     Sets whether suggestions hide their author for a guild
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <param name="anonymous">The new anonymous suggestions setting</param>
+    /// <returns>An IActionResult indicating the result of the operation</returns>
+    [HttpPost("anonymous")]
+    public async Task<IActionResult> SetAnonymousSuggestions(ulong guildId, [FromBody] bool anonymous)
+    {
+        var guild = client.GetGuild(guildId);
+        await service.SetAnonymousSuggestions(guild, anonymous);
+        return Ok();
+    }
+
+    /// <summary>
+    ///     Gets the suggest button channel for a guild
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <returns>The ID of the suggest button channel</returns>
+    [HttpGet("suggestButtonChannel")]
+    public async Task<IActionResult> GetSuggestButtonChannel(ulong guildId)
+    {
+        var guild = client.GetGuild(guildId);
+        return Ok(await service.GetSuggestButtonChannel(guild));
+    }
+
+    /// <summary>
+    ///     Sets the suggest button channel for a guild
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <param name="channelId">The ID of the new suggest button channel</param>
+    /// <returns>An IActionResult indicating the result of the operation</returns>
+    [HttpPost("suggestButtonChannel")]
+    public async Task<IActionResult> SetSuggestButtonChannel(ulong guildId, [FromBody] ulong channelId)
+    {
+        var guild = client.GetGuild(guildId);
+        await service.SetSuggestButtonChannel(guild, channelId);
+        return Ok();
+    }
+
+    /// <summary>
+    ///     Gets the suggest button message for a guild
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <returns>The suggest button message</returns>
+    [HttpGet("suggestButtonMessage")]
+    public async Task<IActionResult> GetSuggestButtonMessage(ulong guildId)
+    {
+        var guild = client.GetGuild(guildId);
+        var message = await service.GetSuggestButtonMessage(guild);
+        return Ok(message == "-" ? "" : message);
+    }
+
+    /// <summary>
+    ///     Sets the suggest button message for a guild
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <param name="message">The new suggest button message</param>
+    /// <returns>An IActionResult indicating the result of the operation</returns>
+    [HttpPost("suggestButtonMessage")]
+    public async Task<IActionResult> SetSuggestButtonMessage(ulong guildId, [FromBody] string message)
+    {
+        var guild = client.GetGuild(guildId);
+        await service.SetSuggestButtonMessage(guild, message);
+        return Ok();
+    }
+
+    /// <summary>
+    ///     Gets the suggest button label for a guild
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <returns>The suggest button label</returns>
+    [HttpGet("suggestButtonLabel")]
+    public async Task<IActionResult> GetSuggestButtonLabel(ulong guildId)
+    {
+        var guild = client.GetGuild(guildId);
+        var label = await service.GetSuggestButtonName(guild);
+        return Ok(label is "-" or null ? "" : label);
+    }
+
+    /// <summary>
+    ///     Sets the suggest button label for a guild
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <param name="label">The new suggest button label</param>
+    /// <returns>An IActionResult indicating the result of the operation</returns>
+    [HttpPost("suggestButtonLabel")]
+    public async Task<IActionResult> SetSuggestButtonLabel(ulong guildId, [FromBody] string label)
+    {
+        var guild = client.GetGuild(guildId);
+        await service.SetSuggestButtonLabel(guild, label);
+        return Ok();
+    }
+
+    /// <summary>
+    ///     Gets the suggest button emote for a guild
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <returns>The suggest button emote</returns>
+    [HttpGet("suggestButtonEmote")]
+    public async Task<IActionResult> GetSuggestButtonEmote(ulong guildId)
+    {
+        var guild = client.GetGuild(guildId);
+        var emote = await service.GetSuggestButtonEmote(guild);
+        return Ok(emote == "-" ? "" : emote);
+    }
+
+    /// <summary>
+    ///     Sets the suggest button emote for a guild
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <param name="emote">The new suggest button emote</param>
+    /// <returns>An IActionResult indicating the result of the operation</returns>
+    [HttpPost("suggestButtonEmote")]
+    public async Task<IActionResult> SetSuggestButtonEmote(ulong guildId, [FromBody] string emote)
+    {
+        var guild = client.GetGuild(guildId);
+        await service.SetSuggestButtonEmote(guild, emote);
+        return Ok();
+    }
+
+    /// <summary>
+    ///     Gets the emote mode for suggestions in a guild (0 = reactions, 1 = buttons)
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <returns>The emote mode</returns>
+    [HttpGet("emoteMode")]
+    public async Task<IActionResult> GetEmoteMode(ulong guildId)
+    {
+        var guild = client.GetGuild(guildId);
+        return Ok(await service.GetEmoteMode(guild));
+    }
+
+    /// <summary>
+    ///     Sets the emote mode for suggestions in a guild (0 = reactions, 1 = buttons)
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <param name="mode">The new emote mode</param>
+    /// <returns>An IActionResult indicating the result of the operation</returns>
+    [HttpPost("emoteMode")]
+    public async Task<IActionResult> SetEmoteMode(ulong guildId, [FromBody] int mode)
+    {
+        var guild = client.GetGuild(guildId);
+        await service.SetEmoteMode(guild, mode);
+        return Ok();
+    }
+
+    /// <summary>
+    ///     Gets the suggest button color for a guild
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <returns>The button style/color</returns>
+    [HttpGet("suggestButtonColor")]
+    public async Task<IActionResult> GetSuggestButtonColor(ulong guildId)
+    {
+        var guild = client.GetGuild(guildId);
+        return Ok(await service.GetSuggestButtonColor(guild));
+    }
+
+    /// <summary>
+    ///     Sets the suggest button color for a guild
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <param name="color">The new button color (1=Blue, 2=Grey, 3=Green, 4=Red)</param>
+    /// <returns>An IActionResult indicating the result of the operation</returns>
+    [HttpPost("suggestButtonColor")]
+    public async Task<IActionResult> SetSuggestButtonColor(ulong guildId, [FromBody] int color)
+    {
+        var guild = client.GetGuild(guildId);
+        await service.SetSuggestButtonColor(guild, color);
+        return Ok();
+    }
+
+    /// <summary>
+    ///     Gets the button style for a specific emote button
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <param name="buttonId">The button number (1-5)</param>
+    /// <returns>The button style for the specified emote</returns>
+    [HttpGet("emoteButtonStyle/{buttonId}")]
+    public async Task<IActionResult> GetEmoteButtonStyle(ulong guildId, int buttonId)
+    {
+        var guild = client.GetGuild(guildId);
+        return Ok(await service.GetButtonStyle(guild, buttonId));
+    }
+
+    /// <summary>
+    ///     Sets the button style for a specific emote button
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <param name="buttonId">The button number (1-5)</param>
+    /// <param name="color">The new button color (1=Blue, 2=Grey, 3=Green, 4=Red)</param>
+    /// <returns>An IActionResult indicating the result of the operation</returns>
+    [HttpPost("emoteButtonStyle/{buttonId}")]
+    public async Task<IActionResult> SetEmoteButtonStyle(ulong guildId, int buttonId, [FromBody] int color)
+    {
+        var guild = client.GetGuild(guildId);
+        await service.SetButtonType(guild, buttonId, color);
+        return Ok();
+    }
+
+    /// <summary>
     ///     Clears all suggestions for a guild
     /// </summary>
     /// <param name="guildId">The ID of the guild</param>

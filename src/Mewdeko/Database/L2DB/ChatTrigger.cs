@@ -70,6 +70,17 @@ namespace DataModel
 		[Column("XpReward"                                                                                                       )] public int       XpReward                      { get; set; } // integer
 		[Column("RequiredXpLevel"                                                                                                )] public int       RequiredXpLevel               { get; set; } // integer
 		[Column("RequirementFailMessage"                                                                                         )] public string?   RequirementFailMessage        { get; set; } // text
+		[Column("EventRoleId"                                                                                                    )] public ulong     EventRoleId                   { get; set; } // numeric(20,0)
+		[Column("StaffOnly"                                                                                                      )] public bool      StaffOnly                     { get; set; } // boolean
+		[Column("NsfwOnly"                                                                                                       )] public bool      NsfwOnly                      { get; set; } // boolean
+		[Column("AllowedChannelIds"                                                                                              )] public string?   AllowedChannelIds             { get; set; } // text
+		[Column("DeniedChannelIds"                                                                                               )] public string?   DeniedChannelIds              { get; set; } // text
+		[Column("DeniedRoleIds"                                                                                                  )] public string?   DeniedRoleIds                 { get; set; } // text
+		[Column("Anonymous"                                                                                                      )] public bool      Anonymous                     { get; set; } // boolean
+		[Column("ReplyChannelId"                                                                                                 )] public ulong     ReplyChannelId                { get; set; } // numeric(20,0)
+		[Column("CreatorId"                                                                                                      )] public ulong     CreatorId                     { get; set; } // numeric(20,0)
+		[Column("PromptQuestion"                                                                                                 )] public string?   PromptQuestion                { get; set; } // text
+		[Column("PromptTimeoutSeconds"                                                                                           )] public int       PromptTimeoutSeconds          { get; set; } // integer
 		[Column("DateAdded"                                                                                                      )] public DateTime? DateAdded                     { get; set; } // timestamp (6) without time zone
 	}
 }

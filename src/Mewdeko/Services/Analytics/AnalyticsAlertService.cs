@@ -356,8 +356,8 @@ public sealed partial class AnalyticsAlertService : INService, IReadyExecutor, I
             return "Minimum samples cannot be negative.";
         if (rule.GroupBy is { Length: > 32 })
             return "Group by is limited to 32 characters.";
-        if (!IsDiscordWebhook(rule.WebhookUrl))
-            return "The webhook must be a Discord webhook URL.";
+        if (!IsWebhookUrl(rule.WebhookUrl))
+            return "The webhook must be a Fluxer webhook URL.";
         if (rule.QuietStartMinute is < 0 or > 1439 || rule.QuietEndMinute is < 0 or > 1439)
             return "Quiet window minutes must be between 0 and 1439.";
         if (rule.QuietStartMinute is null != rule.QuietEndMinute is null)
@@ -367,10 +367,10 @@ public sealed partial class AnalyticsAlertService : INService, IReadyExecutor, I
     }
 
     /// <summary>
-    ///     Whether a URL points at a Discord webhook.
+    ///     Whether a URL points at a Fluxer webhook.
     /// </summary>
     /// <param name="url">The URL.</param>
-    public static bool IsDiscordWebhook(string? url)
+    public static bool IsWebhookUrl(string? url)
     {
         return !string.IsNullOrWhiteSpace(url) && WebhookPattern().IsMatch(url.Trim());
     }
@@ -384,7 +384,7 @@ public sealed partial class AnalyticsAlertService : INService, IReadyExecutor, I
     /// <returns>Whether Discord accepted the message.</returns>
     public async Task<bool> PostWebhookAsync(string webhookUrl, string payloadJson, ulong? threadId = null)
     {
-        if (!IsDiscordWebhook(webhookUrl)) return false;
+        if (!IsWebhookUrl(webhookUrl)) return false;
 
         var url = webhookUrl.Trim() + "?wait=true";
         if (threadId is { } thread) url += "&thread_id=" + thread;
@@ -908,7 +908,7 @@ public sealed partial class AnalyticsAlertService : INService, IReadyExecutor, I
         };
     }
 
-    [GeneratedRegex(@"^https://(canary\.|ptb\.)?discord(app)?\.com/api/webhooks/\d+/[A-Za-z0-9_\-]+$")]
+    [GeneratedRegex(@"^https?://\S+/webhooks/\d+/[A-Za-z0-9_\-]+$")]
     private static partial Regex WebhookPattern();
 
     private sealed record WindowValue(double? Value, double Samples);

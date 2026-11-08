@@ -38,6 +38,7 @@
   "module_description_gambling": "Bet on dice rolls, blackjack, slots, coinflips and others",
   "module_description_games": "Play trivia, nunchi, hangman, connect4 and other games",
   "module_description_giveaways": "Start giveaways",
+  "module_description_globallist": "Report users to a shared list that opted-in communities act on",
   "module_description_help": "Get command help, descriptions and usage examples",
   "module_description_highlights": "Get notified in DMs when a user says a word or phrase",
   "module_description_instancemanagement": "Manage linked bot instances from one place",

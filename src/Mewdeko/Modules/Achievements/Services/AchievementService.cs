@@ -21,16 +21,6 @@ namespace Mewdeko.Modules.Achievements.Services;
 public sealed partial class AchievementService : INService, IReadyExecutor, IUnloadableService
 {
     /// <summary>
-    ///     Most achievements a server can make.
-    /// </summary>
-    public const int MaxCustomAchievements = 200;
-
-    /// <summary>
-    ///     Most categories a server can make.
-    /// </summary>
-    public const int MaxCustomCategories = 25;
-
-    /// <summary>
     ///     Longest achievement or category name.
     /// </summary>
     public const int NameLength = 80;
@@ -437,7 +427,7 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
         var customs = await db.CustomAchievements.Where(x => x.GuildId == guildId).ToListAsync();
         var categories = await db.AchievementCategories.Where(x => x.GuildId == guildId).ToListAsync();
         var uploads = await db.AchievementIconUploads
-            .Where(x => x.GuildId == guildId)
+            .Where(x => x.GuildId == guildId && x.Kind != AchievementIconService.MemberCardKind)
             .Select(x => new { x.Id, x.PublicUrl, x.Kind })
             .ToListAsync();
         var uploadUrls = uploads.ToDictionary(x => x.Id, x => x.PublicUrl ?? IconUploadPath(guildId, x.Id));
@@ -511,6 +501,8 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
                 Feat = builtIn.Feat,
                 Keyword = builtIn.Keyword,
                 RoleRewardId = o?.RoleRewardId,
+                RoleRemoveId = o?.RoleRemoveId,
+                UnlockMessage = o?.UnlockMessage,
                 CurrencyReward = o?.CurrencyReward ?? 0,
                 XpReward = o?.XpReward ?? 0,
                 IsGlobal = builtIn.IsGlobal,
@@ -544,7 +536,10 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
                 Threshold = custom.Threshold,
                 Keyword = custom.Keyword,
                 ChannelId = custom.ChannelId,
+                TargetRoleId = custom.TargetRoleId,
                 RoleRewardId = custom.RoleRewardId,
+                RoleRemoveId = custom.RoleRemoveId,
+                UnlockMessage = custom.UnlockMessage,
                 CurrencyReward = custom.CurrencyReward,
                 XpReward = custom.XpReward,
                 IsCustom = true,
@@ -625,6 +620,12 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
             AchievementMetric.TenureDays => $"Stay in the community for {threshold:N0} {unit}",
             AchievementMetric.XpLevel => $"Reach XP level {threshold:N0}",
             AchievementMetric.NetWorth => $"Have a net worth of {threshold:N0}",
+            AchievementMetric.ThreadsCreated => $"Create {threshold:N0} {unit}",
+            AchievementMetric.ThreadsJoined => $"Join {threshold:N0} {unit}",
+            AchievementMetric.GiveawaysEntered => $"Enter {threshold:N0} {unit}",
+            AchievementMetric.ShopPurchases => $"Buy {threshold:N0} {(threshold == 1 ? "item" : "items")} from the shop",
+            AchievementMetric.BirthdaySet => "Set your birthday",
+            AchievementMetric.RoleReceived => "Receive a specific role",
             _ => $"Reach {threshold:N0} {unit}{qualifier}"
         };
     }
@@ -653,7 +654,7 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
             return AchievementResult<AchievementDefinition>.Fail(AchievementError.NotFound);
 
         var error = ValidateCommon(guild, draft.Name, draft.Description, draft.Points, draft.RoleRewardId,
-            draft.CurrencyReward, draft.XpReward, allowEmptyName: true);
+            draft.CurrencyReward, draft.XpReward, draft.RoleRemoveId, draft.UnlockMessage, allowEmptyName: true);
         if (error != AchievementError.None)
             return AchievementResult<AchievementDefinition>.Fail(error);
         var (iconError, icon) = await NormalizeIconAsync(guild.Id, draft.Icon);
@@ -682,6 +683,8 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
             row.Points = draft.Points is { } p && p != builtIn.Points ? p : null;
             row.Hidden = draft.Hidden is { } h && h != builtIn.Hidden ? h : null;
             row.RoleRewardId = draft.RoleRewardId is > 0 ? draft.RoleRewardId : null;
+            row.RoleRemoveId = draft.RoleRemoveId is > 0 ? draft.RoleRemoveId : null;
+            row.UnlockMessage = Clean(draft.UnlockMessage);
             row.CurrencyReward = Math.Max(0, draft.CurrencyReward);
             row.XpReward = Math.Max(0, draft.XpReward);
             row.DateModified = DateTime.UtcNow;
@@ -848,10 +851,6 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
         try
         {
             await using var db = await dbFactory.CreateConnectionAsync();
-            var count = await db.CustomAchievements.CountAsync(x => x.GuildId == guild.Id);
-            if (count >= MaxCustomAchievements)
-                return AchievementResult<AchievementDefinition>.Fail(AchievementError.TooManyAchievements);
-
             var position = await db.CustomAchievements
                 .Where(x => x.GuildId == guild.Id)
                 .Select(x => (int?)x.Position)
@@ -1009,9 +1008,6 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
             return AchievementResult<AchievementCategory>.Fail(iconError);
 
         await using var db = await dbFactory.CreateConnectionAsync();
-        if (await db.AchievementCategories.CountAsync(x => x.GuildId == guildId) >= MaxCustomCategories)
-            return AchievementResult<AchievementCategory>.Fail(AchievementError.TooManyCategories);
-
         var row = new AchievementCategory
         {
             GuildId = guildId,
@@ -1138,7 +1134,10 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
                 Threshold = row.Threshold,
                 Keyword = row.Keyword,
                 ChannelId = row.ChannelId,
+                TargetRoleId = row.TargetRoleId,
                 RoleRewardId = row.RoleRewardId,
+                RoleRemoveId = row.RoleRemoveId,
+                UnlockMessage = row.UnlockMessage,
                 CurrencyReward = row.CurrencyReward,
                 XpReward = row.XpReward
             };
@@ -1166,6 +1165,8 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
             Points = row?.Points,
             Hidden = row?.Hidden,
             RoleRewardId = row?.RoleRewardId,
+            RoleRemoveId = row?.RoleRemoveId,
+            UnlockMessage = row?.UnlockMessage,
             CurrencyReward = row?.CurrencyReward ?? 0,
             XpReward = row?.XpReward ?? 0
         };
@@ -1179,9 +1180,10 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
     /// <param name="roleId">New reward role, 0 to clear, or null to keep.</param>
     /// <param name="currency">New currency reward, or null to keep.</param>
     /// <param name="xp">New XP reward, or null to keep.</param>
+    /// <param name="takeRoleId">New role to take away, 0 to clear, or null to keep.</param>
     /// <returns>The resolved achievement.</returns>
     public async Task<AchievementResult<AchievementDefinition>> SetRewardsAsync(SocketGuild guild, string key,
-        ulong? roleId, long? currency, int? xp)
+        ulong? roleId, long? currency, int? xp, ulong? takeRoleId = null)
     {
         if (AchievementCatalog.TryParseCustomKey(key, out var id))
         {
@@ -1190,6 +1192,8 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
                 return AchievementResult<AchievementDefinition>.Fail(AchievementError.NotFound);
             if (roleId is not null)
                 draft.RoleRewardId = roleId == 0 ? null : roleId;
+            if (takeRoleId is not null)
+                draft.RoleRemoveId = takeRoleId == 0 ? null : takeRoleId;
             draft.CurrencyReward = currency ?? draft.CurrencyReward;
             draft.XpReward = xp ?? draft.XpReward;
             return await UpdateCustomAsync(guild, id, draft);
@@ -1200,8 +1204,36 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
             return AchievementResult<AchievementDefinition>.Fail(AchievementError.NotFound);
         if (roleId is not null)
             overrideDraft.RoleRewardId = roleId == 0 ? null : roleId;
+        if (takeRoleId is not null)
+            overrideDraft.RoleRemoveId = takeRoleId == 0 ? null : takeRoleId;
         overrideDraft.CurrencyReward = currency ?? overrideDraft.CurrencyReward;
         overrideDraft.XpReward = xp ?? overrideDraft.XpReward;
+        return await SaveOverrideAsync(guild, key, overrideDraft);
+    }
+
+    /// <summary>
+    ///     Sets the unlock message of one achievement, built in or server made.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="key">The achievement key.</param>
+    /// <param name="message">Text or embed JSON with placeholders, or null to use the community's message.</param>
+    /// <returns>The resolved achievement.</returns>
+    public async Task<AchievementResult<AchievementDefinition>> SetUnlockMessageAsync(SocketGuild guild, string key,
+        string? message)
+    {
+        if (AchievementCatalog.TryParseCustomKey(key, out var id))
+        {
+            var draft = await GetCustomDraftAsync(guild.Id, id);
+            if (draft is null)
+                return AchievementResult<AchievementDefinition>.Fail(AchievementError.NotFound);
+            draft.UnlockMessage = message;
+            return await UpdateCustomAsync(guild, id, draft);
+        }
+
+        var overrideDraft = await GetOverrideDraftAsync(guild.Id, key);
+        if (overrideDraft is null)
+            return AchievementResult<AchievementDefinition>.Fail(AchievementError.NotFound);
+        overrideDraft.UnlockMessage = message;
         return await SaveOverrideAsync(guild, key, overrideDraft);
     }
 
@@ -1258,7 +1290,7 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
     private async Task<AchievementError> ValidateCustomAsync(SocketGuild guild, CustomAchievementDraft draft)
     {
         var error = ValidateCommon(guild, draft.Name, draft.Description, draft.Points, draft.RoleRewardId,
-            draft.CurrencyReward, draft.XpReward, allowEmptyName: false);
+            draft.CurrencyReward, draft.XpReward, draft.RoleRemoveId, draft.UnlockMessage, allowEmptyName: false);
         if (error != AchievementError.None)
             return error;
 
@@ -1274,6 +1306,9 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
                     return AchievementError.MetricInvalid;
                 if (draft.Threshold <= 0)
                     return AchievementError.ThresholdInvalid;
+                if (draft.Metric == AchievementMetric.RoleReceived &&
+                    (draft.TargetRoleId is not > 0 || guild.GetRole(draft.TargetRoleId.Value) is null))
+                    return AchievementError.TargetRoleMissing;
                 break;
             case AchievementTrigger.Keyword:
             case AchievementTrigger.Reaction:
@@ -1298,16 +1333,17 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
     }
 
     private AchievementError ValidateCommon(SocketGuild guild, string? name, string? description, int? points,
-        ulong? roleId, long currency, int xp, bool allowEmptyName)
+        ulong? roleId, long currency, int xp, ulong? roleRemoveId, string? unlockMessage, bool allowEmptyName)
     {
         var trimmed = name?.Trim() ?? "";
         if (!allowEmptyName && trimmed.Length == 0 || trimmed.Length > NameLength)
             return AchievementError.NameInvalid;
-        if ((description?.Length ?? 0) > DescriptionLength)
+        if ((description?.Length ?? 0) > DescriptionLength || (unlockMessage?.Length ?? 0) > MessageLength)
             return AchievementError.TextTooLong;
         if (points is < 0 or > MaxPoints || currency < 0 || currency > MaxReward || xp < 0 || xp > MaxReward)
             return AchievementError.RewardInvalid;
-        if (roleId is > 0 && !CanAssign(guild, roleId.Value))
+        if (roleId is > 0 && !CanAssign(guild, roleId.Value) ||
+            roleRemoveId is > 0 && !CanAssign(guild, roleRemoveId.Value))
             return AchievementError.RoleNotAssignable;
         return AchievementError.None;
     }
@@ -1326,7 +1362,8 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
             return (AchievementError.None, stored);
 
         await using var db = await dbFactory.CreateConnectionAsync();
-        var owned = await db.AchievementIconUploads.AnyAsync(x => x.Id == uploadId && x.GuildId == guildId);
+        var owned = await db.AchievementIconUploads.AnyAsync(x =>
+            x.Id == uploadId && x.GuildId == guildId && x.Kind != AchievementIconService.MemberCardKind);
         return owned ? (AchievementError.None, stored) : (AchievementError.IconInvalid, null);
     }
 
@@ -1372,7 +1409,13 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
         row.ChannelId = draft.Trigger is AchievementTrigger.Keyword or AchievementTrigger.Reaction && draft.ChannelId is > 0
             ? draft.ChannelId
             : null;
+        row.TargetRoleId = draft is { Trigger: AchievementTrigger.Metric, Metric: AchievementMetric.RoleReceived } &&
+                           draft.TargetRoleId is > 0
+            ? draft.TargetRoleId
+            : null;
         row.RoleRewardId = draft.RoleRewardId is > 0 ? draft.RoleRewardId : null;
+        row.RoleRemoveId = draft.RoleRemoveId is > 0 ? draft.RoleRemoveId : null;
+        row.UnlockMessage = Clean(draft.UnlockMessage);
         row.CurrencyReward = Math.Max(0, draft.CurrencyReward);
         row.XpReward = Math.Max(0, draft.XpReward);
     }
@@ -1380,8 +1423,8 @@ public sealed partial class AchievementService : INService, IReadyExecutor, IUnl
     private static bool IsDefault(AchievementOverride row)
     {
         return !row.Disabled && row.Name is null && row.Description is null && row.Icon is null &&
-               row.Points is null && row.Hidden is null && row.RoleRewardId is null && row.CurrencyReward == 0 &&
-               row.XpReward == 0;
+               row.Points is null && row.Hidden is null && row.RoleRewardId is null && row.RoleRemoveId is null &&
+               row.UnlockMessage is null && row.CurrencyReward == 0 && row.XpReward == 0;
     }
 
     private static string? Clean(string? value)

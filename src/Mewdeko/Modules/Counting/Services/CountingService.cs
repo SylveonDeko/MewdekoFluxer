@@ -16,6 +16,8 @@ namespace Mewdeko.Modules.Counting.Services;
 /// </summary>
 public class CountingService : INService, IReadyExecutor
 {
+    private static readonly long[] DefaultMilestones = [100, 250, 500, 1000, 2500, 5000, 10000];
+
     // Cache keys
     private const string COUNTING_CHANNEL_CACHE_KEY = "counting_channel_{0}";
     private const string COUNTING_CONFIG_CACHE_KEY = "counting_config_{0}";
@@ -730,18 +732,43 @@ public class CountingService : INService, IReadyExecutor
     /// </summary>
     private async Task CheckForMilestonesAsync(ulong channelId, long number, ulong userId)
     {
-        var milestoneTypes = new[]
-        {
-            100, 500, 1000, 5000, 10000
-        };
+        var config = await GetCountingConfigAsync(channelId);
+        if (config != null && IsMilestone(config, number))
+            await HandleMilestoneAsync(channelId, number, userId, (int)Math.Min(number, int.MaxValue));
+    }
 
-        foreach (var milestone in milestoneTypes)
-        {
-            if (number % milestone == 0)
-            {
-                await HandleMilestoneAsync(channelId, number, userId, milestone);
-            }
-        }
+    /// <summary>
+    /// Whether a number is a milestone for the channel, using the default list when it has none of its own.
+    /// </summary>
+    private static bool IsMilestone(CountingChannelConfig config, long number)
+    {
+        if (string.IsNullOrWhiteSpace(config.Milestones))
+            return DefaultMilestones.Contains(number);
+
+        return config.Milestones.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Any(x => long.TryParse(x, out var value) && value == number);
+    }
+
+    /// <summary>
+    /// Sends one of the channel's custom messages after a count, with the count's placeholders filled in.
+    /// </summary>
+    private async Task SendCountingMessageAsync(Message message, Channel channel, string? template,
+        CountingResult result)
+    {
+        if (string.IsNullOrWhiteSpace(template) || channel.GuildId is not { } guildId) return;
+
+        var number = result.Success ? result.Number : result.ActualNumber;
+        var replacer = new ReplacementBuilder()
+            .WithOverride("%number%", () => number.ToString())
+            .WithOverride("%expected%", () => result.ExpectedNumber.ToString())
+            .WithDefault(message.Author, channel, client.GetGuild(guildId), client)
+            .Build();
+
+        var rendered = replacer.Replace(template) ?? template;
+        if (SmartEmbed.TryParse(rendered, guildId, out var embeds, out var plainText))
+            await channel.SendAsync(plainText, embeds: embeds);
+        else
+            await channel.SendAsync(rendered.SanitizeMentions(true));
     }
 
     /// <summary>
@@ -944,6 +971,22 @@ public class CountingService : INService, IReadyExecutor
                     await Task.Delay(2000); // Give time for users to see the error
                     await message.DeleteAsync();
                 }
+            }
+
+            try
+            {
+                if (!result.Success)
+                    await SendCountingMessageAsync(message, textChannel, config.FailureMessage, result);
+                else
+                {
+                    await SendCountingMessageAsync(message, textChannel, config.SuccessMessage, result);
+                    if (IsMilestone(config, result.Number))
+                        await SendCountingMessageAsync(message, textChannel, config.MilestoneMessage, result);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Error sending a counting message in channel {ChannelId}", message.Channel.Id);
             }
         }
         catch (Exception ex)
@@ -1367,16 +1410,7 @@ public class CountingService : INService, IReadyExecutor
     {
         var config = await GetCountingConfigAsync(channelId);
         if (config?.Milestones == null)
-            return
-            [
-                100,
-                250,
-                500,
-                1000,
-                2500,
-                5000,
-                10000
-            ];
+            return [.. DefaultMilestones];
 
         return config.Milestones.Split(',', StringSplitOptions.RemoveEmptyEntries)
             .Select(long.Parse)

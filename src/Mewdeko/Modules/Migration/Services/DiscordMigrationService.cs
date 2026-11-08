@@ -519,6 +519,12 @@ public sealed class DiscordMigrationService(
             foreach (var source in data.Rows)
             {
                 var row = ToRow(data, source);
+                if (rule.SkipRows.Any(x => x.Matches(row)))
+                {
+                    dropped++;
+                    continue;
+                }
+
                 var oldKey = rule.Key is not null && row.TryGetValue(rule.Key, out var keyNode) && keyNode is not null
                     ? MigrationMapper.NodeText(keyNode)
                     : null;

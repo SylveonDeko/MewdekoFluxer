@@ -3,8 +3,12 @@ using System.Text;
 using DataModel;
 using LinqToDB;
 using LinqToDB.Async;
+using Mewdeko.Database.Enums;
 using Mewdeko.Modules.Achievements.Common;
+using Mewdeko.Modules.CardDesigns.Services;
+using Mewdeko.Services;
 using Mewdeko.Services.Strings;
+using SkiaSharp;
 
 namespace Mewdeko.Modules.Achievements.Services;
 
@@ -20,6 +24,7 @@ public sealed class AchievementViewService : INService
 
     private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
+    private readonly CardDesignService designs;
     private readonly AchievementCardRenderer renderer;
     private readonly AchievementService service;
     private readonly GeneratedBotStrings strings;
@@ -32,9 +37,12 @@ public sealed class AchievementViewService : INService
     /// <param name="strings">Localized bot strings.</param>
     /// <param name="client">The Fluxer client.</param>
     /// <param name="dbFactory">Database connection factory.</param>
+    /// <param name="designs">The card design library.</param>
     public AchievementViewService(AchievementService service, AchievementCardRenderer renderer,
-        GeneratedBotStrings strings, FluxerClient client, IDataConnectionFactory dbFactory)
+        GeneratedBotStrings strings, FluxerClient client, IDataConnectionFactory dbFactory,
+        CardDesignService designs)
     {
+        this.designs = designs;
         this.service = service;
         this.renderer = renderer;
         this.strings = strings;
@@ -101,7 +109,7 @@ public sealed class AchievementViewService : INService
         }
 
         var embed = new EmbedBuilder()
-            .WithColor(TierColor(summary))
+            .WithColor(TierColor(summary, guild.Id))
             .WithAuthor(target.DisplayName, target.GetDisplayAvatarUrl())
             .WithTitle(strings.AchievementOverviewTitle(guild.Id))
             .WithDescription(description.ToString());
@@ -283,7 +291,7 @@ public sealed class AchievementViewService : INService
         var description = headline + "\n\n" + string.Join("\n\n", progress.Select(p => ProgressLine(guildId, p, true)));
 
         return new EmbedBuilder()
-            .WithColor(tier.Grade is { } grade ? new Color(AchievementCatalog.GetGrade(grade).Color) : Mewdeko.OkColor)
+            .WithColor(tier.Grade is { } grade ? new Color(AchievementCatalog.GetGrade(grade).Color) : GuildEmbedColorService.OkFor(guildId))
             .WithAuthor(target.DisplayName ?? target.Username, target.GetAvatarOrDefaultUrl(128))
             .WithTitle(strings.AchievementGlobalTitle(guildId))
             .WithDescription(description);
@@ -352,7 +360,8 @@ public sealed class AchievementViewService : INService
     public async Task<EmbedBuilder> StatsAsync(SocketGuild guild, SocketGuildMember target)
     {
         var metrics = AchievementCatalog.Metrics
-            .Where(m => m.AllowCustom && m.Metric is not (AchievementMetric.Unlocked or AchievementMetric.Points))
+            .Where(m => m.AllowCustom && m.Metric is not (AchievementMetric.Unlocked or AchievementMetric.Points
+                or AchievementMetric.RoleReceived))
             .Select(m => m.Metric)
             .ToHashSet();
         var values = (await service.ComputeMetricsAsync(guild, [target.Id], metrics)).GetValueOrDefault(target.Id) ?? [];
@@ -466,8 +475,12 @@ public sealed class AchievementViewService : INService
             : strings.AchievementOverviewTopTier(localeGuildId);
 
         var name = guild?.GetUser(target.Id)?.DisplayName ?? target.DisplayName ?? target.Username;
+        using var backdrop = guild is null
+            ? null
+            : await LoadBackdropAsync(guild.Id, target.Id);
         return await renderer.RenderAsync(new AchievementCardRenderer.CardData
         {
+            Backdrop = backdrop,
             Name = name,
             AvatarUrl = target.GetAvatarOrDefaultUrl(256),
             Scope = scope,
@@ -480,6 +493,12 @@ public sealed class AchievementViewService : INService
             ProgressLabel = progressLabel,
             EmptySlotLabel = strings.AchievementCardEmptySlot(localeGuildId)
         });
+    }
+
+    private async Task<SKBitmap?> LoadBackdropAsync(ulong guildId, ulong userId)
+    {
+        var design = await designs.ResolveAsync(guildId, userId, CardDesignTarget.Achievement);
+        return design is null ? null : await designs.LoadAchievementBackdropAsync(design);
     }
 
     /// <summary>
@@ -623,10 +642,6 @@ public sealed class AchievementViewService : INService
             AchievementError.MetricInvalid => strings.AchievementErrorMetric(guildId),
             AchievementError.ThresholdInvalid => strings.AchievementErrorThreshold(guildId),
             AchievementError.KeywordMissing => strings.AchievementErrorKeyword(guildId),
-            AchievementError.TooManyAchievements => strings.AchievementErrorTooMany(guildId,
-                AchievementService.MaxCustomAchievements),
-            AchievementError.TooManyCategories => strings.AchievementErrorTooManyCategories(guildId,
-                AchievementService.MaxCustomCategories),
             AchievementError.RoleNotAssignable => strings.AchievementErrorRole(guildId),
             AchievementError.CategoryInvalid => strings.AchievementErrorCategory(guildId),
             AchievementError.IconInvalid => strings.AchievementErrorIcon(guildId),
@@ -635,12 +650,13 @@ public sealed class AchievementViewService : INService
             AchievementError.RewardInvalid => strings.AchievementErrorReward(guildId),
             AchievementError.AlreadyInState => strings.AchievementErrorState(guildId),
             AchievementError.BadgeInvalid => strings.AchievementErrorBadge(guildId),
+            AchievementError.TargetRoleMissing => strings.AchievementErrorTargetRole(guildId),
             _ => strings.AchievementErrorUnknown(guildId)
         };
     }
 
-    private static Color TierColor(AchievementMemberSummary summary)
+    private static Color TierColor(AchievementMemberSummary summary, ulong guildId)
     {
-        return summary.Tier.Grade is { } grade ? new Color(AchievementCatalog.GetGrade(grade).Color) : Mewdeko.OkColor;
+        return summary.Tier.Grade is { } grade ? new Color(AchievementCatalog.GetGrade(grade).Color) : GuildEmbedColorService.OkFor(guildId);
     }
 }

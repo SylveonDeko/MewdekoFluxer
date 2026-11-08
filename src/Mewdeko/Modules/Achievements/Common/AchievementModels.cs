@@ -345,16 +345,6 @@ public enum AchievementError
     KeywordMissing,
 
     /// <summary>
-    ///     The server has as many achievements as it can.
-    /// </summary>
-    TooManyAchievements,
-
-    /// <summary>
-    ///     The server has as many categories as it can.
-    /// </summary>
-    TooManyCategories,
-
-    /// <summary>
     ///     The reward role cannot be given out by the bot.
     /// </summary>
     RoleNotAssignable,
@@ -370,14 +360,14 @@ public enum AchievementError
     TooManyUploads,
 
     /// <summary>
-    ///     The server already has the most card designs allowed.
-    /// </summary>
-    TooManyCards,
-
-    /// <summary>
     ///     The server already has the most card designer images allowed.
     /// </summary>
     TooManyCardImages,
+
+    /// <summary>
+    ///     The community already has the most member design images allowed.
+    /// </summary>
+    TooManyMemberImages,
 
     /// <summary>
     ///     The category key is unknown.
@@ -397,7 +387,12 @@ public enum AchievementError
     /// <summary>
     ///     The badge is not owned or the slot is out of range.
     /// </summary>
-    BadgeInvalid
+    BadgeInvalid,
+
+    /// <summary>
+    ///     A role achievement has no role to wait for.
+    /// </summary>
+    TargetRoleMissing
 }
 
 /// <summary>
@@ -505,9 +500,24 @@ public sealed class CustomAchievementDraft
     public ulong? ChannelId { get; set; }
 
     /// <summary>
+    ///     The role a role achievement waits for.
+    /// </summary>
+    public ulong? TargetRoleId { get; set; }
+
+    /// <summary>
     ///     Role handed out on unlock.
     /// </summary>
     public ulong? RoleRewardId { get; set; }
+
+    /// <summary>
+    ///     Role taken away on unlock.
+    /// </summary>
+    public ulong? RoleRemoveId { get; set; }
+
+    /// <summary>
+    ///     Unlock message source for this achievement, or null to use the community's.
+    /// </summary>
+    public string? UnlockMessage { get; set; }
 
     /// <summary>
     ///     Currency handed out on unlock.
@@ -569,4 +579,14 @@ public sealed class AchievementOverrideDraft
     ///     XP handed out on unlock.
     /// </summary>
     public int XpReward { get; set; }
+
+    /// <summary>
+    ///     Role taken away on unlock.
+    /// </summary>
+    public ulong? RoleRemoveId { get; set; }
+
+    /// <summary>
+    ///     Unlock message source for this achievement, or null to use the community's.
+    /// </summary>
+    public string? UnlockMessage { get; set; }
 }

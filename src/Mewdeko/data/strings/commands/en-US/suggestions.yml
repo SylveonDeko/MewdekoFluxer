@@ -498,6 +498,29 @@ suggestmessage_string_2:
       name: embed
       optional: false
       type: string
+suggestanonymous:
+  args:
+    - ''
+  desc: 'Toggles whether suggestions hide who made them.'
+  params: [ ]
+suggestvotecolor:
+  args:
+    - number
+  desc: 'Turns a suggestion green when upvotes lead by this many votes and red when downvotes do. 0 turns it off.'
+  params:
+    - desc: 'The vote lead needed, or 0 to turn it off.'
+      name: threshold
+      optional: false
+      type: int
+suggestwho:
+  args:
+    - num
+  desc: 'Privately tells staff who made a suggestion.'
+  params:
+    - desc: 'The number of the suggestion to look up.'
+      name: num
+      optional: false
+      type: ulong
 suggestmotes:
   args:
     - '[_]'

@@ -350,6 +350,48 @@ public partial class Suggestions
         }
 
         /// <summary>
+        ///     Sets how many votes one side has to lead by to recolour a suggestion embed.
+        /// </summary>
+        /// <param name="threshold">The vote lead needed, or 0 to turn it off.</param>
+        [Cmd]
+        [Aliases]
+        [RequireContext(ContextType.Guild)]
+        [UserPerm(GuildPermission.Administrator)]
+        public async Task SuggestVoteColor(int threshold)
+        {
+            if (threshold is < 0 or > 1000)
+            {
+                await ctx.Channel.SendErrorAsync(Strings.SuggestVoteColorInvalid(ctx.Guild.Id), Config)
+                    .ConfigureAwait(false);
+                return;
+            }
+
+            await Service.SetVoteColorThreshold(ctx.Guild.Id, threshold).ConfigureAwait(false);
+            await ctx.Channel.SendConfirmAsync(threshold == 0
+                ? Strings.SuggestVoteColorOff(ctx.Guild.Id)
+                : Strings.SuggestVoteColorSet(ctx.Guild.Id, threshold)).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        ///     Toggles whether suggestions hide who made them.
+        /// </summary>
+        /// <remarks>
+        ///     Staff can still look up the author with the suggestwho command.
+        ///     Requires Administrator permissions.
+        /// </remarks>
+        [Cmd]
+        [Aliases]
+        [RequireContext(ContextType.Guild)]
+        [UserPerm(GuildPermission.Administrator)]
+        public async Task SuggestAnonymous()
+        {
+            var current = await Service.GetAnonymousSuggestions(ctx.Guild);
+            await Service.SetAnonymousSuggestions(ctx.Guild, !current).ConfigureAwait(false);
+            await ctx.Channel.SendConfirmAsync(Strings.AnonymousSuggestionsSet(ctx.Guild.Id, !current))
+                .ConfigureAwait(false);
+        }
+
+        /// <summary>
         ///     Sets or updates the deny message for suggestions.
         /// </summary>
         /// <param name="embed">The message or embed code. Use "-" to reset to the default message.</param>

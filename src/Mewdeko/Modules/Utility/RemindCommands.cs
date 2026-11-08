@@ -1,5 +1,7 @@
 ﻿
+using Humanizer;
 using Mewdeko.Common.Attributes.TextCommands;
+using Mewdeko.Common.TypeReaders.Models;
 using Mewdeko.Modules.Utility.Services;
 
 namespace Mewdeko.Modules.Utility;
@@ -110,6 +112,83 @@ public partial class Utility
         }
 
         /// <summary>
+        ///     Makes one of your reminders repeat on an interval, or stops it repeating.
+        /// </summary>
+        /// <param name="index">The number of the reminder in your reminder list.</param>
+        /// <param name="interval">How often to repeat, at least one hour. Use off to stop repeating.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        [Cmd]
+        [Aliases]
+        public async Task RemindRepeat(int index, string interval)
+        {
+            var guildId = ctx.Guild?.Id ?? 0;
+            var stop = interval.Equals("off", StringComparison.OrdinalIgnoreCase);
+            var time = TimeSpan.Zero;
+            if (!stop)
+            {
+                try
+                {
+                    time = StoopidTime.FromInput(interval).Time;
+                }
+                catch (ArgumentException)
+                {
+                }
+
+                if (time < RemindService.MinRepeat || time > TimeSpan.FromDays(60))
+                {
+                    await ReplyErrorAsync(Strings.RemindRepeatRange(guildId)).ConfigureAwait(false);
+                    return;
+                }
+            }
+
+            if (!await Service.SetRepeatAsync(ctx.User.Id, index - 1, stop ? null : time))
+            {
+                await ReplyErrorAsync(Strings.ReminderNotExist(guildId)).ConfigureAwait(false);
+                return;
+            }
+
+            await ReplyConfirmAsync(stop
+                ? Strings.RemindRepeatCleared(guildId, index)
+                : Strings.RemindRepeatSet(guildId, index, time.Humanize())).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        ///     Subscribes you to someone's reminder.
+        /// </summary>
+        /// <param name="id">The reminder id shown in the reminder list.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        [Cmd]
+        [Aliases]
+        public async Task RemindSubscribe(int id)
+        {
+            var guildId = ctx.Guild?.Id ?? 0;
+            var result = await Service.SubscribeAsync(ctx.User.Id, id);
+            await ReplyConfirmAsync(result switch
+            {
+                RemindService.SubscribeResult.Subscribed => Strings.RemindSubscribed(guildId),
+                RemindService.SubscribeResult.AlreadySubscribed => Strings.RemindAlreadySubscribed(guildId),
+                RemindService.SubscribeResult.Owner => Strings.RemindOwnReminder(guildId),
+                _ => Strings.ReminderNotExist(guildId)
+            }).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        ///     Removes your subscription from a reminder.
+        /// </summary>
+        /// <param name="id">The reminder id shown in the reminder list.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        [Cmd]
+        [Aliases]
+        public async Task RemindUnsubscribe(int id)
+        {
+            var guildId = ctx.Guild?.Id ?? 0;
+            var removed = await Service.UnsubscribeAsync(ctx.User.Id, id);
+            await ReplyConfirmAsync(removed
+                ? Strings.RemindUnsubscribed(guildId)
+                : Strings.RemindNotSubscribed(guildId)).ConfigureAwait(false);
+        }
+
+        /// <summary>
         ///     Lists all reminders for the current user.
         /// </summary>
         /// <returns>A task representing the asynchronous operation.</returns>
@@ -155,8 +234,10 @@ public partial class Utility
                     pageBuilder.AddField(
                         $"#{++i} {rem.When:HH:mm yyyy-MM-dd} UTC (in {(int)diff.TotalHours}h {diff.Minutes}m)",
                         $"""
+                         `Id:` {rem.Id}
                          `Target:` {(rem.IsPrivate ? "DM" : "Channel")}
                          `TargetId:` {rem.ChannelId}
+                         `Repeats:` {(rem.RepeatMinutes > 0 ? TimeSpan.FromMinutes(rem.RepeatMinutes).Humanize() : "No")}
                          `Message:` {rem.Message?.TrimTo(50)}
                          """);
                 }

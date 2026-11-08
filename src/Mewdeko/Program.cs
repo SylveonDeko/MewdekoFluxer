@@ -197,10 +197,7 @@ public class Program
                 });
             });
 
-            var auth = builder.Services.AddAuthentication(options =>
-            {
-                options.AddScheme<AuthHandler>(AuthHandler.SchemeName, AuthHandler.SchemeName);
-            });
+            var auth = builder.Services.AddAuthentication();
             auth.AddScheme<AuthenticationSchemeOptions, ApiKeyAuthHandler>("ApiKey", null);
 
             var jwtSecret = string.IsNullOrWhiteSpace(credentials.JwtSecret) ? null : credentials.JwtSecret;
@@ -235,10 +232,7 @@ public class Program
                 .AddPolicy(DashJwtConstants.PolicyName,
                     policy => policy.RequireAuthenticatedUser()
                         .AddAuthenticationSchemes(DashJwtConstants.SchemeName)
-                        .RequireClaim(DashJwtConstants.ScopeClaim, DashJwtConstants.BackendScope))
-                .AddPolicy("TopggPolicy",
-                    policy => policy.RequireClaim(AuthHandler.TopggClaim)
-                        .AddAuthenticationSchemes(AuthHandler.SchemeName));
+                        .RequireClaim(DashJwtConstants.ScopeClaim, DashJwtConstants.BackendScope));
 
             builder.Services.AddCors(options =>
             {

@@ -176,6 +176,12 @@ public class ShopItemResponse
     /// <summary>Text delivered for text items.</summary>
     public string? TextContent { get; set; }
 
+    /// <summary>The card design granted for design items.</summary>
+    public int? DesignId { get; set; }
+
+    /// <summary>Name of the granted design, if it still exists.</summary>
+    public string? DesignName { get; set; }
+
     /// <summary>Remaining stock, or -1 for unlimited.</summary>
     public int Stock { get; set; }
 
@@ -191,6 +197,15 @@ public class ShopItemResponse
     /// <summary>Whether the item can be used up.</summary>
     public bool Consumable { get; set; }
 
+    /// <summary>Message shown after buying, if any.</summary>
+    public string? BuyMessage { get; set; }
+
+    /// <summary>Message shown when the item is used, if any.</summary>
+    public string? UseMessage { get; set; }
+
+    /// <summary>Whether the item is used automatically when bought.</summary>
+    public bool UseOnBuy { get; set; }
+
     /// <summary>Whether the item is visible and purchasable.</summary>
     public bool Enabled { get; set; }
 
@@ -202,4 +217,25 @@ public class ShopItemResponse
 
     /// <summary>Total currency users have spent on this item.</summary>
     public long Revenue { get; set; }
+}
+
+/// <summary>
+///     The economy setup as the dashboard wizard reads it.
+/// </summary>
+public class EconomySetupResponse
+{
+    /// <summary>The currency emoji.</summary>
+    public string? CurrencyEmoji { get; set; }
+
+    /// <summary>The daily reward amount, 0 when not set.</summary>
+    public int RewardAmount { get; set; }
+
+    /// <summary>Seconds between daily rewards.</summary>
+    public int RewardTimeoutSeconds { get; set; }
+
+    /// <summary>Whether setup was marked finished.</summary>
+    public bool SetupComplete { get; set; }
+
+    /// <summary>Whether the economy counts as set up: finished, or already in use.</summary>
+    public bool Configured { get; set; }
 }

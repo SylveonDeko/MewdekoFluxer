@@ -52,6 +52,70 @@ public class ChatLogService(IDataConnectionFactory dbFactory, ILogger<ChatLogSer
     }
 
     /// <summary>
+    ///     Fetches the messages sent in a channel after a point in time, oldest first.
+    /// </summary>
+    /// <param name="channel">The channel to read.</param>
+    /// <param name="after">The earliest message time to include.</param>
+    /// <param name="maxMessages">The most messages to fetch.</param>
+    /// <returns>The messages as chat log data.</returns>
+    public static async Task<List<ChatLogMessageDto>> FetchMessagesAsync(Channel channel, DateTime after,
+        int maxMessages = 5000)
+    {
+        const int pageSize = 100;
+        var messages = new List<Message>();
+        ulong? beforeId = null;
+
+        while (messages.Count < maxMessages)
+        {
+            var page = (await channel.GetMessagesAsync(pageSize, beforeId).FlattenAsync()).ToList();
+            if (page.Count == 0)
+                break;
+
+            messages.AddRange(page.Where(m => m.Timestamp >= after));
+
+            if (page.Count < pageSize || page.Min(m => m.Timestamp) < after)
+                break;
+
+            beforeId = page.OrderBy(m => m.Timestamp).First().Id;
+        }
+
+        return messages.OrderBy(m => m.Timestamp).Select(msg => new ChatLogMessageDto
+        {
+            Id = msg.Id.ToString(),
+            Content = msg.Content ?? string.Empty,
+            Author = new ChatLogAuthorDto
+            {
+                Id = msg.Author.Id.ToString(),
+                Username = msg.Author.Username,
+                AvatarUrl = msg.Author.GetAvatarOrDefaultUrl(160)
+            },
+            Timestamp = msg.Timestamp.UtcDateTime.ToString("O"),
+            Attachments = (msg.Attachments ?? []).Select(att => new ChatLogAttachmentDto
+            {
+                Url = att.Url, ProxyUrl = att.ProxyUrl ?? att.Url, Filename = att.Filename, FileSize = (int)att.Size
+            }).ToList(),
+            Embeds = (msg.Embeds ?? []).Select(embed => new ChatLogEmbedDto
+            {
+                Type = embed.RawType,
+                Title = embed.Title,
+                Description = embed.Description,
+                Url = embed.Url,
+                Thumbnail = embed.Thumbnail?.Url,
+                Author = embed.Author != null
+                    ? new ChatLogEmbedAuthorDto
+                    {
+                        Name = embed.Author.Name, IconUrl = embed.Author.IconUrl
+                    }
+                    : null,
+                Fields = (embed.Fields ?? []).Select(field => new ChatLogEmbedFieldDto
+                {
+                    Name = field.Name, Value = field.Value, Inline = field.IsInline
+                }).ToList()
+            }).ToList()
+        }).ToList();
+    }
+
+    /// <summary>
     ///     Gets a chat log by id
     /// </summary>
     public async Task<ChatLog?> GetChatLogAsync(int logId)

@@ -14,6 +14,37 @@ namespace Mewdeko.Modules.Utility.Services;
 /// </summary>
 public partial class RemindService : INService
 {
+    /// <summary>
+    ///     The shortest interval a reminder can repeat at.
+    /// </summary>
+    public static readonly TimeSpan MinRepeat = TimeSpan.FromHours(1);
+
+    /// <summary>
+    ///     The possible outcomes of subscribing to a reminder.
+    /// </summary>
+    public enum SubscribeResult
+    {
+        /// <summary>
+        ///     The user is now subscribed.
+        /// </summary>
+        Subscribed,
+
+        /// <summary>
+        ///     The reminder does not exist.
+        /// </summary>
+        NotFound,
+
+        /// <summary>
+        ///     The user already subscribed.
+        /// </summary>
+        AlreadySubscribed,
+
+        /// <summary>
+        ///     The user owns the reminder.
+        /// </summary>
+        Owner
+    }
+
     private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly ILogger<RemindService> logger;
@@ -119,6 +150,22 @@ public partial class RemindService : INService
     {
         try
         {
+            await using (var db = await dbFactory.CreateConnectionAsync())
+            {
+                var current = await db.Reminders.FirstOrDefaultAsync(r => r.Id == reminder.Id);
+                if (current == null)
+                {
+                    reminderServers.TryRemove(reminder.Id, out _);
+                    if (reminderTimers.TryRemove(reminder.Id, out var stale))
+                        await stale.DisposeAsync();
+                    return;
+                }
+
+                reminder = current;
+            }
+
+            var subscribers = ParseSubscribers(reminder.Subscribers);
+
             Channel ch;
             if (reminder.IsPrivate)
             {
@@ -133,18 +180,65 @@ public partial class RemindService : INService
             if (ch == null)
                 return;
 
-            await ch.EmbedAsync(new EmbedBuilder()
-                    .WithOkColor()
-                    .WithTitle(strings.ReminderTitle(reminder.ServerId))
-                    .AddField("Created At",
-                        reminder.DateAdded.HasValue ? reminder.DateAdded.Value.ToLongDateString() : "?")
-                    .AddField("By",
-                        (await ch.GetUserAsync(reminder.UserId).ConfigureAwait(false))?.ToString() ??
-                        reminder.UserId.ToString()),
-                reminder.Message).ConfigureAwait(false);
+            var embed = new EmbedBuilder()
+                .WithOkColor(reminder.ServerId)
+                .WithTitle(strings.ReminderTitle(reminder.ServerId))
+                .AddField("Created At",
+                    reminder.DateAdded.HasValue ? reminder.DateAdded.Value.ToLongDateString() : "?")
+                .AddField("By",
+                    (await ch.GetUserAsync(reminder.UserId).ConfigureAwait(false))?.ToString() ??
+                    reminder.UserId.ToString());
 
-            // Remove the executed reminder from the database and timer
-            await RemoveReminder(reminder);
+            var content = reminder.Message;
+            if (!reminder.IsPrivate && subscribers.Count > 0)
+                content = $"{string.Join(" ", subscribers.Select(x => $"<@{x}>"))}\n{content}";
+
+            await ch.EmbedAsync(embed, content).ConfigureAwait(false);
+
+            if (reminder.IsPrivate)
+            {
+                foreach (var subscriber in subscribers)
+                {
+                    try
+                    {
+                        var subscriberUser = client.GetUser(subscriber);
+                        if (subscriberUser == null)
+                            continue;
+
+                        var dm = await subscriberUser.CreateDMChannelAsync().ConfigureAwait(false);
+                        await dm.EmbedAsync(embed, reminder.Message).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex, "Could not DM reminder {ReminderId} to subscriber {UserId}",
+                            reminder.Id, subscriber);
+                    }
+                }
+            }
+
+            if (reminder.RepeatMinutes < MinRepeat.TotalMinutes)
+            {
+                await RemoveReminder(reminder);
+                return;
+            }
+
+            var step = TimeSpan.FromMinutes(reminder.RepeatMinutes);
+            var next = reminder.When;
+            do
+            {
+                next += step;
+            } while (next <= DateTime.UtcNow);
+
+            reminder.When = next;
+            await using (var db = await dbFactory.CreateConnectionAsync())
+            {
+                await db.Reminders
+                    .Where(r => r.Id == reminder.Id)
+                    .Set(r => r.When, next)
+                    .UpdateAsync();
+            }
+
+            await ScheduleReminder(reminder);
         }
         catch (FluxerApiException ex) when (ex.ErrorCode == FluxerErrorCodes.CannotSendMessagesToUser)
         {
@@ -256,6 +350,91 @@ public partial class RemindService : INService
             $"<t:{unixTime}:R>")}";
 
         return (true, response);
+    }
+
+    /// <summary>
+    ///     Sets or clears how often a user's reminder repeats.
+    /// </summary>
+    /// <param name="userId">The owner of the reminder.</param>
+    /// <param name="index">The zero based position of the reminder in the user's reminder list.</param>
+    /// <param name="repeat">The repeat interval, or null to stop repeating.</param>
+    /// <returns>True if the reminder was found and updated.</returns>
+    public async Task<bool> SetRepeatAsync(ulong userId, int index, TimeSpan? repeat)
+    {
+        var rems = await GetUserRemindersAsync(userId);
+        if (index < 0 || index >= rems.Count)
+            return false;
+
+        await using var db = await dbFactory.CreateConnectionAsync();
+        await db.Reminders
+            .Where(r => r.Id == rems[index].Id)
+            .Set(r => r.RepeatMinutes, repeat.HasValue ? (int)repeat.Value.TotalMinutes : 0)
+            .UpdateAsync();
+
+        return true;
+    }
+
+    /// <summary>
+    ///     Subscribes a user to a reminder.
+    /// </summary>
+    /// <param name="userId">The user subscribing.</param>
+    /// <param name="reminderId">The id of the reminder.</param>
+    /// <returns>The outcome of the subscription.</returns>
+    public async Task<SubscribeResult> SubscribeAsync(ulong userId, int reminderId)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var rem = await db.Reminders.FirstOrDefaultAsync(r => r.Id == reminderId);
+        if (rem == null)
+            return SubscribeResult.NotFound;
+
+        if (rem.UserId == userId)
+            return SubscribeResult.Owner;
+
+        var subscribers = ParseSubscribers(rem.Subscribers);
+        if (subscribers.Contains(userId))
+            return SubscribeResult.AlreadySubscribed;
+
+        subscribers.Add(userId);
+        await db.Reminders
+            .Where(r => r.Id == reminderId)
+            .Set(r => r.Subscribers, string.Join(",", subscribers))
+            .UpdateAsync();
+
+        return SubscribeResult.Subscribed;
+    }
+
+    /// <summary>
+    ///     Removes a user's subscription from a reminder.
+    /// </summary>
+    /// <param name="userId">The user unsubscribing.</param>
+    /// <param name="reminderId">The id of the reminder.</param>
+    /// <returns>True if the user was subscribed and is now removed.</returns>
+    public async Task<bool> UnsubscribeAsync(ulong userId, int reminderId)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var rem = await db.Reminders.FirstOrDefaultAsync(r => r.Id == reminderId);
+        if (rem == null)
+            return false;
+
+        var subscribers = ParseSubscribers(rem.Subscribers);
+        if (!subscribers.Remove(userId))
+            return false;
+
+        await db.Reminders
+            .Where(r => r.Id == reminderId)
+            .Set(r => r.Subscribers, string.Join(",", subscribers))
+            .UpdateAsync();
+
+        return true;
+    }
+
+    private static List<ulong> ParseSubscribers(string? subscribers)
+    {
+        return (subscribers ?? "")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(x => ulong.TryParse(x, out var id) ? id : 0)
+            .Where(x => x != 0)
+            .ToList();
     }
 
     /// <summary>

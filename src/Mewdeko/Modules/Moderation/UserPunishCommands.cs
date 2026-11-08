@@ -346,6 +346,7 @@ public partial class Moderation : MewdekoModule
         {
             if (!await CheckRoleHierarchy(user))
                 return;
+            reason = await Service.Cases.ResolveReasonAsync(ctx.Guild.Id, reason).ConfigureAwait(false);
             reason ??= $"{ctx.User} || None Specified";
             if (time.Time.Days > 28)
             {
@@ -353,11 +354,12 @@ public partial class Moderation : MewdekoModule
                 return;
             }
 
-            await user.ModifyAsync(x =>
-            {
-                x.CommunicationDisabledUntil = DateTimeOffset.UtcNow + time.Time;
-                x.TimeoutReason = $"{ctx.User} | {reason}";
-            }).ConfigureAwait(false);
+            await Service.Cases.PunishAsync(ctx.Guild, user.User, ctx.User, ModCaseAction.Timeout, reason, time.Time,
+                () => user.ModifyAsync(x =>
+                {
+                    x.CommunicationDisabledUntil = DateTimeOffset.UtcNow + time.Time;
+                    x.TimeoutReason = $"{ctx.User} | {reason}";
+                })).ConfigureAwait(false);
             await ReplyConfirmAsync(Strings.TimeoutSet(ctx.Guild.Id, user.Mention,
                     time.Time.Humanize(maxUnit: TimeUnit.Day)))
                 .ConfigureAwait(false);
@@ -381,6 +383,8 @@ public partial class Moderation : MewdekoModule
                 x.CommunicationDisabledUntil = null;
                 x.TimeoutReason = $"Removal requested by {ctx.User}";
             }).ConfigureAwait(false);
+            await Service.Cases.RecordAsync(ctx.Guild.Id, user.Id, ctx.User.Id, ModCaseAction.Untimeout, null)
+                .ConfigureAwait(false);
             await ReplyConfirmAsync(Strings.TimeoutRemoved(ctx.Guild.Id, user.Mention)).ConfigureAwait(false);
         }
 
@@ -398,25 +402,43 @@ public partial class Moderation : MewdekoModule
             if (!await CheckRoleHierarchy(user))
                 return;
 
+            reason = await Service.Cases.ResolveReasonAsync(ctx.Guild.Id, reason).ConfigureAwait(false);
             var dmFailed = false;
-            try
+
+            async Task SendWarnDm(int? caseNumber)
             {
-                await (await user.CreateDMChannelAsync().ConfigureAwait(false)).EmbedAsync(new EmbedBuilder()
-                        .WithErrorColor()
-                        .WithDescription(Strings.WarnedOn(ctx.Guild.Id, ctx.Guild.ToString()))
-                        .AddField(efb => efb.WithName(Strings.Moderator(ctx.Guild.Id)).WithValue(ctx.User.ToString()))
-                        .AddField(efb => efb.WithName(Strings.Reason(ctx.Guild.Id)).WithValue(reason ?? "-")))
-                    .ConfigureAwait(false);
-            }
-            catch
-            {
-                dmFailed = true;
+                try
+                {
+                    var custom = await Service.Cases
+                        .SendPunishDmAsync(ctx.Guild, user.User, ctx.User, ModCaseAction.Warn, reason, null,
+                            caseNumber)
+                        .ConfigureAwait(false);
+                    if (custom is null)
+                    {
+                        await (await user.CreateDMChannelAsync().ConfigureAwait(false)).EmbedAsync(new EmbedBuilder()
+                                .WithErrorColor()
+                                .WithDescription(Strings.WarnedOn(ctx.Guild.Id, ctx.Guild.ToString()))
+                                .AddField(efb =>
+                                    efb.WithName(Strings.Moderator(ctx.Guild.Id)).WithValue(ctx.User.ToString()))
+                                .AddField(efb => efb.WithName(Strings.Reason(ctx.Guild.Id)).WithValue(reason ?? "-")))
+                            .ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        dmFailed = !custom.Value;
+                    }
+                }
+                catch
+                {
+                    dmFailed = true;
+                }
             }
 
             WarningPunishment punishment;
             try
             {
-                punishment = await Service.Warn(ctx.Guild, user.Id, ctx.User, reason).ConfigureAwait(false);
+                punishment = await Service.Warn(ctx.Guild, user.Id, ctx.User, reason, SendWarnDm)
+                    .ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -816,6 +838,37 @@ public partial class Moderation : MewdekoModule
         }
 
 
+        private async Task<bool> SendBanDmAsync(SocketGuildMember user, string? reason, TimeSpan? duration,
+            int? caseNumber)
+        {
+            try
+            {
+                var defaultMessage = Strings.Bandm(ctx.Guild.Id, Format.Bold(ctx.Guild.Name), reason);
+                var (embedBuilder, message) = await Service
+                    .GetBanUserDmEmbed(Context, user, defaultMessage, reason, duration, caseNumber)
+                    .ConfigureAwait(false);
+                if (embedBuilder is not null || message is not null)
+                {
+                    var userChannel = await user.CreateDMChannelAsync().ConfigureAwait(false);
+                    await userChannel.SendAsync(message, embeds: embedBuilder).ConfigureAwait(false);
+                }
+
+                return false;
+            }
+            catch
+            {
+                return true;
+            }
+        }
+
+        private async Task<bool> BanWithCaseAsync(SocketGuildMember user, string? reason, TimeSpan? duration,
+            Func<Task> act)
+        {
+            var (_, dmFailed) = await Service.Cases.PunishAsync(ctx.Guild, user.User, ctx.User, ModCaseAction.Ban,
+                reason, duration, act, n => SendBanDmAsync(user, reason, duration, n)).ConfigureAwait(false);
+            return dmFailed;
+        }
+
         /// <summary>
         ///     Bans a user for a specified amount of time.
         /// </summary>
@@ -841,30 +894,10 @@ public partial class Moderation : MewdekoModule
             if (user != null && !await CheckRoleHierarchy(user).ConfigureAwait(false))
                 return;
 
-            var dmFailed = false;
-
-            if (user != null)
-            {
-                try
-                {
-                    var defaultMessage = Strings.Bandm(ctx.Guild.Id, Format.Bold(ctx.Guild.Name), msg);
-                    var (embedBuilder, message) = await Service
-                        .GetBanUserDmEmbed(Context, user, defaultMessage, msg, time.Time).ConfigureAwait(false);
-                    if (embedBuilder is not null || message is not null)
-                    {
-                        var userChannel = await user.CreateDMChannelAsync().ConfigureAwait(false);
-                        await userChannel
-                            .SendAsync(message, embeds: embedBuilder)
-                            .ConfigureAwait(false);
-                    }
-                }
-                catch
-                {
-                    dmFailed = true;
-                }
-            }
-
-            await mute.TimedBan(Context.Guild, user.User, time.Time, $"{ctx.User} | {msg}", pruneTime.Time)
+            msg = await Service.Cases.ResolveReasonAsync(ctx.Guild.Id, msg).ConfigureAwait(false);
+            var dmFailed = await mute.TimedBan(Context.Guild, user.User, time.Time, $"{ctx.User} | {msg}",
+                    pruneTime.Time,
+                    act => BanWithCaseAsync(user, msg, time.Time, act))
                 .ConfigureAwait(false);
             var toSend = new EmbedBuilder().WithOkColor()
                 .WithTitle($"⛔️ {Strings.BannedUser(ctx.Guild.Id)}")
@@ -898,9 +931,11 @@ public partial class Moderation : MewdekoModule
             if (user is null)
                 return;
 
+            msg = await Service.Cases.ResolveReasonAsync(ctx.Guild.Id, msg).ConfigureAwait(false);
             var pruneDays = await banPrune
                 .GetPruneDaysAsync(ctx.Guild.Id, BanPruneAction.HackBan, ctx.Channel).ConfigureAwait(false);
-            await ctx.Guild.AddBanAsync(user, pruneDays, $"{ctx.User} | {msg}").ConfigureAwait(false);
+            await Service.Cases.PunishAsync(ctx.Guild, user, ctx.User, ModCaseAction.Ban, msg, null,
+                () => ctx.Guild.AddBanAsync(user, pruneDays, $"{ctx.User} | {msg}")).ConfigureAwait(false);
 
             await ctx.Channel.EmbedAsync(new EmbedBuilder().WithOkColor()
                     .WithTitle($"⛔️ {Strings.BannedUser(ctx.Guild.Id)}")
@@ -922,7 +957,9 @@ public partial class Moderation : MewdekoModule
         [Priority(0)]
         public async Task Ban(StoopidTime time, IUser userId, [Remainder] string? msg = null)
         {
-            await ctx.Guild.AddBanAsync(userId, time.Time.Days, $"{ctx.User} | {msg}").ConfigureAwait(false);
+            msg = await Service.Cases.ResolveReasonAsync(ctx.Guild.Id, msg).ConfigureAwait(false);
+            await Service.Cases.PunishAsync(ctx.Guild, userId, ctx.User, ModCaseAction.Ban, msg, null,
+                () => ctx.Guild.AddBanAsync(userId, time.Time.Days, $"{ctx.User} | {msg}")).ConfigureAwait(false);
 
             await ctx.Channel.EmbedAsync(new EmbedBuilder().WithOkColor()
                     .WithTitle($"⛔️ {Strings.BannedUser(ctx.Guild.Id)}")
@@ -946,28 +983,12 @@ public partial class Moderation : MewdekoModule
             if (!await CheckRoleHierarchy(user).ConfigureAwait(false))
                 return;
 
-            var dmFailed = false;
-
-            try
-            {
-                var defaultMessage = Strings.Bandm(ctx.Guild.Id, Format.Bold(ctx.Guild.Name), msg);
-                var (embedBuilder, message) = await Service
-                    .GetBanUserDmEmbed(Context, user, defaultMessage, msg, null).ConfigureAwait(false);
-                if (embedBuilder is not null || message is not null)
-                {
-                    var userChannel = await user.CreateDMChannelAsync().ConfigureAwait(false);
-                    await userChannel.SendAsync(message, embeds: embedBuilder)
-                        .ConfigureAwait(false);
-                }
-            }
-            catch
-            {
-                dmFailed = true;
-            }
+            msg = await Service.Cases.ResolveReasonAsync(ctx.Guild.Id, msg).ConfigureAwait(false);
 
             var pruneDays = await banPrune
                 .GetPruneDaysAsync(ctx.Guild.Id, BanPruneAction.Ban, ctx.Channel).ConfigureAwait(false);
-            await ctx.Guild.AddBanAsync(user.Id, pruneDays, $"{ctx.User} | {msg}").ConfigureAwait(false);
+            var dmFailed = await BanWithCaseAsync(user, msg, null,
+                () => ctx.Guild.AddBanAsync(user.Id, pruneDays, $"{ctx.User} | {msg}")).ConfigureAwait(false);
 
             var toSend = new EmbedBuilder().WithOkColor()
                 .WithTitle($"⛔️ {Strings.BannedUser(ctx.Guild.Id)}")
@@ -999,26 +1020,9 @@ public partial class Moderation : MewdekoModule
             if (!await CheckRoleHierarchy(user).ConfigureAwait(false))
                 return;
 
-            var dmFailed = false;
-
-            try
-            {
-                var defaultMessage = Strings.Bandm(ctx.Guild.Id, Format.Bold(ctx.Guild.Name), msg);
-                var (embedBuilder, message) = await Service
-                    .GetBanUserDmEmbed(Context, user, defaultMessage, msg, null).ConfigureAwait(false);
-                if (embedBuilder is not null || message is not null)
-                {
-                    var userChannel = await user.CreateDMChannelAsync().ConfigureAwait(false);
-                    await userChannel.SendAsync(message, embeds: embedBuilder)
-                        .ConfigureAwait(false);
-                }
-            }
-            catch
-            {
-                dmFailed = true;
-            }
-
-            await ctx.Guild.AddBanAsync(user.Id, time.Time.Days, $"{ctx.User} | {msg}").ConfigureAwait(false);
+            msg = await Service.Cases.ResolveReasonAsync(ctx.Guild.Id, msg).ConfigureAwait(false);
+            var dmFailed = await BanWithCaseAsync(user, msg, null,
+                () => ctx.Guild.AddBanAsync(user.Id, time.Time.Days, $"{ctx.User} | {msg}")).ConfigureAwait(false);
 
             var toSend = new EmbedBuilder().WithOkColor()
                 .WithTitle($"⛔️ {Strings.BannedUser(ctx.Guild.Id)}")
@@ -1191,6 +1195,8 @@ public partial class Moderation : MewdekoModule
         private async Task UnbanInternal(IUser user)
         {
             await ctx.Guild.RemoveBanAsync(user).ConfigureAwait(false);
+            await Service.Cases.RecordAsync(ctx.Guild.Id, user.Id, ctx.User.Id, ModCaseAction.Unban, null)
+                .ConfigureAwait(false);
 
             await ReplyConfirmAsync(Strings.UnbannedUser(ctx.Guild.Id, Format.Bold(user.ToString())))
                 .ConfigureAwait(false);
@@ -1228,37 +1234,35 @@ public partial class Moderation : MewdekoModule
             if (user is null)
                 return;
 
-            await SoftbanInternal(user).ConfigureAwait(false);
+            await SoftbanInternal(user, msg).ConfigureAwait(false);
         }
 
-        private async Task SoftbanInternal(SocketGuildMember? user, [Remainder] string? msg = null)
+        private async Task SoftbanInternal(SocketGuildMember? user, string? msg = null)
         {
             if (!await CheckRoleHierarchy(user).ConfigureAwait(false))
                 return;
 
-            var dmFailed = false;
-
-            try
-            {
-                await user.User.SendErrorAsync(Strings.Sbdm(ctx.Guild.Id, Format.Bold(ctx.Guild.Name), msg))
-                    .ConfigureAwait(false);
-            }
-            catch
-            {
-                dmFailed = true;
-            }
-
+            msg = await Service.Cases.ResolveReasonAsync(ctx.Guild.Id, msg).ConfigureAwait(false);
             var softPruneDays = await banPrune
                 .GetPruneDaysAsync(ctx.Guild.Id, BanPruneAction.SoftBan, ctx.Channel).ConfigureAwait(false);
-            await ctx.Guild.AddBanAsync(user.Id, softPruneDays, $"Softban: {ctx.User} | {msg}").ConfigureAwait(false);
-            try
-            {
-                await ctx.Guild.RemoveBanAsync(user.Id).ConfigureAwait(false);
-            }
-            catch
-            {
-                await ctx.Guild.RemoveBanAsync(user.Id).ConfigureAwait(false);
-            }
+            var (_, dmFailed) = await Service.Cases.PunishAsync(ctx.Guild, user.User, ctx.User,
+                ModCaseAction.Softban, msg, null, async () =>
+                {
+                    await ctx.Guild.AddBanAsync(user.Id, softPruneDays, $"Softban: {ctx.User} | {msg}")
+                        .ConfigureAwait(false);
+                    try
+                    {
+                        await ctx.Guild.RemoveBanAsync(user.Id).ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        await ctx.Guild.RemoveBanAsync(user.Id).ConfigureAwait(false);
+                    }
+                },
+                n => Service.Cases.SendDmOrDefaultAsync(ctx.Guild, user.User, ctx.User, ModCaseAction.Softban, msg,
+                    null, n,
+                    () => user.User.SendErrorAsync(Strings.Sbdm(ctx.Guild.Id, Format.Bold(ctx.Guild.Name), msg))))
+                .ConfigureAwait(false);
 
             var toSend = new EmbedBuilder().WithOkColor()
                 .WithTitle($"☣ {Strings.SbUser(ctx.Guild.Id)}")
@@ -1332,7 +1336,8 @@ public partial class Moderation : MewdekoModule
             foreach (var u in users)
                 try
                 {
-                    await u.KickAsync(null, options);
+                    await Service.Cases.PunishAsync(ctx.Guild, u.User, ctx.User, ModCaseAction.Kick, "Masskick", null,
+                        () => u.KickAsync(null, options)).ConfigureAwait(false);
                     succ.Add(u.Id);
                 }
                 catch
@@ -1352,19 +1357,12 @@ public partial class Moderation : MewdekoModule
             if (!await CheckRoleHierarchy(user).ConfigureAwait(false))
                 return;
 
-            var dmFailed = false;
-
-            try
-            {
-                await user.User.SendErrorAsync(Strings.Kickdm(ctx.Guild.Id, Format.Bold(ctx.Guild.Name), msg))
-                    .ConfigureAwait(false);
-            }
-            catch
-            {
-                dmFailed = true;
-            }
-
-            await user.KickAsync($"{ctx.User} | {msg}").ConfigureAwait(false);
+            msg = await Service.Cases.ResolveReasonAsync(ctx.Guild.Id, msg).ConfigureAwait(false);
+            var (_, dmFailed) = await Service.Cases.PunishAsync(ctx.Guild, user.User, ctx.User, ModCaseAction.Kick,
+                msg, null, () => user.KickAsync($"{ctx.User} | {msg}"),
+                n => Service.Cases.SendDmOrDefaultAsync(ctx.Guild, user.User, ctx.User, ModCaseAction.Kick, msg, null,
+                    n, () => user.User.SendErrorAsync(Strings.Kickdm(ctx.Guild.Id, Format.Bold(ctx.Guild.Name), msg))))
+                .ConfigureAwait(false);
 
             var toSend = new EmbedBuilder().WithOkColor()
                 .WithTitle(Strings.KickedUser(ctx.Guild.Id))
@@ -1412,7 +1410,9 @@ public partial class Moderation : MewdekoModule
                 .GetPruneDaysAsync(ctx.Guild.Id, BanPruneAction.MassBan, ctx.Channel).ConfigureAwait(false);
             await Task.WhenAll(valueTuples
                     .Where(x => x.id.HasValue)
-                    .Select(x => ctx.Guild.AddBanAsync(x.id.Value, massPruneDays, x.Reason)))
+                    .Select(x => Service.Cases.PunishByIdAsync(ctx.Guild, x.id.Value, null, ctx.User,
+                        ModCaseAction.Ban, x.Reason, null,
+                        () => ctx.Guild.AddBanAsync(x.id.Value, massPruneDays, x.Reason))))
                 .ConfigureAwait(false);
 
             //wait for the message and edit it

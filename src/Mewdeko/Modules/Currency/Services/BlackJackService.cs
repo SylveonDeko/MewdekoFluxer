@@ -6,7 +6,10 @@ namespace Mewdeko.Modules.Currency.Services;
 ///     Service that handles the logic for a Blackjack game.
 /// </summary>
 /// <param name="strings">The localization service.</param>
-public class BlackjackService(GeneratedBotStrings strings) : INService
+public class BlackjackService(
+    GeneratedBotStrings strings,
+    EconomyBoostService boostService,
+    DailyChallengeService dailyChallengeService) : INService
 {
     private static readonly string[] Suits = ["♠️", "♥️", "♦️", "♣️"];
     private static readonly string[] Ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
@@ -153,12 +156,17 @@ public class BlackjackService(GeneratedBotStrings strings) : INService
                     ? stake
                     : 0;
 
+            if (playerWon)
+                payout = await boostService.ApplyToWinningsAsync(guildId, "blackjack", stake, payout);
+
             var profit = payout - stake;
 
             await updateBalanceAsync(playerId.Id, payout);
             await addTransactionAsync(playerId.Id, payout,
                 playerWon ? strings.WonBlackjack(guildId, profit) :
                 tie ? strings.PushBlackjack(guildId) : strings.LostBlackjack(guildId, stake));
+
+            await dailyChallengeService.RecordPayout(playerId.Id, guildId, stake, payout);
 
             var handEmbed = new EmbedBuilder()
                 .WithOkColor()

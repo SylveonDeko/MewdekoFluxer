@@ -168,7 +168,7 @@ public class StatusRolesService : INService
         if (beforeStatus?.Contains(statusRole.Status) == true)
             return;
 
-        await HandleRoleAddition(user, statusRole, toAdd, toRemove);
+        await HandleRoleAddition(user, statusRole, toAdd, toRemove, status);
     }
 
     private async Task HandleRoleRemoval(SocketGuildMember user, StatusRole statusRole, List<ulong> toAdd,
@@ -186,7 +186,7 @@ public class StatusRolesService : INService
     }
 
     private async Task HandleRoleAddition(SocketGuildMember user, StatusRole statusRole, List<ulong> toAdd,
-        List<ulong> toRemove)
+        List<ulong> toRemove, string? status)
     {
         await RemoveRoles(user, toRemove);
         await AddRoles(user, toAdd);
@@ -194,7 +194,7 @@ public class StatusRolesService : INService
         var channel = user.Guild.GetTextChannel(statusRole.StatusChannelId);
         if (channel != null && !string.IsNullOrWhiteSpace(statusRole.StatusEmbed))
         {
-            await SendStatusEmbed(user, channel, statusRole.StatusEmbed);
+            await SendStatusEmbed(user, channel, statusRole.StatusEmbed, status);
         }
     }
 
@@ -222,9 +222,10 @@ public class StatusRolesService : INService
         }
     }
 
-    private async Task SendStatusEmbed(SocketGuildMember user, Channel channel, string embedText)
+    private async Task SendStatusEmbed(SocketGuildMember user, Channel channel, string embedText, string? status)
     {
-        var rep = new ReplacementBuilder().WithDefault(user, channel, user.Guild, client).Build();
+        var rep = new ReplacementBuilder().WithDefault(user, channel, user.Guild, client)
+            .WithOverride("%status%", () => status ?? "").Build();
 
         if (SmartEmbed.TryParse(rep.Replace(embedText), user.Guild.Id, out var embeds, out var plainText))
         {

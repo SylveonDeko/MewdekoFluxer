@@ -133,6 +133,9 @@ namespace DataModel
 		public ITable<RoleGreet>                 RoleGreets                 => this.GetTable<RoleGreet>();
 		public ITable<RoleMenu>                  RoleMenus                  => this.GetTable<RoleMenu>();
 		public ITable<RoleMenuOption>            RoleMenuOptions            => this.GetTable<RoleMenuOption>();
+		public ITable<RoleMenuTempGrant>         RoleMenuTempGrants         => this.GetTable<RoleMenuTempGrant>();
+		public ITable<RoleMenuGroup>             RoleMenuGroups             => this.GetTable<RoleMenuGroup>();
+		public ITable<RoleMenuReverseState>      RoleMenuReverseStates      => this.GetTable<RoleMenuReverseState>();
 		public ITable<AchievementSetting>        AchievementSettings        => this.GetTable<AchievementSetting>();
 		public ITable<AchievementCategory>       AchievementCategories      => this.GetTable<AchievementCategory>();
 		public ITable<AchievementIconUpload>     AchievementIconUploads     => this.GetTable<AchievementIconUpload>();

@@ -231,7 +231,7 @@ public sealed partial class AchievementService
                 {
                     try
                     {
-                        await EvaluateMembersAsync(guild, chunk.Select(x => (x.UserId, x.Flags)).ToList(), false);
+                        await EvaluateMembersAsync(guild, chunk.Select(x => (x.UserId, x.Flags)).ToList(), false, true);
                     }
                     catch (Exception ex)
                     {
@@ -338,13 +338,19 @@ public sealed partial class AchievementService
         };
 
     private async Task EvaluateMembersAsync(SocketGuild guild,
-        IReadOnlyList<(ulong UserId, AchievementDirty Flags)> batch, bool silent)
+        IReadOnlyList<(ulong UserId, AchievementDirty Flags)> batch, bool silent, bool allowAlmost = false,
+        string? onlyKey = null)
     {
         var catalog = await GetCatalogAsync(guild.Id);
+        var settings = GetSettings(guild.Id);
         var impliedDefs = catalog.Earnable
             .Where(d => d.Feat is { } feat && ImpliedFeats.ContainsKey(feat))
             .ToList();
-        var metricDefs = catalog.Earnable.Where(d => d.IsMetric).Concat(impliedDefs).ToList();
+        var metricDefs = catalog.Earnable
+            .Where(d => d.IsMetric)
+            .Concat(impliedDefs)
+            .Where(d => onlyKey is null || d.Key == onlyKey)
+            .ToList();
         if (metricDefs.Count == 0)
             return;
 
@@ -391,9 +397,25 @@ public sealed partial class AchievementService
                 {
                     { } feat when ImpliedFeats.TryGetValue(feat, out var metric) =>
                         metrics.TryGetValue(metric, out var count) && count >= 1,
+                    _ when d.Metric == AchievementMetric.RoleReceived =>
+                        d.TargetRoleId is { } roleId && member.RoleIds.Contains(roleId),
                     _ => metrics.TryGetValue(d.Metric, out var value) && value >= d.Threshold
                 })
                 .ToList();
+
+            if (allowAlmost && !silent && settings.Row.AlmostThereDm)
+            {
+                var near = locked
+                    .Where(d => d is { Trigger: AchievementTrigger.Metric, Hidden: false, Feat: null } &&
+                                d.Metric != AchievementMetric.RoleReceived && !reached.Contains(d) &&
+                                metrics.TryGetValue(d.Metric, out var value) && value >= 0 &&
+                                value * 4 >= d.Threshold * 3 && value < d.Threshold)
+                    .Select(d => (Definition: d, Value: metrics[d.Metric]))
+                    .ToList();
+                if (near.Count > 0)
+                    _ = NotifyAlmostThereAsync(member, near);
+            }
+
             if (reached.Count == 0)
                 continue;
 
@@ -485,7 +507,8 @@ public sealed partial class AchievementService
         }
 
         if (Needs(AchievementMetric.VoiceJoins, AchievementMetric.MutedHours, AchievementMetric.Unlocked,
-                AchievementMetric.Points))
+                AchievementMetric.Points, AchievementMetric.ThreadsCreated, AchievementMetric.ThreadsJoined,
+                AchievementMetric.GiveawaysEntered, AchievementMetric.ShopPurchases))
         {
             var rows = await db.AchievementMembers
                 .Where(x => x.GuildId == guild.Id && userIds.Contains(x.UserId))
@@ -494,13 +517,17 @@ public sealed partial class AchievementService
             foreach (var userId in userIds)
             {
                 rows.TryGetValue(userId, out var row);
-                var pending = counterDeltas.TryGetValue((guild.Id, userId), out var delta) ? delta.Peek() : (0, 0);
+                var pending = counterDeltas.TryGetValue((guild.Id, userId), out var delta) ? delta.Peek() : default;
                 var liveMuted = voiceTracks.TryGetValue((guild.Id, userId), out var track) && track.MutedSince is { } since
                     ? (long)(now - since).TotalSeconds
                     : 0;
                 var values = result[userId];
-                values[AchievementMetric.VoiceJoins] = (row?.VoiceJoins ?? 0) + pending.Item1;
-                values[AchievementMetric.MutedHours] = ((row?.MutedSeconds ?? 0) + pending.Item2 + liveMuted) / 3600;
+                values[AchievementMetric.VoiceJoins] = (row?.VoiceJoins ?? 0) + pending.Joins;
+                values[AchievementMetric.MutedHours] = ((row?.MutedSeconds ?? 0) + pending.Muted + liveMuted) / 3600;
+                values[AchievementMetric.ThreadsCreated] = (row?.ThreadsCreated ?? 0) + pending.ThreadsCreated;
+                values[AchievementMetric.ThreadsJoined] = (row?.ThreadsJoined ?? 0) + pending.ThreadsJoined;
+                values[AchievementMetric.GiveawaysEntered] = (row?.GiveawaysEntered ?? 0) + pending.Giveaways;
+                values[AchievementMetric.ShopPurchases] = (row?.ShopPurchases ?? 0) + pending.Purchases;
                 values[AchievementMetric.Unlocked] = row?.UnlockedCount ?? 0;
                 values[AchievementMetric.Points] = row?.Points ?? 0;
             }
@@ -539,6 +566,16 @@ public sealed partial class AchievementService
                 .ToListAsync();
             foreach (var row in rows)
                 result[row.UserId][AchievementMetric.Invites] = row.Count;
+        }
+
+        if (Needs(AchievementMetric.BirthdaySet))
+        {
+            var withBirthday = await db.DiscordUsers
+                .Where(x => userIds.Contains(x.UserId) && x.Birthday != null)
+                .Select(x => x.UserId)
+                .ToListAsync();
+            foreach (var userId in userIds)
+                result[userId][AchievementMetric.BirthdaySet] = withBirthday.Contains(userId) ? 1 : 0;
         }
 
         if (Needs(AchievementMetric.Commands))
@@ -753,12 +790,12 @@ public sealed partial class AchievementService
                     emoji.Add((key.GuildId, key.UserId, key.Emoji, count));
             }
 
-            var counters = new List<(ulong GuildId, ulong UserId, long Joins, long Muted)>();
+            var counters = new List<(ulong GuildId, ulong UserId, CounterTotals Totals)>();
             foreach (var (key, delta) in counterDeltas)
             {
-                var (joins, muted) = delta.Take();
-                if (joins > 0 || muted > 0)
-                    counters.Add((key.GuildId, key.UserId, joins, muted));
+                var totals = delta.Take();
+                if (totals.Any)
+                    counters.Add((key.GuildId, key.UserId, totals));
                 else
                     counterDeltas.TryRemove(key, out _);
             }
@@ -784,21 +821,29 @@ public sealed partial class AchievementService
             }
 
             var now = DateTime.UtcNow;
-            foreach (var (guildId, userId, joins, muted) in counters)
+            foreach (var (guildId, userId, totals) in counters)
             {
                 await db.AchievementMembers.InsertOrUpdateAsync(
                     () => new AchievementMember
                     {
                         GuildId = guildId,
                         UserId = userId,
-                        VoiceJoins = joins,
-                        MutedSeconds = muted,
+                        VoiceJoins = totals.Joins,
+                        MutedSeconds = totals.Muted,
+                        ThreadsCreated = totals.ThreadsCreated,
+                        ThreadsJoined = totals.ThreadsJoined,
+                        GiveawaysEntered = totals.Giveaways,
+                        ShopPurchases = totals.Purchases,
                         DateAdded = now
                     },
                     x => new AchievementMember
                     {
-                        VoiceJoins = x.VoiceJoins + joins,
-                        MutedSeconds = x.MutedSeconds + muted
+                        VoiceJoins = x.VoiceJoins + totals.Joins,
+                        MutedSeconds = x.MutedSeconds + totals.Muted,
+                        ThreadsCreated = x.ThreadsCreated + totals.ThreadsCreated,
+                        ThreadsJoined = x.ThreadsJoined + totals.ThreadsJoined,
+                        GiveawaysEntered = x.GiveawaysEntered + totals.Giveaways,
+                        ShopPurchases = x.ShopPurchases + totals.Purchases
                     });
             }
         }
@@ -856,6 +901,8 @@ public sealed partial class AchievementService
             return unlocked;
 
         collector.Feature(FeatureKey, guild.Id);
+        _ = eventHandler.AchievementsUnlocked.RaiseAsync(
+            new AchievementsUnlockedEventArgs(guild.Id, user.Id, unlocked.Select(d => d.Key).ToList()), guild);
         await GrantRewardsAsync(user, unlocked);
 
         var all = unlocked.Concat(globalUnlocked).ToList();
@@ -940,7 +987,8 @@ public sealed partial class AchievementService
             if (def.Trigger == AchievementTrigger.Completion)
             {
                 var targets = def.Key == "prestige_all"
-                    ? catalog.Earnable.Where(d => d.Key != def.Key).ToList()
+                    ? catalog.Earnable.Where(d => d.Key != def.Key && d.CategoryKey != AchievementCatalog.ActivityCategory)
+                        .ToList()
                     : catalog.Earnable.Where(d => d.CategoryKey == def.Keyword &&
                                                   d.Trigger != AchievementTrigger.Completion).ToList();
                 if (targets.Count > 0 && targets.All(t => state.Has(t.Key)))
@@ -1019,6 +1067,27 @@ public sealed partial class AchievementService
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Could not give achievement roles in {GuildId}", guild.Id);
+        }
+
+        try
+        {
+            var taken = unlocked
+                .Where(d => d.RoleRemoveId is > 0 && user.Roles.Any(r => r.Id == d.RoleRemoveId) &&
+                            CanAssign(guild, d.RoleRemoveId!.Value))
+                .Select(d => d.RoleRemoveId!.Value)
+                .Distinct()
+                .ToList();
+            if (taken.Count > 0)
+            {
+                await user.RemoveRolesAsync(taken, new RequestOptions
+                {
+                    AuditLogReason = strings.AchievementAuditReason(guild.Id)
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not take achievement roles in {GuildId}", guild.Id);
         }
 
         try
@@ -1122,6 +1191,7 @@ public sealed partial class AchievementService
         {
             await using var db = await dbFactory.CreateConnectionAsync();
             cleared = await db.UserAchievements.Where(x => x.GuildId == guildId && x.UserId == userId).DeleteAsync();
+            await db.AchievementAlmostThere.Where(x => x.GuildId == guildId && x.UserId == userId).DeleteAsync();
             await db.AchievementMembers
                 .Where(x => x.GuildId == guildId && x.UserId == userId)
                 .Set(x => x.Points, 0)
@@ -1153,6 +1223,7 @@ public sealed partial class AchievementService
     {
         await using var db = await dbFactory.CreateConnectionAsync();
         var cleared = await db.UserAchievements.Where(x => x.GuildId == guildId).DeleteAsync();
+        await db.AchievementAlmostThere.Where(x => x.GuildId == guildId).DeleteAsync();
         await db.AchievementMembers
             .Where(x => x.GuildId == guildId)
             .Set(x => x.Points, 0)
@@ -1168,6 +1239,53 @@ public sealed partial class AchievementService
         await UpdateSettingsAsync(guildId, row => row.BackfilledAt = null);
         QueueSweep(guildId);
         return cleared;
+    }
+
+    /// <summary>
+    ///     Clears one achievement for every member of a community and recounts their points.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <param name="key">The achievement key.</param>
+    /// <returns>How many unlocks were cleared, or null when the achievement does not exist.</returns>
+    public async Task<int?> ResetAchievementAsync(ulong guildId, string key)
+    {
+        var catalog = await GetCatalogAsync(guildId);
+        if (!catalog.ByKey.TryGetValue(key, out var def) || def.IsGlobal)
+            return null;
+
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var cleared = await db.UserAchievements
+            .Where(x => x.GuildId == guildId && x.AchievementKey == key)
+            .DeleteAsync();
+        await db.AchievementAlmostThere
+            .Where(x => x.GuildId == guildId && x.AchievementKey == key)
+            .DeleteAsync();
+        if (cleared > 0)
+            await RecountMembersAsync(db, guildId);
+        foreach (var cacheKey in unlockCache.Keys.Where(k => k.GuildId == guildId))
+            unlockCache.TryRemove(cacheKey, out _);
+
+        if (client.GetGuild(guildId) is { } guild && def.Enabled)
+            _ = SweepAchievementAsync(guild, key);
+        return cleared;
+    }
+
+    private async Task SweepAchievementAsync(SocketGuild guild, string key)
+    {
+        try
+        {
+            await FlushCountersAsync();
+            var members = guild.Users.Where(u => !u.IsBot).Select(u => u.Id).ToList();
+            foreach (var chunk in members.Chunk(BatchSize))
+            {
+                await EvaluateMembersAsync(guild, chunk.Select(u => (u, AchievementDirty.All)).ToList(), true,
+                    onlyKey: key);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Achievement sweep for {Key} failed in {GuildId}", key, guild.Id);
+        }
     }
 
     #endregion

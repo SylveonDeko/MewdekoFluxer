@@ -54,13 +54,16 @@ votemessage:
       name: message
       optional: true
       type: string
-votepassword:
+hasvoted:
   args:
-    - ''
+    - '[@user]'
   desc: >-
-    Initiates a confirmation process for setting a new vote password, cautioning
-    the user about its security.
-  params: [ ]
+    Checks whether a member has voted for this community on FluxerList.
+  params:
+    - desc: 'The member to check. If null, checks the command invoker.'
+      name: user
+      optional: true
+      type: user
 voteroleadd:
   args:
     - '@role [time]'

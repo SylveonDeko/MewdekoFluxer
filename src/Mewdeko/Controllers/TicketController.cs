@@ -467,7 +467,9 @@ public class TicketController : Controller
                 request.RequiredResponseTime,
                 request.MaxActiveTickets,
                 request.AllowedPriorities,
-                request.DefaultPriority);
+                request.DefaultPriority,
+                request.ClaimedCategoryId is > 0 ? request.ClaimedCategoryId : null,
+                request.DmTranscript ?? false);
 
             if (button == null)
                 return BadRequest("This panel has no room for another ticket type. A panel holds at most 20 reactions.");
@@ -530,6 +532,8 @@ public class TicketController : Controller
                 button.ArchiveCategoryId,
                 ArchiveCategoryName = archiveCategory?.Name,
                 button.ThreadChannelId,
+                button.ClaimedCategoryId,
+                button.DmTranscript,
                 button.SupportRoles,
                 button.ViewerRoles,
                 button.AutoCloseTime,
@@ -585,6 +589,9 @@ public class TicketController : Controller
                 settings["categoryId"] = request.CategoryId.Value == 0 ? null : request.CategoryId.Value;
             if (request.ArchiveCategoryId.HasValue)
                 settings["archiveCategoryId"] = request.ArchiveCategoryId.Value == 0 ? null : request.ArchiveCategoryId.Value;
+            if (request.ClaimedCategoryId.HasValue)
+                settings["claimedCategoryId"] = request.ClaimedCategoryId.Value == 0 ? null : request.ClaimedCategoryId.Value;
+            if (request.DmTranscript.HasValue) settings["dmTranscript"] = request.DmTranscript.Value;
             if (request.ThreadChannelId.HasValue)
                 settings["threadChannelId"] = request.ThreadChannelId.Value == 0 ? null : request.ThreadChannelId.Value;
             if (request.ChannelFormat != null) settings["channelNameFormat"] = request.ChannelFormat;
@@ -822,7 +829,9 @@ public class TicketController : Controller
                 request.RequiredResponseTime,
                 request.MaxActiveTickets,
                 request.AllowedPriorities,
-                request.DefaultPriority);
+                request.DefaultPriority,
+                claimedCategoryId: request.ClaimedCategoryId is > 0 ? request.ClaimedCategoryId : null,
+                dmTranscript: request.DmTranscript ?? false);
 
             if (request.ThreadChannelId is > 0 && client.GetGuild(guildId) is { } guild)
             {
@@ -912,6 +921,8 @@ public class TicketController : Controller
                 option.ArchiveCategoryId,
                 ArchiveCategoryName = archiveCategory?.Name,
                 option.ThreadChannelId,
+                option.ClaimedCategoryId,
+                option.DmTranscript,
                 option.SupportRoles,
                 option.ViewerRoles,
                 option.AutoCloseTime,
@@ -966,6 +977,9 @@ public class TicketController : Controller
                 settings["categoryId"] = request.CategoryId.Value == 0 ? null : request.CategoryId.Value;
             if (request.ArchiveCategoryId.HasValue)
                 settings["archiveCategoryId"] = request.ArchiveCategoryId.Value == 0 ? null : request.ArchiveCategoryId.Value;
+            if (request.ClaimedCategoryId.HasValue)
+                settings["claimedCategoryId"] = request.ClaimedCategoryId.Value == 0 ? null : request.ClaimedCategoryId.Value;
+            if (request.DmTranscript.HasValue) settings["dmTranscript"] = request.DmTranscript.Value;
             if (request.ThreadChannelId.HasValue)
                 settings["threadChannelId"] = request.ThreadChannelId.Value == 0 ? null : request.ThreadChannelId.Value;
             if (request.ChannelFormat != null) settings["channelNameFormat"] = request.ChannelFormat;
@@ -1092,6 +1106,45 @@ public class TicketController : Controller
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting ticket {TicketId} in guild {GuildId}", ticketId, guildId);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    ///     Gets the staff notes on a ticket
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <param name="ticketId">The ID of the ticket</param>
+    /// <returns>The notes, oldest first</returns>
+    [HttpGet("tickets/{ticketId}/notes")]
+    public async Task<IActionResult> GetTicketNotes(ulong guildId, int ticketId)
+    {
+        try
+        {
+            var ticket = await ticketService.GetTicketAsync(ticketId);
+            if (ticket == null || ticket.GuildId != guildId)
+                return NotFound("Ticket not found");
+
+            SocketGuild guild = client.GetGuild(guildId);
+            var notes = await ticketService.GetTicketNotesAsync(ticketId);
+            var result = await Task.WhenAll(notes.Select(async note =>
+            {
+                var author = guild == null ? null : await guild.GetUserAsync(note.AuthorId);
+                return new
+                {
+                    note.Id,
+                    note.AuthorId,
+                    AuthorName = author?.Username ?? "Unknown User",
+                    note.Content,
+                    note.CreatedAt
+                };
+            }));
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting notes for ticket {TicketId} in guild {GuildId}", ticketId, guildId);
             return StatusCode(500, "Internal server error");
         }
     }
@@ -2404,7 +2457,11 @@ public class TicketController : Controller
                 transcriptChannelId = settings?.TranscriptChannelId,
                 logChannelId = settings?.LogChannelId,
                 defaultMaxTickets = settings?.DefaultMaxTickets,
-                blacklistedUsers = settings?.BlacklistedUsers
+                blacklistedUsers = settings?.BlacklistedUsers,
+                dmTranscriptOnClose = settings?.DmTranscriptOnClose ?? false,
+                enableStaffPings = settings?.EnableStaffPings ?? false,
+                enableDmNotifications = settings?.EnableDmNotifications ?? false,
+                notificationRoles = settings?.NotificationRoles ?? []
             });
         }
         catch (Exception ex)
@@ -2431,6 +2488,50 @@ public class TicketController : Controller
         catch (Exception ex)
         {
             logger.LogError(ex, "Error setting transcript channel for guild {GuildId}", guildId);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    ///     Sets whether every closed ticket DMs its transcript to the ticket creator
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <param name="request">Request containing the enabled flag</param>
+    /// <returns>Success response</returns>
+    [HttpPut("settings/dm-transcript")]
+    public async Task<IActionResult> SetDmTranscriptOnClose(ulong guildId, [FromBody] SetDmTranscriptRequest request)
+    {
+        try
+        {
+            await ticketService.SetDmTranscriptOnCloseAsync(guildId, request.Enabled);
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error setting the transcript DM option for guild {GuildId}", guildId);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    ///     Sets who gets notified when a ticket is created, claimed or unclaimed
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <param name="request">Request containing the notification options</param>
+    /// <returns>Success response</returns>
+    [HttpPut("settings/notifications")]
+    public async Task<IActionResult> SetNotificationSettings(ulong guildId,
+        [FromBody] UpdateNotificationSettingsRequest request)
+    {
+        try
+        {
+            await ticketService.SetNotificationSettingsAsync(guildId, request.EnableStaffPings,
+                request.EnableDmNotifications, request.NotificationRoles);
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error setting the notification options for guild {GuildId}", guildId);
             return StatusCode(500, "Internal server error");
         }
     }

@@ -194,12 +194,13 @@ public class OwnerOnly(
         var state = FluxerContext.IsConnected ? "✅" : "🔻";
         var shard = $"{gateway.ShardId ?? 0}/{gateway.ShardCount ?? 1}";
         var members = guilds.Sum(x => x.MemberCount ?? x.Members.Count);
+        var latency = $"{gateway.Latency}ms";
 
         var eb = new EmbedBuilder()
             .WithOkColor()
             .WithAuthor(Strings.ShardStatsTitle(ctx.Guild?.Id))
             .WithDescription(Strings.ShardInfo(ctx.Guild?.Id, state, shard, guilds.Count, members))
-            .WithFooter($"{gateway.Latency}ms");
+            .WithFooter(latency);
         await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
     }
 

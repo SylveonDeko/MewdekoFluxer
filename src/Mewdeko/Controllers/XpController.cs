@@ -1,7 +1,11 @@
+using System.Text;
+using System.Text.Json;
 using DataModel;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Controllers.Common.DashboardAccess;
+using Mewdeko.Controllers.Common.XpBackgrounds;
+using Mewdeko.Controllers.Common.XpEvents;
 using Mewdeko.Modules.Xp.Models;
 using Mewdeko.Modules.Xp.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -23,8 +27,557 @@ public class XpController(
     ILogger<XpController> logger,
     IServiceProvider serviceProvider,
     XpRewardManager xpRewardManager,
+    XpBackgroundService backgroundService,
+    XpRoleSyncService roleSyncService,
     IDashboardAuditContext auditContext) : Controller
 {
+    /// <summary>
+    ///     Exports every member's XP as a JSON file
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <returns>The export as a JSON file</returns>
+    [HttpGet("export")]
+    public async Task<IActionResult> ExportXp(ulong guildId)
+    {
+        var settings = await xp.GetGuildXpSettingsAsync(guildId);
+        var curve = (XpCurveType)settings.XpCurveType;
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var rows = await db.GuildUserXps.Where(x => x.GuildId == guildId && (x.TotalXp > 0 || x.BonusXp > 0))
+            .OrderByDescending(x => x.TotalXp)
+            .ToListAsync();
+
+        var json = JsonSerializer.Serialize(new
+        {
+            format = "mewdeko-xp",
+            guildId = guildId.ToString(),
+            curve = curve.ToString(),
+            exportedAt = DateTime.UtcNow,
+            members = rows.Select(x => new
+            {
+                userId = x.UserId.ToString(),
+                xp = x.TotalXp,
+                level = XpCalculator.CalculateLevel(x.TotalXp, curve),
+                bonusXp = x.BonusXp
+            })
+        }, new JsonSerializerOptions
+        {
+            WriteIndented = true
+        });
+
+        return File(Encoding.UTF8.GetBytes(json), "application/json", $"xp-{guildId}.json");
+    }
+
+    /// <summary>
+    ///     Gets the rank card background the server uses, as a data URI the dashboard can show
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <returns>The stored value and its image, or a 404 when there is none</returns>
+    [HttpGet("background")]
+    public async Task<IActionResult> GetBackground(ulong guildId)
+    {
+        var settings = await xp.GetGuildXpSettingsAsync(guildId);
+        if (string.IsNullOrWhiteSpace(settings.CustomXpImageUrl))
+            return NotFound("No background set");
+
+        var bytes = await backgroundService.LoadAsync(settings.CustomXpImageUrl);
+        return bytes is null
+            ? NotFound("Background could not be loaded")
+            : Ok(new
+            {
+                Value = settings.CustomXpImageUrl, Image = $"data:image/png;base64,{Convert.ToBase64String(bytes)}"
+            });
+    }
+
+    /// <summary>
+    ///     Sets the rank card background used for the whole server
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <param name="request">The image URL</param>
+    /// <returns>An empty result, or the reason the image was refused</returns>
+    [HttpPost("background")]
+    public async Task<IActionResult> SetBackground(ulong guildId, [FromBody] XpBackgroundRequest? request)
+    {
+        if (request == null || string.IsNullOrWhiteSpace(request.Url))
+            return BadRequest("Url is required");
+
+        auditContext.RecordBefore(await xp.GetGuildXpSettingsAsync(guildId));
+        var result = await backgroundService.SetGuildBackgroundAsync(guildId, request.Url.Trim());
+        if (result != XpBackgroundResult.Saved)
+            return BadRequest(result.ToString());
+
+        auditContext.RecordAfter(await xp.GetGuildXpSettingsAsync(guildId));
+        return Ok();
+    }
+
+    /// <summary>
+    ///     Removes the server rank card background
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <returns>An empty result, or a 404 when there was none</returns>
+    [HttpDelete("background")]
+    public async Task<IActionResult> ClearBackground(ulong guildId)
+    {
+        auditContext.RecordBefore(await xp.GetGuildXpSettingsAsync(guildId));
+        return await backgroundService.ClearGuildBackgroundAsync(guildId) ? Ok() : NotFound("No background set");
+    }
+
+    /// <summary>
+    ///     Resets the XP of every member in a guild
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <param name="request">Whether bonus XP is wiped too</param>
+    /// <returns>How many members were reset</returns>
+    [HttpPost("reset")]
+    public async Task<IActionResult> ResetGuildXp(ulong guildId, [FromBody] XpResetRequest? request)
+    {
+        var affected = await xp.ResetGuildXp(guildId, request?.ResetBonusXp ?? false);
+        return Ok(affected);
+    }
+
+    /// <summary>
+    ///     Starts a background sync of every member's level roles
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <returns>A 200 status code once the sync has started</returns>
+    [HttpPost("sync-roles")]
+    public IActionResult SyncRoles(ulong guildId)
+    {
+        var guild = client.GetGuild(guildId);
+        if (guild == null)
+            return NotFound("Guild not found");
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await roleSyncService.SyncAllUsersAsync(guild);
+            }
+            catch (InvalidOperationException)
+            {
+                logger.LogInformation("Role sync already running for guild {GuildId}", guildId);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error syncing XP roles for guild {GuildId}", guildId);
+            }
+        });
+
+        return Ok();
+    }
+
+    /// <summary>
+    ///     Gets the last 25 level-ups in a guild, newest first
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <returns>The level-up log</returns>
+    [HttpGet("level-up-log")]
+    public async Task<IActionResult> GetLevelUpLog(ulong guildId)
+    {
+        var entries = await xp.GetLevelUpLogAsync(guildId);
+        var guild = client.GetGuild(guildId);
+
+        return Ok(entries.Select(x => new
+        {
+            x.UserId,
+            Username = guild?.GetUser(x.UserId)?.Username ?? x.UserId.ToString(),
+            x.OldLevel,
+            x.NewLevel,
+            x.DateAdded
+        }));
+    }
+
+    /// <summary>
+    ///     Gets the custom level-up messages of a guild
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <returns>The level-up messages</returns>
+    [HttpGet("level-up-messages")]
+    public async Task<IActionResult> GetLevelUpMessages(ulong guildId)
+    {
+        var messages = await xp.GetLevelUpMessagesAsync(guildId);
+        return Ok(messages.Select(x => new
+        {
+            x.Id, x.MessageContent, x.IsEnabled
+        }));
+    }
+
+    /// <summary>
+    ///     Adds a custom level-up message
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <param name="request">The message template</param>
+    /// <returns>A 200 status code if successful</returns>
+    [HttpPost("level-up-messages")]
+    public async Task<IActionResult> AddLevelUpMessage(ulong guildId, [FromBody] XpLevelUpMessageRequest? request)
+    {
+        if (request == null || string.IsNullOrWhiteSpace(request.Message))
+            return BadRequest("Message is required");
+
+        await xp.AddLevelUpMessageAsync(guildId, request.Message.Trim());
+        return Ok();
+    }
+
+    /// <summary>
+    ///     Turns a custom level-up message on or off
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <param name="id">The message ID</param>
+    /// <param name="enabled">Whether the message is on</param>
+    /// <returns>A 200 status code, or a 404 when the message does not exist</returns>
+    [HttpPost("level-up-messages/{id:int}/toggle")]
+    public async Task<IActionResult> ToggleLevelUpMessage(ulong guildId, int id, [FromBody] bool enabled)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var updated = await db.XpLevelUpMessages
+            .Where(x => x.GuildId == guildId && x.Id == id)
+            .Set(x => x.IsEnabled, enabled)
+            .UpdateAsync();
+
+        return updated > 0 ? Ok() : NotFound("Message not found");
+    }
+
+    /// <summary>
+    ///     Removes a custom level-up message
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <param name="id">The message ID</param>
+    /// <returns>A 200 status code, or a 404 when the message does not exist</returns>
+    [HttpDelete("level-up-messages/{id:int}")]
+    public async Task<IActionResult> RemoveLevelUpMessage(ulong guildId, int id)
+    {
+        return await xp.RemoveLevelUpMessageAsync(guildId, id) ? Ok() : NotFound("Message not found");
+    }
+
+    /// <summary>
+    ///     Gets the channel and role XP multipliers of a guild
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <returns>The channel and role multipliers</returns>
+    [HttpGet("multipliers")]
+    public async Task<IActionResult> GetMultipliers(ulong guildId)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var channels = await db.XpChannelMultipliers.Where(x => x.GuildId == guildId).ToListAsync();
+        var roles = await db.XpRoleMultipliers.Where(x => x.GuildId == guildId).ToListAsync();
+        var guild = client.GetGuild(guildId);
+
+        return Ok(new
+        {
+            Channels = channels.Select(x => new
+            {
+                ChannelId = x.ChannelId.ToString(), Name = guild?.GetChannel(x.ChannelId)?.Name, x.Multiplier
+            }),
+            Roles = roles.Select(x => new
+            {
+                RoleId = x.RoleId.ToString(), Name = guild?.GetRole(x.RoleId)?.Name, x.Multiplier
+            })
+        });
+    }
+
+    /// <summary>
+    ///     Sets the XP multiplier of a channel
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <param name="request">The channel and multiplier</param>
+    /// <returns>A 200 status code if successful</returns>
+    [HttpPost("multipliers/channels")]
+    public async Task<IActionResult> SetChannelMultiplier(ulong guildId, [FromBody] XpMultiplierRequest? request)
+    {
+        if (request == null || request.Id == 0 || request.Multiplier <= 0)
+            return BadRequest("A channel and a positive multiplier are required");
+
+        await xp.SetChannelMultiplierAsync(guildId, request.Id, request.Multiplier);
+        return Ok();
+    }
+
+    /// <summary>
+    ///     Removes the XP multiplier of a channel
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <param name="id">The channel ID</param>
+    /// <returns>A 200 status code if successful</returns>
+    [HttpDelete("multipliers/channels/{id}")]
+    public async Task<IActionResult> RemoveChannelMultiplier(ulong guildId, ulong id)
+    {
+        await xp.SetChannelMultiplierAsync(guildId, id, 1.0);
+        return Ok();
+    }
+
+    /// <summary>
+    ///     Sets the XP multiplier of a role
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <param name="request">The role and multiplier</param>
+    /// <returns>A 200 status code if successful</returns>
+    [HttpPost("multipliers/roles")]
+    public async Task<IActionResult> SetRoleMultiplier(ulong guildId, [FromBody] XpMultiplierRequest? request)
+    {
+        if (request == null || request.Id == 0 || request.Multiplier <= 0)
+            return BadRequest("A role and a positive multiplier are required");
+
+        await xp.SetRoleMultiplierAsync(guildId, request.Id, request.Multiplier);
+        return Ok();
+    }
+
+    /// <summary>
+    ///     Removes the XP multiplier of a role
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <param name="id">The role ID</param>
+    /// <returns>A 200 status code if successful</returns>
+    [HttpDelete("multipliers/roles/{id}")]
+    public async Task<IActionResult> RemoveRoleMultiplier(ulong guildId, ulong id)
+    {
+        await xp.SetRoleMultiplierAsync(guildId, id, 1.0);
+        return Ok();
+    }
+
+    /// <summary>
+    ///     Gets the XP boost events of a guild
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <returns>The boost events, past and upcoming included</returns>
+    [HttpGet("boosts")]
+    public async Task<IActionResult> GetBoosts(ulong guildId)
+    {
+        var boosts = await xp.GetAllBoostEventsAsync(guildId);
+        var now = DateTime.UtcNow;
+
+        return Ok(boosts.Select(x => new
+        {
+            x.Id,
+            x.Name,
+            x.Multiplier,
+            x.StartTime,
+            x.EndTime,
+            Active = x.StartTime <= now && x.EndTime >= now,
+            ChannelIds = SplitIds(x.ApplicableChannels),
+            RoleIds = SplitIds(x.ApplicableRoles)
+        }));
+    }
+
+    /// <summary>
+    ///     Starts a timed XP boost
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <param name="request">The boost to start</param>
+    /// <returns>A 200 status code if successful</returns>
+    [HttpPost("boosts")]
+    public async Task<IActionResult> CreateBoost(ulong guildId, [FromBody] XpBoostRequest? request)
+    {
+        if (request == null || string.IsNullOrWhiteSpace(request.Name))
+            return BadRequest("Name is required");
+        if (request.Multiplier <= 1.0)
+            return BadRequest("Multiplier must be above 1");
+        if (request.DurationMinutes < 1)
+            return BadRequest("Duration must be at least a minute");
+
+        var start = DateTime.UtcNow;
+        await xp.CreateXpBoostEventAsync(guildId, request.Name.Trim(), request.Multiplier, start,
+            start.AddMinutes(request.DurationMinutes), request.ChannelIds, request.RoleIds);
+        return Ok();
+    }
+
+    /// <summary>
+    ///     Cancels an XP boost event
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <param name="id">The boost ID</param>
+    /// <returns>A 200 status code, or a 404 when the boost does not exist</returns>
+    [HttpDelete("boosts/{id:int}")]
+    public async Task<IActionResult> CancelBoost(ulong guildId, int id)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var owned = await db.XpBoostEvents.AnyAsync(x => x.GuildId == guildId && x.Id == id);
+        if (!owned)
+            return NotFound("Boost not found");
+
+        await xp.CancelXpBoostEventAsync(id);
+        return Ok();
+    }
+
+    /// <summary>
+    ///     Gets the XP competitions of a guild
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <returns>The competitions with their rewards, newest first</returns>
+    [HttpGet("competitions")]
+    public async Task<IActionResult> GetCompetitions(ulong guildId)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var competitions = await db.XpCompetitions.Where(x => x.GuildId == guildId)
+            .OrderByDescending(x => x.Id)
+            .ToListAsync();
+        var ids = competitions.Select(x => x.Id).ToList();
+        var rewards = await db.XpCompetitionRewards.Where(x => ids.Contains(x.CompetitionId)).ToListAsync();
+        var participants = await db.XpCompetitionEntries.Where(x => ids.Contains(x.CompetitionId))
+            .GroupBy(x => x.CompetitionId)
+            .Select(g => new
+            {
+                Id = g.Key, Count = g.Count()
+            })
+            .ToListAsync();
+        var guild = client.GetGuild(guildId);
+        var now = DateTime.UtcNow;
+
+        return Ok(competitions.Select(c => new
+        {
+            c.Id,
+            c.Name,
+            c.Type,
+            c.StartTime,
+            c.EndTime,
+            c.TargetLevel,
+            AnnouncementChannelId = c.AnnouncementChannelId?.ToString(),
+            Active = c.StartTime <= now && c.EndTime > now,
+            Participants = participants.FirstOrDefault(p => p.Id == c.Id)?.Count ?? 0,
+            Rewards = rewards.Where(r => r.CompetitionId == c.Id).OrderBy(r => r.Position).Select(r => new
+            {
+                r.Id,
+                r.Position,
+                RoleId = r.RoleId.ToString(),
+                RoleName = r.RoleId == 0 ? null : guild?.GetRole(r.RoleId)?.Name,
+                r.XpAmount,
+                r.CurrencyAmount
+            })
+        }));
+    }
+
+    /// <summary>
+    ///     Starts an XP competition
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <param name="request">The competition to start</param>
+    /// <returns>The ID of the new competition</returns>
+    [HttpPost("competitions")]
+    public async Task<IActionResult> CreateCompetition(ulong guildId, [FromBody] XpCompetitionRequest? request)
+    {
+        if (request == null || string.IsNullOrWhiteSpace(request.Name))
+            return BadRequest("Name is required");
+        if (!Enum.IsDefined(typeof(XpCompetitionType), request.Type))
+            return BadRequest("Unknown competition type");
+        if (request.DurationMinutes < 60)
+            return BadRequest("A competition has to run for at least an hour");
+
+        var type = (XpCompetitionType)request.Type;
+        if (type == XpCompetitionType.ReachLevel && request.TargetLevel <= 0)
+            return BadRequest("A target level is required");
+
+        var start = DateTime.UtcNow;
+        var competition = await xp.CreateCompetitionAsync(guildId, request.Name.Trim(), type, start,
+            start.AddMinutes(request.DurationMinutes), request.TargetLevel,
+            request.AnnouncementChannelId == 0 ? null : request.AnnouncementChannelId);
+
+        foreach (var reward in request.Rewards)
+            await xp.AddCompetitionRewardAsync(competition.Id, reward.Position, reward.RoleId, reward.XpAmount,
+                reward.CurrencyAmount);
+
+        await xp.StartCompetitionAsync(competition.Id);
+        return Ok(competition.Id);
+    }
+
+    /// <summary>
+    ///     Gets the standings of an XP competition
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <param name="id">The competition ID</param>
+    /// <returns>The standings, best first</returns>
+    [HttpGet("competitions/{id:int}/standings")]
+    public async Task<IActionResult> GetCompetitionStandings(ulong guildId, int id)
+    {
+        var competition = await xp.GetCompetitionAsync(id);
+        if (competition == null || competition.GuildId != guildId)
+            return NotFound("Competition not found");
+
+        var entries = await xp.GetCompetitionEntriesAsync(id);
+        var type = (XpCompetitionType)competition.Type;
+        var ordered = type switch
+        {
+            XpCompetitionType.MostGained => entries.OrderByDescending(e => e.CurrentXp - e.StartingXp),
+            XpCompetitionType.ReachLevel => entries.OrderBy(e => e.AchievedTargetAt == null)
+                .ThenBy(e => e.AchievedTargetAt)
+                .ThenByDescending(e => e.CurrentXp),
+            _ => entries.OrderByDescending(e => e.CurrentXp)
+        };
+
+        var guild = client.GetGuild(guildId);
+        var position = 0;
+        return Ok(ordered.Take(100).Select(e => new
+        {
+            Position = ++position,
+            UserId = e.UserId.ToString(),
+            Username = guild?.GetUser(e.UserId)?.Username ?? e.UserId.ToString(),
+            Gained = e.CurrentXp - e.StartingXp,
+            Total = e.CurrentXp,
+            e.AchievedTargetAt,
+            e.FinalPlacement
+        }).ToList());
+    }
+
+    /// <summary>
+    ///     Ends an XP competition now and hands out its rewards
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <param name="id">The competition ID</param>
+    /// <returns>A 200 status code, or the reason it could not end</returns>
+    [HttpPost("competitions/{id:int}/end")]
+    public async Task<IActionResult> EndCompetition(ulong guildId, int id)
+    {
+        var competition = await xp.GetCompetitionAsync(id);
+        if (competition == null || competition.GuildId != guildId)
+            return NotFound("Competition not found");
+        if (competition.EndTime <= DateTime.UtcNow)
+            return BadRequest("Competition already ended");
+
+        await xp.FinalizeCompetitionAsync(id);
+
+        await using var db = await dbFactory.CreateConnectionAsync();
+        await db.XpCompetitions.Where(x => x.Id == id).Set(x => x.EndTime, DateTime.UtcNow).UpdateAsync();
+        return Ok();
+    }
+
+    /// <summary>
+    ///     Gets the users excluded from XP gain
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <returns>The excluded users</returns>
+    [HttpGet("excluded/users")]
+    public async Task<IActionResult> GetExcludedUsers(ulong guildId)
+    {
+        var users = await xp.GetExcludedItemsAsync(guildId, ExcludedItemType.User);
+        var guild = client.GetGuild(guildId);
+        return Ok(users.Select(x => new
+        {
+            UserId = x, Username = guild?.GetUser(x)?.Username
+        }));
+    }
+
+    /// <summary>
+    ///     Excludes a user from XP gain
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <param name="userId">The user ID to exclude</param>
+    /// <returns>A 200 status code if successful</returns>
+    [HttpPost("excluded/users")]
+    public async Task<IActionResult> ExcludeUser(ulong guildId, [FromBody] ulong userId)
+    {
+        await xp.ExcludeItemAsync(guildId, userId, ExcludedItemType.User);
+        return Ok();
+    }
+
+    /// <summary>
+    ///     Includes a previously excluded user for XP gain
+    /// </summary>
+    /// <param name="guildId">The guild ID</param>
+    /// <param name="userId">The user ID to include</param>
+    /// <returns>A 200 status code if successful</returns>
+    [HttpDelete("excluded/users/{userId}")]
+    public async Task<IActionResult> IncludeUser(ulong guildId, ulong userId)
+    {
+        await xp.IncludeItemAsync(guildId, userId, ExcludedItemType.User);
+        return Ok();
+    }
+
     /// <summary>
     ///     Gets the XP settings for a guild
     /// </summary>
@@ -65,6 +618,9 @@ public class XpController(
             s.XpCurveType = settings.XpCurveType;
             s.CustomXpImageUrl = settings.CustomXpImageUrl;
             s.XpGainDisabled = settings.XpGainDisabled;
+            s.LevelUpInterval = Math.Max(1, settings.LevelUpInterval);
+            s.LevelUpMinLevel = Math.Max(0, settings.LevelUpMinLevel);
+            s.LevelUpRewardsOnly = settings.LevelUpRewardsOnly;
         });
 
         if (curveTypeChanged)
@@ -686,6 +1242,11 @@ public class XpController(
             HighestLevel = highestLevel,
             RecentActivity = recentGainsDetails
         });
+    }
+
+    private static List<string> SplitIds(string ids)
+    {
+        return ids.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
     }
 
     /// <summary>

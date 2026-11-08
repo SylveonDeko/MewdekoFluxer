@@ -301,9 +301,19 @@ public class BotCredentials : IBotCredentials
     public string KickClientSecret { get; set; }
 
     /// <summary>
-    ///     Gets or sets the token used for votes.
+    ///     Gets or sets the URL template of the TikTok RSS bridge.
     /// </summary>
-    public string VotesToken { get; set; }
+    public string TikTokRssBridgeUrl { get; set; }
+
+    /// <summary>
+    ///     Gets or sets the FluxerList API key used to post the bot's community count to its own listing.
+    /// </summary>
+    public string FluxerListApiKey { get; set; } = "";
+
+    /// <summary>
+    ///     Gets or sets the secret that encrypts communities' stored FluxerList API keys.
+    /// </summary>
+    public string FluxerListKeyEncryptionKey { get; set; } = "";
 
     /// <summary>
     ///     Gets or sets the Open-Meteo API URL. Defaults to the public API, but can be set to a self-hosted instance.
@@ -565,6 +575,7 @@ public class BotCredentials : IBotCredentials
             TrovoClientId = data[nameof(TrovoClientId)];
             KickClientId = data[nameof(KickClientId)];
             KickClientSecret = data[nameof(KickClientSecret)];
+            TikTokRssBridgeUrl = data[nameof(TikTokRssBridgeUrl)] ?? "";
             IsMasterInstance = Convert.ToBoolean(data[nameof(IsMasterInstance)]);
             SpotifyClientId = data[nameof(SpotifyClientId)];
             SpotifyClientSecret = data[nameof(SpotifyClientSecret)];
@@ -574,7 +585,8 @@ public class BotCredentials : IBotCredentials
             IsApiEnabled = bool.Parse(data[nameof(IsApiEnabled)] ?? "false");
 
 
-            VotesToken = data[nameof(VotesToken)];
+            FluxerListApiKey = data[nameof(FluxerListApiKey)] ?? "";
+            FluxerListKeyEncryptionKey = data[nameof(FluxerListKeyEncryptionKey)] ?? "";
 
 
             TotalShards = int.TryParse(data[nameof(TotalShards)], out var ts) && ts > 0 ? ts : 1;
@@ -741,11 +753,13 @@ public class BotCredentials : IBotCredentials
         public string TrovoClientId { get; } = "";
         public string KickClientId { get; } = "";
         public string KickClientSecret { get; } = "";
+        public string TikTokRssBridgeUrl { get; } = "";
         public string TwitchClientId { get; } = "";
         public int TotalShards { get; } = 1;
         public string TwitchClientSecret { get; } = "";
         public string TwitchEventSubSecret { get; } = "";
-        public string VotesToken { get; } = "";
+        public string FluxerListApiKey { get; } = "";
+        public string FluxerListKeyEncryptionKey { get; } = "";
         public string OpenMeteoApiUrl { get; } = "https://api.open-meteo.com";
         public string ChatSavePath { get; } = "/usr/share/nginx/cdn/chatlogs/";
         public string CdnPath { get; } = "";

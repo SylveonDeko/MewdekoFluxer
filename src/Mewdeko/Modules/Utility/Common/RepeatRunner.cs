@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System.Net;
+using System.Threading;
 using DataModel;
 using Mewdeko.Modules.Administration.Services;
 using Mewdeko.Modules.Utility.Services;
@@ -23,6 +24,8 @@ public class RepeatRunner : IDisposable
     private TimeSpan initialInterval;
     private DateTime lastActivityCheck = DateTime.UtcNow;
     private Timer? timer;
+    private Timer? burstTimer;
+    private int pendingMessages;
 
     /// <summary>
     ///     Initializes a new instance of the RepeatRunner class with the specified parameters.
@@ -95,6 +98,7 @@ public class RepeatRunner : IDisposable
 
         disposed = true;
         timer?.Dispose();
+        burstTimer?.Dispose();
         triggerLock.Dispose();
 
         GC.SuppressFinalize(this);
@@ -113,9 +117,12 @@ public class RepeatRunner : IDisposable
                 break;
             case StickyTriggerMode.OnActivity:
             case StickyTriggerMode.OnNoActivity:
-            case StickyTriggerMode.AfterMessages:
                 // These modes use activity detection instead of timers
                 SetupActivityBasedTrigger();
+                break;
+            case StickyTriggerMode.AfterMessages:
+                if (Repeater.LastMessageId == null)
+                    _ = TriggerInternal(true);
                 break;
             case StickyTriggerMode.TimeInterval:
             default:
@@ -183,9 +190,6 @@ public class RepeatRunner : IDisposable
                 case StickyTriggerMode.OnNoActivity:
                     shouldTrigger = await IsChannelQuiet();
                     break;
-                case StickyTriggerMode.AfterMessages:
-                    shouldTrigger = await HasReachedMessageThreshold();
-                    break;
             }
 
             if (shouldTrigger)
@@ -208,15 +212,7 @@ public class RepeatRunner : IDisposable
         catch (Exception ex)
         {
             Log.Error(ex, "Error in repeater callback for channel {ChannelId}", Repeater.ChannelId);
-            try
-            {
-                Stop();
-                await mrs.RemoveRepeater(Repeater).ConfigureAwait(false);
-            }
-            catch (Exception innerEx)
-            {
-                Log.Error(innerEx, "Error removing failed repeater");
-            }
+            await DisableRepeater(DescribeFailure(ex)).ConfigureAwait(false);
         }
     }
 
@@ -294,8 +290,8 @@ public class RepeatRunner : IDisposable
 
             if (Channel == null)
             {
-                Log.Warning("Channel {ChannelId} not found. Removing repeater.", Repeater.ChannelId);
-                await RemoveRepeater();
+                Log.Warning("Channel {ChannelId} not found. Disabling repeater.", Repeater.ChannelId);
+                await DisableRepeater("The channel no longer exists or I can't see it.");
                 return;
             }
 
@@ -328,6 +324,7 @@ public class RepeatRunner : IDisposable
                 await mrs.UpdateRepeaterStatsAsync(Repeater.Id, Repeater.DisplayCount, Repeater.LastDisplayed.Value);
 
                 // Always track the last message ID for all modes
+                ResetPendingMessages();
                 await mrs.SetRepeaterLastMessage(Repeater.Id, newMsg.Id);
                 Repeater.LastMessageId = newMsg.Id;
                 collector?.Feature("repeater", Guild.Id);
@@ -339,13 +336,13 @@ public class RepeatRunner : IDisposable
         {
             collector?.Feature("repeater", Guild.Id, false, ex.GetType().Name);
             Log.Warning(ex, "HTTP error in repeater for channel {ChannelId}", Repeater.ChannelId);
-            await RemoveRepeater();
+            await DisableRepeater(DescribeFailure(ex));
         }
         catch (Exception ex)
         {
             collector?.Feature("repeater", Guild.Id, false, ex.GetType().Name);
             Log.Error(ex, "Error in repeater for channel {ChannelId}", Repeater.ChannelId);
-            await RemoveRepeater();
+            await DisableRepeater(DescribeFailure(ex));
         }
         finally
         {
@@ -408,25 +405,46 @@ public class RepeatRunner : IDisposable
         }
     }
 
-    private async Task<bool> HasReachedMessageThreshold()
+    /// <summary>
+    ///     Deletes the last message this repeater posted.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    public async Task DeleteLastMessageAsync()
     {
-        if (Channel == null) return false;
+        Channel ??= await Guild.GetTextChannelAsync(Repeater.ChannelId).ConfigureAwait(false);
+        await DeletePreviousMessageAsync().ConfigureAwait(false);
+    }
 
-        try
-        {
-            // Count messages since last trigger
-            var messages = await Channel.GetMessagesAsync(Repeater.ActivityThreshold + 10).FlattenAsync();
-            var messagesSinceLastTrigger = messages
-                .Where(m => !Repeater.LastDisplayed.HasValue || m.Timestamp.UtcDateTime > Repeater.LastDisplayed.Value)
-                .Count();
+    /// <summary>
+    ///     Counts a new message in the channel for the after-messages mode.
+    /// </summary>
+    public void NoteMessage()
+    {
+        if (disposed || !Repeater.IsEnabled || Repeater.TriggerMode != (int)StickyTriggerMode.AfterMessages)
+            return;
 
-            return messagesSinceLastTrigger >= Repeater.ActivityThreshold;
-        }
-        catch (Exception ex)
+        var count = Interlocked.Increment(ref pendingMessages);
+        if (count >= Math.Max(1, Repeater.ActivityThreshold))
         {
-            Log.Warning(ex, "Error checking message threshold for repeater {RepeaterId}", Repeater.Id);
-            return false;
+            _ = TriggerInternal(true);
+            return;
         }
+
+        if (count != 1)
+            return;
+
+        var window = TimeSpan.TryParse(Repeater.ActivityTimeWindow, out var parsed) && parsed > TimeSpan.Zero
+            ? parsed
+            : TimeSpan.FromSeconds(15);
+        burstTimer?.Dispose();
+        burstTimer = new Timer(_ => _ = TriggerInternal(true), null, window, Timeout.InfiniteTimeSpan);
+    }
+
+    private void ResetPendingMessages()
+    {
+        Interlocked.Exchange(ref pendingMessages, 0);
+        burstTimer?.Dispose();
+        burstTimer = null;
     }
 
     private async Task<bool> IsConversationActive()
@@ -512,20 +530,61 @@ public class RepeatRunner : IDisposable
 
         var flags = Repeater.SuppressNotifications ? MessageFlag.SuppressNotifications : MessageFlag.None;
 
-        if (SmartEmbed.TryParse(message, Channel.GuildId, out var embed, out var plainText))
+        var role = Repeater.PingRoleId is { } roleId ? Guild.GetRole(roleId) : null;
+        if (role is null)
+            return await SendCoreAsync(message, flags, null, null).ConfigureAwait(false);
+
+        return await RolePinger.SendAsync(Guild, Channel, role,
+            () => SendCoreAsync(message, flags, role.Mention, RolePinger.MentionsFor(role.Id))).ConfigureAwait(false);
+    }
+
+    private async Task<Message> SendCoreAsync(string message, MessageFlag flags, string? mention,
+        AllowedMentions? mentions)
+    {
+        if (SmartEmbed.TryParse(message, Channel!.GuildId, out var embed, out var plainText))
         {
+            var text = string.Join(' ', mention, plainText).Trim();
             return await Channel
-                .SendMessageAsync(string.IsNullOrEmpty(plainText) ? null : plainText, embed?.ToList(), flags: flags)
+                .SendMessageAsync(string.IsNullOrEmpty(text) ? null : text, embed?.ToList(),
+                    allowedMentions: mentions, flags: flags)
                 .ConfigureAwait(false);
         }
 
-        return await Channel.SendMessageAsync(message, flags: flags).ConfigureAwait(false);
+        return await Channel.SendMessageAsync(string.Join(' ', mention, message).Trim(),
+            allowedMentions: mentions, flags: flags).ConfigureAwait(false);
     }
 
     private async Task RemoveRepeater()
     {
         Stop();
         await mrs.RemoveRepeater(Repeater).ConfigureAwait(false);
+    }
+
+    private async Task DisableRepeater(string reason)
+    {
+        try
+        {
+            Stop();
+            await mrs.DisableRepeaterAsync(Repeater, reason).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error disabling failed repeater {RepeaterId}", Repeater.Id);
+        }
+    }
+
+    private static string DescribeFailure(Exception ex)
+    {
+        var reason = ex switch
+        {
+            FluxerApiException { HttpCode: HttpStatusCode.Forbidden } => "I'm missing permissions to send messages there.",
+            FluxerApiException { HttpCode: HttpStatusCode.NotFound } => "The channel or a message it needed was deleted.",
+            FluxerApiException { Reason: { Length: > 0 } text } => $"Fluxer refused the message ({text}).",
+            FluxerApiException http => $"Fluxer refused the message ({(int)http.HttpCode}).",
+            _ => ex.Message
+        };
+
+        return reason.TrimTo(200);
     }
 
     /// <summary>
@@ -547,6 +606,8 @@ public class RepeatRunner : IDisposable
         {
             timer.Change(Timeout.Infinite, Timeout.Infinite);
         }
+
+        ResetPendingMessages();
     }
 
     /// <summary>
@@ -567,7 +628,8 @@ public class RepeatRunner : IDisposable
 
         var priorityIndicator = Repeater.Priority != 50 ? $"[P{Repeater.Priority}]" : "";
         var redundantIndicator = Repeater.NoRedundant ? "| ✍" : "";
-        var enabledIndicator = !Repeater.IsEnabled ? "[❌]" : "";
+        var enabledIndicator = Repeater.IsEnabled ? "" :
+            string.IsNullOrWhiteSpace(Repeater.DisabledReason) ? "[❌]" : $"[❌ {Repeater.DisabledReason.TrimTo(60)}]";
 
         return
             $"{Channel?.Mention ?? $"⚠<#{Repeater.ChannelId}>"} {modeIndicator}{priorityIndicator}{redundantIndicator}{enabledIndicator}| {interval.TotalHours}:{interval:mm} | {Repeater.Message.TrimTo(33)}";

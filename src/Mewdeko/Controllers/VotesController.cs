@@ -13,6 +13,7 @@ namespace Mewdeko.Controllers;
 [Authorize("ApiKeyPolicy")]
 public class VotesController(
     VoteService service,
+    FluxerListService fluxerList,
     FluxerClient client,
     IDataConnectionFactory dbFactory,
     IDashboardAuditContext auditContext)
@@ -26,7 +27,12 @@ public class VotesController(
     [HttpGet("roles")]
     public async Task<IActionResult> GetVoteRoles(ulong guildId)
     {
-        var voteRoles = await service.GetVoteRoles(guildId);
+        var guild = client.GetGuild(guildId);
+        var voteRoles = (await service.GetVoteRoles(guildId))
+            .Select(r => new
+            {
+                r.RoleId, RoleName = guild?.GetRole(r.RoleId)?.Name ?? "Deleted role", Seconds = r.Timer
+            });
         return Ok(voteRoles);
     }
 
@@ -126,28 +132,42 @@ public class VotesController(
     }
 
     /// <summary>
-    ///     Gets the vote password for a guild
+    ///     Gets whether a FluxerList API key is set for a guild, and how the last sync went
     /// </summary>
     /// <param name="guildId">The ID of the guild</param>
-    /// <returns>The vote password</returns>
-    [HttpGet("password")]
-    public async Task<IActionResult> GetVotePassword(ulong guildId)
+    /// <returns>The key status, never the key</returns>
+    [HttpGet("fluxerlist")]
+    public async Task<IActionResult> GetFluxerListStatus(ulong guildId)
     {
-        await using var db = await dbFactory.CreateConnectionAsync();
-        var config = await db.GuildConfigs.FirstOrDefaultAsync(x => x.GuildId == guildId);
-        return Ok(config?.VotesPassword ?? "");
+        return Ok(await fluxerList.GetStatus(guildId));
     }
 
     /// <summary>
-    ///     Sets the vote password for a guild
+    ///     Saves the FluxerList API key for a guild after checking it owns the community's listing
     /// </summary>
     /// <param name="guildId">The ID of the guild</param>
-    /// <param name="password">The new vote password</param>
-    /// <returns>Success response</returns>
-    [HttpPost("password")]
-    public async Task<IActionResult> SetVotePassword(ulong guildId, [FromBody] string password)
+    /// <param name="apiKey">The FluxerList API key</param>
+    /// <returns>Success or a readable error</returns>
+    [HttpPut("fluxerlist")]
+    public async Task<IActionResult> SetFluxerListKey(ulong guildId, [FromBody] string apiKey)
     {
-        await service.SetVotePassword(guildId, password);
+        var (success, error) = await fluxerList.SetKey(guildId, apiKey);
+        if (!success)
+            return BadRequest(error);
+        auditContext.RecordAfter("FluxerList API key set");
+        return Ok();
+    }
+
+    /// <summary>
+    ///     Removes the FluxerList API key for a guild
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <returns>Success response</returns>
+    [HttpDelete("fluxerlist")]
+    public async Task<IActionResult> RemoveFluxerListKey(ulong guildId)
+    {
+        await fluxerList.RemoveKey(guildId);
+        auditContext.RecordAfter("FluxerList API key removed");
         return Ok();
     }
 
@@ -257,6 +277,54 @@ public class VotesController(
             .Take(limit)
             .ToListAsync();
 
-        return Ok(leaderboard);
+        var guild = client.GetGuild(guildId);
+        return Ok(leaderboard.Select(x => new
+        {
+            x.userId, x.voteCount, username = guild?.GetUser(x.userId)?.Username
+        }));
+    }
+
+    /// <summary>
+    ///     Gets vote totals and the most recent votes for a guild
+    /// </summary>
+    /// <param name="guildId">The ID of the guild</param>
+    /// <returns>Vote totals and recent votes</returns>
+    [HttpGet("summary")]
+    public async Task<IActionResult> GetVoteSummary(ulong guildId)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+
+        var now = DateTime.UtcNow;
+        var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        var totalVotes = await db.Votes.CountAsync(x => x.GuildId == guildId);
+        var votesThisMonth = await db.Votes.CountAsync(x => x.GuildId == guildId && x.DateAdded >= monthStart);
+        var uniqueVoters = await db.Votes
+            .Where(x => x.GuildId == guildId)
+            .Select(x => x.UserId)
+            .Distinct()
+            .CountAsync();
+
+        var recent = await db.Votes
+            .Where(x => x.GuildId == guildId)
+            .OrderByDescending(x => x.DateAdded)
+            .Take(10)
+            .Select(x => new
+            {
+                x.UserId, x.DateAdded
+            })
+            .ToListAsync();
+
+        var guild = client.GetGuild(guildId);
+        return Ok(new
+        {
+            totalVotes,
+            votesThisMonth,
+            uniqueVoters,
+            recent = recent.Select(x => new
+            {
+                x.UserId, username = guild?.GetUser(x.UserId)?.Username, x.DateAdded
+            })
+        });
     }
 }

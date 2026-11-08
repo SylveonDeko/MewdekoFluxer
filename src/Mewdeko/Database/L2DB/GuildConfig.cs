@@ -69,7 +69,8 @@ namespace DataModel
 		[Column("SuggestButtonMessageId"                                                                                              )] public ulong   SuggestButtonMessageId             { get; set; } // numeric(20,0)
 		[Column("SuggestButtonRepostThreshold"                                                                                        )] public int       SuggestButtonRepostThreshold       { get; set; } // integer
 		[Column("SuggestButtonColor"                                                                                                  )] public int       SuggestButtonColor                 { get; set; } // integer
-		[Column("AfkMessage"                                                                                                          )] public string?   AfkMessage                         { get; set; } // text
+		[Column("AnonymousSuggestions"                                                                                                )] public bool      AnonymousSuggestions               { get; set; } // boolean
+		[Column("AfkMessage"                                                                                                       )] public string?   AfkMessage                         { get; set; } // text
 		[Column("StreamMessage"                                                                                                       )] public string?   StreamMessage                      { get; set; } // text
 		[Column("AutoBotRoleIds"                                                                                                      )] public string?   AutoBotRoleIds                     { get; set; } // text
 		[Column("GBEnabled"                                                                                                           )] public int       GbEnabled                          { get; set; } // integer
@@ -152,5 +153,6 @@ namespace DataModel
 		[Column("WizardCompletedByUserId"                                                                                             )] public ulong     WizardCompletedByUserId            { get; set; } // numeric(20,0)
 		[Column("WizardSkipped"                                                                                                       )] public bool      WizardSkipped                      { get; set; } // boolean
 		[Column("HasBasicSetup"                                                                                                       )] public bool      HasBasicSetup                      { get; set; } // boolean
+		[Column("ChatTriggerMemberCreate"                                                                                             )] public bool      ChatTriggerMemberCreate            { get; set; } // boolean
 	}
 }

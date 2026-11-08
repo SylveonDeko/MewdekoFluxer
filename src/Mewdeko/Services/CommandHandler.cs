@@ -162,6 +162,40 @@ public class CommandHandler : INService
         }
     }
 
+    private static readonly AsyncLocal<bool> RunningAsMember = new();
+
+    /// <summary>
+    ///     Runs a command as a member, through the normal command pipeline.
+    /// </summary>
+    /// <param name="basis">A real message in the channel the command runs in.</param>
+    /// <param name="member">The member the command runs as.</param>
+    /// <param name="commandText">The command without its prefix.</param>
+    /// <returns>True when the command was handed to the pipeline.</returns>
+    /// <remarks>
+    ///     A command started this way cannot start another.
+    /// </remarks>
+    public async Task<bool> ExecuteAsMember(SocketMessage basis, SocketGuildMember member, string commandText)
+    {
+        if (RunningAsMember.Value || string.IsNullOrWhiteSpace(commandText) || basis.Guild is not { } guild)
+            return false;
+
+        var prefix = await gss.GetPrefix(guild).ConfigureAwait(false);
+        if (prefix == null)
+            return false;
+
+        RunningAsMember.Value = true;
+        try
+        {
+            await TryRunCommand(guild, basis.Channel, basis.CopyAs(member, prefix + commandText.Trim()))
+                .ConfigureAwait(false);
+            return true;
+        }
+        finally
+        {
+            RunningAsMember.Value = false;
+        }
+    }
+
     private async Task MessageReceivedHandler(SocketMessage usrMsg)
     {
         try
@@ -345,6 +379,7 @@ public class CommandHandler : INService
         CommandContext context, string input, int argPos,
         MultiMatchHandling multiMatchHandling = MultiMatchHandling.Exception)
     {
+        GuildEmbedColorService.Enter(context.Guild?.Id);
         var searchResult = commandService.Search(context, input[argPos..]);
         if (!searchResult.IsSuccess)
             return (false, searchResult.ErrorReason, null, searchResult.Error?.ToString());
@@ -401,8 +436,22 @@ public class CommandHandler : INService
                 return (false, "lateblocker", null, "Blocked");
         }
 
-        var result = await chosenOverload.match.ExecuteAsync(context, chosenOverload.parseResult, Services)
+        var (execContext, deleteInvoker) = await Services.GetRequiredService<CommandReplyRedirectService>()
+            .ApplyAsync(context, cmd).ConfigureAwait(false);
+
+        var result = await chosenOverload.match.ExecuteAsync(execContext, chosenOverload.parseResult, Services)
             .ConfigureAwait(false);
+
+        if (deleteInvoker)
+        {
+            try
+            {
+                await context.Message.DeleteAsync().ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+            }
+        }
 
         if (result is not ExecuteResult executeResult)
             return (result.IsSuccess, result.ErrorReason, cmd, result.Error?.ToString());

@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using System.Text.Json;
 using DataModel;
+using Humanizer;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.Attributes.TextCommands;
@@ -981,6 +982,14 @@ public class CustomVoice(IDataConnectionFactory dbFactory, GuildSettingsService 
             voiceChannel.ConnectedUsers.Any(u => u.Id == originalOwner.Id))
         {
             await ReplyErrorAsync(Strings.CustomVoiceOwnerPresent(Context.Guild.Id));
+            return;
+        }
+
+        var claimWait = CustomVoiceService.GetClaimWait(
+            await Service.GetConfigForChannelAsync(Context.Guild.Id, customChannel.ChannelId), customChannel);
+        if (claimWait > TimeSpan.Zero)
+        {
+            await ReplyErrorAsync(Strings.CustomVoiceOwnerLocked(Context.Guild.Id, claimWait.Humanize(2)));
             return;
         }
 

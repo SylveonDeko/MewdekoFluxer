@@ -1,6 +1,8 @@
 ﻿using System.Diagnostics;
 using System.Globalization;
+using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Runtime;
 using System.Threading;
@@ -33,7 +35,7 @@ public class StatsService : IStatsService, IDisposable, IReadyExecutor
     private readonly ILogger<StatsService> logger;
 
     private readonly DateTime started;
-    private PeriodicTimer topGgTimer;
+    private PeriodicTimer fluxerListTimer;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="StatsService" /> class.
@@ -56,7 +58,7 @@ public class StatsService : IStatsService, IDisposable, IReadyExecutor
 
         started = DateTime.UtcNow;
 
-        _ = PostToTopGg();
+        _ = PostToFluxerList();
     }
 
     /// <summary>
@@ -64,7 +66,7 @@ public class StatsService : IStatsService, IDisposable, IReadyExecutor
     /// </summary>
     public void Dispose()
     {
-        topGgTimer?.Dispose();
+        fluxerListTimer?.Dispose();
     }
 
     /// <inheritdoc />
@@ -214,30 +216,51 @@ public class StatsService : IStatsService, IDisposable, IReadyExecutor
     }
 
 
-    private async Task PostToTopGg()
+    private async Task PostToFluxerList()
     {
-        if (string.IsNullOrEmpty(creds.VotesToken)) return;
+        if (string.IsNullOrEmpty(creds.FluxerListApiKey)) return;
 
-        topGgTimer = new PeriodicTimer(TimeSpan.FromMinutes(30));
+        fluxerListTimer = new PeriodicTimer(TimeSpan.FromMinutes(10));
+        var lastPosted = -1;
+        var lastPostedAt = DateTime.MinValue;
 
-        while (await topGgTimer.WaitForNextTickAsync().ConfigureAwait(false))
+        while (await fluxerListTimer.WaitForNextTickAsync().ConfigureAwait(false))
         {
-            var guilds = client.Guilds;
-            var content = JsonContent.Create(new
+            try
             {
-                shard_count = creds.TotalShards, server_count = guilds.Count
-            });
+                var count = client.Guilds.Count;
+                if (count == lastPosted && DateTime.UtcNow - lastPostedAt < TimeSpan.FromHours(1))
+                    continue;
 
-            http.DefaultRequestHeaders.Remove("Authorization");
-            http.DefaultRequestHeaders.Add("Authorization", creds.VotesToken);
-            var response = await http
-                .PostAsync(new Uri($"https://top.gg/api/bots/{client.CurrentUser.Id}/stats"), content)
-                .ConfigureAwait(false);
+                using var request = new HttpRequestMessage(HttpMethod.Post,
+                    $"https://fluxerlist.com/api/v1/bots/{client.CurrentUser.Id}/stats")
+                {
+                    Content = JsonContent.Create(new
+                    {
+                        serverCount = count
+                    })
+                };
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", creds.FluxerListApiKey);
 
-            if (response.IsSuccessStatusCode) continue;
-            logger.LogError("Failed to post stats to Top.gg: {0} {1} {2}", response.ReasonPhrase, response.StatusCode,
-                response.Content);
-            return;
+                using var response = await http.SendAsync(request).ConfigureAwait(false);
+                if (response.IsSuccessStatusCode)
+                {
+                    lastPosted = count;
+                    lastPostedAt = DateTime.UtcNow;
+                    continue;
+                }
+
+                logger.LogError("Failed to post stats to FluxerList: {StatusCode} {Reason}", response.StatusCode,
+                    response.ReasonPhrase);
+
+                if (response.StatusCode == HttpStatusCode.TooManyRequests &&
+                    response.Headers.RetryAfter?.Delta is { } delay)
+                    await Task.Delay(delay).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "Failed to post stats to FluxerList");
+            }
         }
     }
 

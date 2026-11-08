@@ -2,6 +2,7 @@ using DataModel;
 using LinqToDB.Async;
 using Mewdeko.Controllers.Common.Currency;
 using Mewdeko.Database.Enums;
+using Mewdeko.Modules.CardDesigns.Services;
 using Mewdeko.Modules.Currency.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,8 +24,11 @@ namespace Mewdeko.Controllers;
 public class CurrencyController : Controller
 {
     private readonly CurrencyAnalyticsService analyticsService;
+    private readonly EconomyBoostService boostService;
     private readonly FluxerClient client;
     private readonly CurrencyConfigService configService;
+    private readonly CardDesignService designs;
+    private readonly GuildSettingsService guildSettings;
     private readonly ICurrencyService currencyService;
     private readonly IDataConnectionFactory dbFactory;
     private readonly ILogger<CurrencyController> logger;
@@ -37,22 +41,31 @@ public class CurrencyController : Controller
     /// <param name="configService">The per-guild economy configuration service.</param>
     /// <param name="analyticsService">The economy analytics service.</param>
     /// <param name="shopService">The shop service.</param>
+    /// <param name="boostService">The scheduled boost service.</param>
     /// <param name="dbFactory">The database connection factory.</param>
-    /// <param name="client">The Discord client, used to resolve users and roles.</param>
+    /// <param name="client">The Fluxer client, used to resolve users and roles.</param>
+    /// <param name="guildSettings">The guild settings service, which holds the currency emoji and daily reward.</param>
+    /// <param name="designs">The card design library, for design shop items.</param>
     /// <param name="logger">The logger.</param>
     public CurrencyController(
         ICurrencyService currencyService,
         CurrencyConfigService configService,
         CurrencyAnalyticsService analyticsService,
         ShopService shopService,
+        EconomyBoostService boostService,
         IDataConnectionFactory dbFactory,
         FluxerClient client,
+        GuildSettingsService guildSettings,
+        CardDesignService designs,
         ILogger<CurrencyController> logger)
     {
+        this.guildSettings = guildSettings;
+        this.designs = designs;
         this.currencyService = currencyService;
         this.configService = configService;
         this.analyticsService = analyticsService;
         this.shopService = shopService;
+        this.boostService = boostService;
         this.dbFactory = dbFactory;
         this.client = client;
         this.logger = logger;
@@ -232,6 +245,71 @@ public class CurrencyController : Controller
 
     #endregion
 
+    #region Setup
+
+    /// <summary>
+    ///     Gets the economy setup: currency emoji, daily reward, and whether the economy counts as set up.
+    /// </summary>
+    /// <param name="guildId">The guild to read.</param>
+    /// <returns>The setup state.</returns>
+    [HttpGet("setup")]
+    public async Task<IActionResult> GetSetup(ulong guildId)
+    {
+        return Ok(await BuildSetupAsync(guildId));
+    }
+
+    /// <summary>
+    ///     Applies a partial update to the economy setup.
+    /// </summary>
+    /// <param name="guildId">The guild to update.</param>
+    /// <param name="request">The fields to change. Omitted fields are left alone.</param>
+    /// <returns>The setup state after the update, or a 400 explaining what is wrong.</returns>
+    [HttpPatch("setup")]
+    public async Task<IActionResult> UpdateSetup(ulong guildId, [FromBody] EconomySetupRequest request)
+    {
+        if (request.CurrencyEmoji is not null && CurrencySetupRules.ValidateEmoji(request.CurrencyEmoji) is { } emojiError)
+            return BadRequest(emojiError);
+
+        var guildConfig = await guildSettings.GetGuildConfig(guildId);
+        var amount = request.RewardAmount ?? guildConfig.RewardAmount;
+        var cooldown = request.RewardTimeoutSeconds ?? guildConfig.RewardTimeoutSeconds;
+
+        if ((request.RewardAmount.HasValue || request.RewardTimeoutSeconds.HasValue) &&
+            CurrencySetupRules.ValidateReward(amount, cooldown) is { } rewardError)
+            return BadRequest(rewardError);
+
+        if (request.CurrencyEmoji is not null)
+            guildConfig.CurrencyEmoji = request.CurrencyEmoji.Trim();
+        guildConfig.RewardAmount = amount;
+        guildConfig.RewardTimeoutSeconds = cooldown;
+        await guildSettings.UpdateGuildConfig(guildId, guildConfig);
+
+        if (request.SetupComplete.HasValue)
+            await configService.UpdateAsync(guildId, config => config.SetupComplete = request.SetupComplete.Value);
+
+        return Ok(await BuildSetupAsync(guildId));
+    }
+
+    private async Task<EconomySetupResponse> BuildSetupAsync(ulong guildId)
+    {
+        var guildConfig = await guildSettings.GetGuildConfig(guildId);
+        var economy = await configService.GetConfigAsync(guildId);
+
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var configured = economy.SetupComplete || await db.TransactionHistories.AnyAsync(x => x.GuildId == guildId);
+
+        return new EconomySetupResponse
+        {
+            CurrencyEmoji = guildConfig.CurrencyEmoji,
+            RewardAmount = guildConfig.RewardAmount,
+            RewardTimeoutSeconds = guildConfig.RewardTimeoutSeconds,
+            SetupComplete = economy.SetupComplete,
+            Configured = configured
+        };
+    }
+
+    #endregion
+
     #region Configuration
 
     /// <summary>
@@ -254,6 +332,22 @@ public class CurrencyController : Controller
     [HttpPatch("config")]
     public async Task<IActionResult> UpdateConfig(ulong guildId, [FromBody] UpdateEconomyConfigRequest request)
     {
+        var current = await configService.GetConfigAsync(guildId);
+
+        (long Min, long Max)? Pair(long? min, long? max, long currentMin, long currentMax)
+        {
+            return min.HasValue || max.HasValue ? (min ?? currentMin, max ?? currentMax) : null;
+        }
+
+        var rangeError = CurrencySetupRules.ValidateRanges(
+            Pair(request.WorkMinReward, request.WorkMaxReward, current.WorkMinReward, current.WorkMaxReward),
+            Pair(request.CrimeMinReward, request.CrimeMaxReward, current.CrimeMinReward, current.CrimeMaxReward),
+            Pair(request.CrimeFineMin, request.CrimeFineMax, current.CrimeFineMin, current.CrimeFineMax),
+            Pair(request.MinBet, request.MaxBet, current.MinBet, current.MaxBet));
+
+        if (rangeError is not null)
+            return BadRequest(rangeError);
+
         var updated = await configService.UpdateAsync(guildId, config =>
         {
             if (request.GamblingEnabled.HasValue) config.GamblingEnabled = request.GamblingEnabled.Value;
@@ -342,6 +436,7 @@ public class CurrencyController : Controller
     {
         var items = await shopService.GetItemsAsync(guildId, true);
         var guild = client.GetGuild(guildId);
+        var designNames = (await designs.GetDesignsAsync(guildId)).ToDictionary(d => d.Id, d => d.Name);
 
         await using var db = await dbFactory.CreateConnectionAsync();
 
@@ -370,6 +465,8 @@ public class CurrencyController : Controller
                 RoleId = item.RoleId,
                 RoleName = item.RoleId.HasValue ? guild?.GetRole(item.RoleId.Value)?.Name : null,
                 TextContent = item.TextContent,
+                DesignId = item.DesignId,
+                DesignName = item.DesignId.HasValue ? designNames.GetValueOrDefault(item.DesignId.Value) : null,
                 Stock = item.Stock,
                 MaxPerUser = item.MaxPerUser,
                 RequiredRoleId = item.RequiredRoleId,
@@ -377,6 +474,9 @@ public class CurrencyController : Controller
                     ? guild?.GetRole(item.RequiredRoleId.Value)?.Name
                     : null,
                 Consumable = item.Consumable,
+                BuyMessage = item.BuyMessage,
+                UseMessage = item.UseMessage,
+                UseOnBuy = item.UseOnBuy,
                 Enabled = item.Enabled,
                 SortOrder = item.SortOrder,
                 Owned = totalsForItem?.Owned ?? 0,
@@ -400,7 +500,10 @@ public class CurrencyController : Controller
             return BadRequest("Name is required.");
         if (request.Price < 0)
             return BadRequest("Price cannot be negative.");
+        if (await ValidateItemTypeAsync(guildId, request) is { } typeError)
+            return BadRequest(typeError);
 
+        var isDesign = request.ItemType == (int)ShopItemType.Design;
         var created = await shopService.AddItemAsync(new ShopItem
         {
             GuildId = guildId,
@@ -410,10 +513,14 @@ public class CurrencyController : Controller
             ItemType = request.ItemType,
             RoleId = request.RoleId,
             TextContent = request.TextContent,
+            DesignId = isDesign ? request.DesignId : null,
             Stock = request.Stock < 0 ? -1 : request.Stock,
-            MaxPerUser = Math.Max(0, request.MaxPerUser),
+            MaxPerUser = isDesign ? 1 : Math.Max(0, request.MaxPerUser),
             RequiredRoleId = request.RequiredRoleId,
-            Consumable = request.Consumable,
+            Consumable = !isDesign && request.Consumable,
+            BuyMessage = request.BuyMessage,
+            UseMessage = request.UseMessage,
+            UseOnBuy = !isDesign && request.UseOnBuy,
             Enabled = request.Enabled,
             SortOrder = request.SortOrder
         });
@@ -433,7 +540,10 @@ public class CurrencyController : Controller
     {
         if (request.Price < 0)
             return BadRequest("Price cannot be negative.");
+        if (await ValidateItemTypeAsync(guildId, request) is { } typeError)
+            return BadRequest(typeError);
 
+        var isDesign = request.ItemType == (int)ShopItemType.Design;
         var updated = await shopService.UpdateItemAsync(guildId, name, item =>
         {
             item.Name = string.IsNullOrWhiteSpace(request.Name) ? item.Name : request.Name.Trim();
@@ -442,10 +552,14 @@ public class CurrencyController : Controller
             item.ItemType = request.ItemType;
             item.RoleId = request.RoleId;
             item.TextContent = request.TextContent;
+            item.DesignId = isDesign ? request.DesignId : null;
             item.Stock = request.Stock < 0 ? -1 : request.Stock;
-            item.MaxPerUser = Math.Max(0, request.MaxPerUser);
+            item.MaxPerUser = isDesign ? 1 : Math.Max(0, request.MaxPerUser);
             item.RequiredRoleId = request.RequiredRoleId;
-            item.Consumable = request.Consumable;
+            item.Consumable = !isDesign && request.Consumable;
+            item.BuyMessage = request.BuyMessage;
+            item.UseMessage = request.UseMessage;
+            item.UseOnBuy = request.UseOnBuy;
             item.Enabled = request.Enabled;
             item.SortOrder = request.SortOrder;
         });
@@ -488,6 +602,179 @@ public class CurrencyController : Controller
             x.Quantity,
             x.TotalPaid
         }));
+    }
+
+    /// <summary>
+    ///     Gives a member copies of a shop item, or creates the item hidden when it does not exist yet.
+    /// </summary>
+    /// <param name="guildId">The guild the inventory belongs to.</param>
+    /// <param name="userId">The receiving user.</param>
+    /// <param name="request">The item and amount.</param>
+    /// <param name="spawn">Whether to create the item out of thin air instead of using shop stock.</param>
+    /// <returns>No content on success, or an error when the item is missing or out of stock.</returns>
+    [HttpPost("inventory/{userId}/give")]
+    public async Task<IActionResult> GiveInventoryItem(ulong guildId, ulong userId,
+        [FromBody] InventoryAdjustRequest request, [FromQuery] bool spawn = false)
+    {
+        if (request.Amount <= 0 || string.IsNullOrWhiteSpace(request.ItemName))
+            return BadRequest("An item name and a positive amount are required.");
+
+        if (spawn)
+        {
+            var spawned = await shopService.SpawnItemAsync(guildId, userId, request.ItemName.Trim(), request.Amount);
+            return spawned is null ? Conflict("The item could not be created.") : NoContent();
+        }
+
+        var item = await shopService.GetItemAsync(guildId, request.ItemName.Trim());
+
+        if (item is null)
+            return NotFound($"No item named '{request.ItemName}'.");
+
+        return await shopService.GrantItemAsync(guildId, userId, item, request.Amount, true)
+            ? NoContent()
+            : Conflict("The item is out of stock.");
+    }
+
+    /// <summary>
+    ///     Takes copies of an item out of a member's inventory.
+    /// </summary>
+    /// <param name="guildId">The guild the inventory belongs to.</param>
+    /// <param name="userId">The owning user.</param>
+    /// <param name="request">The item and amount.</param>
+    /// <returns>How many copies were taken, or not found if the item does not exist.</returns>
+    [HttpPost("inventory/{userId}/take")]
+    public async Task<IActionResult> TakeInventoryItem(ulong guildId, ulong userId,
+        [FromBody] InventoryAdjustRequest request)
+    {
+        var item = await shopService.GetItemAsync(guildId, request.ItemName?.Trim() ?? string.Empty);
+
+        if (item is null)
+            return NotFound($"No item named '{request.ItemName}'.");
+
+        return Ok(new
+        {
+            Taken = await shopService.TakeItemAsync(guildId, userId, item, request.Amount)
+        });
+    }
+
+    private async Task<string?> ValidateItemTypeAsync(ulong guildId, ShopItemRequest request)
+    {
+        if (!Enum.IsDefined((ShopItemType)request.ItemType))
+            return "Item type must be 0, 1, 2, 3 or 4.";
+        if (request.ItemType != (int)ShopItemType.Design)
+            return null;
+        if (request.DesignId is not { } designId)
+            return "Pick the design this item grants.";
+
+        return await designs.GetDesignAsync(guildId, designId) is null ? "That design doesn't exist." : null;
+    }
+
+    #endregion
+
+    #region Boosts
+
+    /// <summary>
+    ///     Gets a guild's scheduled earning boosts.
+    /// </summary>
+    /// <param name="guildId">The guild to list.</param>
+    /// <returns>The guild's boosts.</returns>
+    [HttpGet("boosts")]
+    public async Task<IActionResult> GetBoosts(ulong guildId)
+    {
+        return Ok(await boostService.GetBoostsAsync(guildId));
+    }
+
+    /// <summary>
+    ///     Creates a scheduled earning boost.
+    /// </summary>
+    /// <param name="guildId">The guild to add to.</param>
+    /// <param name="request">The boost to create.</param>
+    /// <returns>The created boost, or a conflict if the name is taken.</returns>
+    [HttpPost("boosts")]
+    public async Task<IActionResult> CreateBoost(ulong guildId, [FromBody] EconomyBoostRequest request)
+    {
+        var problem = ValidateBoost(request);
+
+        if (problem is not null)
+            return BadRequest(problem);
+
+        var created = await boostService.AddBoostAsync(new EconomyBoost
+        {
+            GuildId = guildId,
+            Name = request.Name.Trim(),
+            PercentChange = request.PercentChange,
+            Commands = request.Commands.Trim().ToLowerInvariant(),
+            ScheduleType = request.ScheduleType,
+            StartsAt = request.StartsAt,
+            DurationMinutes = request.DurationMinutes,
+            Enabled = request.Enabled
+        });
+
+        return created is null ? Conflict($"A boost named '{request.Name}' already exists.") : Ok(created);
+    }
+
+    /// <summary>
+    ///     Replaces a scheduled earning boost's settings.
+    /// </summary>
+    /// <param name="guildId">The guild the boost belongs to.</param>
+    /// <param name="name">The current name of the boost.</param>
+    /// <param name="request">The new settings.</param>
+    /// <returns>The updated boost, or not found if no such boost exists.</returns>
+    [HttpPut("boosts/{name}")]
+    public async Task<IActionResult> UpdateBoost(ulong guildId, string name, [FromBody] EconomyBoostRequest request)
+    {
+        var problem = ValidateBoost(request);
+
+        if (problem is not null)
+            return BadRequest(problem);
+
+        var updated = await boostService.UpdateBoostAsync(guildId, name, boost =>
+        {
+            boost.Name = request.Name.Trim();
+            boost.PercentChange = request.PercentChange;
+            boost.Commands = request.Commands.Trim().ToLowerInvariant();
+            boost.ScheduleType = request.ScheduleType;
+            boost.StartsAt = request.StartsAt;
+            boost.DurationMinutes = request.DurationMinutes;
+            boost.Enabled = request.Enabled;
+        });
+
+        return updated is null ? NotFound($"No boost named '{name}'.") : Ok(updated);
+    }
+
+    /// <summary>
+    ///     Deletes a scheduled earning boost.
+    /// </summary>
+    /// <param name="guildId">The guild the boost belongs to.</param>
+    /// <param name="name">The name of the boost.</param>
+    /// <returns>No content on success, or not found if no such boost exists.</returns>
+    [HttpDelete("boosts/{name}")]
+    public async Task<IActionResult> DeleteBoost(ulong guildId, string name)
+    {
+        return await boostService.RemoveBoostAsync(guildId, name)
+            ? NoContent()
+            : NotFound($"No boost named '{name}'.");
+    }
+
+    private static string? ValidateBoost(EconomyBoostRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name))
+            return "Name is required.";
+        if (request.PercentChange is < -100 or > 1000 || request.PercentChange == 0)
+            return "Percent must be between -100 and 1000, and not 0.";
+        if (request.DurationMinutes is < 1 or > 525600)
+            return "Duration must be between 1 minute and 365 days.";
+        if (request.ScheduleType is < 0 or > 3)
+            return "Schedule must be 0, 1, 2 or 3.";
+
+        var commands = request.Commands ?? string.Empty;
+        request.Commands = commands;
+
+        var unknown = commands
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .FirstOrDefault(x => !EconomyBoostService.BoostableCommands.Contains(x, StringComparer.OrdinalIgnoreCase));
+
+        return unknown is null ? null : $"Unknown command '{unknown}'.";
     }
 
     #endregion

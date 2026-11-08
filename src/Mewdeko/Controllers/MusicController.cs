@@ -692,6 +692,70 @@ public class MusicController : Controller
     }
 
     /// <summary>
+    ///     Moves a track to another position in the queue
+    /// </summary>
+    /// <param name="guildId">The community ID</param>
+    /// <param name="request">The queue indexes to move from and to</param>
+    /// <param name="userId">The user making the request, used to find their voice channel's player</param>
+    /// <returns>OK result when the track is moved</returns>
+    [HttpPost("queue/move")]
+    [Authorize("ApiKeyPolicy")]
+    public async Task<IActionResult> MoveQueueItem(ulong guildId, [FromBody] MoveQueueRequest request,
+        [FromQuery] ulong userId = 0)
+    {
+        var playerId = await ResolvePlayerId(guildId, userId);
+        var queue = (await cache.GetMusicQueue(playerId)).OrderBy(x => x.Index).ToList();
+
+        var fromPosition = queue.FindIndex(x => x.Index == request.FromIndex);
+        var toPosition = queue.FindIndex(x => x.Index == request.ToIndex);
+        if (fromPosition < 0 || toPosition < 0)
+            return NotFound("Track not found");
+
+        if (fromPosition == toPosition)
+            return Ok();
+
+        var slots = queue.Select(x => x.Index).ToList();
+        var currentTrack = await cache.GetCurrentTrack(playerId);
+        var currentIndex = currentTrack?.Index;
+
+        var moved = queue[fromPosition];
+        var playing = currentIndex is null ? null : queue.FirstOrDefault(x => x.Index == currentIndex);
+        queue.RemoveAt(fromPosition);
+        queue.Insert(toPosition, moved);
+        for (var i = 0; i < queue.Count; i++)
+            queue[i].Index = slots[i];
+
+        await cache.SetMusicQueue(playerId, queue);
+        if (playing is not null)
+            await cache.SetCurrentTrack(playerId, playing);
+
+        await eventManager.BroadcastPlayerUpdate(guildId);
+
+        return Ok();
+    }
+
+    private async Task<ulong> ResolvePlayerId(ulong guildId, ulong userId)
+    {
+        var guild = client.GetGuild(guildId);
+        var candidates = new List<ulong>();
+        var userChannel = userId == 0 ? null : guild?.GetUser(userId)?.VoiceChannel;
+        if (userChannel is not null)
+            candidates.Add(userChannel.Id);
+
+        var botChannel = guild?.GetUser(client.CurrentUser.Id)?.VoiceChannel;
+        if (botChannel is not null)
+            candidates.Add(botChannel.Id);
+
+        foreach (var candidate in candidates)
+        {
+            if ((await cache.GetMusicQueue(candidate)).Count > 0)
+                return candidate;
+        }
+
+        return guildId;
+    }
+
+    /// <summary>
     ///     Sets the volume
     /// </summary>
     /// <param name="guildId">The Discord guild ID</param>

@@ -3520,79 +3520,13 @@ savechat:
   args:
     - '<time> [@channel]'
     - time
-  desc: >-
-    Saves the chat log of a channel. Public mewdeko saves this to the nginx cdn
-    then sends you a link to display it on the cdn
+  desc: 'Saves the recent history of a channel, up to 3 days and 5000 messages, to the chat log store shown on the dashboard chat saver page.'
   params:
-    - desc: >-
-        Saves the chat log of a channel. Public mewdeko saves this to the nginx cdn
-        then sends you a link to display it on the cdn
+    - desc: 'How far back to save, up to 3 days.'
       name: time
       optional: false
       type: duration
-    - desc: >-
-        Saves the chat log of a channel. Public mewdeko saves this to the nginx cdn
-        then sends you a link to display it on the cdn
-      name: channel
-      optional: true
-      type: channel
-savechat_StoopidTime_=:
-  args:
-    - '<time> [@channel]'
-    - time
-  desc: >-
-    Saves the chat log of a channel. Public mewdeko saves this to the nginx cdn
-    then sends you a link to display it on the cdn
-  params:
-    - desc: >-
-        Saves the chat log of a channel. Public mewdeko saves this to the nginx cdn
-        then sends you a link to display it on the cdn
-      name: time
-      optional: false
-      type: duration
-    - desc: >-
-        Saves the chat log of a channel. Public mewdeko saves this to the nginx cdn
-        then sends you a link to display it on the cdn
-      name: channel
-      optional: true
-      type: channel
-savechat_StoopidTime_=_1:
-  args:
-    - '<time> [@channel]'
-    - time
-  desc: >-
-    Saves the chat log of a channel. Public mewdeko saves this to the nginx cdn
-    then sends you a link to display it on the cdn
-  params:
-    - desc: >-
-        Saves the chat log of a channel. Public mewdeko saves this to the nginx cdn
-        then sends you a link to display it on the cdn
-      name: time
-      optional: false
-      type: duration
-    - desc: >-
-        Saves the chat log of a channel. Public mewdeko saves this to the nginx cdn
-        then sends you a link to display it on the cdn
-      name: channel
-      optional: true
-      type: channel
-savechat_StoopidTime_=_2:
-  args:
-    - '<time> [@channel]'
-    - time
-  desc: >-
-    Saves the chat log of a channel. Public mewdeko saves this to the nginx cdn
-    then sends you a link to display it on the cdn
-  params:
-    - desc: >-
-        Saves the chat log of a channel. Public mewdeko saves this to the nginx cdn
-        then sends you a link to display it on the cdn
-      name: time
-      optional: false
-      type: duration
-    - desc: >-
-        Saves the chat log of a channel. Public mewdeko saves this to the nginx cdn
-        then sends you a link to display it on the cdn
+    - desc: 'The channel to save. Defaults to this one.'
       name: channel
       optional: true
       type: channel
@@ -4867,3 +4801,175 @@ linkfixes:
     - ''
   desc: 'Shows whether link fixing is on, and the host used for each site.'
   params: [ ]
+fancy:
+  args:
+    - text
+  desc: 'Converts text to script letters.'
+  params:
+    - desc: 'The text to convert.'
+      name: input
+      optional: false
+      type: string
+boldfancy:
+  args:
+    - text
+  desc: 'Converts text to bold script letters.'
+  params:
+    - desc: 'The text to convert.'
+      name: input
+      optional: false
+      type: string
+fraktur:
+  args:
+    - text
+  desc: 'Converts text to fraktur letters.'
+  params:
+    - desc: 'The text to convert.'
+      name: input
+      optional: false
+      type: string
+boldfraktur:
+  args:
+    - text
+  desc: 'Converts text to bold fraktur letters.'
+  params:
+    - desc: 'The text to convert.'
+      name: input
+      optional: false
+      type: string
+doublestruck:
+  args:
+    - text
+  desc: 'Converts text to double-struck letters.'
+  params:
+    - desc: 'The text to convert.'
+      name: input
+      optional: false
+      type: string
+smallcaps:
+  args:
+    - text
+  desc: 'Converts text to small capital letters.'
+  params:
+    - desc: 'The text to convert.'
+      name: input
+      optional: false
+      type: string
+aesthetic:
+  args:
+    - text
+  desc: 'Converts text to full-width letters.'
+  params:
+    - desc: 'The text to convert.'
+      name: input
+      optional: false
+      type: string
+clap:
+  args:
+    - text
+  desc: 'Puts a clap between each word.'
+  params:
+    - desc: 'The text to convert.'
+      name: input
+      optional: false
+      type: string
+spaceout:
+  args:
+    - text
+  desc: 'Puts a space between each letter.'
+  params:
+    - desc: 'The text to convert.'
+      name: input
+      optional: false
+      type: string
+emojify:
+  args:
+    - text
+  desc: 'Converts text to regional indicator emoji.'
+  params:
+    - desc: 'The text to convert.'
+      name: input
+      optional: false
+      type: string
+youngestaccounts:
+  args:
+    - ''
+  desc: 'Lists the members with the newest accounts.'
+  params: [ ]
+oldestaccounts:
+  args:
+    - ''
+  desc: 'Lists the members with the oldest accounts.'
+  params: [ ]
+latestjoiners:
+  args:
+    - ''
+  desc: 'Lists the members who joined most recently.'
+  params: [ ]
+earliestjoiners:
+  args:
+    - ''
+  desc: 'Lists the members who joined first.'
+  params: [ ]
+remindrepeat:
+  args:
+    - number interval|off
+  desc: 'Makes one of your reminders repeat on an interval of at least one hour, or stops it repeating.'
+  params:
+    - desc: 'The number of the reminder in your reminder list.'
+      name: index
+      optional: false
+      type: int
+    - desc: 'How often to repeat, at least one hour. Use off to stop repeating.'
+      name: interval
+      optional: false
+      type: string
+remindsubscribe:
+  args:
+    - id
+  desc: 'Subscribes you to someone''s reminder so you get pinged with it.'
+  params:
+    - desc: 'The reminder id shown in the reminder list.'
+      name: id
+      optional: false
+      type: int
+remindunsubscribe:
+  args:
+    - id
+  desc: 'Removes your subscription from a reminder.'
+  params:
+    - desc: 'The reminder id shown in the reminder list.'
+      name: id
+      optional: false
+      type: int
+repeatpingrole:
+  args:
+    - index
+    - 'index role'
+  desc: 'Sets the role a repeater pings each time it posts, or clears it. The role is made mentionable only while the message is sent.'
+  params:
+    - desc: 'The one-based index of the repeater to modify.'
+      name: index
+      optional: false
+      type: int
+    - desc: 'The role to ping. Leave empty to stop pinging.'
+      name: role
+      optional: true
+      type: SocketRole
+announcerole:
+  args:
+    - 'channel role message'
+  desc: 'Pings a role in a channel with a message. The role is made mentionable only while the message is sent.'
+  params:
+    - desc: 'The channel to post in.'
+      name: channel
+      optional: false
+      type: TextChannel
+    - desc: 'The role to ping.'
+      name: role
+      optional: false
+      type: SocketRole
+    - desc: 'The announcement text.'
+      name: message
+      optional: false
+      type: string

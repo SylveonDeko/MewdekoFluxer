@@ -10,7 +10,8 @@ namespace Mewdeko.Modules.Votes;
 ///     Contains commands related to managing and interacting with voting features in the server.
 /// </summary>
 /// <param name="interactivity">The interactivity service.</param>
-public class Vote(InteractiveService interactivity) : MewdekoModuleBase<VoteService>
+/// <param name="fluxerList">The FluxerList service.</param>
+public class Vote(InteractiveService interactivity, FluxerListService fluxerList) : MewdekoModuleBase<VoteService>
 {
     /// <summary>
     ///     Sets the specified text channel as the vote channel where all vote confirmations will be sent.
@@ -226,26 +227,35 @@ public class Vote(InteractiveService interactivity) : MewdekoModuleBase<VoteServ
     }
 
     /// <summary>
-    ///     Initiates a confirmation process for setting a new vote password, cautioning the user about its security.
+    ///     Checks whether a member has voted for this community on FluxerList.
     /// </summary>
-    /// <returns>A task that represents the asynchronous operation of setting a new vote password.</returns>
+    /// <param name="user">The member to check. If null, checks the command invoker.</param>
+    /// <returns>A task that represents the asynchronous operation of checking the vote.</returns>
     [Cmd]
     [Aliases]
-    [UserPerm(GuildPermission.ManageGuild)]
     [RequireContext(ContextType.Guild)]
-    public async Task VotePassword()
+    public async Task HasVoted([Remainder] IUser user = null)
     {
-        if (await PromptUserConfirmAsync(
-                "Please make absolute sure nobody else sees this password, otherwise this will lead to improper data. ***Mewdeko and it's team are not responsible for stolen passwords***. \n\nDo you agree to these terms?",
-                ctx.User.Id))
+        var target = user ?? ctx.User;
+        var result = await fluxerList.CheckVote(ctx.Guild.Id, target.Id);
+        switch (result.Status)
         {
-            await ctx.Channel.SendConfirmAsync(Strings.VotePasswordPrompt(ctx.Guild.Id)).ConfigureAwait(false);
-            var password = await NextMessageAsync(ctx.Channel.Id, ctx.User.Id).ConfigureAwait(false);
-            if (string.IsNullOrWhiteSpace(password))
-                return;
-
-            await Service.SetVotePassword(ctx.Guild.Id, password.Trim());
-            await ctx.Channel.SendConfirmAsync(Strings.VotePasswordSet(ctx.Guild.Id)).ConfigureAwait(false);
+            case FluxerListCheckStatus.NotConnected:
+                await ctx.Channel.SendErrorAsync(Strings.FluxerListNotConnected(ctx.Guild.Id), Config);
+                break;
+            case FluxerListCheckStatus.RateLimited:
+                await ctx.Channel.SendErrorAsync(Strings.FluxerListCheckRateLimited(ctx.Guild.Id), Config);
+                break;
+            case FluxerListCheckStatus.Failed:
+                await ctx.Channel.SendErrorAsync(Strings.FluxerListCheckFailed(ctx.Guild.Id, result.Error), Config);
+                break;
+            default:
+                if (result.Voted)
+                    await ctx.Channel.SendConfirmAsync(Strings.FluxerListHasVoted(ctx.Guild.Id, target.Mention));
+                else
+                    await ctx.Channel.SendErrorAsync(Strings.FluxerListHasNotVoted(ctx.Guild.Id, target.Mention),
+                        Config);
+                break;
         }
     }
 

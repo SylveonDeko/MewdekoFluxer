@@ -589,7 +589,7 @@ public class JoinRoleTimeoutService : INService, IReadyExecutor
         try
         {
             await channel.SendAsync(embed: new EmbedBuilder()
-                .WithOkColor()
+                .WithOkColor(guild.Id)
                 .WithTitle(strings.JrtLogTitle(guild.Id))
                 .WithDescription(description)
                 .WithTimestamp(DateTimeOffset.UtcNow)

@@ -2012,6 +2012,67 @@ streamadd_string_2:
       name: link
       optional: false
       type: string
+streamdeleteonend:
+  args:
+    - number
+  desc: 'Toggles deleting a stream''s notification message when the stream ends.'
+  params:
+    - desc: The 1-based index of the stream.
+      name: index
+      optional: false
+      type: int
+streamsocial:
+  args:
+    - 'youtube https://www.youtube.com/@channel'
+    - 'bluesky name.bsky.social true'
+    - 'reddit subreddit'
+    - 'podcast https://example.com/feed.xml'
+  desc: 'Follows a YouTube channel''s uploads, a Bluesky account, a subreddit or a podcast.'
+  params:
+    - desc: youtube, bluesky, reddit or podcast.
+      name: platform
+      optional: false
+      type: string
+    - desc: A URL, handle or name, or a feed URL for a podcast.
+      name: target
+      optional: false
+      type: string
+    - desc: Whether Bluesky reposts count as new posts.
+      name: reposts
+      optional: true
+      type: bool
+podcastsearch:
+  args:
+    - text
+  desc: 'Searches for podcasts to follow.'
+  params:
+    - desc: What to search for.
+      name: term
+      optional: false
+      type: string
+streamlivemessage:
+  args:
+    - number
+  desc: 'Toggles editing a stream''s live message in place while the stream runs.'
+  params:
+    - desc: The 1-based index of the stream.
+      name: index
+      optional: false
+      type: int
+streamvideomessage:
+  args:
+    - number
+    - text
+  desc: 'Sets the message sent when a followed TikTok account posts a new video. Needs TikTokRssBridgeUrl in the bot credentials, such as https://host/tiktok/user/@{{username}} for an RSSHub instance.'
+  params:
+    - desc: The 1-based index of the stream.
+      name: index
+      optional: false
+      type: int
+    - desc: The video message template with placeholders. Leave empty to reset.
+      name: message
+      optional: true
+      type: string
 streamcheck:
   args:
     - text

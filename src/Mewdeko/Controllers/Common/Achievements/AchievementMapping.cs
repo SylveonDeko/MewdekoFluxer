@@ -51,6 +51,11 @@ public static class AchievementMapping
             ChannelId = def.ChannelId,
             RoleRewardId = def.RoleRewardId,
             RoleRewardName = def.RoleRewardId is { } roleId ? guild?.GetRole(roleId)?.Name : null,
+            RoleRemoveId = def.RoleRemoveId,
+            RoleRemoveName = def.RoleRemoveId is { } removeId ? guild?.GetRole(removeId)?.Name : null,
+            TargetRoleId = def.TargetRoleId,
+            TargetRoleName = def.TargetRoleId is { } targetId ? guild?.GetRole(targetId)?.Name : null,
+            UnlockMessage = def.UnlockMessage,
             CurrencyReward = def.CurrencyReward,
             XpReward = def.XpReward,
             IsCustom = def.IsCustom,
@@ -113,6 +118,7 @@ public static class AchievementMapping
             LogChannelId = row.LogChannelId,
             DmByDefault = row.DmByDefault,
             MentionUsers = row.MentionUsers,
+            AlmostThereDm = row.AlmostThereDm,
             UnlockMessage = row.UnlockMessage,
             XpPerPoint = row.XpPerPoint,
             RevealHidden = row.RevealHidden,
@@ -246,8 +252,6 @@ public static class AchievementMapping
             }).ToList(),
             Limits = new AchievementLimitsResponse
             {
-                MaxCustomAchievements = AchievementService.MaxCustomAchievements,
-                MaxCustomCategories = AchievementService.MaxCustomCategories,
                 NameLength = AchievementService.NameLength,
                 DescriptionLength = AchievementService.DescriptionLength,
                 KeywordLength = AchievementService.KeywordLength,
@@ -274,10 +278,6 @@ public static class AchievementMapping
             AchievementError.MetricInvalid => "That isn't something community achievements can count.",
             AchievementError.ThresholdInvalid => "The goal has to be at least 1.",
             AchievementError.KeywordMissing => "Add a phrase or emoji to watch for.",
-            AchievementError.TooManyAchievements =>
-                $"This community already has {AchievementService.MaxCustomAchievements} achievements.",
-            AchievementError.TooManyCategories =>
-                $"This community already has {AchievementService.MaxCustomCategories} categories.",
             AchievementError.RoleNotAssignable =>
                 "The bot can't give out that role. Move the bot's highest role above it, and make sure no integration manages it.",
             AchievementError.CategoryInvalid => "That category doesn't exist.",
@@ -285,13 +285,14 @@ public static class AchievementMapping
                 "Pick an icon from the list, a community emoji, an https image link, or a PNG, JPEG, GIF, or WebP under 4 MB.",
             AchievementError.TooManyUploads =>
                 $"This community already has {AchievementIconService.MaxUploads} uploaded icons. Delete one first.",
-            AchievementError.TooManyCards =>
-                $"This community already has {AchievementService.MaxCardDesigns} card designs. Delete one first.",
             AchievementError.TooManyCardImages =>
                 $"This community already has {AchievementIconService.MaxCardUploads} card images. Delete one first.",
+            AchievementError.TooManyMemberImages =>
+                "This community's member upload space is full. Try a preset, or ask staff to clear some space.",
             AchievementError.RewardInvalid => "Points and rewards have to be zero or more, and within limits.",
             AchievementError.AlreadyInState => "Nothing to change.",
             AchievementError.BadgeInvalid => "That badge isn't owned, or that slot doesn't exist.",
+            AchievementError.TargetRoleMissing => "Pick the role members have to receive.",
             _ => "Something went wrong saving that."
         };
     }

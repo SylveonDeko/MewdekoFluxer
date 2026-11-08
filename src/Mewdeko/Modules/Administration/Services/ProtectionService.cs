@@ -43,6 +43,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     private readonly IAnalyticsCollector collector;
     private readonly IDataConnectionFactory dbFactory;
     private readonly EventHandler eventHandler;
+    private readonly AutomodExtrasService extras;
     private readonly ImageHashingService imageHashing;
     private readonly ILogger<ProtectionService> logger;
     private readonly MuteService mute;
@@ -75,12 +76,15 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     /// <param name="scamPresets">The known scam image hashes that ship with the bot.</param>
     /// <param name="bss">The bot configuration service.</param>
     /// <param name="collector">The analytics collector.</param>
+    /// <param name="extras">The automod extras service.</param>
     public ProtectionService(FluxerClient client,
         MuteService mute, IDataConnectionFactory dbFactory, UserPunishService punishService, EventHandler eventHandler,
         ILogger<ProtectionService> logger, GeneratedBotStrings strings, ImageHashingService imageHashing,
-        ScamImagePresetService scamPresets, BotConfigService bss, IAnalyticsCollector collector)
+        ScamImagePresetService scamPresets, BotConfigService bss, IAnalyticsCollector collector,
+        AutomodExtrasService extras)
     {
         this.client = client;
+        this.extras = extras;
         this.collector = collector;
         this.mute = mute;
         this.dbFactory = dbFactory;
@@ -392,7 +396,8 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
             }
         }
 
-        if (patternStats is { } patterns && patterns.Action != (int)PunishmentAction.Warn)
+        if (patternStats is { } patterns && patterns.Action != (int)PunishmentAction.Warn &&
+            !JoinRoleTimeoutService.ParseIds(patterns.AntiPatternSettings.ExemptRoleIds).Intersect(user.RoleIds).Any())
         {
             try
             {
@@ -481,6 +486,8 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
                     if (isMatch && score >= settings.MinimumScore)
                     {
                         patterns.Increment();
+                        await DeleteAndNotifyAsync(null, user, false, settings.NotifyUser,
+                            ProtectionType.PatternMatching).ConfigureAwait(false);
                         await PunishUsers(patterns.Action, ProtectionType.PatternMatching, patterns.PunishDuration,
                             patterns.RoleId, user).ConfigureAwait(false);
                         if (bss.Data.LogPunishments)
@@ -498,6 +505,8 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
                 if (score >= settings.MinimumScore && reasons.Any())
                 {
                     patterns.Increment();
+                    await DeleteAndNotifyAsync(null, user, false, settings.NotifyUser,
+                        ProtectionType.PatternMatching).ConfigureAwait(false);
                     await PunishUsers(patterns.Action, ProtectionType.PatternMatching, patterns.PunishDuration,
                         patterns.RoleId, user).ConfigureAwait(false);
                     if (bss.Data.LogPunishments)
@@ -577,6 +586,9 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
         if (spamStats.AntiSpamSettings.AntiSpamIgnores.Any(i => i.ChannelId == channel.Id))
             return Task.CompletedTask;
 
+        if (msg.Member is { } spammer && extras.IsExempt(spammer, channel))
+            return Task.CompletedTask;
+
         _ = Task.Run(async () =>
         {
             try
@@ -593,8 +605,10 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
                     {
                         removedStats.Dispose();
                         var settings = spamStats.AntiSpamSettings;
+                        await DeleteAndNotifyAsync(msg, msg.Member!, settings.DeleteMessage, settings.NotifyUser,
+                            ProtectionType.Spamming).ConfigureAwait(false);
                         await PunishUsers(settings.Action, ProtectionType.Spamming, settings.MuteTime, settings.RoleId,
-                            msg.Member!).ConfigureAwait(false);
+                            msg, msg.Member!).ConfigureAwait(false);
                     }
                 }
             }
@@ -615,7 +629,22 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
     /// <param name="roleId">The ID of the role to be added, if applicable.</param>
     /// <param name="gus">The users to be punished.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    private async Task PunishUsers(int action, ProtectionType pt, int muteTime, ulong? roleId, params SocketGuildMember[]? gus)
+    private Task PunishUsers(int action, ProtectionType pt, int muteTime, ulong? roleId, params SocketGuildMember[]? gus)
+    {
+        return PunishUsers(action, pt, muteTime, roleId, null, gus);
+    }
+
+    /// <summary>
+    ///     Punishes a set of users for a message that triggered a protection and logs it.
+    /// </summary>
+    /// <param name="action">The punishment action to be applied.</param>
+    /// <param name="pt">The type of protection triggering the punishment.</param>
+    /// <param name="muteTime">The duration of the mute punishment, if applicable.</param>
+    /// <param name="roleId">The ID of the role to be added, if applicable.</param>
+    /// <param name="trigger">The message that triggered the protection, if there is one.</param>
+    /// <param name="gus">The users to be punished.</param>
+    private async Task PunishUsers(int action, ProtectionType pt, int muteTime, ulong? roleId, Message? trigger,
+        params SocketGuildMember[]? gus)
     {
         if (gus == null || gus.Length == 0) return;
 
@@ -672,6 +701,32 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
 
         if (queued.Count > 0)
             _ = OnAntiProtectionTriggered(punishment, pt, queued.ToArray());
+
+        foreach (var gu in queued)
+        {
+            await LogProtectionAsync(gu, pt, punishment.ToString().ToLowerInvariant(), trigger).ConfigureAwait(false);
+        }
+    }
+
+    private static string ProtectionTypeName(ProtectionType type)
+    {
+        return type switch
+        {
+            ProtectionType.Raiding => "Anti-Raid",
+            ProtectionType.Spamming => "Anti-Spam",
+            ProtectionType.Alting => "Anti-Alt",
+            ProtectionType.MassMention => "Anti-Mass-Mention",
+            ProtectionType.PatternMatching => "Anti-Pattern",
+            ProtectionType.MassPosting => "Anti-Mass-Post",
+            ProtectionType.PostChannelBan => "Anti-Post-Channel",
+            _ => "Anti-Image-Hash"
+        };
+    }
+
+    private Task LogProtectionAsync(SocketGuildMember user, ProtectionType type, string actions, Message? trigger)
+    {
+        return extras.LogAsync(user.GuildId, user.Id, ProtectionTypeName(type), trigger?.Content, actions,
+            trigger?.ChannelId);
     }
 
     /// <summary>
@@ -865,6 +920,13 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
         var mentionCount = msg.MentionedUsers.Count + msg.MentionedRoleIds.Count;
         if (mentionCount == 0) return Task.CompletedTask;
 
+        if (JoinRoleTimeoutService.ParseIds(settings.ExemptChannelIds).Contains(channel.Id) ||
+            (msg.Member is { } exemptMember &&
+             JoinRoleTimeoutService.ParseIds(settings.ExemptRoleIds).Intersect(exemptMember.RoleIds).Any()))
+            return Task.CompletedTask;
+
+        if (msg.Member is { } mentioner && extras.IsExempt(mentioner, channel))
+            return Task.CompletedTask;
 
         _ = Task.Run(async () =>
         {
@@ -872,8 +934,10 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
             {
                 if (mentionCount >= settings.MentionThreshold)
                 {
+                    await DeleteAndNotifyAsync(msg, msg.Member!, settings.DeleteMessage, settings.NotifyUser,
+                        ProtectionType.MassMention).ConfigureAwait(false);
                     await PunishUsers(settings.Action, ProtectionType.MassMention, settings.MuteTime, settings.RoleId,
-                        msg.Member!).ConfigureAwait(false);
+                        msg, msg.Member!).ConfigureAwait(false);
                     if (massMentionStats.UserStats.TryRemove(msg.Author.Id, out var removedStats))
                         removedStats.Dispose();
                     return;
@@ -884,8 +948,10 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
 
                 if (userStats.AddMentions(mentionCount, settings.MaxMentionsInTimeWindow))
                 {
+                    await DeleteAndNotifyAsync(msg, msg.Member!, settings.DeleteMessage, settings.NotifyUser,
+                        ProtectionType.MassMention).ConfigureAwait(false);
                     await PunishUsers(settings.Action, ProtectionType.MassMention, settings.MuteTime, settings.RoleId,
-                        msg.Member!).ConfigureAwait(false);
+                        msg, msg.Member!).ConfigureAwait(false);
                     if (massMentionStats.UserStats.TryRemove(msg.Author.Id, out var removedStats))
                         removedStats.Dispose();
                 }
@@ -1501,6 +1567,9 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
                 if (settings.AntiMassPostIgnoredChannels.Any(c => c.ChannelId == channel.Id))
                     return;
 
+                if (extras.IsExempt(guildUser, channel))
+                    return;
+
                 // Extract content
                 var content = msg.Content;
                 if (string.IsNullOrWhiteSpace(content) || content.Length < settings.MinContentLength)
@@ -1611,8 +1680,8 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
             }
         }
 
-        await PunishUsers(stats.Action, ProtectionType.MassPosting, stats.PunishDuration, stats.RoleId, user)
-            .ConfigureAwait(false);
+        await PunishUsers(stats.Action, ProtectionType.MassPosting, stats.PunishDuration, stats.RoleId, triggerMessage,
+            user).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1650,6 +1719,9 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
 
                 // Check if user has ignored role
                 if (settings.AntiPostChannelIgnoredRoles.Any(r => guildUser.RoleIds.Contains(r.RoleId)))
+                    return;
+
+                if (extras.HasExemptRole(guildUser))
                     return;
 
                 // User posted in honeypot channel - punish them
@@ -1694,7 +1766,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
                 }
 
                 await PunishUsers(settings.Action, ProtectionType.PostChannelBan, settings.PunishDuration,
-                        settings.RoleId, guildUser)
+                        settings.RoleId, msg, guildUser)
                     .ConfigureAwait(false);
 
                 _ = Task.Run(() => UpdateAntiPostChannelStatusEmbedAsync(channel.Guild.Id));
@@ -2140,7 +2212,7 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
         if (stats.IgnoredChannels.Contains(channel.Id))
             return Task.CompletedTask;
 
-        if (guildUser.RoleIds.Any(r => stats.IgnoredRoles.Contains(r)))
+        if (guildUser.RoleIds.Any(r => stats.IgnoredRoles.Contains(r)) || extras.IsExempt(guildUser, channel))
             return Task.CompletedTask;
 
         var urls = CollectImageUrls(msg, settings.CheckEmbeds);
@@ -2418,9 +2490,198 @@ public class ProtectionService : INService, IReadyExecutor, IUnloadableService
         }
 
         if (action is PunishmentAction.Delete or PunishmentAction.None)
+        {
+            await LogProtectionAsync(user, ProtectionType.ImageHash, action.ToString().ToLowerInvariant(),
+                triggerMessage).ConfigureAwait(false);
+            return;
+        }
+
+        await PunishUsers((int)action, ProtectionType.ImageHash, duration, roleId, triggerMessage, user)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    ///     Deletes the offending message and sends the member a DM, as far as a protection is set to.
+    /// </summary>
+    /// <param name="message">The offending message, if there is one.</param>
+    /// <param name="user">The member.</param>
+    /// <param name="delete">Whether to delete the message.</param>
+    /// <param name="notify">Whether to DM the member.</param>
+    /// <param name="type">The protection that triggered.</param>
+    private async Task DeleteAndNotifyAsync(Message? message, SocketGuildMember user, bool delete, bool notify,
+        ProtectionType type)
+    {
+        if (delete && message is not null)
+        {
+            try
+            {
+                await message.DeleteAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "Could not delete protection message {MessageId}", message.Id);
+            }
+        }
+
+        if (!notify)
             return;
 
-        await PunishUsers((int)action, ProtectionType.ImageHash, duration, roleId, user).ConfigureAwait(false);
+        try
+        {
+            var dm = await user.CreateDMChannelAsync().ConfigureAwait(false);
+            await dm.SendAsync(strings.ProtectionTriggeredDm(user.GuildId, user.Guild.Name, ProtectionTypeName(type)))
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Could not DM {UserId} about a protection", user.Id);
+        }
+    }
+
+    /// <summary>
+    ///     Gets the extra options set on every running protection that has them.
+    /// </summary>
+    /// <param name="guildId">The community ID.</param>
+    public List<ProtectionOptionsInfo> GetProtectionOptions(ulong guildId)
+    {
+        var list = new List<ProtectionOptionsInfo>();
+        if (antiSpamGuilds.TryGetValue(guildId, out var spam))
+        {
+            var s = spam.AntiSpamSettings;
+            list.Add(new ProtectionOptionsInfo(ProtectionOptionTarget.Spam, s.DeleteMessage, s.NotifyUser, [],
+                s.AntiSpamIgnores.Select(i => i.ChannelId).ToList()));
+        }
+
+        if (antiMassMentionGuilds.TryGetValue(guildId, out var mention))
+        {
+            var s = mention.AntiMassMentionSettings;
+            list.Add(new ProtectionOptionsInfo(ProtectionOptionTarget.MassMention, s.DeleteMessage, s.NotifyUser,
+                JoinRoleTimeoutService.ParseIds(s.ExemptRoleIds), JoinRoleTimeoutService.ParseIds(s.ExemptChannelIds)));
+        }
+
+        if (antiPatternGuilds.TryGetValue(guildId, out var pattern))
+        {
+            var s = pattern.AntiPatternSettings;
+            list.Add(new ProtectionOptionsInfo(ProtectionOptionTarget.Pattern, false, s.NotifyUser,
+                JoinRoleTimeoutService.ParseIds(s.ExemptRoleIds), []));
+        }
+
+        if (antiMassPostGuilds.TryGetValue(guildId, out var post))
+        {
+            var s = post.AntiMassPostSettings;
+            list.Add(new ProtectionOptionsInfo(ProtectionOptionTarget.MassPost, s.DeleteMessages, s.NotifyUser,
+                s.AntiMassPostIgnoredRoles.Select(r => r.RoleId).ToList(),
+                s.AntiMassPostIgnoredChannels.Select(c => c.ChannelId).ToList()));
+        }
+
+        return list;
+    }
+
+    /// <summary>
+    ///     Sets whether an existing protection deletes the offending message and DMs the member.
+    /// </summary>
+    /// <param name="guildId">The community ID.</param>
+    /// <param name="target">The protection.</param>
+    /// <param name="deleteMessage">Whether to delete the message, or null to leave it as it is.</param>
+    /// <param name="notifyUser">Whether to DM the member, or null to leave it as it is.</param>
+    public async Task<ProtectionOptionResult> SetProtectionOptionsAsync(ulong guildId, ProtectionOptionTarget target,
+        bool? deleteMessage, bool? notifyUser)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+        switch (target)
+        {
+            case ProtectionOptionTarget.Spam:
+            {
+                var s = await db.GetTable<AntiSpamSetting>().FirstOrDefaultAsync(x => x.GuildId == guildId)
+                    .ConfigureAwait(false);
+                if (s is null) return ProtectionOptionResult.NotEnabled;
+                s.DeleteMessage = deleteMessage ?? s.DeleteMessage;
+                s.NotifyUser = notifyUser ?? s.NotifyUser;
+                await db.UpdateAsync(s).ConfigureAwait(false);
+                break;
+            }
+            case ProtectionOptionTarget.MassMention:
+            {
+                var s = await db.GetTable<AntiMassMentionSetting>().FirstOrDefaultAsync(x => x.GuildId == guildId)
+                    .ConfigureAwait(false);
+                if (s is null) return ProtectionOptionResult.NotEnabled;
+                s.DeleteMessage = deleteMessage ?? s.DeleteMessage;
+                s.NotifyUser = notifyUser ?? s.NotifyUser;
+                await db.UpdateAsync(s).ConfigureAwait(false);
+                break;
+            }
+            case ProtectionOptionTarget.Pattern:
+            {
+                if (deleteMessage is not null) return ProtectionOptionResult.Unsupported;
+                var s = await db.GetTable<AntiPatternSetting>().FirstOrDefaultAsync(x => x.GuildId == guildId)
+                    .ConfigureAwait(false);
+                if (s is null) return ProtectionOptionResult.NotEnabled;
+                s.NotifyUser = notifyUser ?? s.NotifyUser;
+                await db.UpdateAsync(s).ConfigureAwait(false);
+                break;
+            }
+            default:
+            {
+                var s = await db.GetTable<AntiMassPostSetting>().FirstOrDefaultAsync(x => x.GuildId == guildId)
+                    .ConfigureAwait(false);
+                if (s is null) return ProtectionOptionResult.NotEnabled;
+                s.DeleteMessages = deleteMessage ?? s.DeleteMessages;
+                s.NotifyUser = notifyUser ?? s.NotifyUser;
+                await db.UpdateAsync(s).ConfigureAwait(false);
+                break;
+            }
+        }
+
+        await Initialize(guildId).ConfigureAwait(false);
+        return ProtectionOptionResult.Ok;
+    }
+
+    /// <summary>
+    ///     Toggles a role or channel as exempt from Anti-Mass-Mention or a role as exempt from Anti-Pattern.
+    /// </summary>
+    /// <param name="guildId">The community ID.</param>
+    /// <param name="target">The protection.</param>
+    /// <param name="id">The role or channel ID.</param>
+    /// <param name="isRole">Whether the ID is a role.</param>
+    /// <returns>The outcome, and whether the exemption was added rather than removed.</returns>
+    public async Task<(ProtectionOptionResult Result, bool Added)> ToggleProtectionExemptAsync(ulong guildId,
+        ProtectionOptionTarget target, ulong id, bool isRole)
+    {
+        if (target is not (ProtectionOptionTarget.MassMention or ProtectionOptionTarget.Pattern) ||
+            (target == ProtectionOptionTarget.Pattern && !isRole))
+            return (ProtectionOptionResult.Unsupported, false);
+
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var added = false;
+
+        string Toggle(string stored)
+        {
+            var ids = JoinRoleTimeoutService.ParseIds(stored);
+            added = !ids.Remove(id);
+            if (added) ids.Add(id);
+            return JoinRoleTimeoutService.JoinIds(ids);
+        }
+
+        if (target == ProtectionOptionTarget.MassMention)
+        {
+            var s = await db.GetTable<AntiMassMentionSetting>().FirstOrDefaultAsync(x => x.GuildId == guildId)
+                .ConfigureAwait(false);
+            if (s is null) return (ProtectionOptionResult.NotEnabled, false);
+            if (isRole) s.ExemptRoleIds = Toggle(s.ExemptRoleIds);
+            else s.ExemptChannelIds = Toggle(s.ExemptChannelIds);
+            await db.UpdateAsync(s).ConfigureAwait(false);
+        }
+        else
+        {
+            var s = await db.GetTable<AntiPatternSetting>().FirstOrDefaultAsync(x => x.GuildId == guildId)
+                .ConfigureAwait(false);
+            if (s is null) return (ProtectionOptionResult.NotEnabled, false);
+            s.ExemptRoleIds = Toggle(s.ExemptRoleIds);
+            await db.UpdateAsync(s).ConfigureAwait(false);
+        }
+
+        await Initialize(guildId).ConfigureAwait(false);
+        return (ProtectionOptionResult.Ok, added);
     }
 
     /// <summary>

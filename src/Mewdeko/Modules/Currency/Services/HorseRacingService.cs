@@ -9,15 +9,18 @@ public class HorseRacingService : INService
 {
     private static readonly string[] Animals = ["🐎", "🐪", "🦏", "🦛", "🐘", "🦒", "🦘", "🐅", "🐆", "🦓"];
     private readonly ICurrencyService cs;
+    private readonly DailyChallengeService dailyChallengeService;
     private readonly ConcurrentDictionary<ulong, RaceData> races = new();
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="HorseRacingService" /> class.
     /// </summary>
     /// <param name="cs">The currency service.</param>
-    public HorseRacingService(ICurrencyService cs)
+    /// <param name="dailyChallengeService">The daily challenge service.</param>
+    public HorseRacingService(ICurrencyService cs, DailyChallengeService dailyChallengeService)
     {
         this.cs = cs;
+        this.dailyChallengeService = dailyChallengeService;
     }
 
     /// <summary>
@@ -32,6 +35,17 @@ public class HorseRacingService : INService
     /// </summary>
     /// <returns>A tuple indicating the success of joining, a message, and whether the race has started.</returns>
     public async Task<(bool Success, string Message, bool RaceStarted)> JoinRace(IUser user, ulong guildId,
+        int betAmount)
+    {
+        var result = await TryJoinRace(user, guildId, betAmount);
+
+        if (result.Success)
+            await dailyChallengeService.RecordBet(user.Id, guildId, "horserace", betAmount);
+
+        return result;
+    }
+
+    private async Task<(bool Success, string Message, bool RaceStarted)> TryJoinRace(IUser user, ulong guildId,
         int betAmount)
     {
         await Task.CompletedTask;
@@ -154,6 +168,8 @@ public class HorseRacingService : INService
             {
                 await cs.CreditAsync(racer.UserId, winnings, "Horse Race", CurrencyCategory.GamePayout, guildId,
                     "horserace");
+
+                await dailyChallengeService.RecordPayout(racer.UserId, guildId, racer.BetAmount, winnings);
             }
 
             finalPositions.Add(new FinalPosition(i + 1, racer.UserId, racer.Animal, winnings, racer.Username));

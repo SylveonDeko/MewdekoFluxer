@@ -5,6 +5,7 @@ using AngleSharp;
 using AngleSharp.Html.Dom;
 using LinqToDB.Async;
 using Mewdeko.Common.TriggerPlaceholders;
+using Mewdeko.Modules.Chat_Triggers.Common;
 using Serilog;
 using ChatTrigger = DataModel.ChatTrigger;
 
@@ -274,11 +275,14 @@ public static class Extensions
     {
         var channel = ct.DmResponse
             ? await ctx.Author.CreateDMChannelAsync().ConfigureAwait(false)
-            : ctx.Channel;
+            : ct.GetReplyChannel(ctx.Channel);
 
         var response = await ct.ResolveContextualPlaceholdersAsync(placeholders, client,
             (ctx.Channel as Channel)?.Guild, ctx.Channel, ctx.Author,
             ctx.MentionedUserIds.FirstOrDefault(), regexMatch, responseOverride).ConfigureAwait(false);
+
+        var blocks = new TriggerBlockEvaluator(gate: TriggerGateFactory.Create(response, ctx.Channel as Channel,
+            ctx.Author));
 
         if (SmartEmbed.TryParse(response, ct.GuildId, out var crembed, out var plainText))
         {
@@ -341,36 +345,93 @@ public static class Extensions
                 .WithOverride("%replied.author%", () => repliedMessage?.Author.Mention ?? "")
                 .Build();
 
-            SmartEmbed.TryParse(rep.Replace(response), ct.GuildId, out crembed, out plainText);
+            var evaluated = blocks.Evaluate(rep.Replace(response));
+            if (blocks.Stopped)
+                return await SendGateStopAsync(ctx.Channel, evaluated).ConfigureAwait(false);
+
+            SmartEmbed.TryParse(evaluated, ct.GuildId, out crembed, out plainText);
             if (sanitize)
                 plainText = plainText.SanitizeMentions();
 
             await ct.SendCrosspostAsync(client, plainText, crembed).ConfigureAwait(false);
 
             if (ct.NoRespond)
+            {
+                await RunBlockCommandsAsync(placeholders, blocks, ctx).ConfigureAwait(false);
                 return null;
+            }
 
             var sent = await channel.SendAsync(plainText, embeds: crembed, messageReference: ct.BuildReference(ctx, channel))
                 .ConfigureAwait(false);
 
             ct.QueueResponseDeletion(sent);
+            await RunBlockCommandsAsync(placeholders, blocks, ctx).ConfigureAwait(false);
             return sent;
         }
 
-        var context = (await ct.ResponseWithContextAsync(ctx, client, ct.ContainsAnywhere, dbProvider, response)
-                .ConfigureAwait(false))
-            .SanitizeMentions(sanitize);
+        var evaluatedText = blocks.Evaluate(await ct.ResponseWithContextAsync(ctx, client, ct.ContainsAnywhere,
+                dbProvider, response)
+            .ConfigureAwait(false));
+        if (blocks.Stopped)
+            return await SendGateStopAsync(ctx.Channel, evaluatedText).ConfigureAwait(false);
+
+        var context = evaluatedText.SanitizeMentions(sanitize);
         await ct.SendCrosspostAsync(client, context).ConfigureAwait(false);
 
         if (ct.NoRespond)
+        {
+            await RunBlockCommandsAsync(placeholders, blocks, ctx).ConfigureAwait(false);
             return null;
+        }
 
         var sentMsg = await channel
             .SendAsync(context, messageReference: ct.BuildReference(ctx, channel))
             .ConfigureAwait(false);
 
         ct.QueueResponseDeletion(sentMsg);
+        await RunBlockCommandsAsync(placeholders, blocks, ctx).ConfigureAwait(false);
         return sentMsg;
+    }
+
+    /// <summary>
+    ///     Gets the channel a trigger's response goes to when it is not a direct message.
+    /// </summary>
+    /// <param name="ct">The trigger being sent.</param>
+    /// <param name="fired">The channel the trigger fired in.</param>
+    /// <returns>The trigger's reply channel, or the channel it fired in when none is set or it no longer exists.</returns>
+    private static Channel GetReplyChannel(this ChatTrigger ct, Channel fired)
+    {
+        if (ct.ReplyChannelId == 0 || fired.Guild is not { } guild)
+            return fired;
+
+        return guild.GetTextChannel(ct.ReplyChannelId) as Channel ?? fired;
+    }
+
+    /// <summary>
+    ///     Tells the member why a <c>{require}</c> or <c>{blacklist}</c> block stopped the trigger.
+    /// </summary>
+    /// <param name="channel">The channel the trigger fired in.</param>
+    /// <param name="message">The message the block carried.</param>
+    /// <returns>The sent message, or null when the block carried no message.</returns>
+    private static async Task<Message?> SendGateStopAsync(Channel channel, string? message)
+    {
+        return string.IsNullOrWhiteSpace(message)
+            ? null
+            : await channel.SendAsync(message.SanitizeMentions(true)).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    ///     Runs the commands a response queued with <c>{cmd:}</c> blocks, as the member that fired the trigger.
+    /// </summary>
+    /// <param name="placeholders">The service that runs the commands, or null to skip them.</param>
+    /// <param name="blocks">The evaluator that holds the queued commands.</param>
+    /// <param name="ctx">The message that fired the trigger.</param>
+    private static Task RunBlockCommandsAsync(TriggerPlaceholderService? placeholders, TriggerBlockEvaluator blocks,
+        Message ctx)
+    {
+        return placeholders is null || blocks.Commands.Count == 0
+            ? Task.CompletedTask
+            : placeholders.RunCommandsAsync(ctx, ctx.Author, blocks.Commands);
     }
 
     /// <summary>

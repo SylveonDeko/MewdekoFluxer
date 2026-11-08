@@ -105,6 +105,7 @@ public class Birthday : MewdekoModuleBase<BirthdayService>
             .WithColor(Mewdeko.OkColor);
 
         var description = "";
+        var yearRule = (await Service.GetBirthdayConfigAsync(ctx.Guild.Id)).BirthYearRule;
 
         for (var i = 0; i < days; i++)
         {
@@ -118,10 +119,8 @@ public class Birthday : MewdekoModuleBase<BirthdayService>
             {
                 var guildUser = await ctx.Guild.GetUserAsync(birthdayUser.UserId);
                 if (guildUser == null) continue;
-                var age = birthdayUser.Birthday.HasValue &&
-                          birthdayUser.BirthdayDisplayMode != (int)BirthdayDisplayModeEnum.MonthAndDate &&
-                          birthdayUser.BirthdayDisplayMode != (int)BirthdayDisplayModeEnum.MonthOnly
-                    ? $" (turning {DateTime.UtcNow.Year - birthdayUser.Birthday.Value.Year})"
+                var age = BirthdayService.SharesBirthYear(birthdayUser, yearRule)
+                    ? $" (turning {DateTime.UtcNow.Year - birthdayUser.Birthday!.Value.Year})"
                     : "";
                 description += $"{Config.SuccessEmote} {guildUser.Mention}{age}\n";
             }
@@ -154,15 +153,14 @@ public class Birthday : MewdekoModuleBase<BirthdayService>
             .WithColor(Mewdeko.OkColor);
 
         var description = "";
+        var yearRule = (await Service.GetBirthdayConfigAsync(ctx.Guild.Id)).BirthYearRule;
         foreach (var birthdayUser in birthdayUsers)
         {
             var guildUser = await ctx.Guild.GetUserAsync(birthdayUser.UserId);
             if (guildUser != null)
             {
-                var age = birthdayUser.Birthday.HasValue &&
-                          birthdayUser.BirthdayDisplayMode != (int)BirthdayDisplayModeEnum.MonthAndDate &&
-                          birthdayUser.BirthdayDisplayMode != (int)BirthdayDisplayModeEnum.MonthOnly
-                    ? $" is turning {DateTime.UtcNow.Year - birthdayUser.Birthday.Value.Year}!"
+                var age = BirthdayService.SharesBirthYear(birthdayUser, yearRule)
+                    ? $" is turning {DateTime.UtcNow.Year - birthdayUser.Birthday!.Value.Year}!"
                     : " is celebrating their birthday!";
                 description += $"🎉 {guildUser.Mention}{age}\n";
             }
@@ -330,8 +328,9 @@ public class Birthday : MewdekoModuleBase<BirthdayService>
                 .AddField("Birthday Role", role, true)
                 .AddField("Ping Role", pingRole, true)
                 .AddField("Message Template", message)
-                .AddField("Default Timezone", config.DefaultTimezone ?? "UTC", true)
-                .AddField("Reminder Days", config.BirthdayReminderDays.ToString(), true)
+                .AddField("Age Message", config.AgeMessage.IsNullOrWhiteSpace() ? "Not set" : "Custom Message Set")
+                .AddField("Announcement Hour", $"{config.AnnouncementHour}:00", true)
+                .AddField("Birth Year", ((BirthYearRule)config.BirthYearRule).ToString(), true)
                 .AddField("Enabled Features", features.Any() ? string.Join(", ", features) : "None");
 
             await ctx.Channel.SendAsync(embed: embed.Build());
@@ -356,6 +355,9 @@ public class Birthday : MewdekoModuleBase<BirthdayService>
             config.BirthdayChannelId = null;
             config.BirthdayRoleId = null;
             config.BirthdayMessage = null;
+            config.AnnouncementHour = 0;
+            config.AgeMessage = null;
+            config.BirthYearRule = (int)BirthYearRule.Optional;
             config.BirthdayPingRoleId = null;
             config.BirthdayReminderDays = 0;
             config.DefaultTimezone = "UTC";
@@ -365,5 +367,115 @@ public class Birthday : MewdekoModuleBase<BirthdayService>
         await ctx.Channel.SendConfirmAsync(Strings.BirthdayConfigReset(ctx.Guild.Id));
     }
 
+    /// <summary>
+    ///     Sets the hour of the day birthdays are announced, in the community's timezone.
+    /// </summary>
+    /// <param name="hour">The hour from 0 to 23.</param>
+    [Cmd]
+    [Aliases]
+    [RequireContext(ContextType.Guild)]
+    [UserPerm(GuildPermission.Administrator)]
+    public async Task BirthdayHour(int hour)
+    {
+        if (hour is < 0 or > 23)
+        {
+            await ctx.Channel.SendErrorAsync(Strings.BirthdayHourInvalid(ctx.Guild.Id), Config);
+            return;
+        }
+
+        await Service.UpdateBirthdayConfigAsync(ctx.Guild.Id, config =>
+        {
+            config.AnnouncementHour = hour;
+        });
+
+        await ctx.Channel.SendConfirmAsync(Strings.BirthdayHourSet(ctx.Guild.Id, hour));
+    }
+
+    /// <summary>
+    ///     Sets the message announced for members who shared their birth year. Leave it out to clear it.
+    /// </summary>
+    /// <param name="message">The message. %birthday.age% is the member's age.</param>
+    [Cmd]
+    [Aliases]
+    [RequireContext(ContextType.Guild)]
+    [UserPerm(GuildPermission.Administrator)]
+    public async Task BirthdayAgeMessage([Remainder] string? message = null)
+    {
+        var text = string.IsNullOrWhiteSpace(message) ? null : message;
+
+        await Service.UpdateBirthdayConfigAsync(ctx.Guild.Id, config =>
+        {
+            config.AgeMessage = text;
+        });
+
+        await ctx.Channel.SendConfirmAsync(text is null
+            ? Strings.BirthdayAgeMessageCleared(ctx.Guild.Id)
+            : Strings.BirthdayAgeMessageSet(ctx.Guild.Id));
+    }
+
+    /// <summary>
+    ///     Sets whether members may share their birth year: not allowed, optional or required.
+    /// </summary>
+    /// <param name="rule">NotAllowed, Optional or Required.</param>
+    [Cmd]
+    [Aliases]
+    [RequireContext(ContextType.Guild)]
+    [UserPerm(GuildPermission.Administrator)]
+    public async Task BirthdayYearRule(BirthYearRule rule)
+    {
+        await Service.UpdateBirthdayConfigAsync(ctx.Guild.Id, config =>
+        {
+            config.BirthYearRule = (int)rule;
+        });
+
+        await ctx.Channel.SendConfirmAsync(Strings.BirthdayYearRuleSet(ctx.Guild.Id, rule.ToString()));
+    }
+
+    /// <summary>
+    ///     Sets a member's birthday.
+    /// </summary>
+    /// <param name="user">The member.</param>
+    /// <param name="date">The birthday.</param>
+    [Cmd]
+    [Aliases]
+    [RequireContext(ContextType.Guild)]
+    [UserPerm(GuildPermission.Administrator)]
+    public async Task BirthdayAdminSet(IUser user, [Remainder] DateTime date)
+    {
+        await Service.SetUserBirthdayAsync(user, date);
+        await ctx.Channel.SendConfirmAsync(Strings.BirthdayAdminSet(ctx.Guild.Id, user.Mention, date.ToString("d")));
+    }
+
+    /// <summary>
+    ///     Removes a member's birthday.
+    /// </summary>
+    /// <param name="user">The member.</param>
+    [Cmd]
+    [Aliases]
+    [RequireContext(ContextType.Guild)]
+    [UserPerm(GuildPermission.Administrator)]
+    public async Task BirthdayAdminRemove(IUser user)
+    {
+        if (!await Service.ClearUserBirthdayAsync(user, false))
+        {
+            await ctx.Channel.SendErrorAsync(Strings.BirthdayAdminNone(ctx.Guild.Id, user.Mention), Config);
+            return;
+        }
+
+        await ctx.Channel.SendConfirmAsync(Strings.BirthdayAdminRemoved(ctx.Guild.Id, user.Mention));
+    }
+
     #endregion
+
+    /// <summary>
+    ///     Deletes your birthday and every birthday setting stored for you.
+    /// </summary>
+    [Cmd]
+    [Aliases]
+    [RequireContext(ContextType.Guild)]
+    public async Task BirthdayForget()
+    {
+        await Service.ClearUserBirthdayAsync(ctx.User, true);
+        await ctx.Channel.SendConfirmAsync(Strings.BirthdayForgotten(ctx.Guild.Id));
+    }
 }

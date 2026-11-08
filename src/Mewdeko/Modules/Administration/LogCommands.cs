@@ -434,5 +434,166 @@ public partial class Administration
                     string.Join("\n", channelMentions))
                 .ConfigureAwait(false);
         }
+
+        /// <summary>
+        ///     Creates a private Logs category with channels for each kind of log and routes every log type to them.
+        /// </summary>
+        /// <remarks>
+        ///     This command is restricted to users with Administrator permissions and needs the bot to have Manage Channels.
+        /// </remarks>
+        /// <example>.logsetup</example>
+        [Cmd]
+        [Aliases]
+        [RequireContext(ContextType.Guild)]
+        [UserPerm(GuildPermission.Administrator)]
+        [BotPerm(GuildPermission.ManageChannels)]
+        public async Task LogSetup()
+        {
+            var channels = await Service.SetupLogChannels(ctx.Guild);
+            if (channels is null)
+            {
+                await ErrorAsync(Strings.LogSetupFailed(ctx.Guild.Id));
+                return;
+            }
+
+            await ConfirmAsync(Strings.LogSetupDone(ctx.Guild.Id, "**Logs**",
+                string.Join("\n", channels.Values.Select(c => $"<#{c.Id}>"))));
+        }
+
+        /// <summary>
+        ///     Exports the log configuration as a code and a JSON file.
+        /// </summary>
+        /// <remarks>
+        ///     This command is restricted to users with Administrator permissions.
+        /// </remarks>
+        /// <example>.logexport</example>
+        [Cmd]
+        [Aliases]
+        [RequireContext(ContextType.Guild)]
+        [UserPerm(GuildPermission.Administrator)]
+        public async Task LogExport()
+        {
+            var export = await Service.ExportConfig(ctx.Guild);
+            if (export is null)
+            {
+                await ErrorAsync(Strings.LogExportEmpty(ctx.Guild.Id));
+                return;
+            }
+
+            using var stream = new System.IO.MemoryStream(System.Text.Encoding.UTF8.GetBytes(export.Value.Json));
+            await ctx.Channel.SendFileAsync(stream, "log-config.json",
+                export.Value.Code.Length <= 1800 ? Strings.LogExportCode(ctx.Guild.Id, export.Value.Code) : null);
+        }
+
+        /// <summary>
+        ///     Imports a log configuration from an export code or an attached JSON file.
+        /// </summary>
+        /// <remarks>
+        ///     Channels are matched by id, then by name. This command is restricted to users with Administrator permissions.
+        /// </remarks>
+        /// <param name="code">The export code. Leave empty to use an attached file.</param>
+        /// <example>.logimport H4sIAAAA...</example>
+        [Cmd]
+        [Aliases]
+        [RequireContext(ContextType.Guild)]
+        [UserPerm(GuildPermission.Administrator)]
+        public async Task LogImport([Remainder] string? code = null)
+        {
+            var attachmentUrl = ctx.Message.Attachments?.FirstOrDefault()?.Url;
+            if (attachmentUrl is not null)
+                code = await DownloadText(attachmentUrl);
+
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                await ErrorAsync(attachmentUrl is null
+                    ? Strings.LogImportMissing(ctx.Guild.Id)
+                    : Strings.LogImportInvalid(ctx.Guild.Id));
+                return;
+            }
+
+            var result = await Service.ImportConfig(ctx.Guild, code);
+            if (!result.Valid)
+            {
+                await ErrorAsync(Strings.LogImportInvalid(ctx.Guild.Id));
+                return;
+            }
+
+            var message = Strings.LogImportApplied(ctx.Guild.Id, result.Applied);
+            if (result.Unmapped.Count > 0)
+                message += "\n" + Strings.LogImportUnmapped(ctx.Guild.Id, string.Join("\n", result.Unmapped));
+
+            await ConfirmAsync(message);
+        }
+
+        private static async Task<string?> DownloadText(string url)
+        {
+            try
+            {
+                using var http = new System.Net.Http.HttpClient
+                {
+                    Timeout = TimeSpan.FromSeconds(10)
+                };
+                var text = await http.GetStringAsync(url);
+                return text.Length <= 200_000 ? text : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        ///     Sets prefixes whose messages are skipped by message edit and delete logs, for example a music bot's prefix.
+        /// </summary>
+        /// <remarks>
+        ///     With no prefixes it shows the current ones. Use "none" to clear them. This command is restricted to users with
+        ///     Administrator permissions.
+        /// </remarks>
+        /// <param name="prefixes">The prefixes to skip.</param>
+        /// <example>.logprefix ! ?</example>
+        /// <example>.logprefix none</example>
+        [Cmd]
+        [Aliases]
+        [RequireContext(ContextType.Guild)]
+        [UserPerm(GuildPermission.Administrator)]
+        public async Task LogPrefix(params string[] prefixes)
+        {
+            if (prefixes.Length == 0)
+            {
+                var current = Service.GetMessageIgnorePrefixes(ctx.Guild.Id);
+                await ConfirmAsync(current.Count == 0
+                    ? Strings.LogPrefixesNone(ctx.Guild.Id)
+                    : Strings.LogPrefixesSet(ctx.Guild.Id, string.Join(" ", current.Select(p => $"`{p}`"))));
+                return;
+            }
+
+            if (prefixes.Length == 1 && prefixes[0].Equals("none", StringComparison.OrdinalIgnoreCase))
+            {
+                await Service.SetMessageIgnorePrefixes(ctx.Guild.Id, []);
+                await ConfirmAsync(Strings.LogPrefixesCleared(ctx.Guild.Id));
+                return;
+            }
+
+            await Service.SetMessageIgnorePrefixes(ctx.Guild.Id, prefixes);
+            await ConfirmAsync(Strings.LogPrefixesSet(ctx.Guild.Id, string.Join(" ", prefixes.Select(p => $"`{p}`"))));
+        }
+
+        /// <summary>
+        ///     Toggles whether logs skip actions by bots.
+        /// </summary>
+        /// <remarks>
+        ///     This command is restricted to users with Administrator permissions.
+        /// </remarks>
+        /// <example>.logignorebots</example>
+        [Cmd]
+        [Aliases]
+        [RequireContext(ContextType.Guild)]
+        [UserPerm(GuildPermission.Administrator)]
+        public async Task LogIgnoreBots()
+        {
+            var ignore = !Service.GetIgnoreBots(ctx.Guild.Id);
+            await Service.SetIgnoreBots(ctx.Guild.Id, ignore);
+            await ConfirmAsync(ignore ? Strings.LogIgnoreBotsOn(ctx.Guild.Id) : Strings.LogIgnoreBotsOff(ctx.Guild.Id));
+        }
     }
 }

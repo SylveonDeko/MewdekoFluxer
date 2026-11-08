@@ -10,6 +10,7 @@ using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Common.ModuleBehaviors;
 using Mewdeko.Modules.CoprMonitoring.Common;
+using Mewdeko.Services;
 using Mewdeko.Services.Settings;
 using Mewdeko.Services.Strings;
 using RabbitMQ.Client;
@@ -892,7 +893,7 @@ public class CoprMonitoringService : INService, IReadyExecutor, IDisposable
             .WithDescription(strings.CoprBuildDefaultDesc(channel.GuildId, buildData.Owner, buildData.Project,
                 buildData.Package, buildData.Build, buildData.Chroot))
             .WithUrl(buildUrl)
-            .WithColor(GetColorForStatus(status))
+            .WithColor(GetColorForStatus(status, channel.GuildId))
             .WithTimestamp(DateTimeOffset.UtcNow)
             .Build();
 
@@ -962,11 +963,11 @@ public class CoprMonitoringService : INService, IReadyExecutor, IDisposable
     /// </summary>
     /// <param name="status">The build status.</param>
     /// <returns>The Discord color.</returns>
-    private Color GetColorForStatus(CoprBuildStatus status)
+    private Color GetColorForStatus(CoprBuildStatus status, ulong? guildId)
     {
         return status switch
         {
-            CoprBuildStatus.Succeeded => Mewdeko.OkColor,
+            CoprBuildStatus.Succeeded => GuildEmbedColorService.OkFor(guildId),
             CoprBuildStatus.Failed => Mewdeko.ErrorColor,
             CoprBuildStatus.Canceled => Color.Orange,
             CoprBuildStatus.Running => Color.Blue,

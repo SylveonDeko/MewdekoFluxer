@@ -425,7 +425,12 @@ public class PollMessageService : INService, IReadyExecutor, IUnloadableService
                     await RemoveReactionAsync(cached, previousEmote, user);
             }
 
-            if (!rejected)
+            if (rejected)
+                return;
+
+            if (await pollService.ReachedMaxVotesAsync(pollId) && await pollService.ClosePollAsync(pollId, 0))
+                await RefreshPollMessageAsync(pollId);
+            else
                 QueueRefresh(pollId);
         }
         catch (Exception ex)

@@ -1,6 +1,7 @@
 ﻿using DataModel;
 using LinqToDB;
 using LinqToDB.Async;
+using Mewdeko.Modules.MultiGreets.Services;
 using Mewdeko.Modules.Utility.Services;
 
 namespace Mewdeko.Modules.RoleGreets.Services;
@@ -19,6 +20,7 @@ public class RoleGreetService : INService
     private readonly IDataConnectionFactory dbFactory;
     private readonly InviteCountService inviteCountService;
     private readonly ILogger<RoleGreetService> logger;
+    private readonly WelcomeCardService welcomeCards;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="RoleGreetService" /> class.
@@ -28,9 +30,11 @@ public class RoleGreetService : INService
     /// <param name="eventHandler">The event handler for guild member update events.</param>
     /// <param name="inviteCountService">The invite count service</param>
     /// <param name="logger">The logger instance for structured logging.</param>
+    /// <param name="welcomeCards">The service drawing message cards.</param>
     public RoleGreetService(IDataConnectionFactory dbFactory, FluxerClient client, EventHandler eventHandler,
-        InviteCountService inviteCountService, ILogger<RoleGreetService> logger)
+        InviteCountService inviteCountService, ILogger<RoleGreetService> logger, WelcomeCardService welcomeCards)
     {
+        this.welcomeCards = welcomeCards;
         this.client = client;
         this.inviteCountService = inviteCountService;
         this.logger = logger;
@@ -79,20 +83,14 @@ public class RoleGreetService : INService
     /// <param name="guildId">The unique identifier of the guild.</param>
     /// <param name="channelId">The unique identifier of the channel.</param>
     /// <param name="roleId">The unique identifier of the role.</param>
-    /// <returns>True if the configuration was added successfully; otherwise, false.</returns>
-    public async Task<bool> AddRoleGreet(ulong guildId, ulong channelId, ulong roleId)
+    public async Task AddRoleGreet(ulong guildId, ulong channelId, ulong roleId)
     {
-        if ((await GetGreets(roleId)).Length == 10)
-            return false;
-
         await using var db = await dbFactory.CreateConnectionAsync();
 
         await db.InsertAsync(new RoleGreet
         {
             ChannelId = channelId, GuildId = guildId, RoleId = roleId, Message = DefaultMessage
         });
-
-        return true;
     }
 
     /// <summary>
@@ -169,6 +167,7 @@ public class RoleGreetService : INService
         await using var db = await dbFactory.CreateConnectionAsync();
 
         await db.DeleteAsync(greet);
+        await welcomeCards.DeleteCardAsync(greet.GuildId, WelcomeCardTarget.RoleGreet, greet.Id);
     }
 
     /// <summary>
@@ -182,6 +181,7 @@ public class RoleGreetService : INService
         foreach (var greet in greets)
         {
             await db.DeleteAsync(greet);
+            await welcomeCards.DeleteCardAsync(greet.GuildId, WelcomeCardTarget.RoleGreet, greet.Id);
         }
     }
 
@@ -197,7 +197,7 @@ public class RoleGreetService : INService
             if (greets.Length == 0) continue;
 
             var replacer = new ReplacementBuilder().WithUser(socketGuildUser).WithClient(client)
-                .WithServer(client, socketGuildUser.Guild);
+                .WithServer(client, socketGuildUser.Guild).WithOverride("%role.name%", () => role.Name);
 
             foreach (var greet in greets)
             {
@@ -230,7 +230,7 @@ public class RoleGreetService : INService
             if (greet.WebhookUrl != null)
             {
                 var webhook = new FluxerWebhookClient(greet.WebhookUrl);
-                var msgId = await SendSmartEmbedWebhookMessage(webhook, content, user.Guild.Id);
+                var msgId = await SendSmartEmbedWebhookMessage(webhook, content, greet, user);
                 if (greet.DeleteTime > 0)
                 {
                     var msg = await channel.GetMessageAsync(msgId);
@@ -239,7 +239,7 @@ public class RoleGreetService : INService
             }
             else
             {
-                await SendSmartEmbedMessage(channel, content, user.Guild.Id, greet.DeleteTime);
+                await SendSmartEmbedMessage(channel, content, greet, user);
             }
         }
         catch (FluxerApiException ex)
@@ -253,32 +253,40 @@ public class RoleGreetService : INService
         }
     }
 
-    private static async Task SendSmartEmbedMessage(Channel channel, string content, ulong guildId,
-        int deleteTime = 0)
+    private async Task SendSmartEmbedMessage(Channel channel, string content, RoleGreet greet,
+        SocketGuildMember user)
     {
-        SmartEmbed.TryParse(content, guildId, out var embedData, out var plainText);
+        var deleteTime = greet.DeleteTime;
+        if (!SmartEmbed.TryParse(content, user.Guild.Id, out var parsed, out var plainText))
+            plainText = content;
+        var (files, embedData) = await welcomeCards.TryAttachAsync(user.Guild.Id, WelcomeCardTarget.RoleGreet,
+            greet.Id, user.User, parsed);
         if (!string.IsNullOrWhiteSpace(plainText) || embedData?.Length > 0)
         {
-            var msg = await channel.SendAsync(plainText, embeds: embedData);
+            var msg = await channel.SendAsync(plainText, embeds: embedData, attachments: files);
             if (deleteTime > 0)
                 msg.DeleteAfter(deleteTime);
         }
-        else if (!string.IsNullOrWhiteSpace(content))
+        else if (!string.IsNullOrWhiteSpace(content) || files is not null)
         {
-            var msg = await channel.SendAsync(content);
+            var msg = await channel.SendAsync(content, attachments: files);
             if (deleteTime > 0)
                 msg.DeleteAfter(deleteTime);
         }
     }
 
-    private async Task<ulong> SendSmartEmbedWebhookMessage(FluxerWebhookClient webhook, string content, ulong guildId)
+    private async Task<ulong> SendSmartEmbedWebhookMessage(FluxerWebhookClient webhook, string content,
+        RoleGreet greet, SocketGuildMember user)
     {
-        SmartEmbed.TryParse(content, guildId, out var embedData, out var plainText);
+        if (!SmartEmbed.TryParse(content, user.Guild.Id, out var parsed, out var plainText))
+            plainText = content;
+        var (files, embedData) = await welcomeCards.TryAttachAsync(user.Guild.Id, WelcomeCardTarget.RoleGreet,
+            greet.Id, user.User, parsed);
         if (!string.IsNullOrWhiteSpace(plainText) || embedData?.Length > 0)
         {
-            return await webhook.SendAsync(plainText, embeds: embedData);
+            return await webhook.SendAsync(plainText, embeds: embedData, attachments: files);
         }
 
-        return await webhook.SendAsync(content);
+        return await webhook.SendAsync(content, attachments: files);
     }
 }

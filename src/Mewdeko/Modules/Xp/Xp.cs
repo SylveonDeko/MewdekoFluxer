@@ -4,6 +4,7 @@ using System.Text;
 using Humanizer;
 using Mewdeko.Common.Attributes.TextCommands;
 using Mewdeko.Common.TypeReaders.Models;
+using Mewdeko.Modules.CardDesigns.Services;
 using Mewdeko.Modules.Currency.Services;
 using Mewdeko.Modules.Xp.Extensions;
 using Mewdeko.Modules.Xp.Models;
@@ -14,13 +15,15 @@ namespace Mewdeko.Modules.Xp;
 /// <summary>
 ///     Module for managing XP system functionality.
 /// </summary>
-public class Xp(
+public partial class Xp(
+    CardDesignViewService designViews,
     InteractiveService serv,
     ICurrencyService currencyService,
     XpRoleSyncService roleSyncService,
     ILogger<Xp> logger,
     FluxerClient client,
-    XpRewardManager xpRewardManager)
+    XpRewardManager xpRewardManager,
+    XpBackgroundService backgroundService)
     : MewdekoModuleBase<XpService>
 {
     /// <summary>
@@ -297,6 +300,81 @@ public class Xp(
     {
         await Service.SetUserNotificationPreferenceAsync(ctx.Guild.Id, ctx.User.Id, type);
         await ReplyConfirmAsync(Strings.XpNotificationSet(ctx.Guild.Id, type)).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    ///     Sets your own rank card background from an image URL, an attached image or a preset.
+    /// </summary>
+    /// <param name="source">An image URL, preset:id, or reset to remove your background.</param>
+    /// <example>.xpbackground https://example.com/card.png</example>
+    /// <example>.xpbackground preset:sunset</example>
+    /// <example>.xpbackground reset</example>
+    [Cmd]
+    [Aliases]
+    [RequireContext(ContextType.Guild)]
+    public async Task XpBackground([Remainder] string? source = null)
+    {
+        if (source?.Trim().Equals("reset", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            await (await backgroundService.ClearUserBackgroundAsync(ctx.User.Id)
+                ? ReplyConfirmAsync(Strings.XpBackgroundCleared(ctx.Guild.Id))
+                : ReplyErrorAsync(Strings.XpBackgroundNone(ctx.Guild.Id)));
+            return;
+        }
+
+        var url = ctx.Message.Attachments?.FirstOrDefault()?.Url ?? source?.Trim();
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            await ReplyErrorAsync(Strings.XpBackgroundMissing(ctx.Guild.Id));
+            return;
+        }
+
+        var result = await backgroundService.SetUserBackgroundAsync(ctx.User.Id, url);
+        await ReplyBackgroundResultAsync(result, Strings.XpBackgroundSet(ctx.Guild.Id));
+    }
+
+    /// <summary>
+    ///     Sets the rank card background for the whole community from an image URL, an attached image or a preset.
+    /// </summary>
+    /// <param name="source">An image URL, preset:id, or reset to remove it.</param>
+    /// <example>.xpserverbackground https://example.com/card.png</example>
+    /// <example>.xpserverbackground preset:sunset</example>
+    /// <example>.xpserverbackground reset</example>
+    [Cmd]
+    [Aliases]
+    [RequireContext(ContextType.Guild)]
+    [UserPerm(GuildPermission.ManageGuild)]
+    public async Task XpServerBackground([Remainder] string? source = null)
+    {
+        if (source?.Trim().Equals("reset", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            await (await backgroundService.ClearGuildBackgroundAsync(ctx.Guild.Id)
+                ? ReplyConfirmAsync(Strings.XpServerBackgroundCleared(ctx.Guild.Id))
+                : ReplyErrorAsync(Strings.XpServerBackgroundNone(ctx.Guild.Id)));
+            return;
+        }
+
+        var url = ctx.Message.Attachments?.FirstOrDefault()?.Url ?? source?.Trim();
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            await ReplyErrorAsync(Strings.XpBackgroundMissing(ctx.Guild.Id));
+            return;
+        }
+
+        var result = await backgroundService.SetGuildBackgroundAsync(ctx.Guild.Id, url);
+        await ReplyBackgroundResultAsync(result, Strings.XpServerBackgroundSet(ctx.Guild.Id));
+    }
+
+    private Task ReplyBackgroundResultAsync(XpBackgroundResult result, string saved)
+    {
+        return result switch
+        {
+            XpBackgroundResult.Saved => ReplyConfirmAsync(saved),
+            XpBackgroundResult.TooLarge => ReplyErrorAsync(Strings.XpBackgroundTooLarge(ctx.Guild.Id)),
+            XpBackgroundResult.NotAnImage => ReplyErrorAsync(Strings.XpBackgroundNotImage(ctx.Guild.Id)),
+            XpBackgroundResult.UnknownPreset => ReplyErrorAsync(Strings.XpBackgroundUnknownPreset(ctx.Guild.Id)),
+            _ => ReplyErrorAsync(Strings.XpBackgroundDownloadFailed(ctx.Guild.Id))
+        };
     }
 
     /// <summary>

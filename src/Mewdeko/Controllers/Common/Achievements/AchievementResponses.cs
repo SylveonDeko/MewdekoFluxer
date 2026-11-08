@@ -98,6 +98,31 @@ public class AchievementResponse
     public string? RoleRewardName { get; set; }
 
     /// <summary>
+    ///     Role taken away on unlock.
+    /// </summary>
+    public ulong? RoleRemoveId { get; set; }
+
+    /// <summary>
+    ///     Role taken away name, or null when it is gone.
+    /// </summary>
+    public string? RoleRemoveName { get; set; }
+
+    /// <summary>
+    ///     The role a role achievement waits for.
+    /// </summary>
+    public ulong? TargetRoleId { get; set; }
+
+    /// <summary>
+    ///     Target role name, or null when it is gone.
+    /// </summary>
+    public string? TargetRoleName { get; set; }
+
+    /// <summary>
+    ///     Unlock message source for this achievement, or null to use the community's.
+    /// </summary>
+    public string? UnlockMessage { get; set; }
+
+    /// <summary>
     ///     Reward currency.
     /// </summary>
     public long CurrencyReward { get; set; }
@@ -349,16 +374,6 @@ public class AchievementPlaceholderResponse
 public class AchievementLimitsResponse
 {
     /// <summary>
-    ///     Most server made achievements.
-    /// </summary>
-    public int MaxCustomAchievements { get; set; }
-
-    /// <summary>
-    ///     Most server made categories.
-    /// </summary>
-    public int MaxCustomCategories { get; set; }
-
-    /// <summary>
     ///     Longest name.
     /// </summary>
     public int NameLength { get; set; }
@@ -511,6 +526,11 @@ public class AchievementSettingsResponse
     ///     Mention members in unlock messages.
     /// </summary>
     public bool MentionUsers { get; set; }
+
+    /// <summary>
+    ///     DM members once when they reach 75% of an achievement.
+    /// </summary>
+    public bool AlmostThereDm { get; set; }
 
     /// <summary>
     ///     Unlock message source, or null for the default.
@@ -1156,7 +1176,7 @@ public class AchievementCardResponse
     /// <summary>
     ///     The built in design, the starting point for new designs.
     /// </summary>
-    public required global::Mewdeko.Modules.Achievements.Common.AchievementCardTemplate BuiltIn { get; set; }
+    public required global::Mewdeko.Common.Cards.CardTemplate BuiltIn { get; set; }
 
     /// <summary>
     ///     Which design categories and achievements pick instead of the default.
@@ -1172,6 +1192,16 @@ public class AchievementCardResponse
     ///     Placeholders text elements can use.
     /// </summary>
     public List<string> Placeholders { get; set; } = [];
+
+    /// <summary>
+    ///     What the label says on unlocked achievements when a design doesn't change it.
+    /// </summary>
+    public string DefaultLabel { get; set; } = "";
+
+    /// <summary>
+    ///     What the label says on locked achievements when a design doesn't change it.
+    /// </summary>
+    public string DefaultLockedLabel { get; set; } = "";
 
     /// <summary>
     ///     The server's dashboard palette as the bot derives it, for swatches.
@@ -1190,28 +1220,25 @@ public class AchievementCardResponse
 public class AchievementCardLimitsResponse
 {
     /// <summary>Smallest card width.</summary>
-    public int MinWidth { get; set; } = global::Mewdeko.Modules.Achievements.Common.AchievementCardTemplate.MinWidth;
+    public int MinWidth { get; set; } = global::Mewdeko.Common.Cards.CardTemplate.MinWidth;
 
     /// <summary>Largest card width.</summary>
-    public int MaxWidth { get; set; } = global::Mewdeko.Modules.Achievements.Common.AchievementCardTemplate.MaxWidth;
+    public int MaxWidth { get; set; } = global::Mewdeko.Common.Cards.CardTemplate.MaxWidth;
 
     /// <summary>Smallest card height.</summary>
-    public int MinHeight { get; set; } = global::Mewdeko.Modules.Achievements.Common.AchievementCardTemplate.MinHeight;
+    public int MinHeight { get; set; } = global::Mewdeko.Common.Cards.CardTemplate.MinHeight;
 
     /// <summary>Largest card height.</summary>
-    public int MaxHeight { get; set; } = global::Mewdeko.Modules.Achievements.Common.AchievementCardTemplate.MaxHeight;
+    public int MaxHeight { get; set; } = global::Mewdeko.Common.Cards.CardTemplate.MaxHeight;
 
     /// <summary>Most elements.</summary>
-    public int MaxElements { get; set; } = global::Mewdeko.Modules.Achievements.Common.AchievementCardTemplate.MaxElements;
+    public int MaxElements { get; set; } = global::Mewdeko.Common.Cards.CardTemplate.MaxElements;
 
     /// <summary>Longest element text.</summary>
-    public int MaxText { get; set; } = global::Mewdeko.Modules.Achievements.Common.AchievementCardTemplate.MaxText;
+    public int MaxText { get; set; } = global::Mewdeko.Common.Cards.CardTemplate.MaxText;
 
     /// <summary>Most card images.</summary>
     public int MaxImages { get; set; } = global::Mewdeko.Modules.Achievements.Services.AchievementIconService.MaxCardUploads;
-
-    /// <summary>Most saved designs.</summary>
-    public int MaxDesigns { get; set; } = global::Mewdeko.Modules.Achievements.Services.AchievementService.MaxCardDesigns;
 
     /// <summary>Longest design name.</summary>
     public int NameLength { get; set; } = global::Mewdeko.Modules.Achievements.Services.AchievementService.CardNameLength;
@@ -1229,7 +1256,7 @@ public class AchievementCardDesignResponse
     public string Name { get; set; } = "";
 
     /// <summary>The design.</summary>
-    public required global::Mewdeko.Modules.Achievements.Common.AchievementCardTemplate Template { get; set; }
+    public required global::Mewdeko.Common.Cards.CardTemplate Template { get; set; }
 
     /// <summary>When it was last saved.</summary>
     public DateTime DateUpdated { get; set; }
@@ -1268,7 +1295,7 @@ public class AchievementCardPreviewResponse
     /// <summary>
     ///     The design as the bot read it, after limits were applied.
     /// </summary>
-    public global::Mewdeko.Modules.Achievements.Common.AchievementCardTemplate? Template { get; set; }
+    public global::Mewdeko.Common.Cards.CardTemplate? Template { get; set; }
 }
 
 /// <summary>

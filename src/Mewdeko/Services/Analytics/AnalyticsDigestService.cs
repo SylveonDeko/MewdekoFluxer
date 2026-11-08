@@ -85,7 +85,7 @@ public sealed class AnalyticsDigestService : INService, IReadyExecutor, IDisposa
     public async Task<bool> SendNowAsync()
     {
         var webhook = config.Data.AnalyticsDigestWebhook;
-        if (!AnalyticsAlertService.IsDiscordWebhook(webhook)) return false;
+        if (!AnalyticsAlertService.IsWebhookUrl(webhook)) return false;
 
         if (!await gate.WaitAsync(0).ConfigureAwait(false)) return false;
         try
@@ -117,7 +117,7 @@ public sealed class AnalyticsDigestService : INService, IReadyExecutor, IDisposa
     private async Task TickAsync()
     {
         if (!collector.Enabled) return;
-        if (!AnalyticsAlertService.IsDiscordWebhook(config.Data.AnalyticsDigestWebhook)) return;
+        if (!AnalyticsAlertService.IsWebhookUrl(config.Data.AnalyticsDigestWebhook)) return;
 
         var now = DateTime.UtcNow;
         if (now.DayOfWeek != DayOfWeek.Monday || now.Hour < SendHourUtc) return;

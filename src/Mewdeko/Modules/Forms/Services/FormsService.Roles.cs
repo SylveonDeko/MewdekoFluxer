@@ -1,5 +1,6 @@
 using DataModel;
 using Mewdeko.Database.Enums;
+using Mewdeko.Services;
 
 namespace Mewdeko.Modules.Forms.Services;
 
@@ -248,7 +249,7 @@ public partial class FormsService
                     ? strings.FormResponseApprovedTitle(form.GuildId)
                     : strings.FormResponseRejectedTitle(form.GuildId))
                 .WithDescription(form.Name)
-                .WithColor(approved ? Mewdeko.OkColor : Mewdeko.ErrorColor)
+                .WithColor(approved ? GuildEmbedColorService.OkFor(form.GuildId) : Mewdeko.ErrorColor)
                 .WithCurrentTimestamp();
 
             if (guild != null)

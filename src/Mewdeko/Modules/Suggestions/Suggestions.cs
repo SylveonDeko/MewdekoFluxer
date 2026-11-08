@@ -73,15 +73,50 @@ public partial class Suggestions : MewdekoModuleBase<SuggestionsService>
             .WithOkColor()
             .AddField("Suggestion",
                 $"{suggest.Suggestion1.Truncate(256)} \n[Jump To Suggestion]({FluxerContext.WebUrl}/channels/{ctx.Guild.Id}/{await Service.GetSuggestionChannel(ctx.Guild.Id)}/{suggest.MessageId})")
-            .AddField("Suggested By", $"<@{suggest.UserId}> `{suggest.UserId}`")
             .AddField("Current State", (SuggestionsService.SuggestState)suggest.CurrentState)
             .AddField("Last Changed By",
                 suggest.StateChangeUser == 0 ? "Nobody" : $"<@{suggest.StateChangeUser}> `{suggest.StateChangeUser}`")
             .AddField("State Change Count", suggest.StateChangeCount)
             .AddField("Emoji Count", string.Join("\n", emoteCount));
+        if (!await Service.GetAnonymousSuggestions(ctx.Guild))
+            eb.AddField("Suggested By", $"<@{suggest.UserId}> `{suggest.UserId}`");
         await ctx.Channel.SendAsync(embed: eb.Build()).ConfigureAwait(false);
     }
 
+
+    /// <summary>
+    ///     Privately tells staff who made a suggestion.
+    /// </summary>
+    /// <param name="num">The number of the suggestion to look up.</param>
+    /// <remarks>
+    ///     Requires Manage Messages permission.
+    /// </remarks>
+    [Cmd]
+    [Aliases]
+    [RequireContext(ContextType.Guild)]
+    [UserPerm(GuildPermission.ManageMessages)]
+    public async Task SuggestWho(ulong num)
+    {
+        var suggest = (await Service.Suggestions(ctx.Guild.Id, num)).FirstOrDefault();
+        if (suggest is null)
+        {
+            await ctx.Channel.SendErrorAsync(Strings.SuggestionNotFound(ctx.Guild.Id), Config)
+                .ConfigureAwait(false);
+            return;
+        }
+
+        try
+        {
+            await ctx.User.SendConfirmAsync(Strings.SuggestionAuthor(ctx.Guild.Id, num, suggest.UserId))
+                .ConfigureAwait(false);
+            await ctx.Message.AddReactionAsync(new Emoji("✅")).ConfigureAwait(false);
+        }
+        catch
+        {
+            await ctx.Channel.SendErrorAsync(Strings.SuggestionAuthorDmFailed(ctx.Guild.Id), Config)
+                .ConfigureAwait(false);
+        }
+    }
 
     /// <summary>
     ///     Clears all suggestions from the server.

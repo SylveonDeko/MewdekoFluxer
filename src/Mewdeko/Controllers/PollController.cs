@@ -154,6 +154,9 @@ public class PollController : Controller
                 IsAnonymous = request.IsAnonymous,
                 AllowVoteChanges = request.AllowVoteChanges,
                 AllowedRoles = request.AllowedRoles,
+                BlockedRoles = request.BlockedRoles,
+                MaxVotes = request.MaxVotes > 0 ? request.MaxVotes : null,
+                ResultsMessage = string.IsNullOrWhiteSpace(request.ResultsMessage) ? null : request.ResultsMessage,
                 Color = request.Color,
                 ShowResults = request.ShowResults,
                 ShowProgressBars = request.ShowProgressBars
@@ -486,7 +489,10 @@ public class PollController : Controller
                 AllowVoteChanges = request.AllowVoteChanges,
                 Color = request.Color,
                 ShowResults = request.ShowResults,
-                DefaultType = request.DefaultType
+                DefaultType = request.DefaultType,
+                BlockedRoles = request.BlockedRoles,
+                MaxVotes = request.MaxVotes,
+                ResultsMessage = string.IsNullOrWhiteSpace(request.ResultsMessage) ? null : request.ResultsMessage
             };
 
             var template = await templateService.CreateTemplateAsync(guildId, request.UserId,
@@ -878,6 +884,9 @@ public class PollController : Controller
                 IsAnonymous = request.IsAnonymous,
                 AllowVoteChanges = request.AllowVoteChanges,
                 AllowedRoles = request.AllowedRoles,
+                BlockedRoles = request.BlockedRoles,
+                MaxVotes = request.MaxVotes > 0 ? request.MaxVotes : null,
+                ResultsMessage = string.IsNullOrWhiteSpace(request.ResultsMessage) ? null : request.ResultsMessage,
                 Color = request.Color,
                 ShowResults = request.ShowResults,
                 ShowProgressBars = request.ShowProgressBars

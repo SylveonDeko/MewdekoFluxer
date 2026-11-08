@@ -12,7 +12,10 @@ namespace Mewdeko.Modules.Currency.Services.Impl;
 ///     Service implementation for managing trivia chain games.
 /// </summary>
 /// <param name="strings">The localized strings service.</param>
-public class TriviaChainService(GeneratedBotStrings strings) : ITriviaChainService
+public class TriviaChainService(
+    GeneratedBotStrings strings,
+    EconomyBoostService boostService,
+    DailyChallengeService dailyChallengeService) : ITriviaChainService
 {
     private static readonly Dictionary<ulong, TriviaChainState> TriviaChainStates = new();
 
@@ -88,9 +91,14 @@ public class TriviaChainService(GeneratedBotStrings strings) : ITriviaChainServi
 
             if (newChainLength == 5)
             {
+                potentialWin = await boostService.ApplyToWinningsAsync(guildId, "triviachain",
+                    chainState.BetAmount, potentialWin);
+
                 await currencyService.CreditAsync(userId, potentialWin,
                     strings.TriviaChainTransactionCompleted(guildId), CurrencyCategory.GamePayout, guildId,
                     "triviachain");
+
+                await dailyChallengeService.RecordPayout(userId, guildId, chainState.BetAmount, potentialWin);
 
                 var completedText = strings.TriviaChainCompleted(guildId, potentialWin,
                     await currencyService.GetCurrencyEmote(guildId));
@@ -148,6 +156,9 @@ public class TriviaChainService(GeneratedBotStrings strings) : ITriviaChainServi
         await currencyService.CreditAsync(chainState.UserId, chainState.TotalWinnings,
             strings.TriviaChainTransactionCashedOut(chainState.GuildId), CurrencyCategory.GamePayout,
             chainState.GuildId, "triviachain");
+
+        await dailyChallengeService.RecordPayout(chainState.UserId, chainState.GuildId, chainState.BetAmount,
+            chainState.TotalWinnings);
 
         var cashedOut = strings.TriviaChainCashedOut(chainState.GuildId, chainState.TotalWinnings,
             await currencyService.GetCurrencyEmote(chainState.GuildId));

@@ -1,4 +1,5 @@
-﻿using DataModel;
+﻿using System.IO;
+using DataModel;
 using LinqToDB;
 using LinqToDB.Async;
 using Mewdeko.Modules.Utility.Services;
@@ -18,6 +19,7 @@ public class MultiGreetService : INService
     private readonly GuildSettingsService guildSettingsService;
     private readonly InviteCountService inviteCountService;
     private readonly ILogger<MultiGreetService> logger;
+    private readonly WelcomeCardService welcomeCards;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="MultiGreetService" /> class.
@@ -29,10 +31,12 @@ public class MultiGreetService : INService
     /// <param name="inviteCountService">The invite count service.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     /// <param name="collector">The analytics collector.</param>
+    /// <param name="welcomeCards">The service drawing welcome cards.</param>
     public MultiGreetService(IDataConnectionFactory dbFactory, FluxerClient client,
         GuildSettingsService guildSettingsService, EventHandler eventHandler, InviteCountService inviteCountService,
-        ILogger<MultiGreetService> logger, IAnalyticsCollector collector)
+        ILogger<MultiGreetService> logger, IAnalyticsCollector collector, WelcomeCardService welcomeCards)
     {
+        this.welcomeCards = welcomeCards;
         this.collector = collector;
         this.client = client;
         this.guildSettingsService = guildSettingsService;
@@ -171,6 +175,7 @@ public class MultiGreetService : INService
     {
         await using var db = await dbFactory.CreateConnectionAsync();
         await db.DeleteAsync(greet);
+        await welcomeCards.DeleteCardAsync(greet.GuildId, WelcomeCardTarget.Greet, greet.Id);
     }
 
     /// <summary>
@@ -184,6 +189,7 @@ public class MultiGreetService : INService
         foreach (var greet in greets)
         {
             await db.DeleteAsync(greet);
+            await welcomeCards.DeleteCardAsync(greet.GuildId, WelcomeCardTarget.Greet, greet.Id);
         }
     }
 
@@ -203,33 +209,41 @@ public class MultiGreetService : INService
         await db.UpdateAsync(greet);
     }
 
-    private static async Task SendSmartEmbedMessage(Channel channel, string content, ulong guildId,
-        int deleteTime = 0)
+    private async Task SendSmartEmbedMessage(Channel channel, string content, MultiGreet greet,
+        SocketGuildMember user)
     {
-        SmartEmbed.TryParse(content, guildId, out var embedData, out var plainText);
+        var deleteTime = greet.DeleteTime;
+        if (!SmartEmbed.TryParse(content, user.Guild.Id, out var parsed, out var plainText))
+            plainText = content;
+        var (files, embedData) = await welcomeCards.TryAttachAsync(user.Guild.Id, WelcomeCardTarget.Greet, greet.Id,
+            user.User, parsed);
         if (!string.IsNullOrWhiteSpace(plainText) || embedData?.Length > 0)
         {
-            var msg = await channel.SendAsync(plainText, embeds: embedData);
+            var msg = await channel.SendAsync(plainText, embeds: embedData, attachments: files);
             if (deleteTime > 0)
                 msg.DeleteAfter(deleteTime);
         }
-        else if (!string.IsNullOrWhiteSpace(content))
+        else if (!string.IsNullOrWhiteSpace(content) || files is not null)
         {
-            var msg = await channel.SendAsync(content);
+            var msg = await channel.SendAsync(content, attachments: files);
             if (deleteTime > 0)
                 msg.DeleteAfter(deleteTime);
         }
     }
 
-    private async Task<ulong> SendSmartEmbedWebhookMessage(FluxerWebhookClient webhook, string content, ulong guildId)
+    private async Task<ulong> SendSmartEmbedWebhookMessage(FluxerWebhookClient webhook, string content,
+        MultiGreet greet, SocketGuildMember user)
     {
-        SmartEmbed.TryParse(content, guildId, out var embedData, out var plainText);
+        if (!SmartEmbed.TryParse(content, user.Guild.Id, out var parsed, out var plainText))
+            plainText = content;
+        var (files, embedData) = await welcomeCards.TryAttachAsync(user.Guild.Id, WelcomeCardTarget.Greet, greet.Id,
+            user.User, parsed);
         if (!string.IsNullOrWhiteSpace(plainText) || embedData?.Length > 0)
         {
-            return await webhook.SendAsync(plainText, embeds: embedData);
+            return await webhook.SendAsync(plainText, embeds: embedData, attachments: files);
         }
 
-        return await webhook.SendAsync(content);
+        return await webhook.SendAsync(content, attachments: files);
     }
 
     private async Task HandleGreet(MultiGreet greet, SocketGuildMember user, ReplacementBuilder replacer)
@@ -257,7 +271,7 @@ public class MultiGreetService : INService
             if (greet.WebhookUrl != null)
             {
                 var webhook = new FluxerWebhookClient(greet.WebhookUrl);
-                var msgId = await SendSmartEmbedWebhookMessage(webhook, content, user.Guild.Id);
+                var msgId = await SendSmartEmbedWebhookMessage(webhook, content, greet, user);
                 if (greet.DeleteTime > 0)
                 {
                     var msg = await channel.GetMessageAsync(msgId);
@@ -266,7 +280,7 @@ public class MultiGreetService : INService
             }
             else
             {
-                await SendSmartEmbedMessage(channel, content, user.Guild.Id, greet.DeleteTime);
+                await SendSmartEmbedMessage(channel, content, greet, user);
             }
 
             collector.Feature("greet", user.Guild.Id);

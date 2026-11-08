@@ -11,5 +11,11 @@
   "suggestion_number": "Suggestion #{0}",
   "suggestion_sent": "Suggestion has been sent!",
   "suggestion_thread_name": "Suggestion #{0}",
-  "suggestion_threads_type_set": "Successfully set Suggestion Threads Type to `{0}`"
+  "suggestion_threads_type_set": "Successfully set Suggestion Threads Type to `{0}`",
+  "anonymous_suggestions_set": "Anonymous suggestions are now `{0}`",
+  "suggestion_author": "Suggestion #{0} was made by <@{1}> (`{1}`)",
+  "suggestion_author_dm_failed": "I couldn't DM you. Open your DMs and try again.",
+  "suggest_vote_color_set": "Suggestions turn green or red when one side leads by {0} votes.",
+  "suggest_vote_color_off": "Suggestions no longer change colour with votes.",
+  "suggest_vote_color_invalid": "Use a number from 0 to 1000. 0 turns it off."
 }

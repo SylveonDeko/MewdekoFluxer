@@ -90,9 +90,19 @@ public interface IBotCredentials
     public string KickClientSecret { get; }
 
     /// <summary>
-    ///     Gets the token used for voting.
+    ///     Gets the URL template of the RSS bridge used to read new TikTok videos, with {username} as the placeholder.
     /// </summary>
-    public string VotesToken { get; }
+    public string TikTokRssBridgeUrl { get; }
+
+    /// <summary>
+    ///     Gets the FluxerList API key used to post the bot's community count to its own listing.
+    /// </summary>
+    public string FluxerListApiKey { get; }
+
+    /// <summary>
+    ///     Gets the secret that encrypts communities' stored FluxerList API keys. Derived from other secrets when empty.
+    /// </summary>
+    public string FluxerListKeyEncryptionKey { get; }
 
     /// <summary>
     ///     Gets the bot's Twitch client ID.

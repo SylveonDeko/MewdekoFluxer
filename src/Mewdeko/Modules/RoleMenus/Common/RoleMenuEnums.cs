@@ -13,7 +13,22 @@ public enum RoleMenuMode
     /// <summary>
     ///     Members hold one role at a time. Picking another swaps it.
     /// </summary>
-    Exclusive = 1
+    Exclusive = 1,
+
+    /// <summary>
+    ///     Reacting only adds roles. Taking the reaction off does not remove them.
+    /// </summary>
+    Verify = 2,
+
+    /// <summary>
+    ///     Reacting only removes roles. Roles can't be added from the menu.
+    /// </summary>
+    RemoveOnly = 3,
+
+    /// <summary>
+    ///     Reacting takes the role away and taking the reaction off gives it back.
+    /// </summary>
+    Reverse = 4
 }
 
 /// <summary>
@@ -105,11 +120,6 @@ public enum RoleMenuError
     NotFound,
 
     /// <summary>
-    ///     The server already has the most menus allowed.
-    /// </summary>
-    TooManyMenus,
-
-    /// <summary>
     ///     The menu name is too long.
     /// </summary>
     NameInvalid,
@@ -168,6 +178,21 @@ public enum RoleMenuError
     ///     A reorder did not list every option exactly once.
     /// </summary>
     InvalidOrder,
+
+    /// <summary>
+    ///     A duration or expiry time is out of range or already past.
+    /// </summary>
+    InvalidDuration,
+
+    /// <summary>
+    ///     The group does not exist in this community.
+    /// </summary>
+    InvalidGroup,
+
+    /// <summary>
+    ///     The accent colour is out of range.
+    /// </summary>
+    InvalidColor,
 
     /// <summary>
     ///     The message could not be posted.

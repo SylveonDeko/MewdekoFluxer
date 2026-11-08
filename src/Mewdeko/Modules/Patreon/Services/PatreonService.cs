@@ -818,7 +818,7 @@ public class PatreonService : BackgroundService, INService, IReadyExecutor
 
             // Trigger role sync for this user if enabled
             var config = await uow.GuildConfigs.FirstOrDefaultAsync(x => x.GuildId == guildId);
-            if (config?.PatreonRoleSync == true)
+            if (config?.PatreonRoleSync == true && discordUserId != 0)
             {
                 _ = SyncUserRolesAsync(guildId, discordUserId);
             }
@@ -1037,6 +1037,18 @@ public class PatreonService : BackgroundService, INService, IReadyExecutor
                 tierId, roleId, guildId);
             return false;
         }
+    }
+
+    /// <summary>
+    ///     Checks whether role synchronization is on for a guild
+    /// </summary>
+    /// <param name="guildId">Discord guild ID</param>
+    /// <returns>True if tier roles are being synced</returns>
+    public async Task<bool> IsRoleSyncEnabled(ulong guildId)
+    {
+        await using var uow = await db.CreateConnectionAsync();
+        var config = await uow.GuildConfigs.FirstOrDefaultAsync(x => x.GuildId == guildId);
+        return config?.PatreonRoleSync ?? false;
     }
 
     /// <summary>

@@ -58,10 +58,35 @@ public sealed record ColumnRule(
     IReadOnlyDictionary<string, ColumnRule>? JsonPaths = null);
 
 /// <summary>
+///     A condition marking source rows that are left behind.
+/// </summary>
+/// <param name="Column">The column to look at.</param>
+/// <param name="Value">The value that marks the row, or null when the rule is about a value being present.</param>
+/// <param name="NotNull">Whether any value in the column marks the row.</param>
+public sealed record SkipRowRule(string Column, string? Value, bool NotNull)
+{
+    /// <summary>
+    ///     Whether a source row is left behind.
+    /// </summary>
+    /// <param name="row">The row.</param>
+    /// <returns>True when it matches.</returns>
+    public bool Matches(IReadOnlyDictionary<string, JsonNode?> row)
+    {
+        if (!row.TryGetValue(Column, out var value) || value is null)
+            return false;
+
+        return NotNull || string.Equals(MigrationMapper.NodeText(value), Value, StringComparison.Ordinal);
+    }
+}
+
+/// <summary>
 ///     How a table's rows are moved over.
 /// </summary>
 public sealed class TableRule
 {
+    /// <summary>Gets or sets the conditions marking source rows that are not migrated.</summary>
+    public IReadOnlyList<SkipRowRule> SkipRows { get; init; } = [];
+
     /// <summary>Gets or sets the table name.</summary>
     public required string Table { get; init; }
 
@@ -169,8 +194,16 @@ public sealed class MigrationSpec
                 break;
         }
 
+        var skipRows = entry["skipRows"] is JsonArray skipNode
+            ? skipNode.OfType<JsonObject>()
+                .Select(x => new SkipRowRule((string)x["column"]!, x["equals"] is { } eq ? MigrationMapper.NodeText(eq) : null,
+                    x["notNull"] is { } nn && (bool)nn))
+                .ToList()
+            : [];
+
         return new TableRule
         {
+            SkipRows = skipRows,
             Table = name,
             Copy = copy,
             Scope = (string?)entry["scope"] ?? "guild",

@@ -478,6 +478,43 @@ public class HighlightsService : INService, IReadyExecutor, IUnloadableService
         await cache.RemoveAsync($"highlightSettings_{guildId}");
     }
 
+    /// <summary>
+    ///     Removes every highlight a user has in a guild.
+    /// </summary>
+    /// <param name="guildId">The guild to remove highlights from</param>
+    /// <param name="userId">The user whose highlights are removed</param>
+    /// <returns>The number of highlights removed</returns>
+    public async Task<int> RemoveUserHighlights(ulong guildId, ulong userId)
+    {
+        await using var dbContext = await dbFactory.CreateConnectionAsync();
+
+        var count = await dbContext.Highlights
+            .Where(x => x.GuildId == guildId && x.UserId == userId)
+            .DeleteAsync();
+
+        await cache.RemoveAsync($"highlights_{guildId}");
+        return count;
+    }
+
+    /// <summary>
+    ///     Removes a word from every user's highlights in a guild.
+    /// </summary>
+    /// <param name="guildId">The guild to remove highlights from</param>
+    /// <param name="word">The word to remove, ignoring case</param>
+    /// <returns>The number of highlights removed</returns>
+    public async Task<int> RemoveWord(ulong guildId, string word)
+    {
+        await using var dbContext = await dbFactory.CreateConnectionAsync();
+
+        var lowered = word.ToLower();
+        var count = await dbContext.Highlights
+            .Where(x => x.GuildId == guildId && x.Word != null && x.Word.ToLower() == lowered)
+            .DeleteAsync();
+
+        await cache.RemoveAsync($"highlights_{guildId}");
+        return count;
+    }
+
     private async Task<List<Highlight?>> GetForGuild(ulong guildId)
     {
         return await cache.GetOrSetAsync($"highlights_{guildId}", async _ =>

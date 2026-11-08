@@ -1,4 +1,8 @@
 using System.IO;
+using DataModel;
+using LinqToDB;
+using LinqToDB.Async;
+using Mewdeko.Common.Cards;
 using Mewdeko.Common.Palette;
 using Mewdeko.Modules.Achievements.Common;
 using Microsoft.Extensions.DependencyInjection;
@@ -104,6 +108,69 @@ public sealed partial class AchievementService
     }
 
     /// <summary>
+    ///     Sends a member a DM about achievements they are three quarters of the way to.
+    /// </summary>
+    /// <param name="user">The member.</param>
+    /// <param name="near">The achievements they are close to and their current values.</param>
+    /// <returns>A task that completes when sent.</returns>
+    private async Task NotifyAlmostThereAsync(SocketGuildMember user,
+        IReadOnlyList<(AchievementDefinition Definition, long Value)> near)
+    {
+        try
+        {
+            var guild = user.Guild;
+            var prefs = await GetUserSettingsAsync(user.Id);
+            if ((AchievementDmPreference)prefs.DmUnlocks == AchievementDmPreference.Never)
+                return;
+
+            await using var db = await dbFactory.CreateConnectionAsync();
+            var keys = near.Select(n => n.Definition.Key).ToList();
+            var known = await db.AchievementAlmostThere
+                .Where(x => x.GuildId == guild.Id && x.UserId == user.Id && keys.Contains(x.AchievementKey))
+                .Select(x => x.AchievementKey)
+                .ToListAsync();
+
+            var claimed = new List<(AchievementDefinition Definition, long Value)>();
+            foreach (var item in near.Where(n => !known.Contains(n.Definition.Key)))
+            {
+                try
+                {
+                    await db.InsertAsync(new AchievementAlmostThere
+                    {
+                        GuildId = guild.Id,
+                        UserId = user.Id,
+                        AchievementKey = item.Definition.Key,
+                        NotifiedAt = DateTime.UtcNow
+                    });
+                    claimed.Add(item);
+                }
+                catch (Exception ex) when (IsDuplicate(ex))
+                {
+                }
+            }
+
+            if (claimed.Count == 0)
+                return;
+
+            var best = claimed.Select(c => c.Definition).OrderByDescending(d => d.Grade).First();
+            var embed = new EmbedBuilder()
+                .WithColor(new Color(AchievementCatalog.GetGrade(best.Grade).Color))
+                .WithTitle(strings.AchievementAlmostTitle(guild.Id))
+                .WithDescription(string.Join("\n", claimed.Take(10).Select(c =>
+                    strings.AchievementAlmostLine(guild.Id, c.Definition.Name, c.Value.ToString("N0"),
+                        c.Definition.Threshold.ToString("N0")))))
+                .WithFooter(strings.AchievementAlmostFooter(guild.Id, guild.Name));
+
+            var dm = await user.CreateDMChannelAsync();
+            await dm.SendAsync(embed: embed.Build());
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Could not DM almost there news to {UserId}", user.Id);
+        }
+    }
+
+    /// <summary>
     ///     Whether an unlock may be announced in the channel it happened in. Quiet channels never take
     ///     announcements, and when the server asks for it, neither do channels the member cannot talk in.
     ///     A thread follows its parent channel.
@@ -149,11 +216,17 @@ public sealed partial class AchievementService
 
         await using var image = settings.Row.UnlockImage ? await RenderUnlockImageAsync(user, unlocked, catalog) : null;
 
+        var message = unlocked
+            .OrderByDescending(d => d.Grade)
+            .ThenByDescending(d => d.Points)
+            .Select(d => d.UnlockMessage)
+            .FirstOrDefault(m => !string.IsNullOrWhiteSpace(m)) ?? settings.Row.UnlockMessage;
+
         Message sent;
-        if (!string.IsNullOrWhiteSpace(settings.Row.UnlockMessage))
+        if (!string.IsNullOrWhiteSpace(message))
         {
             var replacer = BuildReplacer(user, context, unlocked, summary, catalog);
-            var processed = replacer.Replace(settings.Row.UnlockMessage) ?? "";
+            var processed = replacer.Replace(message) ?? "";
             sent = SmartEmbed.TryParse(processed, guild.Id, out var embeds, out var plainText)
                 ? await SendAsync(channel, image, plainText, embeds, allowed)
                 : await SendAsync(channel, image, processed, null, allowed);
@@ -249,10 +322,11 @@ public sealed partial class AchievementService
     /// <param name="definition">The achievement to show.</param>
     /// <param name="catalog">The server's catalog.</param>
     /// <param name="locked">Whether to draw the locked state.</param>
+    /// <param name="editingId">An element to draw without its text, or null.</param>
     /// <returns>The image and where each element landed, or null when drawing failed.</returns>
-    public async Task<AchievementUnlockRenderer.RenderResult?> RenderCardPreviewAsync(SocketGuildMember user,
-        AchievementCardTemplate template, AchievementDefinition definition, AchievementGuildCatalog catalog,
-        bool locked)
+    public async Task<CardRenderResult?> RenderCardPreviewAsync(SocketGuildMember user,
+        CardTemplate template, AchievementDefinition definition, AchievementGuildCatalog catalog,
+        bool locked, string? editingId = null)
     {
         var guildId = user.Guild.Id;
         var target = definition.IsMetric && definition.Threshold > 0 ? definition.Threshold : 100;
@@ -266,13 +340,24 @@ public sealed partial class AchievementService
         try
         {
             return await services.GetRequiredService<AchievementUnlockRenderer>()
-                .RenderWithLayoutAsync(data, template);
+                .RenderWithLayoutAsync(data, template, editingId);
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Failed to draw an achievement card preview in {GuildId}", guildId);
             return null;
         }
+    }
+
+    /// <summary>
+    ///     What a card's label says when its design doesn't change it.
+    /// </summary>
+    /// <param name="guildId">The guild ID, for its language.</param>
+    /// <param name="locked">Whether the achievement is locked.</param>
+    /// <returns>The label.</returns>
+    public string CardLabel(ulong guildId, bool locked)
+    {
+        return locked ? strings.AchievementImageLocked(guildId) : strings.AchievementImageUnlocked(guildId);
     }
 
     private async Task<MemoryStream?> RenderImageAsync(SocketGuildMember user, AchievementDefinition def,
@@ -282,7 +367,7 @@ public sealed partial class AchievementService
         {
             var data = await BuildImageDataAsync(user, def, catalog, label, more, progress, locked);
             return await services.GetRequiredService<AchievementUnlockRenderer>()
-                .RenderAsync(data, await GetCardForAsync(user.Guild.Id, def));
+                .RenderAsync(data, await GetCardForMemberAsync(user.Guild.Id, user.Id, def));
         }
         catch (Exception ex)
         {

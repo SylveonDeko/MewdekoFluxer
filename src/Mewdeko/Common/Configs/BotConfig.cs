@@ -53,6 +53,7 @@ public sealed class BotConfig
         BotHellBotCount = 50;
         BotHellBotPercent = 50;
         BotHellAutoLeave = false;
+        CardPresetBaseUrl = "https://cdn.mewdeko.tech/card-backgrounds";
     }
 
     /// <summary>
@@ -316,6 +317,15 @@ public sealed class BotConfig
     /// </summary>
     [Comment("Whether the bot automatically leaves a community flagged as a bot hell right after joining it.")]
     public bool BotHellAutoLeave { get; set; }
+
+    /// <summary>
+    ///     Gets or sets the folder URL the shared card background presets are served from.
+    /// </summary>
+    [Comment("""
+             Folder the shared card background presets are served from.
+             It holds catalog.json and one folder of images per category.
+             """)]
+    public string CardPresetBaseUrl { get; set; }
 
     /// <summary>
     ///     Gets or sets the channel ID that bot hell detections get posted to.

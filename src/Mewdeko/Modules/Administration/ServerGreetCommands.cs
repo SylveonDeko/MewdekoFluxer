@@ -270,6 +270,110 @@ public partial class Administration
         }
 
         /// <summary>
+        ///     Displays the current boost message.
+        /// </summary>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        [Cmd]
+        [Aliases]
+        [RequireContext(ContextType.Guild)]
+        [UserPerm(GuildPermission.ManageGuild)]
+        public async Task BoostMsg()
+        {
+            var boostMessage = await Service.GetBoostMessage(ctx.Guild.Id);
+            await ReplyConfirmAsync(Strings.BoostmsgCur(ctx.Guild.Id, boostMessage.SanitizeMentions()));
+        }
+
+        /// <summary>
+        ///     Enables or disables boost messages.
+        /// </summary>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        [Cmd]
+        [Aliases]
+        [RequireContext(ContextType.Guild)]
+        [UserPerm(GuildPermission.ManageGuild)]
+        public async Task Boost()
+        {
+            var enabled = await Service.SetBoost(ctx.Guild.Id, ctx.Channel.Id).ConfigureAwait(false);
+
+            if (enabled)
+                await ReplyConfirmAsync(Strings.BoostOn(ctx.Guild.Id)).ConfigureAwait(false);
+            else
+                await ReplyConfirmAsync(Strings.BoostOff(ctx.Guild.Id)).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        ///     Sets the timer for deleting boost messages.
+        /// </summary>
+        /// <param name="timer">The timer in seconds. Must be between 0 and 600.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        [Cmd]
+        [Aliases]
+        [RequireContext(ContextType.Guild)]
+        [UserPerm(GuildPermission.ManageGuild)]
+        public async Task BoostDel(int timer = 30)
+        {
+            if (timer is < 0 or > 600)
+            {
+                await ReplyErrorAsync(Strings.BoostdelRange(ctx.Guild.Id)).ConfigureAwait(false);
+                return;
+            }
+
+            await Service.SetBoostDel(ctx.Guild.Id, timer).ConfigureAwait(false);
+
+            if (timer > 0)
+                await ReplyConfirmAsync(Strings.BoostdelOn(ctx.Guild.Id, timer)).ConfigureAwait(false);
+            else
+                await ReplyConfirmAsync(Strings.BoostdelOff(ctx.Guild.Id)).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        ///     Sets the boost message for the community.
+        /// </summary>
+        /// <param name="text">The new boost message.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        [Cmd]
+        [Aliases]
+        [RequireContext(ContextType.Guild)]
+        [UserPerm(GuildPermission.ManageGuild)]
+        public async Task BoostMsg([Remainder] string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                await BoostMsg().ConfigureAwait(false);
+                return;
+            }
+
+            var sendBoostEnabled = await Service.SetBoostMessage(ctx.Guild.Id, text);
+
+            await ReplyConfirmAsync(Strings.BoostmsgNew(ctx.Guild.Id)).ConfigureAwait(false);
+            if (!sendBoostEnabled)
+                await ReplyConfirmAsync(Strings.BoostmsgEnable(ctx.Guild.Id,
+                        $"`{await guildSettings.GetPrefix(ctx.Guild)}boost`"))
+                    .ConfigureAwait(false);
+        }
+
+        /// <summary>
+        ///     Sends a test boost message.
+        /// </summary>
+        /// <param name="user">The member to send the test message for.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        [Cmd]
+        [Aliases]
+        [RequireContext(ContextType.Guild)]
+        [UserPerm(GuildPermission.ManageGuild)]
+        [Ratelimit(5)]
+        public async Task BoostTest([Remainder] SocketGuildMember? user = null)
+        {
+            user ??= Context.Member!;
+
+            await Service.BoostTest(Context.Channel, user).ConfigureAwait(false);
+            var enabled = await Service.GetBoostEnabled(Context.Guild.Id);
+            if (!enabled)
+                await ReplyConfirmAsync(Strings.BoostmsgEnable(ctx.Guild.Id,
+                    $"`{await guildSettings.GetPrefix(ctx.Guild)}boost`")).ConfigureAwait(false);
+        }
+
+        /// <summary>
         ///     Sends a test direct message greet.
         /// </summary>
         /// <remarks>

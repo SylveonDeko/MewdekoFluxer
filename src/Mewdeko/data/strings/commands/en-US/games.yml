@@ -371,6 +371,45 @@ pollm:
       name: input
       optional: false
       type: string
+pollmaxvotes:
+  args:
+    - 3 50
+  desc: 'Ends a poll automatically once it has this many votes. Use 0 to remove the limit.'
+  params:
+    - desc: The poll ID shown in the poll footer.
+      name: pollId
+      optional: false
+      type: int
+    - desc: 'The number of votes, or 0 for no limit.'
+      name: votes
+      optional: false
+      type: int
+pollblockrole:
+  args:
+    - 3 @Muted
+  desc: 'Stops a role from voting on a poll, or lets it vote again if it was blocked.'
+  params:
+    - desc: The poll ID shown in the poll footer.
+      name: pollId
+      optional: false
+      type: int
+    - desc: 'The role to block or unblock.'
+      name: role
+      optional: false
+      type: IRole
+pollresultsmessage:
+  args:
+    - 3 The winner is %poll.winner%
+  desc: 'Sets the message posted when a poll ends. Leave it out to clear it.'
+  params:
+    - desc: The poll ID shown in the poll footer.
+      name: pollId
+      optional: false
+      type: int
+    - desc: 'The message. Uses %poll.question%, %poll.votes%, %poll.voters%, %poll.winner%, %poll.winner.votes%, %poll.results%, %poll.id% and %poll.link%.'
+      name: message
+      optional: true
+      type: string
 pollstats:
   args:
     - 3
@@ -653,3 +692,18 @@ tl:
     - ''
   desc: 'Shows the current trivia leaderboard.'
   params: [ ]
+dailydice:
+  args:
+    - ''
+  desc: 'Rolls your one die for the day.'
+  params: [ ]
+dailydiceboard:
+  args:
+    - ''
+    - 'true'
+  desc: 'Shows the best rolls of the month.'
+  params:
+    - desc: 'Shows last month instead.'
+      name: lastMonth
+      optional: true
+      type: bool

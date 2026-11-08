@@ -21,7 +21,7 @@ public class RoleMenuRequest
     public string? Message { get; set; }
 
     /// <summary>
-    ///     0 pick any, 1 pick one.
+    ///     0 pick any, 1 pick one, 2 add only, 3 remove only, 4 reverse.
     /// </summary>
     public int Mode { get; set; }
 
@@ -41,7 +41,32 @@ public class RoleMenuRequest
     public ulong? RequiredRoleId { get; set; }
 
     /// <summary>
-    ///     0 private confirmation, 1 no confirmation.
+    ///     Roles that stop a member from using the menu.
+    /// </summary>
+    public List<ulong> BlockedRoleIds { get; set; } = [];
+
+    /// <summary>
+    ///     Seconds a role from this menu lasts before it is taken back. 0 means it stays.
+    /// </summary>
+    public int TempRoleSeconds { get; set; }
+
+    /// <summary>
+    ///     When the menu deletes its message and turns itself off, in UTC. Null means never.
+    /// </summary>
+    public DateTime? ExpiresAt { get; set; }
+
+    /// <summary>
+    ///     Group the menu is linked into, or null or 0 for none.
+    /// </summary>
+    public int? GroupId { get; set; }
+
+    /// <summary>
+    ///     RGB colour of the default embed, or null for the default.
+    /// </summary>
+    public int? AccentColor { get; set; }
+
+    /// <summary>
+    ///     0 short note, 1 no note.
     /// </summary>
     public int ReplyMode { get; set; }
 
@@ -85,6 +110,16 @@ public class RoleMenuOptionRequest
     ///     Short text shown beside the option in the default message.
     /// </summary>
     public string? Description { get; set; }
+
+    /// <summary>
+    ///     Seconds this role lasts before it is taken back. 0 uses the menu's setting.
+    /// </summary>
+    public int TempRoleSeconds { get; set; }
+
+    /// <summary>
+    ///     Most members who can hold this role through the menu. 0 means no limit.
+    /// </summary>
+    public int MaxHolders { get; set; }
 }
 
 /// <summary>
@@ -149,4 +184,36 @@ public class RoleMenuImportRequest
     ///     Whether to remove the older setup once the new menu is posted.
     /// </summary>
     public bool RetireOriginal { get; set; } = true;
+}
+
+/// <summary>
+///     Creates a role menu group or changes its limit.
+/// </summary>
+public class RoleMenuGroupRequest
+{
+    /// <summary>
+    ///     Group name. Ignored when changing an existing group.
+    /// </summary>
+    public string? Name { get; set; }
+
+    /// <summary>
+    ///     Most roles a member can hold across the group's menus. 1 means one at a time, 0 means no limit.
+    /// </summary>
+    public int MaxRoles { get; set; } = 1;
+}
+
+/// <summary>
+///     Creates a channel for role menus.
+/// </summary>
+public class RoleMenuChannelRequest
+{
+    /// <summary>
+    ///     Channel name.
+    /// </summary>
+    public string Name { get; set; } = null!;
+
+    /// <summary>
+    ///     Category to put the channel in. Null or 0 means none.
+    /// </summary>
+    public ulong? CategoryId { get; set; }
 }

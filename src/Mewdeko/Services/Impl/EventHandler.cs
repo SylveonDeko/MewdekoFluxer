@@ -1,6 +1,8 @@
 ﻿using System.Diagnostics;
 using System.Threading;
 using Fluxer.Net.Gateway;
+using Mewdeko.Common;
+using Mewdeko.Modules.Achievements.Common;
 using Mewdeko.Modules.Xp.Events;
 using Mewdeko.Services.Analytics;
 using Channel = Fluxer.Net.Channel;
@@ -83,13 +85,25 @@ public sealed class EventHandler : IDisposable
         ThreadCreated = new BotEvent<ThreadChannel>(this, nameof(ThreadCreated));
         ThreadUpdated = new BotEvent<Cacheable<ThreadChannel>, ThreadChannel>(this, nameof(ThreadUpdated));
         ThreadDeleted = new BotEvent<Cacheable<ThreadChannel>>(this, nameof(ThreadDeleted));
+        ThreadMembersAdded = new BotEvent<Cacheable<ThreadChannel>, ThreadMember[]>(this, nameof(ThreadMembersAdded));
         RoleCreated = new BotEvent<SocketRole>(this, nameof(RoleCreated));
         RoleUpdated = new BotEvent<SocketRole, SocketRole>(this, nameof(RoleUpdated));
         RoleDeleted = new BotEvent<SocketRole>(this, nameof(RoleDeleted));
         AuditLogCreated = new BotEvent<SocketAuditLog, SocketGuild>(this, nameof(AuditLogCreated));
         InviteCreated = new BotEvent<Invite>(this, nameof(InviteCreated));
         InviteDeleted = new BotEvent<Channel, string>(this, nameof(InviteDeleted));
+        EmojiCreated = new BotEvent<GuildEmoji>(this, nameof(EmojiCreated));
+        EmojiUpdated = new BotEvent<GuildEmoji, GuildEmoji>(this, nameof(EmojiUpdated));
+        EmojiDeleted = new BotEvent<GuildEmoji>(this, nameof(EmojiDeleted));
+        StickerCreated = new BotEvent<GuildSticker>(this, nameof(StickerCreated));
+        StickerUpdated = new BotEvent<GuildSticker, GuildSticker>(this, nameof(StickerUpdated));
+        StickerDeleted = new BotEvent<GuildSticker>(this, nameof(StickerDeleted));
+        WebhooksUpdated = new BotEvent<Channel>(this, nameof(WebhooksUpdated));
         XpLevelChanged = new BotEvent<XpLevelChangedEventArgs>(this, nameof(XpLevelChanged));
+        GiveawayEntered = new BotEvent<MemberActivityEventArgs>(this, nameof(GiveawayEntered));
+        ShopItemPurchased = new BotEvent<MemberActivityEventArgs>(this, nameof(ShopItemPurchased));
+        BirthdaySet = new BotEvent<MemberActivityEventArgs>(this, nameof(BirthdaySet));
+        AchievementsUnlocked = new BotEvent<AchievementsUnlockedEventArgs>(this, nameof(AchievementsUnlocked));
 
         RegisterEvents();
     }
@@ -198,6 +212,9 @@ public sealed class EventHandler : IDisposable
     /// <summary>Fires when a thread is deleted.</summary>
     public BotEvent<Cacheable<ThreadChannel>> ThreadDeleted { get; }
 
+    /// <summary>Fires when members are added to a thread, including its owner when it is created.</summary>
+    public BotEvent<Cacheable<ThreadChannel>, ThreadMember[]> ThreadMembersAdded { get; }
+
     /// <summary>Fires when a role is created.</summary>
     public BotEvent<SocketRole> RoleCreated { get; }
 
@@ -216,8 +233,41 @@ public sealed class EventHandler : IDisposable
     /// <summary>Fires when an invite is deleted, with its channel and code.</summary>
     public BotEvent<Channel, string> InviteDeleted { get; }
 
+    /// <summary>Fires when a custom emoji is created.</summary>
+    public BotEvent<GuildEmoji> EmojiCreated { get; }
+
+    /// <summary>Fires when a custom emoji changes, with the emoji before and after.</summary>
+    public BotEvent<GuildEmoji, GuildEmoji> EmojiUpdated { get; }
+
+    /// <summary>Fires when a custom emoji is deleted.</summary>
+    public BotEvent<GuildEmoji> EmojiDeleted { get; }
+
+    /// <summary>Fires when a custom sticker is created.</summary>
+    public BotEvent<GuildSticker> StickerCreated { get; }
+
+    /// <summary>Fires when a custom sticker changes, with the sticker before and after.</summary>
+    public BotEvent<GuildSticker, GuildSticker> StickerUpdated { get; }
+
+    /// <summary>Fires when a custom sticker is deleted.</summary>
+    public BotEvent<GuildSticker> StickerDeleted { get; }
+
+    /// <summary>Fires when the webhooks of a channel change.</summary>
+    public BotEvent<Channel> WebhooksUpdated { get; }
+
     /// <summary>Fires when a member's XP level changes. Raised by the XP module.</summary>
     public BotEvent<XpLevelChangedEventArgs> XpLevelChanged { get; }
+
+    /// <summary>Fires when a member enters a giveaway. Raised by the giveaway module.</summary>
+    public BotEvent<MemberActivityEventArgs> GiveawayEntered { get; }
+
+    /// <summary>Fires when a member buys a shop item. Raised by the shop module.</summary>
+    public BotEvent<MemberActivityEventArgs> ShopItemPurchased { get; }
+
+    /// <summary>Fires when a member sets their birthday. The guild ID is 0 as it is not tied to one guild.</summary>
+    public BotEvent<MemberActivityEventArgs> BirthdaySet { get; }
+
+    /// <summary>Fires when a member unlocks achievements in a guild. Raised by the achievements module.</summary>
+    public BotEvent<AchievementsUnlockedEventArgs> AchievementsUnlocked { get; }
 
     /// <inheritdoc />
     public void Dispose()
@@ -256,6 +306,7 @@ public sealed class EventHandler : IDisposable
         var eventTotals = eventMetrics.GetOrAdd(eventName, _ => new EventMetrics());
         var moduleTotals = moduleMetrics.GetOrAdd(moduleName, _ => new ModuleMetrics());
         var started = Stopwatch.GetTimestamp();
+        GuildEmbedColorService.Enter(guild?.Id);
         try
         {
             using (perfService.Measure($"Event_{eventName}_{moduleName}"))
@@ -377,6 +428,7 @@ public sealed class EventHandler : IDisposable
         gateway.ThreadCreated += (guild, thread) => ThreadCreated.RaiseAsync(thread, guild);
         gateway.ThreadUpdated += (guild, before, after) => ThreadUpdated.RaiseAsync((before, after), guild);
         gateway.ThreadDeleted += (guild, thread) => ThreadDeleted.RaiseAsync(thread, guild);
+        gateway.ThreadMembersAdded += (guild, thread, members) => ThreadMembersAdded.RaiseAsync((thread, members), guild);
 
         gateway.RoleCreated += role => RoleCreated.RaiseAsync(role, role.Guild);
         gateway.RoleUpdated += (before, after) => RoleUpdated.RaiseAsync((before, after), after.Guild);
@@ -386,6 +438,24 @@ public sealed class EventHandler : IDisposable
         gateway.InviteCreated += invite =>
             InviteCreated.RaiseAsync(invite, invite.Guild is { } partial ? client.GetGuild(partial.Id) : null);
         gateway.InviteDeleted += (channel, guild, code) => InviteDeleted.RaiseAsync((channel, code), guild);
+
+        gateway.EmojiCreated += emoji =>
+            emoji is GuildEmoji created ? EmojiCreated.RaiseAsync(created, client.GetGuild(created.GuildId)) : Task.CompletedTask;
+        gateway.EmojiUpdated += (before, after) =>
+            before is GuildEmoji old && after is GuildEmoji updated
+                ? EmojiUpdated.RaiseAsync((old, updated), client.GetGuild(updated.GuildId))
+                : Task.CompletedTask;
+        gateway.EmojiDeleted += emoji =>
+            emoji is GuildEmoji deleted ? EmojiDeleted.RaiseAsync(deleted, client.GetGuild(deleted.GuildId)) : Task.CompletedTask;
+        gateway.StickerCreated += sticker =>
+            sticker is GuildSticker created ? StickerCreated.RaiseAsync(created, client.GetGuild(created.GuildId)) : Task.CompletedTask;
+        gateway.StickerUpdated += (before, after) =>
+            before is GuildSticker old && after is GuildSticker updated
+                ? StickerUpdated.RaiseAsync((old, updated), client.GetGuild(updated.GuildId))
+                : Task.CompletedTask;
+        gateway.StickerDeleted += sticker =>
+            sticker is GuildSticker deleted ? StickerDeleted.RaiseAsync(deleted, client.GetGuild(deleted.GuildId)) : Task.CompletedTask;
+        gateway.WebhooksUpdated += (guild, channel) => WebhooksUpdated.RaiseAsync(channel, guild);
     }
 
     private async Task OnPrivateMessageCreatedAsync(SocketPrivateMessage message)

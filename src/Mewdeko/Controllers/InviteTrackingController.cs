@@ -424,7 +424,16 @@ public class InviteTrackingController : Controller
         if (guild == null)
             return NotFound("Guild not found");
 
-        var invites = await guild.GetInvitesAsync();
+        IEnumerable<Invite> invites;
+        try
+        {
+            invites = await guild.GetInvitesAsync();
+        }
+        catch (FluxerApiException ex) when (ex.HttpCode == System.Net.HttpStatusCode.Forbidden)
+        {
+            return StatusCode(403, "Mewdeko needs the Manage Community permission to see invites.");
+        }
+
         var labels = (await inviteService.GetLabelsAsync(guildId)).ToDictionary(x => x.InviteCode);
 
         return Ok(invites.Select(invite =>

@@ -1,0 +1,376 @@
+stick:
+  args:
+    - 'Read the rules before posting.'
+  desc: 'Sticks a message to the current channel. It returns to the bottom after 5 new messages or 15 seconds, whichever comes first. Accepts several lines or embed json.'
+  params:
+    - desc: 'The message text or embed json.'
+      name: content
+      optional: false
+      type: string
+stickin:
+  args:
+    - '#rules Read the rules before posting.'
+  desc: 'Sticks a message to a channel.'
+  params:
+    - desc: 'The channel to stick the message to.'
+      name: channel
+      optional: false
+      type: TextChannel
+    - desc: 'The message text or embed json.'
+      name: content
+      optional: false
+      type: string
+stickyedit:
+  args:
+    - '#rules New rules text.'
+  desc: 'Changes the sticky message in a channel.'
+  params:
+    - desc: 'The channel the sticky is in.'
+      name: channel
+      optional: false
+      type: TextChannel
+    - desc: 'The new message text or embed json.'
+      name: content
+      optional: false
+      type: string
+unstick:
+  args:
+    - ''
+    - '#rules'
+  desc: 'Removes the sticky message from a channel and deletes its last copy.'
+  params:
+    - desc: 'The channel to unstick. Defaults to the current channel.'
+      name: channel
+      optional: true
+      type: TextChannel
+stickylist:
+  args:
+    - ''
+  desc: 'Lists the sticky messages in the community.'
+  params: []
+stickyclear:
+  args:
+    - ''
+  desc: 'Removes every sticky message in the community.'
+  params: []
+stickyset:
+  args:
+    - '#rules 10 30s'
+  desc: 'Sets after how many new messages or how much time a channel''s sticky returns to the bottom, whichever comes first.'
+  params:
+    - desc: 'The channel the sticky is in.'
+      name: channel
+      optional: false
+      type: TextChannel
+    - desc: 'How many new messages bring the sticky back, from 1 to 1000.'
+      name: messages
+      optional: false
+      type: int
+    - desc: 'How long after the first new message the sticky comes back, from 5s to 6h.'
+      name: window
+      optional: false
+      type: StoopidTime
+stickytemplatesave:
+  args:
+    - 'rules Read the rules before posting.'
+  desc: 'Saves a sticky template, or replaces the content of one with the same name.'
+  params:
+    - desc: 'The template name.'
+      name: name
+      optional: false
+      type: string
+    - desc: 'The message text or embed json.'
+      name: content
+      optional: false
+      type: string
+stickytemplatelist:
+  args:
+    - ''
+  desc: 'Lists the sticky templates in the community.'
+  params: []
+stickytemplatedelete:
+  args:
+    - 'rules'
+  desc: 'Deletes a sticky template.'
+  params:
+    - desc: 'The template name.'
+      name: name
+      optional: false
+      type: string
+stickytemplateuse:
+  args:
+    - 'rules'
+    - 'rules #rules'
+  desc: 'Sticks a saved template to a channel.'
+  params:
+    - desc: 'The template name.'
+      name: name
+      optional: false
+      type: string
+    - desc: 'The channel to stick it to. Defaults to the current channel.'
+      name: channel
+      optional: true
+      type: TextChannel
+autoreact:
+  args:
+    - list
+    - 'show 1'
+    - 'add #general 👍 🔥'
+    - 'edit 1 type images'
+    - 'edit 1 bots on'
+    - 'edit 1 skipwords spoiler, nsfw'
+    - 'edit 1 type links'
+    - 'edit 1 delete on'
+    - 'move 3 1'
+    - 'manager @Moderators'
+    - 'remove 1'
+    - 'enable 1'
+    - 'disable 1'
+  desc: 'Reacts to new messages in a channel. Options: list, show, add (channel and emojis), edit (channel, emojis, type, delete, bots, webhooks, replies, allowedroles, ignoredroles, ignoredmembers, skipwords, requiredwords), move (rule and position, rules earlier in the list add their reactions first), remove, enable, disable and manager (the role that can manage auto reactions without Manage Community). Types are any, text, images, videos, media and links. Delete on removes messages that do not fit the type.'
+  params:
+    - desc: 'list, show, add, edit, move, remove, enable, disable or manager.'
+      name: option
+      optional: true
+      type: string
+    - desc: 'The channel and emojis for add, the role for manager, or the rule number and what to change for the rest.'
+      name: value
+      optional: true
+      type: string
+backupcreate:
+  args:
+    - ''
+    - '50 #general #rules'
+  desc: 'Makes a backup of this community: settings, roles, channels and emojis. Add a number to also save that many recent messages from each channel you list, or from this channel if you list none. You can keep 5 backups and make one every 30 minutes.'
+  params:
+    - desc: 'How many recent messages to save, then the channels to save them from.'
+      name: options
+      optional: true
+      type: string
+backuplist:
+  args:
+    - ''
+  desc: 'Lists your backups.'
+  params: []
+backupinfo:
+  args:
+    - '1'
+  desc: 'Shows what one of your backups holds.'
+  params:
+    - desc: 'The backup ID.'
+      name: id
+      optional: false
+      type: int
+backupdelete:
+  args:
+    - '1'
+  desc: 'Deletes one of your backups.'
+  params:
+    - desc: 'The backup ID.'
+      name: id
+      optional: false
+      type: int
+backuprestore:
+  args:
+    - '1'
+    - '1 add'
+  desc: 'Restores one of your backups into this community. You must be the owner or an administrator here and in the community it came from. Replace deletes every role, channel and emoji first, add only creates what is missing.'
+  params:
+    - desc: 'The backup ID.'
+      name: id
+      optional: false
+      type: int
+    - desc: 'replace or add.'
+      name: mode
+      optional: true
+      type: string
+templatesave:
+  args:
+    - 'My Layout'
+  desc: 'Saves this community''s roles, categories and channels as a template, without messages or emojis. Saving under an existing name replaces that template. You must be the owner or an administrator.'
+  params:
+    - desc: 'The template name.'
+      name: name
+      optional: false
+      type: string
+templatelist:
+  args:
+    - ''
+  desc: 'Lists the starter templates (community, gaming and support) and your saved templates.'
+  params: []
+templatedelete:
+  args:
+    - 'My Layout'
+  desc: 'Deletes one of your saved templates. Starter templates cannot be deleted.'
+  params:
+    - desc: 'The template name.'
+      name: name
+      optional: false
+      type: string
+templateapply:
+  args:
+    - 'community'
+    - 'My Layout'
+  desc: 'Applies a starter template or one of your saved templates to this community by adding the roles and channels it is missing. Nothing is deleted. You must be the owner or an administrator.'
+  params:
+    - desc: 'The starter template or one of your saved templates.'
+      name: name
+      optional: false
+      type: string
+inviteroleadd:
+  args:
+    - '@role 10'
+  desc: 'Gives a role to members who reach a number of net invites. Running it again for the same role moves it to a new milestone.'
+  params:
+    - desc: 'The role.'
+      name: role
+      optional: false
+      type: Role
+    - desc: 'The net invites needed.'
+      name: invites
+      optional: false
+      type: int
+inviteroleremove:
+  args:
+    - '@role'
+  desc: 'Stops giving a role at a number of invites. Members keep the role.'
+  params:
+    - desc: 'The role.'
+      name: role
+      optional: false
+      type: Role
+inviteroles:
+  args:
+    - ''
+  desc: 'Lists the invite milestone roles and how they are handed out.'
+  params: []
+inviterolemode:
+  args:
+    - 'StackAll'
+    - 'HighestOnly'
+  desc: 'Sets whether members keep every milestone role they reach or only the role for their highest milestone.'
+  params:
+    - desc: 'StackAll or HighestOnly.'
+      name: mode
+      optional: false
+      type: InviteRoleMode
+inviteroledrop:
+  args:
+    - ''
+  desc: 'Toggles whether members lose a milestone role when their invites fall below it.'
+  params: []
+inviterolesync:
+  args:
+    - ''
+  desc: 'Gives or takes milestone roles for every member to match their current invites.'
+  params: []
+freegamealert:
+  args:
+    - channel
+    - 'channel role'
+  desc: 'Posts free game alerts for the Epic Games Store, Steam and GOG in a channel, with an optional role ping.'
+  params:
+    - desc: 'The channel to post in.'
+      name: channel
+      optional: false
+      type: TextChannel
+    - desc: 'The role to ping. Leave empty for no ping.'
+      name: role
+      optional: true
+      type: Role
+freegameremove:
+  args:
+    - channel
+  desc: 'Stops free game alerts in a channel.'
+  params:
+    - desc: 'The channel to stop alerts in.'
+      name: channel
+      optional: false
+      type: TextChannel
+freegamestores:
+  args:
+    - 'channel epic gog'
+  desc: 'Chooses which stores a channel gets free game alerts for.'
+  params:
+    - desc: 'The alert channel.'
+      name: channel
+      optional: false
+      type: TextChannel
+    - desc: 'Any of epic, steam and gog.'
+      name: stores
+      optional: false
+      type: string
+freegamelist:
+  args:
+    - ''
+  desc: 'Lists the channels that get free game alerts.'
+  params: []
+freegamesnow:
+  args:
+    - ''
+  desc: 'Shows the games that are free right now.'
+  params: []
+memberdump:
+  args:
+    - ''
+    - 'role:Staff format:csv'
+    - 'norole:Verified joinedbefore:2025-01-01 type:humans fields:id,name,joined'
+  desc: 'Exports the member list as a text or CSV file. Options are key:value pairs: role, norole, joinedbefore, joinedafter, createdbefore, createdafter (dates are UTC), type (bots or humans), format (txt or csv) and fields (id, name, display, joined, created, roles).'
+  params:
+    - desc: 'The filters and format.'
+      name: options
+      optional: true
+      type: string
+editlink:
+  args:
+    - 'https://fluxer.app/channels/1/2/3 New text'
+  desc: 'Replaces the text and embeds of a message the bot posted, by message link. Accepts embed json.'
+  params:
+    - desc: 'The link to the bot''s message.'
+      name: messageLink
+      optional: false
+      type: string
+    - desc: 'The new text or embed json.'
+      name: content
+      optional: false
+      type: string
+msgjson:
+  args:
+    - 'https://fluxer.app/channels/1/2/3'
+  desc: 'Sends the text and embed json of a message the bot posted as a file, ready to edit and apply with editlink.'
+  params:
+    - desc: 'The link to the bot''s message.'
+      name: messageLink
+      optional: false
+      type: string
+cmdreply:
+  args:
+    - 'help #bot-commands'
+    - 'utility #bot-commands true'
+  desc: 'Sends a command''s or module''s replies to a channel instead of where it was used. Optionally deletes the message that used it.'
+  params:
+    - desc: 'A command, alias or module name.'
+      name: target
+      optional: false
+      type: string
+    - desc: 'The channel replies go to.'
+      name: channel
+      optional: false
+      type: TextChannel
+    - desc: 'Whether to delete the message that used the command.'
+      name: deleteInvoker
+      optional: true
+      type: bool
+cmdreplyremove:
+  args:
+    - 'help'
+  desc: 'Stops sending a command''s or module''s replies to a set channel.'
+  params:
+    - desc: 'A command, alias or module name.'
+      name: target
+      optional: false
+      type: string
+cmdreplylist:
+  args:
+    - ''
+  desc: 'Lists the commands and modules whose replies go to a set channel.'
+  params: []

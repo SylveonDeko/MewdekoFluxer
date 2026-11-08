@@ -27,5 +27,13 @@
   "multigreet_type_regular": "Regular MultiGreet mode enabled",
   "multigreet_webhook_disabled": "Webhook disabled for MultiGreet #{0}!",
   "multigreet_webhook_invalid_avatar": "The avatar URL used is not a direct URL or is invalid! Please use a different URL",
-  "multigreet_webhook_set": "Webhook has been set successfully"
+  "multigreet_webhook_set": "Webhook has been set successfully",
+  "boost_off": "Boost announcements disabled.",
+  "boost_on": "Boost announcements enabled on this channel.",
+  "boostdel_off": "Automatic deletion of boost messages has been disabled.",
+  "boostdel_on": "Boost messages will be deleted after {0} seconds.",
+  "boostdel_range": "The delete time must be from 0 to 600 seconds.",
+  "boostmsg_cur": "Current boost message: {0}",
+  "boostmsg_enable": "Enable boost messages by typing {0}",
+  "boostmsg_new": "New boost message set."
 }

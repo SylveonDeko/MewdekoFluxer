@@ -299,6 +299,39 @@ public partial class ServerManagement
         }
 
         /// <summary>
+        ///     Adds a channel or category to the lockdown exemptions, or removes it.
+        /// </summary>
+        /// <param name="channel">The channel or category to toggle.</param>
+        [Cmd]
+        [Aliases]
+        [RequireContext(ContextType.Guild)]
+        [UserPerm(GuildPermission.Administrator)]
+        public async Task LockdownExempt([Remainder] Channel channel)
+        {
+            var added = await Service.ToggleExemptionAsync(ctx.Guild.Id, channel.Id).ConfigureAwait(false);
+            var mention = $"<#{channel.Id}>";
+            await ReplyConfirmAsync(added
+                ? Strings.LockdownExemptAdded(ctx.Guild.Id, mention)
+                : Strings.LockdownExemptRemoved(ctx.Guild.Id, mention)).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        ///     Lists the channels and categories lockdown never touches.
+        /// </summary>
+        [Cmd]
+        [Aliases]
+        [RequireContext(ContextType.Guild)]
+        [UserPerm(GuildPermission.Administrator)]
+        public async Task LockdownExemptList()
+        {
+            var ids = Service.GetExemptions(ctx.Guild.Id);
+            await ReplyConfirmAsync(ids.Count == 0
+                    ? Strings.LockdownExemptNone(ctx.Guild.Id)
+                    : Strings.LockdownExemptList(ctx.Guild.Id, string.Join(' ', ids.Select(x => $"<#{x}>"))))
+                .ConfigureAwait(false);
+        }
+
+        /// <summary>
         ///     Deletes and recreates a text channel, effectively "nuking" it.
         /// </summary>
         /// <param name="chan3">Optional parameter to specify a channel to nuke.</param>

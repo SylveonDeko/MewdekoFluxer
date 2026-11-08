@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using DataModel;
+using Mewdeko.Services;
 
 namespace Mewdeko.Modules.Forms.Services;
 
@@ -46,7 +47,7 @@ public partial class FormsService
         var embed = new EmbedBuilder()
             .WithTitle(form.Name)
             .WithDescription($"Response #{response.Id} was {outcome.ToLowerInvariant()}.")
-            .WithColor(approved ? Mewdeko.OkColor : Mewdeko.ErrorColor)
+            .WithColor(approved ? GuildEmbedColorService.OkFor(form.GuildId) : Mewdeko.ErrorColor)
             .WithFooter(strings.FormSubmissionFooter(form.GuildId, response.Id, form.Id))
             .WithTimestamp(DateTimeOffset.UtcNow);
 
@@ -77,7 +78,7 @@ public partial class FormsService
 
         if (!WebhookUrlRegex().IsMatch(url))
         {
-            logger.LogWarning("Form {FormId} has a notification webhook that is not a Discord webhook URL",
+            logger.LogWarning("Form {FormId} has a notification webhook that is not a Fluxer webhook URL",
                 form.Id);
             return;
         }
@@ -106,7 +107,7 @@ public partial class FormsService
         }
     }
 
-    [GeneratedRegex(@"^https://(canary\.|ptb\.)?discord(app)?\.com/api/webhooks/\d+/[A-Za-z0-9_\-]+/?$")]
+    [GeneratedRegex(@"^https?://\S+/webhooks/\d+/[A-Za-z0-9_\-]+/?$")]
     private static partial Regex WebhookUrlRegex();
 
     private sealed class WebhookPayload

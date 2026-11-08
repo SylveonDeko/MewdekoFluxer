@@ -169,7 +169,7 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
             ReasonKeys.Select((key, index) => $"{index + 1}. {GetReasonLabel(key, guild.Id)}"));
 
         var eb = new EmbedBuilder()
-            .WithOkColor()
+            .WithOkColor(guild.Id)
             .WithTitle(strings.LeaveFeedbackTitle(guild.Id))
             .WithDescription(strings.LeaveFeedbackDesc(guild.Id, guild.Name))
             .AddField(strings.LeaveFeedbackReasonsTitle(guild.Id), reasonList)
@@ -378,7 +378,7 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
         {
             await Dismiss(record.Id).ConfigureAwait(false);
             await message.Channel.SendAsync(embed: new EmbedBuilder()
-                .WithOkColor()
+                .WithOkColor(record.GuildId)
                 .WithDescription(strings.LeaveFeedbackDismissed(record.GuildId))
                 .Build()).ConfigureAwait(false);
             return;
@@ -397,7 +397,7 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
             await SetComment(record.Id, comment.TrimTo(2000)).ConfigureAwait(false);
 
         await message.Channel.SendAsync(embed: new EmbedBuilder()
-            .WithOkColor()
+            .WithOkColor(record.GuildId)
             .WithDescription(strings.LeaveFeedbackSubmitted(record.GuildId))
             .Build()).ConfigureAwait(false);
 
@@ -468,7 +468,7 @@ public class GuildLeaveFeedbackService : INService, IReadyExecutor
                 return;
 
             var eb = new EmbedBuilder()
-                .WithOkColor()
+                .WithOkColor(record.GuildId)
                 .WithTitle(strings.LeaveFeedbackLogTitle(null))
                 .AddField("Community", $"{record.GuildName} `{record.GuildId}`")
                 .AddField("Members", record.MemberCount, true)

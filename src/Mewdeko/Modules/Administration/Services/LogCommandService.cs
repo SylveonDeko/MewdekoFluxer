@@ -1,5 +1,8 @@
 ﻿using System.IO;
+using System.IO.Compression;
 using System.Net.Http;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using DataModel;
 using LinqToDB;
@@ -173,8 +176,67 @@ public class LogCommandService(
         MessagesBulkDeleted,
 
         /// <summary> Reactions were added or removed from messages. </summary>
-        ReactionEvents
+        ReactionEvents,
+
+        /// <summary> A member was timed out. </summary>
+        UserTimedOut,
+
+        /// <summary> A member's timeout was removed. </summary>
+        UserTimeoutRemoved,
+
+        /// <summary> A message contained an invite link. </summary>
+        InviteLinkPosted,
+
+        /// <summary> A custom emoji was created. </summary>
+        EmojiCreated,
+
+        /// <summary> A custom emoji was renamed. </summary>
+        EmojiUpdated,
+
+        /// <summary> A custom emoji was deleted. </summary>
+        EmojiDeleted,
+
+        /// <summary> A custom sticker was created. </summary>
+        StickerCreated,
+
+        /// <summary> A custom sticker was edited. </summary>
+        StickerUpdated,
+
+        /// <summary> A custom sticker was deleted. </summary>
+        StickerDeleted,
+
+        /// <summary> A channel's permission overwrites changed. </summary>
+        ChannelPermissionsUpdated,
+
+        /// <summary> A channel's webhooks changed. </summary>
+        WebhookChanged
     }
+
+    /// <summary>
+    ///     Result of importing a log configuration.
+    /// </summary>
+    /// <param name="Applied">The log types that were mapped to a channel.</param>
+    /// <param name="Unmapped">Descriptions of channels that could not be mapped.</param>
+    /// <param name="Valid">Whether the code could be read.</param>
+    public record LogImportResult(int Applied, List<string> Unmapped, bool Valid);
+
+    private sealed class LogConfigExport
+    {
+        public int Version { get; set; } = 1;
+        public Dictionary<string, ExportedChannel> Types { get; set; } = new();
+        public List<ExportedChannel> Ignored { get; set; } = [];
+        public List<string> Prefixes { get; set; } = [];
+    }
+
+    private sealed class ExportedChannel
+    {
+        public ulong Id { get; set; }
+        public string Name { get; set; } = "";
+    }
+
+    private static readonly Regex InviteRegex = new(
+        @"(?:https?://)?(?:www\.)?(?:fluxer\.gg|fluxer\.app/invite)/[A-Za-z0-9-]+",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     /// <summary>
     ///     Cache of ignored channels per guild
@@ -317,6 +379,16 @@ public class LogCommandService(
         handler.MessagesBulkDeleted.Subscribe("LogCommandService", OnMessagesBulkDeleted);
         handler.ReactionAdded.Subscribe("LogCommandService", OnReactionAdded);
         handler.ReactionRemoved.Subscribe("LogCommandService", OnReactionRemoved);
+        handler.GuildMemberUpdated.Subscribe("LogCommandService", OnUserTimeoutChanged);
+        handler.MessageReceived.Subscribe("LogCommandService", OnInviteLinkPosted);
+        handler.EmojiCreated.Subscribe("LogCommandService", OnEmojiCreated);
+        handler.EmojiUpdated.Subscribe("LogCommandService", OnEmojiUpdated);
+        handler.EmojiDeleted.Subscribe("LogCommandService", OnEmojiDeleted);
+        handler.StickerCreated.Subscribe("LogCommandService", OnStickerCreated);
+        handler.StickerUpdated.Subscribe("LogCommandService", OnStickerUpdated);
+        handler.StickerDeleted.Subscribe("LogCommandService", OnStickerDeleted);
+        handler.WebhooksUpdated.Subscribe("LogCommandService", OnWebhooksUpdated);
+        handler.ChannelUpdated.Subscribe("LogCommandService", OnChannelPermissionsChanged);
         muteService.UserMuted += OnUserMuted;
         muteService.UserUnmuted += OnUserUnmuted;
 
@@ -962,8 +1034,9 @@ public class LogCommandService(
     /// <param name="args2">The new message</param>
     private async Task OnMessageUpdated(Message? oldMessage, SocketMessage args2)
     {
-        if (oldMessage is null || args2.Author is not { IsBot: false }) return;
+        if (oldMessage is null || args2.Author is null) return;
         if (args2.Channel is not { } guildChannel) return;
+        if (IgnoresBot(guildChannel.Guild.Id, args2.Author.IsBot)) return;
         if (oldMessage.Content == args2.Content) return; // Compare content directly
 
         // Check if channel is ignored
@@ -973,6 +1046,10 @@ public class LogCommandService(
         if (GuildLogSettings.TryGetValue(guildChannel.Guild.Id, out var logSetting))
         {
             if (logSetting.MessageUpdatedId is null or 0)
+                return;
+
+            if (StartsWithIgnoredPrefix(logSetting, oldMessage.Content) ||
+                StartsWithIgnoredPrefix(logSetting, args2.Content))
                 return;
 
             var channel = guildChannel.Guild.GetTextChannel(logSetting.MessageUpdatedId.Value);
@@ -1004,8 +1081,9 @@ public class LogCommandService(
         // Get message from cache if available
         var message = args.HasValue ? args.Value : null;
         // If message not in cache, we cannot proceed as we don't have content/author
-        if (message == null || message.Author.IsBot) return;
+        if (message == null) return;
         if (guildChannel.Guild is null) return; // Ensure it's a guild channel
+        if (IgnoresBot(guildChannel.Guild.Id, message.Author.IsBot)) return;
 
         // Check if channel is ignored
         if (IsChannelIgnored(guildChannel.Guild.Id, guildChannel.Id))
@@ -1014,6 +1092,9 @@ public class LogCommandService(
         if (GuildLogSettings.TryGetValue(guildChannel.Guild.Id, out var logSetting))
         {
             if (logSetting.MessageDeletedId is null or 0)
+                return;
+
+            if (StartsWithIgnoredPrefix(logSetting, message.Content))
                 return;
 
             var logChannel = guildChannel.Guild.GetTextChannel(logSetting.MessageDeletedId.Value);
@@ -1267,7 +1348,7 @@ public class LogCommandService(
     /// <param name="userInGuild">The member after the update.</param>
     private async Task OnUserUpdated(UserSnapshot args, SocketGuildMember userInGuild)
     {
-        if (args.IsBot) return;
+        if (IgnoresBot(userInGuild.Guild.Id, args.IsBot)) return;
 
         var after = userInGuild.User;
         var hasAvatarChanged = args.AvatarHash != after.AvatarHash;
@@ -1556,7 +1637,7 @@ public class LogCommandService(
     private async Task OnVoicePresence(SocketGuildMember guildUser, VoiceStateSnapshot oldState,
         VoiceStateSnapshot newState)
     {
-        if (guildUser.IsBot)
+        if (IgnoresBot(guildUser.Guild.Id, guildUser.IsBot))
             return;
 
         // Check if old or new channel is ignored
@@ -1668,7 +1749,7 @@ public class LogCommandService(
     private async Task OnVoicePresenceTts(SocketGuildMember guildUser, VoiceStateSnapshot oldState,
         VoiceStateSnapshot newState)
     {
-        if (guildUser.IsBot)
+        if (IgnoresBot(guildUser.Guild.Id, guildUser.IsBot))
             return;
 
         // Check if old or new channel is ignored
@@ -1803,6 +1884,7 @@ public class LogCommandService(
             case LogType.InviteDeleted: logSetting.InviteDeletedId = channelId; break;
             case LogType.MessagesBulkDeleted: logSetting.MessagesBulkDeletedId = channelId; break;
             case LogType.ReactionEvents: logSetting.ReactionEventsId = channelId; break;
+            default: SetLogChannelId(logSetting, type, channelId); break;
         }
 
         try
@@ -1877,6 +1959,17 @@ public class LogCommandService(
                 logSetting.InviteDeletedId = channelId;
                 logSetting.MessagesBulkDeletedId = channelId;
                 logSetting.ReactionEventsId = channelId;
+                logSetting.EmojiCreatedId = channelId;
+                logSetting.EmojiUpdatedId = channelId;
+                logSetting.EmojiDeletedId = channelId;
+                logSetting.StickerCreatedId = channelId;
+                logSetting.StickerUpdatedId = channelId;
+                logSetting.StickerDeletedId = channelId;
+                logSetting.UserTimedOutId = channelId;
+                logSetting.UserTimeoutRemovedId = channelId;
+                logSetting.InviteLinkPostedId = channelId;
+                logSetting.ChannelPermissionsUpdatedId = channelId;
+                logSetting.WebhookChangedId = channelId;
                 break;
             case LogCategoryTypes.Users:
                 logSetting.NicknameUpdatedId = channelId;
@@ -1903,19 +1996,30 @@ public class LogCommandService(
                 logSetting.ServerUpdatedId = channelId;
                 logSetting.InviteCreatedId = channelId;
                 logSetting.InviteDeletedId = channelId;
+                logSetting.EmojiCreatedId = channelId;
+                logSetting.EmojiUpdatedId = channelId;
+                logSetting.EmojiDeletedId = channelId;
+                logSetting.StickerCreatedId = channelId;
+                logSetting.StickerUpdatedId = channelId;
+                logSetting.StickerDeletedId = channelId;
+                logSetting.WebhookChangedId = channelId;
                 break;
             case LogCategoryTypes.Channel:
                 logSetting.ChannelUpdatedId = channelId;
                 logSetting.ChannelCreatedId = channelId;
                 logSetting.ChannelDestroyedId = channelId;
+                logSetting.ChannelPermissionsUpdatedId = channelId;
                 break;
             case LogCategoryTypes.Messages:
                 logSetting.MessageDeletedId = channelId;
                 logSetting.MessageUpdatedId = channelId;
                 logSetting.MessagesBulkDeletedId = channelId;
                 logSetting.ReactionEventsId = channelId;
+                logSetting.InviteLinkPostedId = channelId;
                 break;
             case LogCategoryTypes.Moderation:
+                logSetting.UserTimedOutId = channelId;
+                logSetting.UserTimeoutRemovedId = channelId;
                 logSetting.UserMutedId = channelId;
                 logSetting.UserBannedId = channelId;
                 logSetting.UserUnbannedId = channelId;
@@ -1950,6 +2054,21 @@ public class LogCommandService(
                 logSetting.UserRoleAddedId = noneValue;
                 logSetting.UserRoleRemovedId = noneValue;
                 logSetting.LogVoicePresenceTtsId = noneValue;
+                logSetting.InviteCreatedId = noneValue;
+                logSetting.InviteDeletedId = noneValue;
+                logSetting.MessagesBulkDeletedId = noneValue;
+                logSetting.ReactionEventsId = noneValue;
+                logSetting.EmojiCreatedId = noneValue;
+                logSetting.EmojiUpdatedId = noneValue;
+                logSetting.EmojiDeletedId = noneValue;
+                logSetting.StickerCreatedId = noneValue;
+                logSetting.StickerUpdatedId = noneValue;
+                logSetting.StickerDeletedId = noneValue;
+                logSetting.UserTimedOutId = noneValue;
+                logSetting.UserTimeoutRemovedId = noneValue;
+                logSetting.InviteLinkPostedId = noneValue;
+                logSetting.ChannelPermissionsUpdatedId = noneValue;
+                logSetting.WebhookChangedId = noneValue;
                 break;
         }
 
@@ -1966,6 +2085,684 @@ public class LogCommandService(
         {
             logger.LogError(e, "There was an issue setting log settings by type for Guild {GuildId}", guildId);
         }
+    }
+
+    private static readonly (string Name, LogType[] Types)[] SetupGroups =
+    [
+        ("message-logs",
+            [
+                LogType.MessageUpdated, LogType.MessageDeleted, LogType.MessagesBulkDeleted, LogType.ReactionEvents,
+                LogType.InviteLinkPosted
+            ]),
+        ("member-logs",
+            [
+                LogType.UserJoined, LogType.UserLeft, LogType.UsernameUpdated, LogType.NicknameUpdated,
+                LogType.AvatarUpdated, LogType.UserUpdated, LogType.UserRoleAdded, LogType.UserRoleRemoved
+            ]),
+        ("moderation-logs",
+            [
+                LogType.UserBanned, LogType.UserUnbanned, LogType.UserMuted, LogType.UserTimedOut,
+                LogType.UserTimeoutRemoved, LogType.Other
+            ]),
+        ("server-logs",
+            [
+                LogType.ServerUpdated, LogType.InviteCreated, LogType.InviteDeleted,
+                LogType.RoleCreated, LogType.RoleUpdated, LogType.RoleDeleted, LogType.ChannelCreated,
+                LogType.ChannelUpdated, LogType.ChannelDestroyed, LogType.ThreadCreated, LogType.ThreadUpdated,
+                LogType.ThreadDeleted, LogType.EmojiCreated, LogType.EmojiUpdated, LogType.EmojiDeleted,
+                LogType.StickerCreated, LogType.StickerUpdated, LogType.StickerDeleted,
+                LogType.ChannelPermissionsUpdated, LogType.WebhookChanged
+            ]),
+        ("voice-logs", [LogType.VoicePresence, LogType.VoicePresenceTts])
+    ];
+
+    /// <summary>
+    ///     Gets the channel configured for a log type.
+    /// </summary>
+    /// <param name="l">The log settings.</param>
+    /// <param name="type">The log type.</param>
+    /// <returns>The channel id, or null if none is set.</returns>
+    public static ulong? GetLogChannelId(LoggingV2 l, LogType type)
+    {
+        return type switch
+        {
+            LogType.Other => l.LogOtherId,
+            LogType.MessageUpdated => l.MessageUpdatedId,
+            LogType.UserUpdated => l.UserUpdatedId,
+            LogType.MessageDeleted => l.MessageDeletedId,
+            LogType.UserJoined => l.UserJoinedId,
+            LogType.UserLeft => l.UserLeftId,
+            LogType.UserBanned => l.UserBannedId,
+            LogType.UserUnbanned => l.UserUnbannedId,
+            LogType.ChannelCreated => l.ChannelCreatedId,
+            LogType.ChannelDestroyed => l.ChannelDestroyedId,
+            LogType.ChannelUpdated => l.ChannelUpdatedId,
+            LogType.VoicePresence => l.LogVoicePresenceId,
+            LogType.VoicePresenceTts => l.LogVoicePresenceTtsId,
+            LogType.UserMuted => l.UserMutedId,
+            LogType.ThreadCreated => l.ThreadCreatedId,
+            LogType.ThreadDeleted => l.ThreadDeletedId,
+            LogType.ThreadUpdated => l.ThreadUpdatedId,
+            LogType.NicknameUpdated => l.NicknameUpdatedId,
+            LogType.RoleCreated => l.RoleCreatedId,
+            LogType.RoleDeleted => l.RoleDeletedId,
+            LogType.RoleUpdated => l.RoleUpdatedId,
+            LogType.ServerUpdated => l.ServerUpdatedId,
+            LogType.UserRoleAdded => l.UserRoleAddedId,
+            LogType.UserRoleRemoved => l.UserRoleRemovedId,
+            LogType.UsernameUpdated => l.UsernameUpdatedId,
+            LogType.AvatarUpdated => l.AvatarUpdatedId,
+            LogType.InviteCreated => l.InviteCreatedId,
+            LogType.InviteDeleted => l.InviteDeletedId,
+            LogType.MessagesBulkDeleted => l.MessagesBulkDeletedId,
+            LogType.ReactionEvents => l.ReactionEventsId,
+            LogType.EmojiCreated => l.EmojiCreatedId,
+            LogType.EmojiUpdated => l.EmojiUpdatedId,
+            LogType.EmojiDeleted => l.EmojiDeletedId,
+            LogType.StickerCreated => l.StickerCreatedId,
+            LogType.StickerUpdated => l.StickerUpdatedId,
+            LogType.StickerDeleted => l.StickerDeletedId,
+            LogType.UserTimedOut => l.UserTimedOutId,
+            LogType.UserTimeoutRemoved => l.UserTimeoutRemovedId,
+            LogType.InviteLinkPosted => l.InviteLinkPostedId,
+            LogType.ChannelPermissionsUpdated => l.ChannelPermissionsUpdatedId,
+            LogType.WebhookChanged => l.WebhookChangedId,
+            _ => null
+        };
+    }
+
+    private static void SetLogChannelId(LoggingV2 l, LogType type, ulong? channelId)
+    {
+        switch (type)
+        {
+            case LogType.Other: l.LogOtherId = channelId; break;
+            case LogType.RoleUpdated: l.RoleUpdatedId = channelId; break;
+            case LogType.RoleCreated: l.RoleCreatedId = channelId; break;
+            case LogType.ServerUpdated: l.ServerUpdatedId = channelId; break;
+            case LogType.ThreadCreated: l.ThreadCreatedId = channelId; break;
+            case LogType.UserRoleAdded: l.UserRoleAddedId = channelId; break;
+            case LogType.UserRoleRemoved: l.UserRoleRemovedId = channelId; break;
+            case LogType.UsernameUpdated: l.UsernameUpdatedId = channelId; break;
+            case LogType.NicknameUpdated: l.NicknameUpdatedId = channelId; break;
+            case LogType.AvatarUpdated: l.AvatarUpdatedId = channelId; break;
+            case LogType.ThreadDeleted: l.ThreadDeletedId = channelId; break;
+            case LogType.ThreadUpdated: l.ThreadUpdatedId = channelId; break;
+            case LogType.MessageUpdated: l.MessageUpdatedId = channelId; break;
+            case LogType.MessageDeleted: l.MessageDeletedId = channelId; break;
+            case LogType.UserJoined: l.UserJoinedId = channelId; break;
+            case LogType.UserLeft: l.UserLeftId = channelId; break;
+            case LogType.UserBanned: l.UserBannedId = channelId; break;
+            case LogType.UserUnbanned: l.UserUnbannedId = channelId; break;
+            case LogType.UserUpdated: l.UserUpdatedId = channelId; break;
+            case LogType.ChannelCreated: l.ChannelCreatedId = channelId; break;
+            case LogType.ChannelDestroyed: l.ChannelDestroyedId = channelId; break;
+            case LogType.ChannelUpdated: l.ChannelUpdatedId = channelId; break;
+            case LogType.VoicePresence: l.LogVoicePresenceId = channelId; break;
+            case LogType.VoicePresenceTts: l.LogVoicePresenceTtsId = channelId; break;
+            case LogType.UserMuted: l.UserMutedId = channelId; break;
+            case LogType.RoleDeleted: l.RoleDeletedId = channelId; break;
+            case LogType.InviteCreated: l.InviteCreatedId = channelId; break;
+            case LogType.InviteDeleted: l.InviteDeletedId = channelId; break;
+            case LogType.MessagesBulkDeleted: l.MessagesBulkDeletedId = channelId; break;
+            case LogType.ReactionEvents: l.ReactionEventsId = channelId; break;
+            case LogType.EmojiCreated: l.EmojiCreatedId = channelId; break;
+            case LogType.EmojiUpdated: l.EmojiUpdatedId = channelId; break;
+            case LogType.EmojiDeleted: l.EmojiDeletedId = channelId; break;
+            case LogType.StickerCreated: l.StickerCreatedId = channelId; break;
+            case LogType.StickerUpdated: l.StickerUpdatedId = channelId; break;
+            case LogType.StickerDeleted: l.StickerDeletedId = channelId; break;
+            case LogType.UserTimedOut: l.UserTimedOutId = channelId; break;
+            case LogType.UserTimeoutRemoved: l.UserTimeoutRemovedId = channelId; break;
+            case LogType.InviteLinkPosted: l.InviteLinkPostedId = channelId; break;
+            case LogType.ChannelPermissionsUpdated: l.ChannelPermissionsUpdatedId = channelId; break;
+            case LogType.WebhookChanged: l.WebhookChangedId = channelId; break;
+        }
+    }
+
+    private async Task SaveLogSettingsAsync(ulong guildId, Action<LoggingV2> mutate)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var logSetting = await db.LoggingV2.FirstOrDefaultAsync(l => l.GuildId == guildId).ConfigureAwait(false);
+        var isNew = logSetting == null;
+        logSetting ??= new LoggingV2
+        {
+            GuildId = guildId
+        };
+
+        mutate(logSetting);
+
+        try
+        {
+            if (isNew)
+                await db.InsertAsync(logSetting).ConfigureAwait(false);
+            else
+                await db.UpdateAsync(logSetting).ConfigureAwait(false);
+
+            GuildLogSettings.AddOrUpdate(guildId, logSetting, (_, _) => logSetting);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "There was an issue saving log settings for Guild {GuildId}", guildId);
+        }
+    }
+
+    /// <summary>
+    ///     Creates a private "Logs" category with a channel per log group and routes every log type to its channel.
+    /// </summary>
+    /// <param name="guild">The guild to set logging up in.</param>
+    /// <returns>The channels used, keyed by name, or null if they could not be created.</returns>
+    public async Task<Dictionary<string, Channel>?> SetupLogChannels(SocketGuild guild)
+    {
+        try
+        {
+            var overwrites = new[]
+            {
+                OverwritePermissions.ToRequest(guild.Id, OverwriteRequestType.Role,
+                    new OverwritePermissions(0, ChannelPermission.ViewChannel)),
+                OverwritePermissions.ToRequest(client.CurrentUser.Id, OverwriteRequestType.Member,
+                    new OverwritePermissions(
+                        ChannelPermission.ViewChannel | ChannelPermission.SendMessages | ChannelPermission.EmbedLinks |
+                        ChannelPermission.AttachFiles, 0))
+            };
+
+            var category = guild.CategoryChannels
+                               .FirstOrDefault(c => c.Name.Equals("Logs", StringComparison.OrdinalIgnoreCase))
+                           ?? await guild.CreateCategoryChannelAsync(new CreateCategoryChannelRequest
+                           {
+                               Name = "Logs", PermissionOverwrites = overwrites
+                           }).ConfigureAwait(false);
+
+            var channels = new Dictionary<string, Channel>();
+            var routes = new Dictionary<LogType, ulong>();
+            foreach (var (name, types) in SetupGroups)
+            {
+                var channel = guild.TextChannels
+                                  .FirstOrDefault(c => c.ParentId == category.Id &&
+                                                       c.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                              ?? await guild.CreateTextChannelAsync(new CreateTextChannelRequest
+                              {
+                                  Name = name, ParentCategoryId = category.Id, PermissionOverwrites = overwrites
+                              }).ConfigureAwait(false);
+
+                channels[name] = channel;
+                foreach (var type in types)
+                    routes[type] = channel.Id;
+            }
+
+            await ApplyLogChannels(guild.Id, routes).ConfigureAwait(false);
+            return channels;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to set up log channels for guild {GuildId}", guild.Id);
+            return null;
+        }
+    }
+
+    /// <summary>
+    ///     Sets the channel for several log types in one save.
+    /// </summary>
+    /// <param name="guildId">The guild to update.</param>
+    /// <param name="routes">The channel to use for each log type.</param>
+    public Task ApplyLogChannels(ulong guildId, IReadOnlyDictionary<LogType, ulong> routes)
+    {
+        return SaveLogSettingsAsync(guildId, l =>
+        {
+            foreach (var (type, channelId) in routes)
+                SetLogChannelId(l, type, channelId);
+        });
+    }
+
+    private static List<string> ParsePrefixes(string? stored)
+    {
+        return string.IsNullOrEmpty(stored)
+            ? []
+            : stored.Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList();
+    }
+
+    /// <summary>
+    ///     Gets the prefixes whose messages are skipped by message edit and delete logs.
+    /// </summary>
+    /// <param name="guildId">The guild to get prefixes for.</param>
+    /// <returns>The configured prefixes.</returns>
+    public List<string> GetMessageIgnorePrefixes(ulong guildId)
+    {
+        return GuildLogSettings.TryGetValue(guildId, out var l) ? ParsePrefixes(l.MessageIgnorePrefixes) : [];
+    }
+
+    /// <summary>
+    ///     Sets the prefixes whose messages are skipped by message edit and delete logs.
+    /// </summary>
+    /// <param name="guildId">The guild to update.</param>
+    /// <param name="prefixes">The prefixes to skip. An empty collection clears them.</param>
+    public Task SetMessageIgnorePrefixes(ulong guildId, IEnumerable<string> prefixes)
+    {
+        var cleaned = prefixes.Select(p => p.Trim()).Where(p => p.Length > 0).Distinct().ToList();
+        return SaveLogSettingsAsync(guildId,
+            l => l.MessageIgnorePrefixes = cleaned.Count == 0 ? null : string.Join('\n', cleaned));
+    }
+
+    /// <summary>
+    ///     Gets whether a guild's logs skip actions by bots.
+    /// </summary>
+    /// <param name="guildId">The guild to check.</param>
+    /// <returns>True when bots are skipped, which is the default.</returns>
+    public bool GetIgnoreBots(ulong guildId)
+    {
+        return !GuildLogSettings.TryGetValue(guildId, out var l) || l.IgnoreBots;
+    }
+
+    /// <summary>
+    ///     Sets whether a guild's logs skip actions by bots.
+    /// </summary>
+    /// <param name="guildId">The guild to update.</param>
+    /// <param name="ignore">Whether to skip bots.</param>
+    public Task SetIgnoreBots(ulong guildId, bool ignore)
+    {
+        return SaveLogSettingsAsync(guildId, l => l.IgnoreBots = ignore);
+    }
+
+    private bool IgnoresBot(ulong guildId, bool isBot)
+    {
+        return isBot && GetIgnoreBots(guildId);
+    }
+
+    private static bool StartsWithIgnoredPrefix(LoggingV2 l, string? content)
+    {
+        if (string.IsNullOrEmpty(l.MessageIgnorePrefixes) || string.IsNullOrEmpty(content))
+            return false;
+
+        return ParsePrefixes(l.MessageIgnorePrefixes)
+            .Any(p => content.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    ///     Exports a guild's log configuration.
+    /// </summary>
+    /// <param name="guild">The guild to export.</param>
+    /// <returns>The configuration as indented JSON and as a short code, or null if nothing is configured.</returns>
+    public async Task<(string Json, string Code)?> ExportConfig(SocketGuild guild)
+    {
+        if (!GuildLogSettings.TryGetValue(guild.Id, out var l))
+            return null;
+
+        var channels = guild.TextChannels.ToDictionary(c => c.Id);
+        var export = new LogConfigExport
+        {
+            Prefixes = ParsePrefixes(l.MessageIgnorePrefixes)
+        };
+
+        foreach (var type in Enum.GetValues<LogType>())
+        {
+            var id = GetLogChannelId(l, type);
+            if (id is null or 0 || !channels.TryGetValue(id.Value, out var channel))
+                continue;
+
+            export.Types[type.ToString()] = new ExportedChannel
+            {
+                Id = channel.Id, Name = channel.Name
+            };
+        }
+
+        foreach (var id in await GetIgnoredChannels(guild.Id).ConfigureAwait(false))
+        {
+            if (channels.TryGetValue(id, out var channel))
+                export.Ignored.Add(new ExportedChannel
+                {
+                    Id = channel.Id, Name = channel.Name
+                });
+        }
+
+        if (export.Types.Count == 0 && export.Ignored.Count == 0 && export.Prefixes.Count == 0)
+            return null;
+
+        var json = JsonSerializer.Serialize(export, new JsonSerializerOptions
+        {
+            WriteIndented = true
+        });
+
+        using var output = new MemoryStream();
+        await using (var gzip = new GZipStream(output, CompressionLevel.SmallestSize, true))
+        {
+            await gzip.WriteAsync(JsonSerializer.SerializeToUtf8Bytes(export)).ConfigureAwait(false);
+        }
+
+        return (json, Convert.ToBase64String(output.ToArray()));
+    }
+
+    /// <summary>
+    ///     Imports a log configuration from a code or JSON, mapping channels by id and then by name.
+    /// </summary>
+    /// <param name="guild">The guild to import into.</param>
+    /// <param name="input">The export code or JSON.</param>
+    /// <returns>What was applied and which channels could not be mapped.</returns>
+    public async Task<LogImportResult> ImportConfig(SocketGuild guild, string input)
+    {
+        LogConfigExport? export;
+        try
+        {
+            input = input.Trim().Trim('`');
+            if (input.StartsWith('{'))
+            {
+                export = JsonSerializer.Deserialize<LogConfigExport>(input);
+            }
+            else
+            {
+                await using var gzip = new GZipStream(new MemoryStream(Convert.FromBase64String(input)),
+                    CompressionMode.Decompress);
+                export = await JsonSerializer.DeserializeAsync<LogConfigExport>(gzip).ConfigureAwait(false);
+            }
+        }
+        catch (Exception)
+        {
+            return new LogImportResult(0, [], false);
+        }
+
+        if (export is null)
+            return new LogImportResult(0, [], false);
+
+        var channels = guild.TextChannels.ToList();
+        var unmapped = new HashSet<string>();
+
+        Channel? Resolve(ExportedChannel exported)
+        {
+            var found = channels.FirstOrDefault(c => c.Id == exported.Id)
+                        ?? channels.FirstOrDefault(c => c.Name.Equals(exported.Name, StringComparison.OrdinalIgnoreCase));
+            if (found is null)
+                unmapped.Add($"#{exported.Name}");
+            return found;
+        }
+
+        var routes = new Dictionary<LogType, ulong>();
+        foreach (var (typeName, exported) in export.Types)
+        {
+            if (!Enum.TryParse<LogType>(typeName, true, out var type))
+                continue;
+
+            var channel = Resolve(exported);
+            if (channel is not null)
+                routes[type] = channel.Id;
+        }
+
+        var ignored = export.Ignored.Select(Resolve).OfType<Channel>().Select(c => c.Id).ToHashSet();
+
+        await SaveLogSettingsAsync(guild.Id, l =>
+        {
+            foreach (var (type, channelId) in routes)
+                SetLogChannelId(l, type, channelId);
+
+            var prefixes = export.Prefixes.Select(p => p.Trim()).Where(p => p.Length > 0).Distinct().ToList();
+            l.MessageIgnorePrefixes = prefixes.Count == 0 ? null : string.Join('\n', prefixes);
+        }).ConfigureAwait(false);
+
+        await UpdateIgnoredChannelsAsync(guild.Id, ignored).ConfigureAwait(false);
+        return new LogImportResult(routes.Count, unmapped.ToList(), true);
+    }
+
+    private static string? EmojiUrl(GuildEmoji emoji)
+    {
+        return emoji.GetEmojiUrl();
+    }
+
+    private async Task SendEmojiLogAsync(SocketGuild? guild, ulong? channelId, string title, string text, Color color,
+        string? imageUrl)
+    {
+        if (guild is null || channelId is null or 0 || guild.GetTextChannel(channelId.Value) is not { } channel)
+            return;
+
+        var eb = LogEmbed(title, text, color);
+        if (imageUrl is not null)
+            eb.WithThumbnailUrl(imageUrl);
+
+        await SendLogAsync(channel, eb);
+    }
+
+    /// <summary>
+    ///     Handles a custom emoji being created.
+    /// </summary>
+    /// <param name="emoji">The created emoji.</param>
+    private async Task OnEmojiCreated(GuildEmoji emoji)
+    {
+        if (!GuildLogSettings.TryGetValue(emoji.GuildId, out var logSetting) || logSetting.EmojiCreatedId is null or 0)
+            return;
+
+        var guild = client.GetGuild(emoji.GuildId);
+        var gid = emoji.GuildId;
+        var by = (await GetAuditLogsSafeAsync(guild, ActionType.EmojiCreated)).FirstOrDefault()?.User;
+        await SendEmojiLogAsync(guild, logSetting.EmojiCreatedId, strings.LogEmojiCreated(gid),
+            strings.NameField(gid, emoji.Name) + strings.IdField(gid, emoji.Id) +
+            (by is null ? "" : strings.CreatedByField(gid, by.Mention, by.Id)), Mewdeko.OkColor, EmojiUrl(emoji));
+    }
+
+    /// <summary>
+    ///     Handles a custom emoji being renamed.
+    /// </summary>
+    /// <param name="before">The emoji before the edit.</param>
+    /// <param name="after">The emoji after the edit.</param>
+    private async Task OnEmojiUpdated(GuildEmoji before, GuildEmoji after)
+    {
+        if (before.Name == after.Name ||
+            !GuildLogSettings.TryGetValue(after.GuildId, out var logSetting) || logSetting.EmojiUpdatedId is null or 0)
+            return;
+
+        var guild = client.GetGuild(after.GuildId);
+        var gid = after.GuildId;
+        var by = (await GetAuditLogsSafeAsync(guild, ActionType.EmojiUpdated)).FirstOrDefault()?.User;
+        await SendEmojiLogAsync(guild, logSetting.EmojiUpdatedId, strings.LogEmojiUpdated(gid),
+            strings.LogNameChangeField(gid, before.Name, after.Name) + strings.IdField(gid, after.Id) +
+            (by is null ? "" : strings.UpdatedByField(gid, by.Mention, by.Id)), Mewdeko.OkColor, EmojiUrl(after));
+    }
+
+    /// <summary>
+    ///     Handles a custom emoji being deleted.
+    /// </summary>
+    /// <param name="emoji">The deleted emoji.</param>
+    private async Task OnEmojiDeleted(GuildEmoji emoji)
+    {
+        if (!GuildLogSettings.TryGetValue(emoji.GuildId, out var logSetting) || logSetting.EmojiDeletedId is null or 0)
+            return;
+
+        var guild = client.GetGuild(emoji.GuildId);
+        var gid = emoji.GuildId;
+        var by = (await GetAuditLogsSafeAsync(guild, ActionType.EmojiDeleted)).FirstOrDefault()?.User;
+        await SendEmojiLogAsync(guild, logSetting.EmojiDeletedId, strings.LogEmojiDeleted(gid),
+            strings.NameField(gid, emoji.Name) + strings.IdField(gid, emoji.Id) +
+            (by is null ? "" : strings.DeletedByField(gid, by.Mention, by.Id)), Mewdeko.ErrorColor, null);
+    }
+
+    /// <summary>
+    ///     Handles a custom sticker being created.
+    /// </summary>
+    /// <param name="sticker">The created sticker.</param>
+    private async Task OnStickerCreated(GuildSticker sticker)
+    {
+        if (!GuildLogSettings.TryGetValue(sticker.GuildId, out var logSetting) ||
+            logSetting.StickerCreatedId is null or 0)
+            return;
+
+        var gid = sticker.GuildId;
+        var by = sticker.Creator;
+        await SendEmojiLogAsync(client.GetGuild(gid), logSetting.StickerCreatedId, strings.LogStickerCreated(gid),
+            strings.NameField(gid, sticker.Name) + strings.IdField(gid, sticker.Id) +
+            (by is null ? "" : strings.CreatedByField(gid, by.Mention, by.Id)), Mewdeko.OkColor,
+            sticker.GetStickerUrl());
+    }
+
+    /// <summary>
+    ///     Handles a custom sticker being edited.
+    /// </summary>
+    /// <param name="before">The sticker before the edit.</param>
+    /// <param name="after">The sticker after the edit.</param>
+    private async Task OnStickerUpdated(GuildSticker before, GuildSticker after)
+    {
+        var oldTags = before.Tags ?? [];
+        var newTags = after.Tags ?? [];
+        if (before.Name == after.Name && before.Description == after.Description && oldTags.SequenceEqual(newTags))
+            return;
+
+        if (!GuildLogSettings.TryGetValue(after.GuildId, out var logSetting) ||
+            logSetting.StickerUpdatedId is null or 0)
+            return;
+
+        var gid = after.GuildId;
+        var text = strings.LogNameChangeField(gid, before.Name, after.Name) + strings.IdField(gid, after.Id);
+        if (before.Description != after.Description)
+            text += $"`Description:` {before.Description ?? "N/A"} to {after.Description ?? "N/A"}\n";
+        if (!oldTags.SequenceEqual(newTags))
+            text += $"`Tags:` {string.Join(", ", oldTags)} to {string.Join(", ", newTags)}\n";
+
+        await SendEmojiLogAsync(client.GetGuild(gid), logSetting.StickerUpdatedId, strings.LogStickerUpdated(gid), text,
+            Mewdeko.OkColor, after.GetStickerUrl());
+    }
+
+    /// <summary>
+    ///     Handles a custom sticker being deleted.
+    /// </summary>
+    /// <param name="sticker">The deleted sticker.</param>
+    private async Task OnStickerDeleted(GuildSticker sticker)
+    {
+        if (!GuildLogSettings.TryGetValue(sticker.GuildId, out var logSetting) ||
+            logSetting.StickerDeletedId is null or 0)
+            return;
+
+        var gid = sticker.GuildId;
+        var guild = client.GetGuild(gid);
+        var by = (await GetAuditLogsSafeAsync(guild, ActionType.StickerDeleted)).FirstOrDefault()?.User;
+        await SendEmojiLogAsync(guild, logSetting.StickerDeletedId, strings.LogStickerDeleted(gid),
+            strings.NameField(gid, sticker.Name) + strings.IdField(gid, sticker.Id) +
+            (by is null ? "" : strings.DeletedByField(gid, by.Mention, by.Id)), Mewdeko.ErrorColor, null);
+    }
+
+    /// <summary>
+    ///     Handles the webhooks of a channel changing.
+    /// </summary>
+    /// <param name="channel">The channel whose webhooks changed.</param>
+    private async Task OnWebhooksUpdated(Channel channel)
+    {
+        if (channel.Guild is not { } guild || !GuildLogSettings.TryGetValue(guild.Id, out var logSetting) ||
+            logSetting.WebhookChangedId is null or 0 ||
+            guild.GetTextChannel(logSetting.WebhookChangedId.Value) is not { } logChannel)
+            return;
+
+        await Task.Delay(500);
+        var gid = guild.Id;
+        var entry = (await GetAuditLogsSafeAsync(guild, ActionType.WebhookUpdated)).FirstOrDefault();
+        var text = strings.LogChannelField(gid, channel.Id, channel.Name);
+        if (entry is not null)
+            text += strings.UpdatedByField(gid, entry.User.Mention, entry.User.Id);
+
+        await SendLogAsync(logChannel, LogEmbed(strings.LogWebhookChanged(gid), text, Mewdeko.OkColor));
+    }
+
+    /// <summary>
+    ///     Handles the permission overwrites of a channel changing.
+    /// </summary>
+    /// <param name="before">The channel before the update.</param>
+    /// <param name="after">The channel after the update.</param>
+    private async Task OnChannelPermissionsChanged(Channel before, Channel after)
+    {
+        if (after.Guild is not { } guild || IsChannelIgnored(guild.Id, after.Id) ||
+            !GuildLogSettings.TryGetValue(guild.Id, out var logSetting) ||
+            logSetting.ChannelPermissionsUpdatedId is null or 0 ||
+            guild.GetTextChannel(logSetting.ChannelPermissionsUpdatedId.Value) is not { } logChannel)
+            return;
+
+        var oldOverwrites = (before.PermissionOverwrites ?? []).ToDictionary(x => x.Id);
+        var newOverwrites = (after.PermissionOverwrites ?? []).ToDictionary(x => x.Id);
+        var gid = guild.Id;
+
+        string Describe(ulong id, PermissionOverwriteType type)
+        {
+            return type == PermissionOverwriteType.Role ? $"<@&{id}>" : $"<@{id}>";
+        }
+
+        var changes = new List<string>();
+        foreach (var (id, added) in newOverwrites.Where(x => !oldOverwrites.ContainsKey(x.Key)))
+            changes.Add(strings.LogPermissionOverwriteAdded(gid, Describe(id, added.Type)));
+        foreach (var (id, removed) in oldOverwrites.Where(x => !newOverwrites.ContainsKey(x.Key)))
+            changes.Add(strings.LogPermissionOverwriteRemoved(gid, Describe(id, removed.Type)));
+        foreach (var (id, current) in newOverwrites.Where(x => oldOverwrites.ContainsKey(x.Key)))
+        {
+            var old = oldOverwrites[id];
+            if (old.Allow.RawValue != current.Allow.RawValue || old.Deny.RawValue != current.Deny.RawValue)
+                changes.Add(strings.LogPermissionOverwriteChanged(gid, Describe(id, current.Type)));
+        }
+
+        if (changes.Count == 0)
+            return;
+
+        await Task.Delay(500);
+        var entry = (await GetAuditLogsSafeAsync(guild, ActionType.OverwriteUpdated)).FirstOrDefault();
+        var text = strings.LogChannelField(gid, after.Id, after.Name) + string.Join("\n", changes) + "\n";
+        if (entry is not null)
+            text += strings.UpdatedByField(gid, entry.User.Mention, entry.User.Id);
+
+        await SendLogAsync(logChannel, LogEmbed(strings.LogChannelPermissionsChanged(gid), text, Mewdeko.OkColor));
+    }
+
+    /// <summary>
+    ///     Handles a member being timed out or having a timeout removed.
+    /// </summary>
+    /// <param name="before">The member before the update.</param>
+    /// <param name="after">The member after the update.</param>
+    private async Task OnUserTimeoutChanged(MemberSnapshot? before, SocketGuildMember after)
+    {
+        if (before is null || !GuildLogSettings.TryGetValue(after.Guild.Id, out var logSetting))
+            return;
+
+        var now = DateTimeOffset.UtcNow;
+        var oldUntil = before.TimedOutUntil is { } o && o > now ? o : (DateTimeOffset?)null;
+        var newUntil = after.CommunicationDisabledUntil is { } n && n > now ? n : (DateTimeOffset?)null;
+        if (oldUntil == newUntil || IgnoresBot(after.Guild.Id, after.User.IsBot))
+            return;
+
+        var gid = after.Guild.Id;
+        var logId = newUntil is not null ? logSetting.UserTimedOutId : logSetting.UserTimeoutRemovedId;
+        if (logId is null or 0 || after.Guild.GetTextChannel(logId.Value) is not { } channel)
+            return;
+
+        await Task.Delay(500);
+        var by = (await GetAuditLogsSafeAsync(after.Guild, ActionType.MemberUpdated)).FirstOrDefault()?.User;
+        var text = strings.UserField(gid, after.Mention, after.Id);
+        if (newUntil is not null)
+            text += strings.LogTimeoutUntilField(gid, $"<t:{newUntil.Value.ToUnixTimeSeconds()}:f>");
+        if (by is not null)
+            text += strings.UpdatedByField(gid, by.Mention, by.Id);
+
+        await SendLogAsync(channel,
+            newUntil is not null
+                ? LogEmbed(strings.LogUserTimedOut(gid), text, Mewdeko.ErrorColor)
+                : LogEmbed(strings.LogUserTimeoutRemoved(gid), text, Mewdeko.OkColor));
+    }
+
+    /// <summary>
+    ///     Handles a message containing a Fluxer invite link.
+    /// </summary>
+    /// <param name="message">The received message.</param>
+    private async Task OnInviteLinkPosted(SocketMessage message)
+    {
+        if (message.Channel is not { Guild: { } guild } guildChannel || message.Author is null ||
+            IgnoresBot(guild.Id, message.Author.IsBot) || message.Content.Length == 0)
+            return;
+
+        var matches = InviteRegex.Matches(message.Content);
+        if (matches.Count == 0)
+            return;
+
+        if (!GuildLogSettings.TryGetValue(guild.Id, out var logSetting) ||
+            logSetting.InviteLinkPostedId is null or 0 ||
+            IsChannelIgnored(guild.Id, guildChannel.Id) ||
+            guild.GetTextChannel(logSetting.InviteLinkPostedId.Value) is not { } channel)
+            return;
+
+        var gid = guild.Id;
+        var invites = string.Join(", ", matches.Select(m => $"`{m.Value}`").Distinct());
+        var eb = LogEmbed(strings.LogInviteLinkPosted(gid),
+            strings.MessageAuthorField(gid, message.Author.Mention, message.Author.Id) +
+            strings.MessageChannelField(gid, $"<#{guildChannel.Id}>", guildChannel.Id) +
+            strings.LogInvitesField(gid, invites) + message.GetJumpUrl(), Mewdeko.ErrorColor);
+
+        await SendLogAsync(channel, eb);
     }
 
     /// <summary>
@@ -2230,7 +3027,7 @@ public class LogCommandService(
         SocketReaction reaction)
     {
         if (guildChannel.Guild is null) return Task.CompletedTask;
-        if (reaction.Member?.IsBot == true) return Task.CompletedTask;
+        if (IgnoresBot(guildChannel.Guild.Id, reaction.Member?.IsBot == true)) return Task.CompletedTask;
 
         // Check if channel is ignored
         if (IsChannelIgnored(guildChannel.Guild.Id, guildChannel.Id))
@@ -2251,7 +3048,7 @@ public class LogCommandService(
         SocketReaction reaction)
     {
         if (guildChannel.Guild is null) return Task.CompletedTask;
-        if (reaction.Member?.IsBot == true) return Task.CompletedTask;
+        if (IgnoresBot(guildChannel.Guild.Id, reaction.Member?.IsBot == true)) return Task.CompletedTask;
 
         // Check if channel is ignored
         if (IsChannelIgnored(guildChannel.Guild.Id, guildChannel.Id))

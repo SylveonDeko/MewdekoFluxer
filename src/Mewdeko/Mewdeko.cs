@@ -65,9 +65,25 @@ public class Mewdeko : IDisposable
     private CommandService CommandService { get; }
 
     /// <summary>
-    ///     Gets or sets the color used for successful operations.
+    ///     Gets the color used for successful operations in the running command's guild, or
+    ///     <see cref="DefaultOkColor" />.
     /// </summary>
-    public static Color OkColor { get; set; }
+    public static Color OkColor
+    {
+        get
+        {
+            return GuildEmbedColorService.Ok;
+        }
+        set
+        {
+            DefaultOkColor = value;
+        }
+    }
+
+    /// <summary>
+    ///     Gets or sets the bot's own color for successful operations, used by guilds without a color of their own.
+    /// </summary>
+    public static Color DefaultOkColor { get; set; }
 
     /// <summary>
     ///     Gets or sets the color used for error operations.

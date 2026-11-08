@@ -332,6 +332,26 @@ public class MewdekoDb : DataConnection
     public ITable<InviteCount> InviteCounts => this.GetTable<InviteCount>();
 
     /// <summary>
+    ///     Gets the invite roles table.
+    /// </summary>
+    public ITable<InviteRole> InviteRoles => this.GetTable<InviteRole>();
+
+    /// <summary>
+    ///     Gets the invite role settings table.
+    /// </summary>
+    public ITable<InviteRoleSetting> InviteRoleSettings => this.GetTable<InviteRoleSetting>();
+
+    /// <summary>
+    ///     Gets the command reply redirects table.
+    /// </summary>
+    public ITable<CommandReplyRedirect> CommandReplyRedirects => this.GetTable<CommandReplyRedirect>();
+
+    /// <summary>
+    ///     Gets the suggestion vote colours table.
+    /// </summary>
+    public ITable<SuggestionVoteColor> SuggestionVoteColors => this.GetTable<SuggestionVoteColor>();
+
+    /// <summary>
     ///     Gets the tickets table.
     /// </summary>
     public ITable<Ticket> Tickets => this.GetTable<Ticket>();
@@ -593,6 +613,54 @@ public class MewdekoDb : DataConnection
             return this.GetTable<LinkFixSetting>();
         }
     }
+
+    /// <summary>
+    ///     Gets the server backups table.
+    /// </summary>
+    public ITable<ServerBackup> ServerBackups
+    {
+        get
+        {
+            return this.GetTable<ServerBackup>();
+        }
+    }
+
+    /// <summary>
+    ///     Gets the server templates table.
+    /// </summary>
+    public ITable<ServerTemplate> ServerTemplates
+    {
+        get
+        {
+            return this.GetTable<ServerTemplate>();
+        }
+    }
+
+    /// <summary>
+    ///     Gets the verification settings table.
+    /// </summary>
+    public ITable<VerificationSetting> VerificationSettings => this.GetTable<VerificationSetting>();
+
+    /// <summary>
+    ///     Gets the verification permission backups table.
+    /// </summary>
+    public ITable<VerificationPermissionBackup> VerificationPermissionBackups =>
+        this.GetTable<VerificationPermissionBackup>();
+
+    /// <summary>
+    ///     Gets the welcome card settings table.
+    /// </summary>
+    public ITable<WelcomeCardSetting> WelcomeCardSettings => this.GetTable<WelcomeCardSetting>();
+
+    /// <summary>
+    ///     Gets the welcome card images table.
+    /// </summary>
+    public ITable<WelcomeCardImage> WelcomeCardImages => this.GetTable<WelcomeCardImage>();
+
+    /// <summary>
+    ///     Gets the table of cards attached to member event messages.
+    /// </summary>
+    public ITable<MessageCard> MessageCards => this.GetTable<MessageCard>();
 
     /// <summary>
     ///     Gets the bridge pairs table.
@@ -910,6 +978,16 @@ public class MewdekoDb : DataConnection
     public ITable<FollowedStream> FollowedStreams => this.GetTable<FollowedStream>();
 
     /// <summary>
+    ///     Gets the table of live stream messages being edited in place.
+    /// </summary>
+    public ITable<TrackedStreamMessage> TrackedStreamMessages => this.GetTable<TrackedStreamMessage>();
+
+    /// <summary>
+    ///     Gets the table of per-guild embed colours.
+    /// </summary>
+    public ITable<GuildEmbedColor> GuildEmbedColors => this.GetTable<GuildEmbedColor>();
+
+    /// <summary>
     ///     Gets the giveaway users table.
     /// </summary>
     public ITable<GiveawayUser> GiveawayUsers => this.GetTable<GiveawayUser>();
@@ -958,6 +1036,31 @@ public class MewdekoDb : DataConnection
     ///     Gets the currency shop items table.
     /// </summary>
     public ITable<ShopItem> ShopItems => this.GetTable<ShopItem>();
+
+    /// <summary>
+    ///     Gets the card design library table.
+    /// </summary>
+    public ITable<CardDesign> CardDesigns => this.GetTable<CardDesign>();
+
+    /// <summary>
+    ///     Gets the card design ownership table.
+    /// </summary>
+    public ITable<CardDesignOwner> CardDesignOwners => this.GetTable<CardDesignOwner>();
+
+    /// <summary>
+    ///     Gets the member card design settings table.
+    /// </summary>
+    public ITable<CardDesignSetting> CardDesignSettings => this.GetTable<CardDesignSetting>();
+
+    /// <summary>
+    ///     Gets the equipped card designs table.
+    /// </summary>
+    public ITable<EquippedCardDesign> EquippedCardDesigns => this.GetTable<EquippedCardDesign>();
+
+    /// <summary>
+    ///     Gets the scheduled economy boosts table.
+    /// </summary>
+    public ITable<EconomyBoost> EconomyBoosts => this.GetTable<EconomyBoost>();
 
     /// <summary>
     ///     Gets the user shop inventory table.
@@ -1163,6 +1266,91 @@ public class MewdekoDb : DataConnection
             return this.GetTable<LockdownJoinSetting>();
         }
     }
+
+    /// <summary>
+    ///     Gets the sticky templates table.
+    /// </summary>
+    public ITable<StickyTemplate> StickyTemplates => this.GetTable<StickyTemplate>();
+
+    /// <summary>
+    ///     Gets the moderation cases table.
+    /// </summary>
+    public ITable<ModCase> ModCases => this.GetTable<ModCase>();
+
+    /// <summary>
+    ///     Gets the moderation case settings table.
+    /// </summary>
+    public ITable<ModCaseSetting> ModCaseSettings => this.GetTable<ModCaseSetting>();
+
+    /// <summary>
+    ///     Gets the moderator notes table.
+    /// </summary>
+    public ITable<ModNote> ModNotes => this.GetTable<ModNote>();
+
+    /// <summary>
+    ///     Gets the member report cooldowns table.
+    /// </summary>
+    public ITable<ModReportCooldown> ModReportCooldowns => this.GetTable<ModReportCooldown>();
+
+    /// <summary>
+    ///     Gets the reason aliases table.
+    /// </summary>
+    public ITable<ModReasonAlias> ModReasonAliases => this.GetTable<ModReasonAlias>();
+
+    /// <summary>
+    ///     Gets the custom punishment DM templates table.
+    /// </summary>
+    public ITable<PunishDmTemplate> PunishDmTemplates => this.GetTable<PunishDmTemplate>();
+
+    /// <summary>
+    ///     Gets the auto reactions table.
+    /// </summary>
+    public ITable<AutoReaction> AutoReactions => this.GetTable<AutoReaction>();
+
+    /// <summary>
+    ///     Gets the auto reaction settings table.
+    /// </summary>
+    public ITable<AutoReactionSetting> AutoReactionSettings => this.GetTable<AutoReactionSetting>();
+
+    /// <summary>
+    ///     Gets the daily dice rolls table.
+    /// </summary>
+    public ITable<DailyDiceRoll> DailyDiceRolls => this.GetTable<DailyDiceRoll>();
+
+    /// <summary>
+    ///     Gets the free game alerts table.
+    /// </summary>
+    public ITable<FreeGameAlert> FreeGameAlerts => this.GetTable<FreeGameAlert>();
+
+    /// <summary>
+    ///     Gets the announced free games table.
+    /// </summary>
+    public ITable<FreeGameAnnounced> FreeGameAnnounced => this.GetTable<FreeGameAnnounced>();
+
+    /// <summary>
+    ///     Gets the lockdown exemptions table.
+    /// </summary>
+    public ITable<LockdownExemption> LockdownExemptions => this.GetTable<LockdownExemption>();
+
+    /// <summary>
+    ///     Gets the table of channels that are locked or hidden.
+    /// </summary>
+    public ITable<ChannelTimedAction> ChannelTimedActions => this.GetTable<ChannelTimedAction>();
+
+    /// <summary>
+    ///     Gets the table of voice channels linked to text channels.
+    /// </summary>
+    public ITable<VoiceTextLink> VoiceTextLinks => this.GetTable<VoiceTextLink>();
+
+    /// <summary>
+    ///     Gets the table of each guild's peak online member count.
+    /// </summary>
+    public ITable<GuildPeakOnline> GuildPeakOnline => this.GetTable<GuildPeakOnline>();
+
+    /// <summary>
+    ///     Gets the auto-purge settings table.
+    /// </summary>
+    public ITable<AutoPurgeSetting> AutoPurgeSettings => this.GetTable<AutoPurgeSetting>();
 
     /// <summary>
     ///     Gets the LoggingV2 table.
@@ -1498,6 +1686,16 @@ public class MewdekoDb : DataConnection
     public ITable<Vote> Votes => this.GetTable<Vote>();
 
     /// <summary>
+    ///     Gets the FluxerList API keys table.
+    /// </summary>
+    public ITable<FluxerListKey> FluxerListKeys => this.GetTable<FluxerListKey>();
+
+    /// <summary>
+    ///     Gets the FluxerList voters table.
+    /// </summary>
+    public ITable<FluxerListVoter> FluxerListVoters => this.GetTable<FluxerListVoter>();
+
+    /// <summary>
     ///     Gets the warning punishments table.
     /// </summary>
     public ITable<WarningPunishment> WarningPunishments => this.GetTable<WarningPunishment>();
@@ -1557,6 +1755,11 @@ public class MewdekoDb : DataConnection
             return this.GetTable<XpLevelUpMessage>();
         }
     }
+
+    /// <summary>
+    ///     Gets the XP level-up log table.
+    /// </summary>
+    public ITable<XpLevelUpLog> XpLevelUpLogs => this.GetTable<XpLevelUpLog>();
 
     /// <summary>
     ///     Gets the XP role trackings table.
@@ -2351,6 +2554,21 @@ public class MewdekoDb : DataConnection
     public ITable<RoleMenuOption> RoleMenuOptions => this.GetTable<RoleMenuOption>();
 
     /// <summary>
+    ///     Gets the role menu temporary grants table: roles given by a menu that are taken back when they expire.
+    /// </summary>
+    public ITable<RoleMenuTempGrant> RoleMenuTempGrants => this.GetTable<RoleMenuTempGrant>();
+
+    /// <summary>
+    ///     Gets the role menu groups table: menus linked so members share one role or a maximum across them.
+    /// </summary>
+    public ITable<RoleMenuGroup> RoleMenuGroups => this.GetTable<RoleMenuGroup>();
+
+    /// <summary>
+    ///     Gets the role menu reverse states table: who has made the first pick on a reverse menu and so lost the role.
+    /// </summary>
+    public ITable<RoleMenuReverseState> RoleMenuReverseStates => this.GetTable<RoleMenuReverseState>();
+
+    /// <summary>
     ///     Gets the achievement settings table: one row of achievement settings per server.
     /// </summary>
     public ITable<AchievementSetting> AchievementSettings => this.GetTable<AchievementSetting>();
@@ -2381,6 +2599,11 @@ public class MewdekoDb : DataConnection
     public ITable<AchievementOverride> AchievementOverrides => this.GetTable<AchievementOverride>();
 
     /// <summary>
+    ///     Gets the achievement almost there table: members already told they are close to an achievement.
+    /// </summary>
+    public ITable<AchievementAlmostThere> AchievementAlmostThere => this.GetTable<AchievementAlmostThere>();
+
+    /// <summary>
     ///     Gets the user achievements table: every unlocked achievement, with guild 0 for global ones.
     /// </summary>
     public ITable<UserAchievement> UserAchievements => this.GetTable<UserAchievement>();
@@ -2399,4 +2622,64 @@ public class MewdekoDb : DataConnection
     ///     Gets the achievement user settings table: each user's achievement privacy and notification choices.
     /// </summary>
     public ITable<AchievementUserSetting> AchievementUserSettings => this.GetTable<AchievementUserSetting>();
+
+    /// <summary>
+    ///     Gets the user rank card backgrounds table.
+    /// </summary>
+    public ITable<UserXpBackground> UserXpBackgrounds => this.GetTable<UserXpBackground>();
+
+    /// <summary>
+    ///     Gets the automations table.
+    /// </summary>
+    public ITable<Automation> Automations => this.GetTable<Automation>();
+
+    /// <summary>
+    ///     Gets the table of automation runs.
+    /// </summary>
+    public ITable<AutomationRun> AutomationRuns => this.GetTable<AutomationRun>();
+
+    /// <summary>
+    ///     Gets the global list settings table.
+    /// </summary>
+    public ITable<GlobalListSetting> GlobalListSettings => this.GetTable<GlobalListSetting>();
+
+    /// <summary>
+    ///     Gets the global list category actions table.
+    /// </summary>
+    public ITable<GlobalListCategoryAction> GlobalListCategoryActions => this.GetTable<GlobalListCategoryAction>();
+
+    /// <summary>
+    ///     Gets the global list entries table.
+    /// </summary>
+    public ITable<GlobalListEntry> GlobalListEntries => this.GetTable<GlobalListEntry>();
+
+    /// <summary>
+    ///     Gets the global list reports table.
+    /// </summary>
+    public ITable<GlobalListReport> GlobalListReports => this.GetTable<GlobalListReport>();
+
+    /// <summary>
+    ///     Gets the global list evidence screenshots table.
+    /// </summary>
+    public ITable<GlobalListEvidenceImage> GlobalListEvidenceImages => this.GetTable<GlobalListEvidenceImage>();
+
+    /// <summary>
+    ///     Gets the global list votes table.
+    /// </summary>
+    public ITable<GlobalListVote> GlobalListVotes => this.GetTable<GlobalListVote>();
+
+    /// <summary>
+    ///     Gets the global list reviewers table.
+    /// </summary>
+    public ITable<GlobalListReviewer> GlobalListReviewers => this.GetTable<GlobalListReviewer>();
+
+    /// <summary>
+    ///     Gets the global list reporter standings table.
+    /// </summary>
+    public ITable<GlobalListStanding> GlobalListStandings => this.GetTable<GlobalListStanding>();
+
+    /// <summary>
+    ///     Gets the global list appeals table.
+    /// </summary>
+    public ITable<GlobalListAppeal> GlobalListAppeals => this.GetTable<GlobalListAppeal>();
 }

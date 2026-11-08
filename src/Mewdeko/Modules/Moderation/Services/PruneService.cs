@@ -10,7 +10,31 @@ public class PurgeService : INService
     //channelids where Purges are currently occuring
     private readonly ConcurrentHashSet<ulong> pruningGuilds = [];
 
+    private static readonly System.Text.RegularExpressions.Regex LinkRegex =
+        new(@"https?://\S+", System.Text.RegularExpressions.RegexOptions.IgnoreCase |
+                             System.Text.RegularExpressions.RegexOptions.Compiled);
+
     private readonly TimeSpan twoWeeks = TimeSpan.FromDays(14);
+
+    /// <summary>
+    ///     Checks whether a message contains a URL.
+    /// </summary>
+    /// <param name="message">The message to check</param>
+    /// <returns>True if the content has a link</returns>
+    public static bool HasLink(Message message)
+    {
+        return LinkRegex.IsMatch(message.Content ?? "");
+    }
+
+    /// <summary>
+    ///     Checks whether a message has any attachment.
+    /// </summary>
+    /// <param name="message">The message to check</param>
+    /// <returns>True if the message has an attachment</returns>
+    public static bool HasFile(Message message)
+    {
+        return message.Attachments is { Length: > 0 };
+    }
 
     /// <summary>
     ///     Purges messages from a channel using a predicate

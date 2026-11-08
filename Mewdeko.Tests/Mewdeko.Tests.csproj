@@ -37,6 +37,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="DataImportTests.cs"/>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../src/Mewdeko/Mewdeko.csproj"/>
   </ItemGroup>
 

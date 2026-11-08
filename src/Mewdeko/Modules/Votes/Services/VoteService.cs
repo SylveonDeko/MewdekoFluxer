@@ -34,141 +34,135 @@ public class VoteService : INService
     }
 
     /// <summary>
-    ///     Vote password and data handler
+    ///     Records a vote and runs the vote message and vote roles for the member who cast it.
     /// </summary>
-    /// <param name="voteModal">The data the api returns</param>
-    public async ValueTask RunVoteStuff(CompoundVoteModal voteModal)
+    /// <param name="guildId">The ID of the community that received the vote.</param>
+    /// <param name="userId">The ID of the member who voted.</param>
+    public async ValueTask HandleVote(ulong guildId, ulong userId)
     {
-        await using var db = await dbFactory.CreateConnectionAsync();
-
-        // Get potential vote config using LinqToDB
-        var potentialVoteConfig = await db.GuildConfigs
-            .FirstOrDefaultAsync(x => x.VotesPassword == voteModal.Password);
-
-        if (potentialVoteConfig is null)
-            return;
-
-        var guild = client.GetGuild(potentialVoteConfig.GuildId);
+        var guild = client.GetGuild(guildId);
         if (guild is null)
             return;
 
-        var user = guild.GetUser(ulong.Parse(voteModal.VoteModel.User));
-        var newVote = new DataModel.Vote
+        await using var db = await dbFactory.CreateConnectionAsync();
+
+        var config = await db.GuildConfigs.FirstOrDefaultAsync(x => x.GuildId == guildId);
+
+        await db.InsertAsync(new DataModel.Vote
         {
-            UserId = user.Id, GuildId = guild.Id
-        };
+            UserId = userId, GuildId = guildId
+        });
 
-        // Insert new vote using LinqToDB
-        await db.InsertAsync(newVote);
+        var user = guild.GetUser(userId);
+        if (user is null)
+            return;
 
-        if (string.IsNullOrEmpty(potentialVoteConfig.VoteEmbed))
+        if (config is not null && guild.GetTextChannel(config.VotesChannel) is Channel { IsTextable: true } channel)
         {
-            if (potentialVoteConfig.VotesChannel is 0)
-                return;
-
-            if (guild.GetTextChannel(potentialVoteConfig.VotesChannel) is not Channel { IsTextable: true } channel)
-                return;
-
-            // Count votes using LinqToDB
-            var votes = await db.Votes
-                .CountAsync(x => x.UserId == user.Id && x.GuildId == guild.Id);
-
-            var eb = new EmbedBuilder()
-                .WithTitle(Strings.VoteThanks(guild.Id, guild.Name))
-                .WithDescription(Strings.VoteCountCorrect(guild.Id, votes))
-                .WithThumbnailUrl(user.RealAvatarUrl().AbsoluteUri)
-                .WithOkColor();
-
-            await channel.SendAsync(user.Mention, embed: eb.Build());
-
-            // Check for vote roles using LinqToDB
-            if (!await db.VoteRoles.AnyAsync(x => x.GuildId == guild.Id))
-                return;
-
-            // Get vote roles using LinqToDB
-            var split = await db.VoteRoles
-                .Where(x => x.GuildId == guild.Id)
-                .ToListAsync();
-
-            if (!split.Any())
-                return;
-
-            foreach (var i in split)
+            if (string.IsNullOrEmpty(config.VoteEmbed))
             {
-                var role = guild.GetRole(i.RoleId);
-                try
-                {
-                    await user.AddRoleAsync(role);
-                }
-                catch
-                {
-                    // ignored, means role was too high or inaccessible
-                }
+                var votes = await db.Votes
+                    .CountAsync(x => x.UserId == user.Id && x.GuildId == guild.Id);
 
-                if (i.Timer is 0) continue;
-                var timespan = TimeSpan.FromSeconds(i.Timer);
-                await muteService.TimedRole(user, timespan, "Vote Role", role);
-            }
-        }
-        else
-        {
-            if (guild.GetTextChannel(potentialVoteConfig.VotesChannel) is not Channel { IsTextable: true } channel)
-                return;
+                var eb = new EmbedBuilder()
+                    .WithTitle(Strings.VoteThanks(guild.Id, guild.Name))
+                    .WithDescription(Strings.VoteCountCorrect(guild.Id, votes))
+                    .WithThumbnailUrl(user.RealAvatarUrl().AbsoluteUri)
+                    .WithOkColor(guild.Id);
 
-            if (potentialVoteConfig.VotesChannel is 0)
-                return;
-
-            // Get votes using LinqToDB
-            var votesQuery = db.Votes
-                .Where(x => x.UserId == user.Id && x.GuildId == guild.Id);
-
-            var votesCount = await votesQuery.CountAsync();
-            var votesMonthCount = await votesQuery
-                .CountAsync(x => x.DateAdded.Value.Month == DateTime.UtcNow.Month);
-
-            var rep = new ReplacementBuilder()
-                .WithDefault(user, null, guild, client)
-                .WithOverride("%votestotalcount%", () => votesCount.ToString())
-                .WithOverride("%votesmonthcount%", () => votesMonthCount.ToString())
-                .Build();
-
-            if (SmartEmbed.TryParse(rep.Replace(potentialVoteConfig.VoteEmbed), guild.Id, out var embeds,
-                    out var plainText))
-            {
-                await channel.SendAsync(plainText, embeds: embeds);
+                await channel.SendAsync(user.Mention, embed: eb.Build());
             }
             else
             {
-                await channel.SendAsync(rep.Replace(potentialVoteConfig.VoteEmbed).SanitizeMentions());
+                var votesQuery = db.Votes
+                    .Where(x => x.UserId == user.Id && x.GuildId == guild.Id);
+
+                var votesCount = await votesQuery.CountAsync();
+                var votesMonthCount = await votesQuery
+                    .CountAsync(x => x.DateAdded.Value.Month == DateTime.UtcNow.Month);
+
+                var rep = new ReplacementBuilder()
+                    .WithDefault(user, null, guild, client)
+                    .WithOverride("%votestotalcount%", () => votesCount.ToString())
+                    .WithOverride("%votesmonthcount%", () => votesMonthCount.ToString())
+                    .Build();
+
+                if (SmartEmbed.TryParse(rep.Replace(config.VoteEmbed), guild.Id, out var embeds,
+                        out var plainText))
+                {
+                    await channel.SendAsync(plainText, embeds: embeds);
+                }
+                else
+                {
+                    await channel.SendAsync(rep.Replace(config.VoteEmbed).SanitizeMentions());
+                }
+            }
+        }
+
+        var voteRoles = await db.VoteRoles
+            .Where(x => x.GuildId == guild.Id)
+            .ToListAsync();
+
+        foreach (var i in voteRoles)
+        {
+            var role = guild.GetRole(i.RoleId);
+            if (role is null)
+                continue;
+
+            try
+            {
+                await user.AddRoleAsync(role);
+            }
+            catch
+            {
+                // ignored, means role was too high or inaccessible
             }
 
-            // Check for vote roles using LinqToDB
-            if (!await db.VoteRoles.AnyAsync(x => x.GuildId == guild.Id))
-                return;
+            if (i.Timer is 0) continue;
+            var timespan = TimeSpan.FromSeconds(i.Timer);
+            await muteService.TimedRole(user, timespan, "Vote Role", role);
+        }
+    }
 
-            // Get vote roles using LinqToDB
-            var split = await db.VoteRoles
-                .Where(x => x.GuildId == guild.Id)
-                .ToListAsync();
+    /// <summary>
+    ///     Takes the vote roles that have no duration off members whose vote is gone.
+    /// </summary>
+    /// <param name="guildId">The ID of the community.</param>
+    /// <param name="userIds">The members who no longer have a vote.</param>
+    public async Task RemoveLapsedVoteRoles(ulong guildId, IEnumerable<ulong> userIds)
+    {
+        var guild = client.GetGuild(guildId);
+        if (guild is null)
+            return;
 
-            if (!split.Any())
-                return;
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var roleIds = await db.VoteRoles
+            .Where(x => x.GuildId == guildId && x.Timer == 0)
+            .Select(x => x.RoleId)
+            .ToListAsync();
 
-            foreach (var i in split)
+        if (roleIds.Count == 0)
+            return;
+
+        foreach (var userId in userIds)
+        {
+            var user = guild.GetUser(userId);
+            if (user is null)
+                continue;
+
+            foreach (var roleId in roleIds)
             {
-                var role = guild.GetRole(i.RoleId);
                 try
                 {
-                    await user.AddRoleAsync(role);
+                    await user.RemoveRoleAsync(roleId, new RequestOptions
+                    {
+                        AuditLogReason = "Vote removed"
+                    });
                 }
                 catch
                 {
-                    // ignored, means role was too high or inaccessible
+                    // role unavailable
                 }
-
-                if (i.Timer is 0) continue;
-                var timespan = TimeSpan.FromSeconds(i.Timer);
-                await muteService.TimedRole(user, timespan, "Vote Role", role);
             }
         }
     }
@@ -189,10 +183,6 @@ public class VoteService : INService
             return (false, Strings.UnableToAddEveryoneRole(guildId));
 
         await using var db = await dbFactory.CreateConnectionAsync();
-
-        // Count vote roles using LinqToDB
-        if (await db.VoteRoles.CountAsync(x => x.GuildId == guildId) >= 10)
-            return (false, Strings.ReachedMaximumVoteRoles(guildId));
 
         // Check if role already exists as vote role using LinqToDB
         if (await db.VoteRoles
@@ -255,7 +245,7 @@ public class VoteService : INService
 
         // Find the vote role using LinqToDB
         var voteRole = await db.VoteRoles
-            .FirstOrDefaultAsync(x => x.RoleId == roleId);
+            .FirstOrDefaultAsync(x => x.RoleId == roleId && x.GuildId == guildId);
 
         if (voteRole is null)
             return (false, Strings.RoleNotAddedAsVoteRole(guildId));
@@ -356,38 +346,6 @@ public class VoteService : INService
     }
 
     /// <summary>
-    ///     Sets or updates the password required for vote validation in a guild.
-    /// </summary>
-    /// <param name="guildId">The ID of the guild for which the vote password is to be set.</param>
-    /// <param name="password">The new password for vote validation.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task SetVotePassword(ulong guildId, string password)
-    {
-        await using var db = await dbFactory.CreateConnectionAsync();
-
-        // Get guild config using LinqToDB
-        var config = await db.GuildConfigs
-            .FirstOrDefaultAsync(x => x.GuildId == guildId);
-
-        if (config == null)
-        {
-            // Create new guild config if it doesn't exist
-            config = new GuildConfig
-            {
-                GuildId = guildId
-            };
-            config.VotesPassword = password;
-            await db.InsertAsync(config);
-        }
-        else
-        {
-            // Update existing guild config
-            config.VotesPassword = password;
-            await db.UpdateAsync(config);
-        }
-    }
-
-    /// <summary>
     ///     Sets or updates the channel ID where vote acknowledgements should be sent in a guild.
     /// </summary>
     /// <param name="guildId">The ID of the guild for which the vote channel is to be set.</param>
@@ -473,7 +431,7 @@ public class VoteService : INService
             return new EmbedBuilder().WithErrorColor().WithDescription(Strings.YouDoNotHaveAnyVotes(guild.Id));
 
         return new EmbedBuilder()
-            .WithOkColor()
+            .WithOkColor(guild.Id)
             .WithTitle(Strings.VoteStatsFor(guild.Id, guild.Name))
             .AddField(Strings.VotesThisMonth(guild.Id), thisMonth)
             .AddField(Strings.TotalVotes(guild.Id), total)

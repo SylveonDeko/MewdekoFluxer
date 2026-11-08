@@ -960,13 +960,24 @@ public class MuteService : INService, IReadyExecutor, IDisposable
     /// <param name="after">The time to ban the user for</param>
     /// <param name="reason">The reason for the ban</param>
     /// <param name="todelete">The time to delete the ban message</param>
-    public async Task TimedBan(SocketGuild guild, IUser? user, TimeSpan after, string reason, TimeSpan todelete = default)
+    /// <param name="punish">
+    ///     Runs the ban in place of banning directly, recording the case and sending the DM, and returns whether the DM
+    ///     failed.
+    /// </param>
+    /// <returns>Whether the DM failed.</returns>
+    public async Task<bool> TimedBan(SocketGuild guild, IUser? user, TimeSpan after, string reason,
+        TimeSpan todelete = default, Func<Func<Task>, Task<bool>>? punish = null)
     {
         var pruneDays = todelete == default
             ? await banPrune.GetPruneDaysAsync(guild.Id, BanPruneAction.TempBan).ConfigureAwait(false)
             : todelete.Days;
 
-        await guild.AddBanAsync(user.Id, pruneDays, reason).ConfigureAwait(false);
+        var dmFailed = false;
+        Task Ban() => guild.AddBanAsync(user.Id, pruneDays, reason);
+        if (punish is null)
+            await Ban().ConfigureAwait(false);
+        else
+            dmFailed = await punish(Ban).ConfigureAwait(false);
 
         await using var dbContext = await dbFactory.CreateConnectionAsync();
 
@@ -978,6 +989,7 @@ public class MuteService : INService, IReadyExecutor, IDisposable
 
         await dbContext.InsertAsync(unbanTimer);
         StartUn_Timer(guild.Id, user.Id, after, TimerType.Ban);
+        return dmFailed;
     }
 
     /// <summary>

@@ -5,6 +5,7 @@ using Mewdeko.Common.Configs;
 using Mewdeko.Modules.Administration.Services;
 using Mewdeko.Modules.Permissions.Common;
 using Mewdeko.Modules.Permissions.Services;
+using Mewdeko.Services;
 using Mewdeko.Services.Analytics;
 using Mewdeko.Services.Strings;
 
@@ -52,6 +53,7 @@ public class SuggestionsService : INService
     private readonly IAnalyticsCollector collector;
     private readonly BotConfig config;
     private readonly IDataConnectionFactory dbFactory;
+    private const string AnonymousName = "Anonymous";
     private readonly EventHandler eventHandler;
     private readonly GuildSettingsService guildSettings;
     private readonly ILogger<SuggestionsService> logger;
@@ -152,8 +154,280 @@ public class SuggestionsService : INService
         }
 
         await dbContext.UpdateAsync(suggestion);
+        if (suggestion.CurrentState == 0 && index < 2)
+            await ApplyVoteColor(message, guild.Id, suggestion.EmoteCount1, suggestion.EmoteCount2)
+                .ConfigureAwait(false);
         if (added)
             collector.Feature("suggestion_vote", guild.Id);
+    }
+
+    /// <summary>
+    ///     Gets how many votes one side has to lead by to recolour a suggestion embed.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <returns>The threshold, 0 when off.</returns>
+    public async Task<int> GetVoteColorThreshold(ulong guildId)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+        return await db.SuggestionVoteColors.Where(x => x.GuildId == guildId).Select(x => x.Threshold)
+            .FirstOrDefaultAsync();
+    }
+
+    /// <summary>
+    ///     Sets how many votes one side has to lead by to recolour a suggestion embed.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <param name="threshold">The vote lead needed, 0 to turn it off.</param>
+    public async Task SetVoteColorThreshold(ulong guildId, int threshold)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var updated = await db.SuggestionVoteColors.Where(x => x.GuildId == guildId)
+            .Set(x => x.Threshold, threshold)
+            .UpdateAsync();
+        if (updated == 0)
+            await db.InsertAsync(new SuggestionVoteColor
+            {
+                GuildId = guildId, Threshold = threshold, DateAdded = DateTime.UtcNow
+            });
+    }
+
+    /// <summary>
+    ///     Recolours a suggestion embed when one side leads by the guild's threshold.
+    /// </summary>
+    /// <param name="message">The suggestion message.</param>
+    /// <param name="guildId">The guild ID.</param>
+    /// <param name="upvotes">The votes for.</param>
+    /// <param name="downvotes">The votes against.</param>
+    public async Task ApplyVoteColor(Message message, ulong guildId, int upvotes, int downvotes)
+    {
+        var threshold = await GetVoteColorThreshold(guildId);
+        if (threshold <= 0)
+            return;
+
+        var embed = message.Embeds?.FirstOrDefault();
+        if (embed is null)
+            return;
+
+        int green = (int)Color.Green.RawValue, red = (int)Color.Red.RawValue;
+        var lead = upvotes - downvotes;
+        int? target = lead >= threshold ? green : -lead >= threshold ? red : null;
+        if (target is null)
+        {
+            if (embed.Color != green && embed.Color != red)
+                return;
+            target = (int)GuildEmbedColorService.OkFor(guildId).RawValue;
+        }
+
+        if (embed.Color == target)
+            return;
+
+        var rebuilt = embed.ToEmbedBuilder().WithColor(target.Value).Build();
+        await message.ModifyAsync(x => x.Embed = rebuilt).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    ///     Gets whether suggestions hide their author.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <returns>True if suggestions are anonymous.</returns>
+    public async Task<bool> GetAnonymousSuggestions(SocketGuild guild)
+    {
+        return (await guildSettings.GetGuildConfig(guild.Id)).AnonymousSuggestions;
+    }
+
+    /// <summary>
+    ///     Sets whether suggestions hide their author.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="value">Whether suggestions are anonymous.</param>
+    public async Task SetAnonymousSuggestions(SocketGuild guild, bool value)
+    {
+        var gc = await guildSettings.GetGuildConfig(guild.Id);
+        gc.AnonymousSuggestions = value;
+        await guildSettings.UpdateGuildConfig(guild.Id, gc);
+    }
+
+    /// <summary>
+    ///     Sets the channel the suggest button panel is posted in.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="channelId">The channel ID.</param>
+    public async Task SetSuggestButtonChannel(SocketGuild guild, ulong channelId)
+    {
+        var gc = await guildSettings.GetGuildConfig(guild.Id);
+        gc.SuggestButtonChannel = channelId;
+        await guildSettings.UpdateGuildConfig(guild.Id, gc);
+    }
+
+    /// <summary>
+    ///     Gets the channel the suggest button panel is posted in.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <returns>The channel ID, 0 when unset.</returns>
+    public async Task<ulong> GetSuggestButtonChannel(SocketGuild guild)
+    {
+        return (await guildSettings.GetGuildConfig(guild.Id)).SuggestButtonChannel;
+    }
+
+    /// <summary>
+    ///     Sets the message of the suggest button panel.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="message">The message.</param>
+    public async Task SetSuggestButtonMessage(SocketGuild guild, string? message)
+    {
+        var gc = await guildSettings.GetGuildConfig(guild.Id);
+        gc.SuggestButtonMessage = message;
+        await guildSettings.UpdateGuildConfig(guild.Id, gc);
+    }
+
+    /// <summary>
+    ///     Gets the message of the suggest button panel.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <returns>The message.</returns>
+    public async Task<string?> GetSuggestButtonMessage(SocketGuild guild)
+    {
+        return (await guildSettings.GetGuildConfig(guild.Id)).SuggestButtonMessage;
+    }
+
+    /// <summary>
+    ///     Sets the label of the suggest button.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="label">The label.</param>
+    public async Task SetSuggestButtonLabel(SocketGuild guild, string label)
+    {
+        var gc = await guildSettings.GetGuildConfig(guild.Id);
+        gc.SuggestButtonName = label;
+        await guildSettings.UpdateGuildConfig(guild.Id, gc);
+    }
+
+    /// <summary>
+    ///     Gets the label of the suggest button.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <returns>The label.</returns>
+    public async Task<string?> GetSuggestButtonName(SocketGuild guild)
+    {
+        return (await guildSettings.GetGuildConfig(guild.Id)).SuggestButtonName;
+    }
+
+    /// <summary>
+    ///     Sets the emote of the suggest button.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="emote">The emote.</param>
+    public async Task SetSuggestButtonEmote(SocketGuild guild, string emote)
+    {
+        var gc = await guildSettings.GetGuildConfig(guild.Id);
+        gc.SuggestButtonEmote = emote;
+        await guildSettings.UpdateGuildConfig(guild.Id, gc);
+    }
+
+    /// <summary>
+    ///     Gets the emote of the suggest button.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <returns>The emote.</returns>
+    public async Task<string?> GetSuggestButtonEmote(SocketGuild guild)
+    {
+        return (await guildSettings.GetGuildConfig(guild.Id)).SuggestButtonEmote;
+    }
+
+    /// <summary>
+    ///     Sets how members vote: 0 for reactions, 1 for buttons.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="mode">The emote mode.</param>
+    public async Task SetEmoteMode(SocketGuild guild, int mode)
+    {
+        var gc = await guildSettings.GetGuildConfig(guild.Id);
+        gc.EmoteMode = mode;
+        await guildSettings.UpdateGuildConfig(guild.Id, gc);
+    }
+
+    /// <summary>
+    ///     Gets how members vote: 0 for reactions, 1 for buttons.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <returns>The emote mode.</returns>
+    public async Task<int> GetEmoteMode(SocketGuild guild)
+    {
+        return (await guildSettings.GetGuildConfig(guild.Id)).EmoteMode;
+    }
+
+    /// <summary>
+    ///     Sets the style of the suggest button.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="colorNum">The style number.</param>
+    public async Task SetSuggestButtonColor(SocketGuild guild, int colorNum)
+    {
+        var gc = await guildSettings.GetGuildConfig(guild.Id);
+        gc.SuggestButtonColor = colorNum;
+        await guildSettings.UpdateGuildConfig(guild.Id, gc);
+    }
+
+    /// <summary>
+    ///     Gets the style of the suggest button.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <returns>The style number.</returns>
+    public async Task<int> GetSuggestButtonColor(SocketGuild guild)
+    {
+        return (await guildSettings.GetGuildConfig(guild.Id)).SuggestButtonColor;
+    }
+
+    /// <summary>
+    ///     Sets the style of one vote button.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="buttonId">The button number, 1 to 5.</param>
+    /// <param name="color">The style number.</param>
+    public async Task SetButtonType(SocketGuild guild, int buttonId, int color)
+    {
+        var gc = await guildSettings.GetGuildConfig(guild.Id);
+        switch (buttonId)
+        {
+            case 1:
+                gc.Emote1Style = color;
+                break;
+            case 2:
+                gc.Emote2Style = color;
+                break;
+            case 3:
+                gc.Emote3Style = color;
+                break;
+            case 4:
+                gc.Emote4Style = color;
+                break;
+            case 5:
+                gc.Emote5Style = color;
+                break;
+        }
+
+        await guildSettings.UpdateGuildConfig(guild.Id, gc);
+    }
+
+    /// <summary>
+    ///     Gets the style of one vote button.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="id">The button number, 1 to 5.</param>
+    /// <returns>The style number, 2 when the button does not exist.</returns>
+    public async Task<int> GetButtonStyle(SocketGuild guild, int id)
+    {
+        var gc = await guildSettings.GetGuildConfig(guild.Id);
+        return id switch
+        {
+            1 => gc.Emote1Style,
+            2 => gc.Emote2Style,
+            3 => gc.Emote3Style,
+            4 => gc.Emote4Style,
+            5 => gc.Emote5Style,
+            _ => 2
+        };
     }
 
     /// <summary>
@@ -977,28 +1251,31 @@ public class SuggestionsService : INService
     private async Task<EmbedRequest> CreateStatusEmbed(SocketGuild guild, IUser user, Suggestion suggest, SuggestState state,
         string reason, StatusConfig statusConfig)
     {
+        var anonymous = await GetAnonymousSuggestions(guild);
         var suggestUser = await guild.GetUserAsync(suggest.UserId);
         var sug = suggest.Suggestion1 ?? await GetSuggestionContent(guild, suggest);
 
         if (statusConfig.Message is "-" or "" or null)
         {
-            return new EmbedBuilder()
-                .WithAuthor(suggestUser)
+            var defaultEmbed = new EmbedBuilder()
                 .WithTitle(GetSuggestionStateTitle(guild.Id, suggest.SuggestionId, state))
                 .WithDescription(sug)
                 .WithColor(GetColorForState(state))
-                .AddField("Reason", reason)
-                .Build();
+                .AddField("Reason", reason);
+            if (!anonymous)
+                defaultEmbed.WithAuthor(suggestUser);
+            return defaultEmbed.Build();
         }
 
         var replacer = new ReplacementBuilder()
             .WithServer(client, guild as SocketGuild)
-            .WithOverride("%suggest.user%", () => suggestUser.ToString())
-            .WithOverride("%suggest.user.id%", () => suggestUser.Id.ToString())
+            .WithOverride("%suggest.user%", () => anonymous ? AnonymousName : suggestUser.ToString())
+            .WithOverride("%suggest.user.id%", () => anonymous ? AnonymousName : suggestUser.Id.ToString())
             .WithOverride("%suggest.message%", () => sug.SanitizeMentions(true))
             .WithOverride("%suggest.number%", () => suggest.SuggestionId.ToString())
-            .WithOverride("%suggest.user.name%", () => suggestUser.Username)
-            .WithOverride("%suggest.user.avatar%", () => suggestUser.RealAvatarUrl().ToString())
+            .WithOverride("%suggest.user.name%", () => anonymous ? AnonymousName : suggestUser.Username)
+            .WithOverride("%suggest.user.avatar%",
+                () => anonymous ? "" : suggestUser.RealAvatarUrl().ToString())
             .WithOverride("%suggest.mod.user%", user.ToString)
             .WithOverride("%suggest.mod.avatar%", () => user.RealAvatarUrl().ToString())
             .WithOverride("%suggest.mod.name%", () => user.Username)
@@ -1187,21 +1464,25 @@ public class SuggestionsService : INService
         var sugnum1 = await GetSNum(guild.Id);
         var customMessage = await GetSuggestionMessage(guild) is not ("-" or "");
         Message posted;
+        var anonymous = await GetAnonymousSuggestions(guild);
         if (!customMessage)
         {
-            posted = await suggestionChannel.SendAsync(
-                embed: new EmbedBuilder().WithAuthor(user)
-                    .WithTitle(strings.SuggestionNumber(channel.Guild.Id, sugnum1))
-                    .WithDescription(suggestion).WithOkColor().Build()).ConfigureAwait(false);
+            var postEmbed = new EmbedBuilder()
+                .WithTitle(strings.SuggestionNumber(channel.Guild.Id, sugnum1))
+                .WithDescription(suggestion).WithOkColor(channel.Guild.Id);
+            if (!anonymous)
+                postEmbed.WithAuthor(user);
+            posted = await suggestionChannel.SendAsync(embed: postEmbed.Build()).ConfigureAwait(false);
         }
         else
         {
             var replacer = new ReplacementBuilder().WithServer(client, guild as SocketGuild)
-                .WithOverride("%suggest.user%", user.ToString)
+                .WithOverride("%suggest.user%", () => anonymous ? AnonymousName : user.ToString())
                 .WithOverride("%suggest.message%", () => suggestion.SanitizeMentions(true))
                 .WithOverride("%suggest.number%", () => sugnum1.ToString())
-                .WithOverride("%suggest.user.name%", () => user.Username)
-                .WithOverride("%suggest.user.avatar%", () => user.RealAvatarUrl().ToString()).Build();
+                .WithOverride("%suggest.user.name%", () => anonymous ? AnonymousName : user.Username)
+                .WithOverride("%suggest.user.avatar%",
+                    () => anonymous ? "" : user.RealAvatarUrl().ToString()).Build();
             var rendered = replacer.Replace(await GetSuggestionMessage(guild));
             posted = SmartEmbed.TryParse(rendered, guild.Id, out var embed, out var plainText)
                 ? await suggestionChannel.SendAsync(plainText, embeds: embed).ConfigureAwait(false)

@@ -29,6 +29,7 @@ public class InviteCountService : INService, IReadyExecutor
     private readonly FluxerClient client;
     private readonly IAnalyticsCollector collector;
     private readonly IDataConnectionFactory dbFactory;
+    private readonly InviteRoleService inviteRoles;
     private readonly ConcurrentDictionary<ulong, ConcurrentDictionary<string, Invite>> guildInvites = new();
     private readonly ConcurrentDictionary<ulong, SemaphoreSlim> guildJoinLocks = new();
     private readonly ConcurrentDictionary<ulong, InviteCountSetting> inviteCountSettings = new();
@@ -54,8 +55,10 @@ public class InviteCountService : INService, IReadyExecutor
     /// <param name="collector">The analytics collector.</param>
     /// <param name="strings">Localized strings for log channel embeds.</param>
     public InviteCountService(EventHandler handler, IDataConnectionFactory dbFactory, FluxerClient client,
-        ILogger<InviteCountService> logger, IAnalyticsCollector collector, GeneratedBotStrings strings)
+        ILogger<InviteCountService> logger, IAnalyticsCollector collector, GeneratedBotStrings strings,
+        InviteRoleService inviteRoles)
     {
+        this.inviteRoles = inviteRoles;
         this.dbFactory = dbFactory;
         this.client = client;
         this.logger = logger;
@@ -1062,7 +1065,7 @@ public class InviteCountService : INService, IReadyExecutor
 
     #region Counts
 
-    private static async Task<InviteCount> ApplyDeltaAsync(MewdekoDb db, ulong guildId, ulong userId,
+    private async Task<InviteCount> ApplyDeltaAsync(MewdekoDb db, ulong guildId, ulong userId,
         Action<InviteCount> mutate)
     {
         var row = await db.InviteCounts.FirstOrDefaultAsync(x => x.UserId == userId && x.GuildId == guildId);
@@ -1075,12 +1078,18 @@ public class InviteCountService : INService, IReadyExecutor
             mutate(row);
             row.Recalculate();
             row.Id = await db.InsertWithInt32IdentityAsync(row);
-            return row;
+        }
+        else
+        {
+            var before = row.Count;
+            mutate(row);
+            row.Recalculate();
+            await db.UpdateAsync(row);
+            if (row.Count == before)
+                return row;
         }
 
-        mutate(row);
-        row.Recalculate();
-        await db.UpdateAsync(row);
+        _ = inviteRoles.OnInviteCountChanged(guildId, userId, row.Count);
         return row;
     }
 
@@ -1172,6 +1181,8 @@ public class InviteCountService : INService, IReadyExecutor
         await db.InvitedBies.Where(x => x.GuildId == guildId && x.InviterId == userId)
             .Set(x => x.InviterId, 0UL)
             .UpdateAsync();
+        if (removed > 0)
+            _ = inviteRoles.OnInviteCountChanged(guildId, userId, 0);
         return removed > 0;
     }
 
@@ -1187,7 +1198,10 @@ public class InviteCountService : INService, IReadyExecutor
 
         if (scope == InviteResetScope.Server)
         {
+            var resetIds = await db.InviteCounts.Where(x => x.GuildId == guild.Id).Select(x => x.UserId).ToListAsync();
             var count = await db.InviteCounts.Where(x => x.GuildId == guild.Id).DeleteAsync();
+            foreach (var resetId in resetIds)
+                _ = inviteRoles.OnInviteCountChanged(guild.Id, resetId, 0);
             await db.InvitedBies.Where(x => x.GuildId == guild.Id).DeleteAsync();
             return count;
         }

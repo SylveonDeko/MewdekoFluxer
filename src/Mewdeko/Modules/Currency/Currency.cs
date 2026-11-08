@@ -249,7 +249,7 @@ public partial class Currency(
         var payout = Math.Max(0, betAmount + delta);
 
         if (payout > 0)
-            await PayoutAsync(payout, "spinwheel");
+            await PayoutAsync(payout, "spinwheel", betAmount);
 
         var net = payout - betAmount;
         var emote = await Service.GetCurrencyEmote(ctx.Guild.Id);
@@ -957,7 +957,7 @@ public partial class Currency(
         var eb = new EmbedBuilder()
             .WithTitle(Strings.CrapsTitle(ctx.Guild.Id))
             .WithColor(Color.Blue)
-            .AddField(Strings.CrapsRolled(ctx.Guild.Id, die1, die2, total), "");
+            .WithDescription(Strings.CrapsRolled(ctx.Guild.Id, die1, die2, total));
 
         var won = false;
         var push = false;
@@ -1105,27 +1105,25 @@ public partial class Currency(
         var eb = new EmbedBuilder()
             .WithTitle(Strings.ScratchCardTitle(ctx.Guild.Id))
             .WithColor(Color.Blue)
-            .AddField(Strings.ScratchCardType(ctx.Guild.Id, cardType.ToUpper()), "", true)
-            .AddField(Strings.ScratchCardCost(ctx.Guild.Id, card.cost, emote), "", true);
+            .AddDescriptionLine(Strings.ScratchCardType(ctx.Guild.Id, cardType.ToUpper()))
+            .AddDescriptionLine(Strings.ScratchCardCost(ctx.Guild.Id, card.cost, emote));
 
         if (won)
         {
             var winAmount = CurrencyRng.Next(card.minWin, card.maxWin + 1);
             winAmount = (int)await WinAsync(card.cost, (double)winAmount / card.cost, "scratchcard");
 
-            eb.WithDescription(Strings.ScratchCardWin(ctx.Guild.Id, winAmount, emote))
-                .WithColor(Color.Green);
-
             var symbols = GenerateScratchSymbols(true);
-            eb.AddField(Strings.ScratchCardSymbols(ctx.Guild.Id, symbols), "");
+            eb.AddDescriptionLine(Strings.ScratchCardSymbols(ctx.Guild.Id, symbols))
+                .AddDescriptionLine(Strings.ScratchCardWin(ctx.Guild.Id, winAmount, emote))
+                .WithColor(Color.Green);
         }
         else
         {
-            eb.WithDescription(Strings.ScratchCardLose(ctx.Guild.Id))
-                .WithColor(Color.Red);
-
             var symbols = GenerateScratchSymbols(false);
-            eb.AddField(Strings.ScratchCardSymbols(ctx.Guild.Id, symbols), "");
+            eb.AddDescriptionLine(Strings.ScratchCardSymbols(ctx.Guild.Id, symbols))
+                .AddDescriptionLine(Strings.ScratchCardLose(ctx.Guild.Id))
+                .WithColor(Color.Red);
         }
 
         await ctx.Channel.SendAsync(embed: eb.Build());
@@ -1171,8 +1169,8 @@ public partial class Currency(
             .WithTitle(Strings.RussianRouletteTitle(ctx.Guild.Id))
             .WithDescription(Strings.RussianRouletteDescription(ctx.Guild.Id))
             .WithColor(Color.Blue)
-            .AddField(Strings.RussianRouletteChambers(ctx.Guild.Id, chamber.ToString()), "", true)
-            .AddField(Strings.RussianRouletteBullets(ctx.Guild.Id, bullets.ToString()), "", true);
+            .AddDescriptionLine(Strings.RussianRouletteChambers(ctx.Guild.Id, chamber.ToString()))
+            .AddDescriptionLine(Strings.RussianRouletteBullets(ctx.Guild.Id, bullets.ToString()));
 
         if (survived)
         {
@@ -1438,18 +1436,18 @@ public partial class Currency(
             .WithTitle(Strings.LotteryDrawTitle(ctx.Guild.Id, CurrencyRng.Next(1000, 9999)))
             .WithColor(won ? Color.Green : Color.Red)
             .AddField(Strings.LotteryTicketCost(ctx.Guild.Id, ticketCost, emote), $"{ticketCost} {emote}", true)
-            .AddField(Strings.LotteryYourTickets(ctx.Guild.Id, ticketCount.ToString()), "", true);
+            .AddDescriptionLine(Strings.LotteryYourTickets(ctx.Guild.Id, ticketCount.ToString()));
 
         if (won)
         {
             winAmount = await WinAsync(totalCost, (double)winAmount / totalCost, "lottery");
 
-            eb.WithDescription(Strings.LotteryWinner(ctx.Guild.Id, ctx.User.Mention, CurrencyRng.Next(1, 1000),
+            eb.AddDescriptionLine(Strings.LotteryWinner(ctx.Guild.Id, ctx.User.Mention, CurrencyRng.Next(1, 1000),
                 winAmount, emote));
         }
         else
         {
-            eb.WithDescription(Strings.LotteryNoWinner(ctx.Guild.Id, totalCost + CurrencyRng.Next(100, 500), emote));
+            eb.AddDescriptionLine(Strings.LotteryNoWinner(ctx.Guild.Id, totalCost + CurrencyRng.Next(100, 500), emote));
         }
 
         await ReplyAsync(Strings.LotteryTicketsBought(ctx.Guild.Id, ticketCount, totalCost, emote));
@@ -1563,17 +1561,17 @@ public partial class Currency(
         var eb = new EmbedBuilder()
             .WithTitle(Strings.CrashTitle(ctx.Guild.Id))
             .WithColor(won ? Color.Green : Color.Red)
-            .AddField(Strings.CrashTargetMultiplier(ctx.Guild.Id, $"{targetMultiplier:F2}"), "", true)
-            .AddField(Strings.CrashActualMultiplier(ctx.Guild.Id, $"{crashPoint:F2}"), "", true);
+            .AddDescriptionLine(Strings.CrashTargetMultiplier(ctx.Guild.Id, $"{targetMultiplier:F2}"))
+            .AddDescriptionLine(Strings.CrashActualMultiplier(ctx.Guild.Id, $"{crashPoint:F2}"));
 
         if (won)
         {
             var winAmount = await WinAsync(betAmount, targetMultiplier, "crash");
-            eb.WithDescription(Strings.CrashWin(ctx.Guild.Id, targetMultiplier, winAmount - betAmount, emote));
+            eb.AddDescriptionLine(Strings.CrashWin(ctx.Guild.Id, targetMultiplier, winAmount - betAmount, emote));
         }
         else
         {
-            eb.WithDescription(Strings.CrashLose(ctx.Guild.Id, crashPoint, betAmount, emote));
+            eb.AddDescriptionLine(Strings.CrashLose(ctx.Guild.Id, crashPoint, betAmount, emote));
         }
 
         await ctx.Channel.SendAsync(embed: eb.Build());
@@ -1613,18 +1611,18 @@ public partial class Currency(
         var eb = new EmbedBuilder()
             .WithTitle(Strings.KenoTitle(ctx.Guild.Id))
             .WithColor(multiplier > 0 ? Color.Green : Color.Red)
-            .AddField(Strings.KenoYourNumbers(ctx.Guild.Id, string.Join(", ", selectedNumbers.OrderBy(x => x))), "")
-            .AddField(Strings.KenoDrawnNumbers(ctx.Guild.Id, string.Join(", ", drawnNumbers.OrderBy(x => x))), "")
-            .AddField(Strings.KenoMatches(ctx.Guild.Id, matches.ToString()), "", true);
+            .AddDescriptionLine(Strings.KenoYourNumbers(ctx.Guild.Id, string.Join(", ", selectedNumbers.OrderBy(x => x))))
+            .AddDescriptionLine(Strings.KenoDrawnNumbers(ctx.Guild.Id, string.Join(", ", drawnNumbers.OrderBy(x => x))))
+            .AddDescriptionLine(Strings.KenoMatches(ctx.Guild.Id, matches.ToString()));
 
         if (multiplier > 0)
         {
             var winAmount = await WinAsync(betAmount, multiplier, "keno");
-            eb.WithDescription(Strings.KenoWin(ctx.Guild.Id, matches, winAmount - betAmount, emote));
+            eb.AddDescriptionLine(Strings.KenoWin(ctx.Guild.Id, matches, winAmount - betAmount, emote));
         }
         else
         {
-            eb.WithDescription(Strings.KenoLose(ctx.Guild.Id, matches, betAmount, emote));
+            eb.AddDescriptionLine(Strings.KenoLose(ctx.Guild.Id, matches, betAmount, emote));
         }
 
         await ctx.Channel.SendAsync(embed: eb.Build());
@@ -1671,8 +1669,8 @@ public partial class Currency(
             .WithDescription(profit > 0
                 ? Strings.PlinkoWin(ctx.Guild.Id, multiplier, Math.Abs(profit), emote)
                 : Strings.PlinkoLose(ctx.Guild.Id, multiplier, Math.Abs(profit), emote))
-            .AddField(Strings.PlinkoMultiplier(ctx.Guild.Id, $"{multiplier:F2}"), "", true)
-            .AddField(Strings.PlinkoSlot(ctx.Guild.Id, slot.ToString()), "", true)
+            .AddDescriptionLine(Strings.PlinkoMultiplier(ctx.Guild.Id, $"{multiplier:F2}"))
+            .AddDescriptionLine(Strings.PlinkoSlot(ctx.Guild.Id, slot.ToString()))
             .WithImageUrl("attachment://plinko.png");
 
         await ctx.Channel.SendFileAsync(stream, "plinko.png", embed: eb.Build());
@@ -1714,7 +1712,7 @@ public partial class Currency(
         var payout = Math.Max(0, betAmount + delta);
 
         if (payout > 0)
-            await PayoutAsync(payout, "wheelfortune");
+            await PayoutAsync(payout, "wheelfortune", betAmount);
 
         var balanceChange = payout - betAmount;
 
@@ -1722,7 +1720,7 @@ public partial class Currency(
             .WithTitle(Strings.WheelFortuneTitle(ctx.Guild.Id))
             .WithColor(balanceChange >= 0 ? Color.Green : Color.Red)
             .WithDescription(Strings.WheelFortuneResult(ctx.Guild.Id, segment.TrimStart('x')))
-            .AddField(Strings.WheelFortuneType(ctx.Guild.Id, wheelType.ToUpper()), "", true)
+            .AddDescriptionLine(Strings.WheelFortuneType(ctx.Guild.Id, wheelType.ToUpper()))
             .WithImageUrl("attachment://wheel.png");
 
         await ctx.Channel.SendFileAsync(stream, "wheel.png", embed: eb.Build());
@@ -1758,8 +1756,8 @@ public partial class Currency(
         var eb = new EmbedBuilder()
             .WithTitle(Strings.DuckRaceTitle(ctx.Guild.Id))
             .WithColor(multiplier > 0 ? Color.Green : Color.Red)
-            .AddField(Strings.DuckRaceYourDuck(ctx.Guild.Id, $"{userDuck + 1} {ducks[userDuck]}"), "", true)
-            .AddField(Strings.DuckRacePosition(ctx.Guild.Id, $"{userPosition}/5"), "", true);
+            .AddDescriptionLine(Strings.DuckRaceYourDuck(ctx.Guild.Id, $"{userDuck + 1} {ducks[userDuck]}"))
+            .AddDescriptionLine(Strings.DuckRacePosition(ctx.Guild.Id, $"{userPosition}/5"));
 
         var resultsText = "";
         for (var i = 0; i < raceResults.Count; i++)
@@ -1769,16 +1767,16 @@ public partial class Currency(
             resultsText += $"{i + 1}. {duck} Duck #{raceResults[i].duckIndex + 1}{isUserDuck}\n";
         }
 
-        eb.AddField(Strings.DuckRaceResults(ctx.Guild.Id, resultsText), "");
+        eb.AddDescriptionLine(Strings.DuckRaceResults(ctx.Guild.Id, resultsText.TrimEnd()));
 
         if (multiplier > 0)
         {
             var winAmount = await WinAsync(betAmount, multiplier, "duckrace");
-            eb.WithDescription(Strings.DuckRaceWin(ctx.Guild.Id, winAmount - betAmount, emote));
+            eb.AddDescriptionLine(Strings.DuckRaceWin(ctx.Guild.Id, winAmount - betAmount, emote));
         }
         else
         {
-            eb.WithDescription(Strings.DuckRaceLose(ctx.Guild.Id, betAmount, emote));
+            eb.AddDescriptionLine(Strings.DuckRaceLose(ctx.Guild.Id, betAmount, emote));
         }
 
         await ctx.Channel.SendAsync(embed: eb.Build());
@@ -1822,22 +1820,22 @@ public partial class Currency(
         var eb = new EmbedBuilder()
             .WithTitle(Strings.BingoTitle(ctx.Guild.Id))
             .WithColor(won ? Color.Green : Color.Red)
-            .AddField(Strings.BingoCardType(ctx.Guild.Id, cardType.ToUpper()), "", true)
-            .AddField(
+            .AddDescriptionLine(Strings.BingoCardType(ctx.Guild.Id, cardType.ToUpper()))
+            .AddDescriptionLine(
                 Strings.BingoCalledNumbers(ctx.Guild.Id,
-                    string.Join(", ", calledNumbers.Take(10)) + (calledNumbers.Count > 10 ? "..." : "")), "");
+                    string.Join(", ", calledNumbers.Take(10)) + (calledNumbers.Count > 10 ? "..." : "")));
 
         var cardDisplay = FormatBingoCard(playerCard, calledNumbers);
-        eb.AddField(Strings.BingoYourCard(ctx.Guild.Id, cardDisplay), "");
+        eb.AddDescriptionLine(Strings.BingoYourCard(ctx.Guild.Id, cardDisplay));
 
         if (won)
         {
             var winAmount = await WinAsync(betAmount, config.multiplier, "bingo");
-            eb.WithDescription(Strings.BingoWin(ctx.Guild.Id, winAmount - betAmount, emote));
+            eb.AddDescriptionLine(Strings.BingoWin(ctx.Guild.Id, winAmount - betAmount, emote));
         }
         else
         {
-            eb.WithDescription(Strings.BingoLose(ctx.Guild.Id, betAmount, emote));
+            eb.AddDescriptionLine(Strings.BingoLose(ctx.Guild.Id, betAmount, emote));
         }
 
         await ctx.Channel.SendAsync(embed: eb.Build());
@@ -1934,6 +1932,9 @@ public partial class Currency(
             return;
         }
 
+        await dailyChallengeService.RecordBet(accepter.Id, ctx.Guild.Id, "diceduel", betAmount);
+        await dailyChallengeService.RecordBet(challenger.Id, ctx.Guild.Id, "diceduel", betAmount);
+
         var challengerRoll = CurrencyRng.Next(1, 7);
         var accepterRoll = CurrencyRng.Next(1, 7);
 
@@ -1960,6 +1961,7 @@ public partial class Currency(
 
             await Service.CreditAsync(winner.Id, betAmount * 2, Strings.DiceDuelTransactionWon(ctx.Guild.Id),
                 CurrencyCategory.GamePayout, ctx.Guild.Id, "diceduel");
+            await dailyChallengeService.RecordPayout(winner.Id, ctx.Guild.Id, betAmount, betAmount * 2);
 
             eb.WithDescription(challengerWon
                 ? Strings.DiceDuelChallengerWin(ctx.Guild.Id, winner.Mention, winnerRoll, loser.Mention, loserRoll)
@@ -2015,8 +2017,8 @@ public partial class Currency(
             .WithTitle(Strings.MemoryTitle(ctx.Guild.Id))
             .WithDescription(Strings.MemorySequenceShow(ctx.Guild.Id, sequenceDisplay))
             .WithColor(Color.Blue)
-            .AddField(Strings.MemoryDifficulty(ctx.Guild.Id, difficulty.ToUpper()), "", true)
-            .AddField(Strings.MemoryShowTime(ctx.Guild.Id, $"{config.showTime / 1000} seconds"), "", true);
+            .AddDescriptionLine(Strings.MemoryDifficulty(ctx.Guild.Id, difficulty.ToUpper()))
+            .AddDescriptionLine(Strings.MemoryShowTime(ctx.Guild.Id, $"{config.showTime / 1000} seconds"));
 
         var message = await ctx.Channel.SendAsync(embed: showEmbed.Build());
 
@@ -2456,7 +2458,7 @@ public partial class Currency(
     {
         var challenge = await dailyChallengeService.GetCurrentChallenge(ctx.User.Id, ctx.Guild.Id);
 
-        if (challenge == null)
+        if (challenge.IsCompleted)
         {
             await ReplyAsync(Strings.DailyChallengeAlreadyCompleted(ctx.Guild.Id));
             return;
@@ -2466,11 +2468,11 @@ public partial class Currency(
             .WithTitle(Strings.DailyChallengeTitle(ctx.Guild.Id))
             .WithColor(Color.Blue)
             .WithDescription(challenge.Description)
-            .AddField(Strings.DailyChallengeProgress(ctx.Guild.Id, challenge.Progress, challenge.RequiredAmount), "",
-                true)
-            .AddField(
+            .AddDescriptionLine(Strings.DailyChallengeProgress(ctx.Guild.Id, challenge.Progress,
+                challenge.RequiredAmount))
+            .AddDescriptionLine(
                 Strings.DailyChallengeReward(ctx.Guild.Id, challenge.RewardAmount,
-                    await Service.GetCurrencyEmote(ctx.Guild.Id)), "", true);
+                    await Service.GetCurrencyEmote(ctx.Guild.Id)));
 
         if (challenge.Progress >= challenge.RequiredAmount)
         {
@@ -2491,9 +2493,9 @@ public partial class Currency(
     {
         var challenge = await dailyChallengeService.GetCurrentChallenge(ctx.User.Id, ctx.Guild.Id);
 
-        if (challenge == null)
+        if (challenge.IsCompleted)
         {
-            await ReplyAsync(Strings.DailyChallengeNoneAvailable(ctx.Guild.Id));
+            await ReplyErrorAsync(Strings.DailyChallengeAlreadyClaimed(ctx.Guild.Id));
             return;
         }
 
@@ -2503,20 +2505,19 @@ public partial class Currency(
             return;
         }
 
-        var reward = await dailyChallengeService.CompleteChallenge(ctx.User.Id, ctx.Guild.Id, challenge.ChallengeType);
+        var reward = await dailyChallengeService.ClaimChallenge(ctx.User.Id, ctx.Guild.Id);
 
-        if (reward > 0)
-        {
-            await Service.CreditAsync(ctx.User.Id, reward, Strings.DailyChallengeTransactionReward(ctx.Guild.Id),
-                CurrencyCategory.Challenge, ctx.Guild.Id, "challenge");
-
-            await ReplyConfirmAsync(Strings.DailyChallengeClaimed(ctx.Guild.Id, reward,
-                await Service.GetCurrencyEmote(ctx.Guild.Id)));
-        }
-        else
+        if (reward <= 0)
         {
             await ReplyErrorAsync(Strings.DailyChallengeAlreadyClaimed(ctx.Guild.Id));
+            return;
         }
+
+        await Service.CreditAsync(ctx.User.Id, reward, Strings.DailyChallengeTransactionReward(ctx.Guild.Id),
+            CurrencyCategory.Challenge, ctx.Guild.Id, "challenge");
+
+        await ReplyConfirmAsync(Strings.DailyChallengeClaimed(ctx.Guild.Id, reward,
+            await Service.GetCurrencyEmote(ctx.Guild.Id)));
     }
 
     /// <summary>

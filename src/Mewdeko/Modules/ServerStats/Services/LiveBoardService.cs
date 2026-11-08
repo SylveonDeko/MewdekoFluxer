@@ -124,6 +124,42 @@ public class LiveBoardService : INService, IReadyExecutor, IDisposable
     }
 
     /// <summary>
+    ///     Changes a live board's settings and refreshes its message.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="id">The board ID.</param>
+    /// <param name="kind">What to show.</param>
+    /// <param name="range">The window.</param>
+    /// <param name="entries">Rows for leaderboards.</param>
+    /// <param name="intervalMinutes">Refresh interval.</param>
+    /// <returns>The updated board, or null when it does not exist.</returns>
+    public async Task<LiveBoard?> UpdateAsync(SocketGuild guild, int id, LiveBoardKind kind, StatsRange range,
+        int entries, int intervalMinutes)
+    {
+        LiveBoard? board;
+        await using (var db = await dbFactory.CreateConnectionAsync())
+        {
+            board = await db.LiveBoards.FirstOrDefaultAsync(x => x.GuildId == guild.Id && x.Id == id);
+            if (board == null)
+                return null;
+
+            board.Kind = (int)kind;
+            board.Range = (int)range;
+            board.Entries = Math.Clamp(entries, 3, 25);
+            board.IntervalMinutes = Math.Max(MinimumIntervalMinutes, intervalMinutes);
+            await db.LiveBoards.Where(x => x.Id == id)
+                .Set(x => x.Kind, board.Kind)
+                .Set(x => x.Range, board.Range)
+                .Set(x => x.Entries, board.Entries)
+                .Set(x => x.IntervalMinutes, board.IntervalMinutes)
+                .UpdateAsync();
+        }
+
+        await RefreshAsync(guild, board);
+        return board;
+    }
+
+    /// <summary>
     ///     Deletes a live board and its message.
     /// </summary>
     /// <param name="guild">The guild.</param>
@@ -359,7 +395,7 @@ public class LiveBoardService : INService, IReadyExecutor, IDisposable
             case LiveBoardKind.InviteLeaderboard:
             {
                 var rows = await invites.GetInviteLeaderboardAsync(guild, range, limit: board.Entries);
-                var eb = new EmbedBuilder().WithOkColor()
+                var eb = new EmbedBuilder().WithOkColor(guild.Id)
                     .WithTitle($"{strings.InviteLeaderboardTitle(guild.Id)} ({range.DisplayName()})")
                     .WithDescription(rows.Count == 0
                         ? strings.NoInviteData(guild.Id)
@@ -376,7 +412,7 @@ public class LiveBoardService : INService, IReadyExecutor, IDisposable
                 var rows = await stats.GetTopUsersAsync(guild.Id, statKind, days, board.Entries);
                 var title = strings.StatsTopTitle(guild.Id, ServerStatsEmbeds.KindName(strings, guild.Id, statKind),
                     ServerStatsEmbeds.WindowName(days));
-                var eb = new EmbedBuilder().WithOkColor()
+                var eb = new EmbedBuilder().WithOkColor(guild.Id)
                     .WithTitle(title)
                     .WithDescription(rows.Count == 0
                         ? strings.StatsNoData(guild.Id)
@@ -405,7 +441,7 @@ public class LiveBoardService : INService, IReadyExecutor, IDisposable
             case LiveBoardKind.InviteStats:
             {
                 var analytics = await invites.GetAnalyticsAsync(guild, range);
-                var eb = new EmbedBuilder().WithOkColor()
+                var eb = new EmbedBuilder().WithOkColor(guild.Id)
                     .WithTitle(strings.InviteStatsTitle(guild.Id, range.DisplayName()))
                     .AddField(strings.InviteStatsJoins(guild.Id), analytics.Joins.ToString("N0"), true)
                     .AddField(strings.InviteStatsLeaves(guild.Id), analytics.Leaves.ToString("N0"), true)

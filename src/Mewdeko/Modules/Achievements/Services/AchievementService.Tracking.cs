@@ -1,4 +1,5 @@
 using System.Threading;
+using Mewdeko.Common;
 using System.Text.RegularExpressions;
 using LinqToDB.Async;
 using Mewdeko.Modules.Achievements.Common;
@@ -50,6 +51,11 @@ public sealed partial class AchievementService
         eventHandler.GuildMemberUpdated.Subscribe(EventModuleName, OnGuildMemberUpdatedAsync);
         eventHandler.XpLevelChanged.Subscribe(EventModuleName, OnXpLevelChangedAsync);
         eventHandler.LeftGuild.Subscribe(EventModuleName, OnLeftGuildAsync);
+        eventHandler.ThreadCreated.Subscribe(EventModuleName, OnThreadCreatedAsync);
+        eventHandler.ThreadMembersAdded.Subscribe(EventModuleName, OnThreadMembersAddedAsync);
+        eventHandler.GiveawayEntered.Subscribe(EventModuleName, OnGiveawayEnteredAsync);
+        eventHandler.ShopItemPurchased.Subscribe(EventModuleName, OnShopItemPurchasedAsync);
+        eventHandler.BirthdaySet.Subscribe(EventModuleName, OnBirthdaySetAsync);
         commandHandler.CommandExecuted += OnTextCommandExecutedAsync;
     }
 
@@ -63,6 +69,11 @@ public sealed partial class AchievementService
         eventHandler.GuildMemberUpdated.Unsubscribe(EventModuleName, OnGuildMemberUpdatedAsync);
         eventHandler.XpLevelChanged.Unsubscribe(EventModuleName, OnXpLevelChangedAsync);
         eventHandler.LeftGuild.Unsubscribe(EventModuleName, OnLeftGuildAsync);
+        eventHandler.ThreadCreated.Unsubscribe(EventModuleName, OnThreadCreatedAsync);
+        eventHandler.ThreadMembersAdded.Unsubscribe(EventModuleName, OnThreadMembersAddedAsync);
+        eventHandler.GiveawayEntered.Unsubscribe(EventModuleName, OnGiveawayEnteredAsync);
+        eventHandler.ShopItemPurchased.Unsubscribe(EventModuleName, OnShopItemPurchasedAsync);
+        eventHandler.BirthdaySet.Unsubscribe(EventModuleName, OnBirthdaySetAsync);
         commandHandler.CommandExecuted -= OnTextCommandExecutedAsync;
     }
 
@@ -470,6 +481,63 @@ public sealed partial class AchievementService
         return Task.CompletedTask;
     }
 
+    private void CountActivity(SocketGuildMember? user, Action<CounterDelta> count, ulong earnChannelId = 0,
+        ulong announceChannelId = 0)
+    {
+        if (user is null || user.IsBot || !CanEarn(user, earnChannelId))
+            return;
+
+        count(counterDeltas.GetOrAdd((user.Guild.Id, user.Id), _ => new CounterDelta()));
+        MarkDirty(user.Guild.Id, user.Id, AchievementDirty.Activity, announceChannelId);
+    }
+
+    private Task OnThreadCreatedAsync(ThreadChannel thread)
+    {
+        if (thread.OwnerId is { } ownerId && client.GetGuild(thread.GuildId ?? 0) is { } guild)
+        {
+            CountActivity(guild.GetUser(ownerId), delta => delta.AddThreadCreated(), thread.ParentId ?? thread.Id,
+                thread.Id);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task OnThreadMembersAddedAsync(Cacheable<ThreadChannel> cached, ThreadMember[] members)
+    {
+        var thread = await cached.GetOrDownloadAsync().ConfigureAwait(false);
+        if (thread is null || client.GetGuild(thread.GuildId ?? 0) is not { } guild)
+            return;
+
+        foreach (var added in members.Where(m => m.Id != thread.OwnerId))
+        {
+            CountActivity(guild.GetUser(added.Id), delta => delta.AddThreadJoined(), thread.ParentId ?? thread.Id,
+                thread.Id);
+        }
+    }
+
+    private Task OnGiveawayEnteredAsync(MemberActivityEventArgs args)
+    {
+        CountActivity(client.GetGuild(args.GuildId)?.GetUser(args.UserId), delta => delta.AddGiveaway());
+        return Task.CompletedTask;
+    }
+
+    private Task OnShopItemPurchasedAsync(MemberActivityEventArgs args)
+    {
+        CountActivity(client.GetGuild(args.GuildId)?.GetUser(args.UserId), delta => delta.AddPurchase());
+        return Task.CompletedTask;
+    }
+
+    private Task OnBirthdaySetAsync(MemberActivityEventArgs args)
+    {
+        foreach (var guild in client.Guilds)
+        {
+            if (guild.GetUser(args.UserId) is { } member && CanEarn(member))
+                MarkDirty(guild.Id, member.Id, AchievementDirty.Birthday);
+        }
+
+        return Task.CompletedTask;
+    }
+
     private Task OnTextCommandExecutedAsync(Message message, CommandInfo command)
     {
         if (message is SocketMessage { Member: { } user, Channel: { } channel })
@@ -549,12 +617,40 @@ public sealed partial class AchievementService
     }
 
     /// <summary>
-    ///     Voice counters waiting to be written.
+    ///     Counts waiting to be written.
+    /// </summary>
+    /// <param name="Joins">Voice joins.</param>
+    /// <param name="Muted">Seconds muted in voice.</param>
+    /// <param name="ThreadsCreated">Threads created.</param>
+    /// <param name="ThreadsJoined">Threads joined.</param>
+    /// <param name="Giveaways">Giveaways entered.</param>
+    /// <param name="Purchases">Shop purchases.</param>
+    private readonly record struct CounterTotals(
+        long Joins,
+        long Muted,
+        long ThreadsCreated,
+        long ThreadsJoined,
+        long Giveaways,
+        long Purchases)
+    {
+        /// <summary>
+        ///     Whether anything is waiting.
+        /// </summary>
+        public bool Any => Joins > 0 || Muted > 0 || ThreadsCreated > 0 || ThreadsJoined > 0 || Giveaways > 0 ||
+                           Purchases > 0;
+    }
+
+    /// <summary>
+    ///     Counters waiting to be written.
     /// </summary>
     private sealed class CounterDelta
     {
+        private long giveaways;
         private long joins;
         private long muted;
+        private long purchases;
+        private long threadsCreated;
+        private long threadsJoined;
 
         /// <summary>
         ///     Counts a voice join.
@@ -574,21 +670,57 @@ public sealed partial class AchievementService
         }
 
         /// <summary>
+        ///     Counts a created thread.
+        /// </summary>
+        public void AddThreadCreated()
+        {
+            Interlocked.Increment(ref threadsCreated);
+        }
+
+        /// <summary>
+        ///     Counts a joined thread.
+        /// </summary>
+        public void AddThreadJoined()
+        {
+            Interlocked.Increment(ref threadsJoined);
+        }
+
+        /// <summary>
+        ///     Counts an entered giveaway.
+        /// </summary>
+        public void AddGiveaway()
+        {
+            Interlocked.Increment(ref giveaways);
+        }
+
+        /// <summary>
+        ///     Counts a shop purchase.
+        /// </summary>
+        public void AddPurchase()
+        {
+            Interlocked.Increment(ref purchases);
+        }
+
+        /// <summary>
         ///     Takes the pending counts and resets them.
         /// </summary>
-        /// <returns>The joins and muted seconds.</returns>
-        public (long Joins, long Muted) Take()
+        /// <returns>The pending counts.</returns>
+        public CounterTotals Take()
         {
-            return (Interlocked.Exchange(ref joins, 0), Interlocked.Exchange(ref muted, 0));
+            return new CounterTotals(Interlocked.Exchange(ref joins, 0), Interlocked.Exchange(ref muted, 0),
+                Interlocked.Exchange(ref threadsCreated, 0), Interlocked.Exchange(ref threadsJoined, 0),
+                Interlocked.Exchange(ref giveaways, 0), Interlocked.Exchange(ref purchases, 0));
         }
 
         /// <summary>
         ///     Reads the pending counts without resetting them.
         /// </summary>
-        /// <returns>The joins and muted seconds.</returns>
-        public (long Joins, long Muted) Peek()
+        /// <returns>The pending counts.</returns>
+        public CounterTotals Peek()
         {
-            return (Interlocked.Read(ref joins), Interlocked.Read(ref muted));
+            return new CounterTotals(Interlocked.Read(ref joins), Interlocked.Read(ref muted),
+                Interlocked.Read(ref threadsCreated), Interlocked.Read(ref threadsJoined),
+                Interlocked.Read(ref giveaways), Interlocked.Read(ref purchases));
         }
     }
 }

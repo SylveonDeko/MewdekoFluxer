@@ -35,6 +35,7 @@ namespace Mewdeko.Modules.Utility;
 /// <param name="cache"></param>
 /// <param name="logger">The logger instance for structured logging.</param>
 /// <param name="mediaConversionService">The media conversion service.</param>
+/// <param name="chatLogService">The chat log service.</param>
 public partial class Utility(
     FluxerClient client,
     IStatsService stats,
@@ -48,7 +49,8 @@ public partial class Utility(
     IDataConnectionFactory dbFactory,
     IDataCache cache,
     ILogger<Utility> logger,
-    MediaConversionService mediaConversionService)
+    MediaConversionService mediaConversionService,
+    ChatLogService chatLogService)
     : MewdekoModuleBase<UtilityService>
 {
     /// <summary>
@@ -242,72 +244,43 @@ public partial class Utility(
     }
 
     /// <summary>
-    ///     Saves the chat log of a channel. Public mewdeko saves this to the nginx cdn then sends you a link to display it on
-    ///     the cdn
+    ///     Saves the recent messages of a channel as a chat log you can open on the dashboard.
     /// </summary>
-    /// <param name="time"></param>
-    /// <param name="channel"></param>
+    /// <param name="time">How far back to save, up to 3 days.</param>
+    /// <param name="channel">The channel to save. Defaults to this one.</param>
+    /// <example>.savechat 1d #general</example>
     [Cmd]
     [Aliases]
     [RequireContext(ContextType.Guild)]
     [UserPerm(GuildPermission.ManageMessages)]
     public async Task SaveChat(StoopidTime time, TextChannel? channel = null)
     {
-        var curTime = DateTime.UtcNow.Subtract(time.Time);
-        if (!Directory.Exists(creds.ChatSavePath))
-        {
-            await ctx.Channel.SendErrorAsync(Strings.ChatSaveMissing(ctx.Guild.Id), Config);
-            return;
-        }
-
-        var secureString = StringExtensions.GenerateSecureString(16);
-        try
-        {
-            Directory.CreateDirectory($"{creds.ChatSavePath}/{ctx.Guild.Id}/{secureString}");
-        }
-        catch (Exception ex)
-        {
-            await ctx.Channel.SendErrorAsync(Strings.FailedToCreateDirectory(ctx.Guild.Id, ex.Message), Config)
-                .ConfigureAwait(false);
-            return;
-        }
-
         if (time.Time.Days > 3)
         {
             await ctx.Channel.SendErrorAsync(Strings.MaxTimeLimit(ctx.Guild.Id), Config);
             return;
         }
 
-        using var process = new Process();
-        process.StartInfo = new ProcessStartInfo
+        var target = channel ?? (TextChannel)ctx.Channel;
+        var after = DateTime.UtcNow.Subtract(time.Time);
+
+        await ctx.Channel.SendConfirmAsync(Strings.SavingChatLog(ctx.Guild.Id, config.Data.LoadingEmote));
+        await ctx.Channel.TriggerTypingAsync().ConfigureAwait(false);
+
+        var messages = await ChatLogService.FetchMessagesAsync(target, after).ConfigureAwait(false);
+        if (messages.Count == 0)
         {
-            Arguments =
-                $"../ChatExporter/DiscordChatExporter.Cli.dll export -t {creds.Token} -c {channel?.Id ?? ctx.Channel.Id} --after {curTime:yyyy-MM-ddTHH:mm:ssZ} --output \"{creds.ChatSavePath}/{ctx.Guild.Id}/{secureString}/{ctx.Guild.Name.Replace(" ", "-")}-{(channel?.Name ?? ctx.Channel.Name).Replace(" ", "-")}-{curTime:yyyy-MM-ddTHH-mm-ssZ}.html\" --media true",
-            FileName = "dotnet",
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            CreateNoWindow = true
-        };
-        using (ctx.Channel.EnterTypingState())
-        {
-            process.Start();
-            await ctx.Channel.SendConfirmAsync(
-                Strings.SavingChatLog(ctx.Guild.Id, config.Data.LoadingEmote));
+            await ctx.Channel.SendErrorAsync(Strings.ChatLogEmpty(ctx.Guild.Id), Config);
+            return;
         }
 
-        await process.WaitForExitAsync().ConfigureAwait(false);
-        if (creds.ChatSavePath.Contains("/usr/share/nginx/cdn"))
-        {
-            var fileName =
-                $"{ctx.Guild.Name.Replace(" ", "-")}-{(channel?.Name ?? ctx.Channel.Name).Replace(" ", "-")}-{curTime:yyyy-MM-ddTHH-mm-ssZ}.html";
-            await ctx.User.SendConfirmAsync(
-                    Strings.ChatLogUrlCdn(ctx.Guild.Id, ctx.Guild.Id, secureString, fileName))
-                .ConfigureAwait(false);
-        }
-        else
-            await ctx.Channel
-                .SendConfirmAsync(Strings.ChatLogUrlLocal(ctx.Guild.Id, creds.ChatSavePath, ctx.Guild.Id, secureString))
-                .ConfigureAwait(false);
+        await chatLogService.SaveChatLogAsync(ctx.Guild.Id, target.Id, target.Name,
+            $"{target.Name} {after:yyyy-MM-dd HH-mm}", ctx.User.Id, messages).ConfigureAwait(false);
+
+        var dashboard = string.IsNullOrWhiteSpace(creds.DashboardUrl) ? "" : creds.DashboardUrl.TrimEnd('/');
+        await ctx.Channel
+            .SendConfirmAsync(Strings.ChatLogSaved(ctx.Guild.Id, messages.Count, $"{dashboard}/dashboard/chatsaver"))
+            .ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1345,7 +1318,7 @@ public partial class Utility(
     {
         await ctx.Channel.EmbedAsync(new EmbedBuilder().WithOkColor()
                 .WithDescription(
-                    "Vote here for Mewdeko!\n[Vote Link](https://top.gg/bot/752236274261426212)\nMake sure to join the support community!\n[Link](https://mewdeko.tech/support)"))
+                    $"Vote here for Mewdeko!\n[Vote Link](https://fluxerlist.com/bots/{client.CurrentUser.Id})\nMake sure to join the support community!\n[Link](https://mewdeko.tech/support)"))
             .ConfigureAwait(false);
     }
 

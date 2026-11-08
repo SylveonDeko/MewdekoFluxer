@@ -2,6 +2,7 @@ using System.Net.Http;
 using DataModel;
 using LinqToDB;
 using LinqToDB.Async;
+using Mewdeko.Database.Enums;
 using Mewdeko.Modules.Achievements.Common;
 using Mewdeko.Services.Impl;
 using SkiaSharp;
@@ -42,6 +43,16 @@ public sealed class AchievementIconService : INService
     ///     Most card images a server keeps.
     /// </summary>
     public const int MaxCardUploads = 30;
+
+    /// <summary>
+    ///     Upload kind of backgrounds members upload for their own designs.
+    /// </summary>
+    public const short MemberCardKind = 2;
+
+    /// <summary>
+    ///     Most member design backgrounds a community keeps, approved or waiting.
+    /// </summary>
+    public const int MaxMemberCardUploads = 200;
 
     /// <summary>
     ///     Longest side of a stored card image, in pixels.
@@ -93,16 +104,24 @@ public sealed class AchievementIconService : INService
         if (bytes.Length == 0 || bytes.Length > MaxUploadBytes)
             return AchievementResult<AchievementIconUpload>.Fail(AchievementError.IconInvalid);
 
-        var png = Normalize(bytes, kind == CardKind ? CardImageSize : IconSize);
+        var png = Normalize(bytes, kind is CardKind or MemberCardKind ? CardImageSize : IconSize);
         if (png is null)
             return AchievementResult<AchievementIconUpload>.Fail(AchievementError.IconInvalid);
 
         await using var db = await dbFactory.CreateConnectionAsync();
-        var limit = kind == CardKind ? MaxCardUploads : MaxUploads;
+        var limit = kind switch
+        {
+            CardKind => MaxCardUploads,
+            MemberCardKind => MaxMemberCardUploads,
+            _ => MaxUploads
+        };
         if (await db.AchievementIconUploads.CountAsync(x => x.GuildId == guildId && x.Kind == kind) >= limit)
-            return AchievementResult<AchievementIconUpload>.Fail(kind == CardKind
-                ? AchievementError.TooManyCardImages
-                : AchievementError.TooManyUploads);
+            return AchievementResult<AchievementIconUpload>.Fail(kind switch
+            {
+                CardKind => AchievementError.TooManyCardImages,
+                MemberCardKind => AchievementError.TooManyMemberImages,
+                _ => AchievementError.TooManyUploads
+            });
 
         var row = new AchievementIconUpload
         {
@@ -114,16 +133,74 @@ public sealed class AchievementIconService : INService
         };
         row.Id = await db.InsertWithInt32IdentityAsync(row);
 
-        row.PublicUrl = await PublishAsync(guildId, row.Id, png);
-        if (row.PublicUrl is not null)
+        if (kind != MemberCardKind)
         {
-            await db.AchievementIconUploads.Where(x => x.Id == row.Id)
-                .Set(x => x.PublicUrl, row.PublicUrl)
-                .UpdateAsync();
+            row.PublicUrl = await PublishAsync(guildId, row.Id, png);
+            if (row.PublicUrl is not null)
+            {
+                await db.AchievementIconUploads.Where(x => x.Id == row.Id)
+                    .Set(x => x.PublicUrl, row.PublicUrl)
+                    .UpdateAsync();
+            }
         }
 
         achievements.RefreshCatalog(guildId);
         return AchievementResult<AchievementIconUpload>.Ok(row);
+    }
+
+    /// <summary>
+    ///     Publishes an approved member upload to the CDN.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <param name="id">The upload ID.</param>
+    public async Task PublishApprovedAsync(ulong guildId, int id)
+    {
+        if (!cdn.IsConfigured)
+            return;
+
+        var png = await GetBytesAsync(guildId, id);
+        if (png is null)
+            return;
+
+        var url = await PublishAsync(guildId, id, png);
+        if (url is null)
+            return;
+
+        await using var db = await dbFactory.CreateConnectionAsync();
+        await db.AchievementIconUploads.Where(x => x.GuildId == guildId && x.Id == id)
+            .Set(x => x.PublicUrl, url)
+            .UpdateAsync();
+    }
+
+    /// <summary>
+    ///     Whether an upload may be served to anyone. Member uploads only are once a moderator approved them.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <param name="id">The upload ID.</param>
+    /// <returns>True when it is public.</returns>
+    public async Task<bool> IsPublicAsync(ulong guildId, int id)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+        var kind = await db.AchievementIconUploads.Where(x => x.GuildId == guildId && x.Id == id)
+            .Select(x => (short?)x.Kind)
+            .FirstOrDefaultAsync();
+        if (kind != MemberCardKind)
+            return true;
+
+        return await db.CardDesigns.AnyAsync(x =>
+            x.GuildId == guildId && x.UploadId == id && x.ReviewStatus == (short)CardDesignReview.Approved);
+    }
+
+    /// <summary>
+    ///     How many uploads of a kind a community holds.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <param name="kind">The upload kind.</param>
+    /// <returns>The count.</returns>
+    public async Task<int> CountAsync(ulong guildId, short kind)
+    {
+        await using var db = await dbFactory.CreateConnectionAsync();
+        return await db.AchievementIconUploads.CountAsync(x => x.GuildId == guildId && x.Kind == kind);
     }
 
     /// <summary>

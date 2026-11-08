@@ -234,7 +234,7 @@ public partial class ReplacementBuilder
         reps.TryAdd("%dancegif%", () => nekosBestApi.ActionsApi.Dance().GetAwaiter().GetResult().Results.First().Url);
         reps.TryAdd("%facepalmgif%",
             () => nekosBestApi.ActionsApi.Facepalm().GetAwaiter().GetResult().Results.First().Url);
-        reps.TryAdd("%feedgif", () => nekosBestApi.ActionsApi.Feed().GetAwaiter().GetResult().Results.First().Url);
+        reps.TryAdd("%feedgif%", () => nekosBestApi.ActionsApi.Feed().GetAwaiter().GetResult().Results.First().Url);
         reps.TryAdd("%handholdgif%",
             () => nekosBestApi.ActionsApi.Handhold().GetAwaiter().GetResult().Results.First().Url);
         reps.TryAdd("%happygif%", () => nekosBestApi.ActionsApi.Happy().GetAwaiter().GetResult().Results.First().Url);
