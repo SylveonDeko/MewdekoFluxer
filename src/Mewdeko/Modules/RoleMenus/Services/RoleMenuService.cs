@@ -1843,7 +1843,7 @@ public class RoleMenuService : INService, IReadyExecutor, IUnloadableService
     /// </summary>
     /// <param name="cached">The message.</param>
     /// <param name="emote">The reaction to remove.</param>
-    /// <param name="member">The member whose reaction it is.</param>
+    /// <param name="memberId">The member whose reaction it is.</param>
     /// <returns>A task that completes when the attempt is done.</returns>
     private async Task RemoveMemberReactionAsync(Cacheable<Message> cached, IEmoji emote, ulong memberId)
     {

@@ -67,6 +67,7 @@ public class GiveawayService : INService, IDisposable
     /// <param name="collector">The analytics collector.</param>
     /// <param name="currencyService">The currency service, used to pay coin prizes.</param>
     /// <param name="xpService">The XP service, used to pay XP prizes.</param>
+    /// <param name="eventHandler">The gateway event handler.</param>
     public GiveawayService(
         FluxerClient client,
         IDataConnectionFactory dbFactory,
@@ -431,6 +432,9 @@ public class GiveawayService : INService, IDisposable
     /// <param name="banner">Optional: The URL of the banner for the giveaway.</param>
     /// <param name="pingRole">Optional: The role to ping for the giveaway.</param>
     /// <param name="messageCount">Minimum message count required to enter.</param>
+    /// <param name="extraEntryRoles">Optional: Roles that earn extra entries.</param>
+    /// <param name="prizeType">The kind of prize paid out, 0 for none.</param>
+    /// <param name="prizeAmount">The amount paid out for a coin or XP prize.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task GiveawaysInternal(
         Channel chan,

@@ -100,7 +100,7 @@ public class XpVoiceTracker : INService, IDisposable
     /// <summary>
     ///     Handles voice state updates for voice XP tracking.
     /// </summary>
-    /// <param name="user">The user whose voice state changed.</param>
+    /// <param name="guildUser">The user whose voice state changed.</param>
     /// <param name="before">The previous voice state.</param>
     /// <param name="after">The new voice state.</param>
     /// <returns>A task representing the asynchronous operation.</returns>

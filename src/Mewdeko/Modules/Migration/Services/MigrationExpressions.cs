@@ -52,6 +52,7 @@ public sealed partial class MigrationExpressions(
     ///     Uploads the export's emojis and stickers that the Fluxer server does not have yet.
     /// </summary>
     /// <param name="plan">The prepared migration, whose emoji pairs grow with every upload.</param>
+    /// <param name="progress">Receives progress updates, if given.</param>
     /// <returns>What was copied.</returns>
     public async Task<ExpressionOutcome> CopyAsync(MigrationPlan plan, MigrationProgress? progress = null)
     {

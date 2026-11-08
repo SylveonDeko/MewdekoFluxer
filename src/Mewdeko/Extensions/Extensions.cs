@@ -92,7 +92,7 @@ public static partial class Extensions
     public static bool IsValidAttachment(this IReadOnlyCollection<IAttachment> attachments)
     {
         var first = attachments.FirstOrDefault();
-        return first != null && first.Url.CheckIfMusicUrl();
+        return first?.Url != null && first.Url.CheckIfMusicUrl();
     }
 
     /// <summary>

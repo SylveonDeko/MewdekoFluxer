@@ -28,7 +28,7 @@ public class ActivityTotal
     public string Name { get; set; } = "";
 
     /// <summary>
-    ///     The Discord <see cref="Discord.ActivityType" /> value.
+    ///     The Discord activity type value.
     /// </summary>
     [Column("Type")]
     public int Type { get; set; }

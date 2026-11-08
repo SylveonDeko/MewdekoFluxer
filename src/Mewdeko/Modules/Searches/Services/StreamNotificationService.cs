@@ -915,6 +915,7 @@ public class StreamNotificationService : IReadyExecutor, INService
     /// <param name="stream">The stream data.</param>
     /// <param name="followedStream">The followed stream configuration.</param>
     /// <param name="guildId">The guild ID for localization.</param>
+    /// <param name="duration">How long the stream has been live, if known.</param>
     /// <returns>A replacement builder with stream placeholders.</returns>
     private ReplacementBuilder CreateStreamReplacer(StreamData stream, FollowedStream followedStream, ulong guildId,
         TimeSpan? duration = null)
@@ -1177,6 +1178,9 @@ public class StreamNotificationService : IReadyExecutor, INService
     private async Task ModifyAsync(Channel channel, ulong messageId, MessagePayload payload)
     {
         var message = await channel.GetMessageAsync(messageId);
+        if (message is null)
+            return;
+
         await message.ModifyAsync(props =>
         {
             props.Content = payload.Text ?? string.Empty;

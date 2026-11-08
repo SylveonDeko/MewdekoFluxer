@@ -9,8 +9,8 @@ public partial class Administration
     /// <summary>
     ///     Commands for saving this community's structure as a template and applying templates to a community.
     /// </summary>
-    [Group]
     /// <param name="backups">The server backup service, which runs the restore.</param>
+    [Group]
     public class ServerTemplateCommands(ServerBackupService backups) : MewdekoSubmodule<ServerTemplateService>
     {
         /// <summary>

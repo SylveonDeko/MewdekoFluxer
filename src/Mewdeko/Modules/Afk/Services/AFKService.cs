@@ -53,6 +53,8 @@ public class AfkService : INService, IReadyExecutor, IDisposable
     /// <param name="strings">The localization service.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     /// <param name="collector">The analytics collector.</param>
+    /// <param name="welcomeCards">The welcome card service.</param>
+    /// <param name="inbox">The AFK inbox service.</param>
     public AfkService(
         IDataConnectionFactory dbFactory,
         FluxerClient client,

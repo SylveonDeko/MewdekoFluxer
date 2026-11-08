@@ -962,6 +962,7 @@ public class CoprMonitoringService : INService, IReadyExecutor, IDisposable
     ///     Gets the appropriate color for the build status.
     /// </summary>
     /// <param name="status">The build status.</param>
+    /// <param name="guildId">The guild to resolve the color for.</param>
     /// <returns>The Discord color.</returns>
     private Color GetColorForStatus(CoprBuildStatus status, ulong? guildId)
     {

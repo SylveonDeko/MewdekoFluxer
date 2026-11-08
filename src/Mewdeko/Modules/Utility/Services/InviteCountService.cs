@@ -54,6 +54,7 @@ public class InviteCountService : INService, IReadyExecutor
     /// <param name="logger">The logger instance for structured logging.</param>
     /// <param name="collector">The analytics collector.</param>
     /// <param name="strings">Localized strings for log channel embeds.</param>
+    /// <param name="inviteRoles">The invite role service.</param>
     public InviteCountService(EventHandler handler, IDataConnectionFactory dbFactory, FluxerClient client,
         ILogger<InviteCountService> logger, IAnalyticsCollector collector, GeneratedBotStrings strings,
         InviteRoleService inviteRoles)

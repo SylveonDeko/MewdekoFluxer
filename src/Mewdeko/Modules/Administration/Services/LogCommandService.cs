@@ -928,7 +928,7 @@ public class LogCommandService(
     /// <summary>
     ///     Handles the event when a thread gets deleted.
     /// </summary>
-    /// <param name="args">The cached thread. May return null. See <see cref="Cacheable{TEntity,TId}" /></param>
+    /// <param name="args">The cached thread. May return null.</param>
     private async Task OnThreadDeleted(Cacheable<ThreadChannel> args)
     {
         if (!args.HasValue) return;
@@ -961,7 +961,7 @@ public class LogCommandService(
     /// <summary>
     ///     Handles the event when a thread is updated.
     /// </summary>
-    /// <param name="cacheable">The cached thread. May return null. See <see cref="Cacheable{TEntity,TId}" /></param>
+    /// <param name="cacheable">The cached thread. May return null.</param>
     /// <param name="arsg2">The updated thread.</param>
     private async Task OnThreadUpdated(Cacheable<ThreadChannel> cacheable, ThreadChannel arsg2)
     {
@@ -1074,8 +1074,8 @@ public class LogCommandService(
     /// <summary>
     ///     Handles the event when a message is deleted.
     /// </summary>
-    /// <param name="args">The cached message. May return null. See <see cref="Cacheable{TEntity,TId}" /></param>
-    /// <param name="arsg2">The channel where the message was deleted</param>
+    /// <param name="args">The cached message. May return null.</param>
+    /// <param name="guildChannel">The channel where the message was deleted</param>
     private async Task OnMessageDeleted(Cacheable<Message> args, Channel guildChannel)
     {
         // Get message from cache if available
@@ -1631,7 +1631,7 @@ public class LogCommandService(
     /// <summary>
     ///     Handles the event when voice state is updated.
     /// </summary>
-    /// <param name="user">The user that had their voice state updated.</param>
+    /// <param name="guildUser">The user that had their voice state updated.</param>
     /// <param name="oldState">The voice state before the update.</param>
     /// <param name="newState">The voice state after the update.</param>
     private async Task OnVoicePresence(SocketGuildMember guildUser, VoiceStateSnapshot oldState,
@@ -1743,7 +1743,7 @@ public class LogCommandService(
     /// <summary>
     ///     Handles the event when a user says something using tts in a channel.
     /// </summary>
-    /// <param name="user">The user that used tts.</param>
+    /// <param name="guildUser">The user that used tts.</param>
     /// <param name="oldState">The voice state before the update.</param>
     /// <param name="newState">The voice state after the update.</param>
     private async Task OnVoicePresenceTts(SocketGuildMember guildUser, VoiceStateSnapshot oldState,
@@ -2979,7 +2979,7 @@ public class LogCommandService(
     ///     Handles the event when messages are bulk deleted.
     /// </summary>
     /// <param name="messages">The collection of deleted messages.</param>
-    /// <param name="channel">The channel where messages were deleted.</param>
+    /// <param name="guildChannel">The channel where messages were deleted.</param>
     private async Task OnMessagesBulkDeleted(IReadOnlyCollection<Cacheable<Message>> messages,
         Channel guildChannel)
     {
@@ -3021,7 +3021,7 @@ public class LogCommandService(
     ///     Handles the event when a reaction is added to a message.
     /// </summary>
     /// <param name="message">The cached message.</param>
-    /// <param name="channel">The channel containing the message.</param>
+    /// <param name="guildChannel">The channel containing the message.</param>
     /// <param name="reaction">The reaction that was added.</param>
     private Task OnReactionAdded(Cacheable<Message> message, Channel guildChannel,
         SocketReaction reaction)
@@ -3042,7 +3042,7 @@ public class LogCommandService(
     ///     Handles the event when a reaction is removed from a message.
     /// </summary>
     /// <param name="message">The cached message.</param>
-    /// <param name="channel">The channel containing the message.</param>
+    /// <param name="guildChannel">The channel containing the message.</param>
     /// <param name="reaction">The reaction that was removed.</param>
     private Task OnReactionRemoved(Cacheable<Message> message, Channel guildChannel,
         SocketReaction reaction)

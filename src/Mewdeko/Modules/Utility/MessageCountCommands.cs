@@ -435,7 +435,7 @@ public partial class Utility
         }
 
         /// <summary>
-        ///     Overload for <see cref="ResetMessageCounts(Discord.IUser?,Discord.Channel?)" />
+        ///     Overload for <see cref="ResetMessageCounts(IUser,TextChannel)" />
         /// </summary>
         /// <param name="channel">Optional: The channel to reset message counts in.</param>
         /// <returns>A task that represents the asynchronous operation.</returns>

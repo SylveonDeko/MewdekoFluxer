@@ -1942,6 +1942,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// <param name="key">The trigger key.</param>
     /// <param name="message">The trigger message.</param>
     /// <param name="regex">A boolean indicating whether the trigger uses regex.</param>
+    /// <param name="creatorId">The ID of the user creating the trigger.</param>
     /// <returns>The added chat trigger.</returns>
     public async Task<CTModel?> AddAsync(ulong? guildId, string key, string? message, bool regex, ulong creatorId = 0)
     {
@@ -2673,6 +2674,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     /// </summary>
     /// <param name="guild">The guild the member left.</param>
     /// <param name="user">The member that left.</param>
+    /// <param name="member">The cached member snapshot, if any.</param>
     private Task OnUserLeft(SocketGuild guild, User user, MemberSnapshot? member)
     {
         return FireEventTriggersAsync(guild.Id, CtEventType.MemberLeave, user);
@@ -3865,6 +3867,7 @@ public sealed class ChatTriggersService : IEarlyBehavior, INService, IReadyExecu
     ///     Executes a reaction-based trigger.
     /// </summary>
     /// <param name="ct">The trigger to execute.</param>
+    /// <param name="responses">The responses to pick from.</param>
     /// <param name="guild">The guild where the reaction occurred.</param>
     /// <param name="channel">The channel where the reaction occurred.</param>
     /// <param name="user">The user who reacted.</param>
