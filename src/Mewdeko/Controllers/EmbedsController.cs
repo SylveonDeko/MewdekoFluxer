@@ -483,10 +483,14 @@ public class EmbedsController(
 
         // Anything that isn't a recognised embed payload is sent as plain message content, matching how
         // the rest of the bot treats embed strings.
-        if (!SmartEmbed.TryParse(request.JsonCode, guildId, out var embeds, out var plainText))
+        var rendered = new ReplacementBuilder()
+            .WithDefault(user, channel, guild, client)
+            .Build()
+            .Replace(request.JsonCode) ?? request.JsonCode;
+        if (!SmartEmbed.TryParse(rendered, guildId, out var embeds, out var plainText))
         {
             embeds = null;
-            plainText = request.JsonCode;
+            plainText = rendered;
         }
 
         if (string.IsNullOrWhiteSpace(plainText) && (embeds == null || embeds.Length == 0))
