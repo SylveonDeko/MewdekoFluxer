@@ -33,6 +33,10 @@ public class AfkService : INService, IReadyExecutor, IDisposable
     private readonly ConcurrentDictionary<ulong, DateTime> recentlyProcessedMessages = new();
     private readonly GeneratedBotStrings strings;
     private readonly WelcomeCardService welcomeCards;
+    private readonly AfkInboxService inbox;
+    private const string NotifyEmoji = "🔔";
+    private readonly ConcurrentDictionary<ulong, (ulong GuildId, ulong AwayId, DateTime Expires)> notifyMessages = new();
+    private readonly ConcurrentDictionary<(ulong GuildId, ulong UserId), ConcurrentDictionary<ulong, byte>> returnNotify = new();
     private bool isDisposed;
     private bool isInitialized;
 
@@ -57,9 +61,10 @@ public class AfkService : INService, IReadyExecutor, IDisposable
         EventHandler eventHandler,
         BotConfigService config,
         GeneratedBotStrings strings, ILogger<AfkService> logger, IAnalyticsCollector collector,
-        WelcomeCardService welcomeCards)
+        WelcomeCardService welcomeCards, AfkInboxService inbox)
     {
         this.welcomeCards = welcomeCards;
+        this.inbox = inbox;
         this.collector = collector;
         this.cache = cache;
         this.guildSettings = guildSettings;
@@ -73,6 +78,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
         this.eventHandler.MessageReceived.Subscribe("AFKService", MessageReceived);
         this.eventHandler.MessageUpdated.Subscribe("AFKService", MessageUpdated);
         this.eventHandler.UserIsTyping.Subscribe("AFKService", UserTyping);
+        this.eventHandler.ReactionAdded.Subscribe("AFKService", OnNotifyReactionAsync);
 
         cleanupTimer = new Timer(async _ => await CleanupTimersAsync().ConfigureAwait(false), null,
             TimeSpan.FromMinutes(30), TimeSpan.FromMinutes(30));
@@ -209,6 +215,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
         if (string.IsNullOrEmpty(message))
         {
             await cache.RemoveAsync($"{guildId}:{userId}");
+            _ = SendReturnNotifiesAsync(guildId, userId);
         }
         else
         {
@@ -294,6 +301,100 @@ public class AfkService : INService, IReadyExecutor, IDisposable
         if (guildConfig == null) return;
         guildConfig.AfkTimeout = num;
         await guildSettings.UpdateGuildConfig(guild.Id, guildConfig);
+    }
+
+    /// <summary>
+    ///     Sets whether AFK replies carry a reaction to be told when the member returns.
+    /// </summary>
+    /// <param name="guild">The guild.</param>
+    /// <param name="enabled">Whether to add the reaction.</param>
+    public async Task AfkNotifyButtonSet(SocketGuild guild, bool enabled)
+    {
+        var guildConfig = await guildSettings.GetGuildConfig(guild.Id);
+        if (guildConfig == null) return;
+        guildConfig.AfkNotifyButton = enabled;
+        await guildSettings.UpdateGuildConfig(guild.Id, guildConfig);
+    }
+
+    /// <summary>
+    ///     Gets whether AFK replies carry the notify reaction.
+    /// </summary>
+    /// <param name="guildId">The guild ID.</param>
+    /// <returns>True when the reaction is added.</returns>
+    public async Task<bool> GetAfkNotifyButton(ulong guildId)
+    {
+        return (await GetGuildConfigCached(guildId))?.AfkNotifyButton ?? false;
+    }
+
+    private async Task PromptInboxAsync(Channel channel, SocketGuildMember user)
+    {
+        try
+        {
+            var count = await inbox.CountAsync(user.GuildId, user.Id);
+            if (count == 0) return;
+            var prefix = await guildSettings.GetPrefix(user.Guild);
+            var prompt = await channel.SendAsync(strings.AfkInboxPromptText(user.GuildId, user.Mention, count, prefix));
+            prompt.DeleteAfter(120);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Could not show the AFK inbox prompt in {GuildId}", user.GuildId);
+        }
+    }
+
+    private async Task OfferReturnNotifyAsync(Message? sent, ulong guildId, ulong awayId, bool enabled)
+    {
+        if (!enabled || sent is null)
+            return;
+        notifyMessages[sent.Id] = (guildId, awayId, DateTime.UtcNow.AddHours(12));
+        try
+        {
+            await sent.AddReactionAsync(NotifyEmoji.ToIEmote());
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Could not add the AFK notify reaction in {GuildId}", guildId);
+        }
+    }
+
+    private Task OnNotifyReactionAsync(Cacheable<Message> message, Channel channel, SocketReaction reaction)
+    {
+        if (reaction.User is { IsBot: true } || reaction.Emoji.Name != NotifyEmoji ||
+            !notifyMessages.TryGetValue(message.Id, out var entry))
+            return Task.CompletedTask;
+        if (entry.Expires < DateTime.UtcNow)
+        {
+            notifyMessages.TryRemove(message.Id, out _);
+            return Task.CompletedTask;
+        }
+
+        returnNotify.GetOrAdd((entry.GuildId, entry.AwayId), _ => new ConcurrentDictionary<ulong, byte>())
+            [reaction.UserId] = 0;
+        return Task.CompletedTask;
+    }
+
+    private async Task SendReturnNotifiesAsync(ulong guildId, ulong userId)
+    {
+        if (!returnNotify.TryRemove((guildId, userId), out var requesters))
+            return;
+        var guild = client.GetGuild(guildId);
+        var member = guild?.GetUser(userId);
+        if (guild is null || member is null)
+            return;
+        foreach (var requesterId in requesters.Keys)
+        {
+            try
+            {
+                var requester = await guild.GetUserAsync(requesterId);
+                if (requester is null) continue;
+                var dm = await requester.CreateDMChannelAsync();
+                await dm.SendAsync(strings.AfkNotifyBack(guildId, member.ToString(), guild.Name));
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "Could not DM {RequesterId} about {UserId} returning", requesterId, userId);
+            }
+        }
     }
 
     /// <summary>
@@ -685,6 +786,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
                                 .SendAsync(strings.WelcomeBackAfk(user.Guild.Id, user.Mention))
                                 .ConfigureAwait(false);
                             notifyMsg.DeleteAfter(5);
+                            _ = PromptInboxAsync(msg.Channel, user);
                             try
                             {
                                 if (user.Nickname?.Contains("[AFK]") == true)
@@ -726,20 +828,23 @@ public class AfkService : INService, IReadyExecutor, IDisposable
 
                     if (string.IsNullOrWhiteSpace(customAfkMessage) || customAfkMessage == "-")
                     {
+                        var footer = strings.AfkFor(user.Guild.Id,
+                            (DateTime.UtcNow - (mentionedAfk.DateAdded ?? DateTime.UtcNow)).Humanize());
+                        if (guildConfig.AfkMessages && !await inbox.IsOptedOutAsync(mentionedUser.Id))
+                            footer += "\n" + strings.AfkLeaveMessageHint(user.Guild.Id, prefix, mentionedUser.Username);
                         var embed = new EmbedBuilder()
                             .WithAuthor(eab =>
                                 eab.WithName(strings.UserCurrentlyAway(user.Guild.Id, mentionedGuildUser))
                                     .WithIconUrl(mentionedGuildUser.GetAvatarUrl()))
                             .WithDescription(mentionedAfk.Message.Truncate(length))
-                            .WithFooter(
-                                strings.AfkFor(user.Guild.Id,
-                                    (DateTime.UtcNow - (mentionedAfk.DateAdded ?? DateTime.UtcNow)).Humanize()))
+                            .WithFooter(footer)
                             .WithOkColor(user.Guild.Id)
                             .Build();
 
                         var (files, withCard) = await welcomeCards.TryAttachAsync(user.GuildId,
                             WelcomeCardTarget.Afk, 0, mentionedGuildUser.User, [embed]);
                         var sentMsg = await msg.Channel.SendAsync(embeds: withCard, attachments: files);
+                        await OfferReturnNotifyAsync(sentMsg, user.GuildId, mentionedGuildUser.Id, guildConfig.AfkNotifyButton);
                         if (afkDeleteTime > 0) sentMsg.DeleteAfter(afkDeleteTime);
                     }
                     else
@@ -765,6 +870,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
                             var (files, withCard) = await welcomeCards.TryAttachAsync(user.GuildId,
                                 WelcomeCardTarget.Afk, 0, mentionedGuildUser.User, embed);
                             var sentMsg = await msg.Channel.SendAsync(plainText, embeds: withCard, attachments: files);
+                            await OfferReturnNotifyAsync(sentMsg, user.GuildId, mentionedGuildUser.Id, guildConfig.AfkNotifyButton);
                             if (afkDeleteTime > 0) sentMsg.DeleteAfter(afkDeleteTime);
                         }
                         else
@@ -773,6 +879,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
                                 WelcomeCardTarget.Afk, 0, mentionedGuildUser.User, null);
                             var sentMsg = await msg.Channel.SendAsync(parsedMessage.SanitizeMentions(true),
                                 embeds: withCard, attachments: files);
+                            await OfferReturnNotifyAsync(sentMsg, user.GuildId, mentionedGuildUser.Id, guildConfig.AfkNotifyButton);
                             if (afkDeleteTime > 0) sentMsg.DeleteAfter(afkDeleteTime);
                         }
                     }
@@ -831,6 +938,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
                         await chan.SendAsync(
                             strings.WelcomeBackAfk(guildUser.GuildId, guildUser.Mention));
                     notifyMsg.DeleteAfter(5);
+                    _ = PromptInboxAsync(chan, guildUser);
 
                     try
                     {
@@ -864,6 +972,7 @@ public class AfkService : INService, IReadyExecutor, IDisposable
             eventHandler.MessageReceived.Unsubscribe("AFKService", MessageReceived);
             eventHandler.MessageUpdated.Unsubscribe("AFKService", MessageUpdated);
             eventHandler.UserIsTyping.Unsubscribe("AFKService", UserTyping);
+            eventHandler.ReactionAdded.Unsubscribe("AFKService", OnNotifyReactionAsync);
             // Unsubscribe from Bot Joined/Left Guild events if needed
 
             cleanupTimer?.Dispose();
