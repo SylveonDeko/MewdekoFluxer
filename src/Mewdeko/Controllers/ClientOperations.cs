@@ -37,7 +37,7 @@ public class ClientOperations(FluxerClient client, DashboardAccessService dashbo
 
         return Ok(guild.Roles.Values.Select(x => new NeededRoleInfo
         {
-            Id = x.Id, Name = x.Name
+            Id = x.Id, Name = x.Name, Color = (uint)x.Color, IconUrl = x.GetIconUrl(), Position = x.Position
         }));
     }
 

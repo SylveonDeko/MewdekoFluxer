@@ -1,3 +1,4 @@
+using System.Text.Json;
 using DataModel;
 
 namespace Mewdeko.Modules.GlobalList.Common;
@@ -193,9 +194,25 @@ public class GlobalListSettingsPatch
     public bool? ApplyToExisting { get; set; }
 
     /// <summary>
-    ///     Gets or sets the actions to change.
+    ///     Gets or sets the actions to change, by category and action name or number.
     /// </summary>
-    public Dictionary<GlobalListCategory, GlobalListAction>? Actions { get; set; }
+    public Dictionary<string, JsonElement>? Actions { get; set; }
+
+    /// <summary>
+    ///     The actions with names and numbers resolved, skipping unknown ones.
+    /// </summary>
+    public IEnumerable<(GlobalListCategory Category, GlobalListAction Action)> ParsedActions()
+    {
+        foreach (var (key, value) in Actions ?? [])
+        {
+            if (!Enum.TryParse(key, true, out GlobalListCategory category) || !Enum.IsDefined(category))
+                continue;
+            var raw = value.ValueKind == JsonValueKind.Number ? value.GetRawText() : value.GetString();
+            if (raw is null || !Enum.TryParse(raw, true, out GlobalListAction action) || !Enum.IsDefined(action))
+                continue;
+            yield return (category, action);
+        }
+    }
 }
 
 /// <summary>

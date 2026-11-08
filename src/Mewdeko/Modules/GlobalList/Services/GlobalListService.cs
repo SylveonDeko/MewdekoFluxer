@@ -149,11 +149,8 @@ public class GlobalListService : INService
         else
             await db.InsertAsync(row);
 
-        foreach (var (category, action) in patch.Actions ?? [])
+        foreach (var (category, action) in patch.ParsedActions())
         {
-            if (!Enum.IsDefined(category) || !Enum.IsDefined(action))
-                continue;
-
             var updated = await db.GlobalListCategoryActions
                 .Where(x => x.GuildId == guildId && x.Category == category)
                 .Set(x => x.Action, action)

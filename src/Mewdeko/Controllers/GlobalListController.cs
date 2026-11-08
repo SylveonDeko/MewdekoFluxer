@@ -45,8 +45,11 @@ public class GlobalListController(
     /// <param name="guildId">The guild ID.</param>
     /// <param name="patch">The change.</param>
     [HttpPost]
-    public async Task<IActionResult> Update(ulong guildId, [FromBody] GlobalListSettingsPatch patch)
+    public async Task<IActionResult> Update(ulong guildId, [FromBody] GlobalListSettingsPatch? patch)
     {
+        if (patch is null)
+            return BadRequest("InvalidBody");
+
         var guild = client.GetGuild(guildId);
         if (guild is null)
             return NotFound("Guild not found.");
