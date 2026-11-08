@@ -238,7 +238,7 @@ public class HelpService : INService, IReadyExecutor
                     await IsModuleEnabled(guild?.Id, channel, user, m.Name)
                         ? Format.Bold(m.Name)
                         : Format.Strikethrough(m.Name)));
-                embed.AddField(GetCategoryName(category, guildId), string.Join(" · ", entries));
+                embed.AddField(GetCategoryName(category, guildId), string.Join(",", entries));
             }
         }
         else
