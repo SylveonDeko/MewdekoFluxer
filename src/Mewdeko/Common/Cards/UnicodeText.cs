@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using HarfBuzzSharp;
 using SkiaSharp;
 using SkiaSharp.HarfBuzz;
@@ -29,11 +30,16 @@ public static class UnicodeText
             return DrawShaped(canvas, x, y, text, font, paint);
 
         var width = 0f;
-        foreach (var (run, runFont) in Runs(text, font))
+        foreach (var (run, typeface) in Runs(text, font))
         {
-            width += runFont == font
-                ? DrawShaped(canvas, x + width, y, run, font, paint)
-                : Draw(canvas, x + width, y, run, runFont, paint);
+            if (typeface is null)
+            {
+                width += DrawShaped(canvas, x + width, y, run, font, paint);
+                continue;
+            }
+
+            using var fallback = typeface.ToFont(font.Size);
+            width += DrawShaped(canvas, x + width, y, run, fallback, paint);
         }
 
         return width;
@@ -53,44 +59,46 @@ public static class UnicodeText
             return MeasureShaped(text, font);
 
         var width = 0f;
-        foreach (var (run, runFont) in Runs(text, font))
-            width += runFont == font ? MeasureShaped(run, font) : Measure(run, runFont);
+        foreach (var (run, typeface) in Runs(text, font))
+        {
+            if (typeface is null)
+            {
+                width += MeasureShaped(run, font);
+                continue;
+            }
+
+            using var fallback = typeface.ToFont(font.Size);
+            width += MeasureShaped(run, fallback);
+        }
+
         return width;
     }
 
-    private static List<(string Text, SKFont Font)> Runs(string text, SKFont font)
+    private static List<(string Text, SKTypeface? Typeface)> Runs(string text, SKFont font)
     {
-        var runs = new List<(string, SKFont)>();
-        var start = 0;
+        var runs = new List<(string, SKTypeface?)>();
+        var current = new StringBuilder();
+        SKTypeface? currentFace = null;
         var enumerator = StringInfo.GetTextElementEnumerator(text);
         while (enumerator.MoveNext())
         {
-            if (font.ContainsGlyphs(enumerator.GetTextElement()))
-                continue;
-            if (start != enumerator.ElementIndex)
+            var element = enumerator.GetTextElement();
+            var face = font.ContainsGlyphs(element)
+                ? null
+                : SKFontManager.Default.MatchCharacter(font.Typeface.FamilyName, font.Typeface.FontStyle, null,
+                    element.EnumerateRunes().First().Value);
+            if (current.Length > 0 && face?.FamilyName != currentFace?.FamilyName)
             {
-                runs.Add((text[start..enumerator.ElementIndex], font));
-                start = enumerator.ElementIndex;
+                runs.Add((current.ToString(), currentFace));
+                current.Clear();
             }
 
-            var foundNextGood = false;
-            while (enumerator.MoveNext())
-            {
-                if (!font.ContainsGlyphs(enumerator.GetTextElement()))
-                    continue;
-                foundNextGood = true;
-                break;
-            }
-
-            var missing = foundNextGood ? text[start..enumerator.ElementIndex] : text[start..];
-            var fallback = SKFontManager.Default.MatchCharacter(font.Typeface.FamilyName, font.Typeface.FontStyle,
-                null, missing.EnumerateRunes().First().Value);
-            runs.Add((missing, fallback is null ? font : fallback.ToFont(font.Size)));
-            start = foundNextGood ? enumerator.ElementIndex : text.Length;
+            current.Append(element);
+            currentFace = face;
         }
 
-        if (start < text.Length)
-            runs.Add((text[start..], font));
+        if (current.Length > 0)
+            runs.Add((current.ToString(), currentFace));
         return runs;
     }
 

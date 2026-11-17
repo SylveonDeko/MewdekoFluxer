@@ -110,14 +110,31 @@ public sealed class InteractiveService : INService
     public async Task<int?> WaitForReactionAsync(Message message, ulong userId, IReadOnlyList<Emoji> choices,
         TimeSpan? timeout = null)
     {
-        var prompt = new PromptSession(userId, choices);
+        return (await WaitForAnyReactionAsync(message, [userId], choices, timeout).ConfigureAwait(false))?.Index;
+    }
+
+    /// <summary>
+    ///     Adds reactions to a message and waits for any of several users to pick one of them.
+    /// </summary>
+    /// <param name="message">The message to put the choices on.</param>
+    /// <param name="userIds">The users whose reactions count.</param>
+    /// <param name="choices">The reactions to offer, in order.</param>
+    /// <param name="timeout">How long to wait, thirty seconds when not given.</param>
+    /// <returns>The user and the index of the reaction they chose, or null when nobody answered in time.</returns>
+    public async Task<(ulong UserId, int Index)?> WaitForAnyReactionAsync(Message message,
+        IReadOnlyCollection<ulong> userIds, IReadOnlyList<Emoji> choices, TimeSpan? timeout = null)
+    {
+        var prompt = new PromptSession(userIds, choices);
         prompts[message.Id] = prompt;
         try
         {
             _ = AddReactionsAsync(message, choices);
             var winner = await Task.WhenAny(prompt.Result.Task, Task.Delay(timeout ?? TimeSpan.FromSeconds(30)))
                 .ConfigureAwait(false);
-            return winner == prompt.Result.Task ? await prompt.Result.Task.ConfigureAwait(false) : null;
+
+            return winner == prompt.Result.Task
+                ? (prompt.PickedBy, await prompt.Result.Task.ConfigureAwait(false))
+                : null;
         }
         finally
         {
@@ -152,11 +169,21 @@ public sealed class InteractiveService : INService
 
         if (prompts.TryGetValue(cachedMessage.Id, out var prompt))
         {
-            if (reaction.UserId != prompt.UserId)
+            if (!prompt.Accepts(reaction.UserId))
                 return Task.CompletedTask;
             var choice = prompt.IndexOf(reaction.Emoji);
             if (choice >= 0)
-                prompt.Result.TrySetResult(choice);
+            {
+                lock (prompt)
+                {
+                    if (!prompt.Result.Task.IsCompleted)
+                    {
+                        prompt.PickedBy = reaction.UserId;
+                        prompt.Result.TrySetResult(choice);
+                    }
+                }
+            }
+
             return Task.CompletedTask;
         }
 
@@ -292,10 +319,15 @@ public sealed class InteractiveService : INService
         public CancellationTokenSource Expiry { get; } = new();
     }
 
-    private sealed class PromptSession(ulong userId, IReadOnlyList<Emoji> choices)
+    private sealed class PromptSession(IReadOnlyCollection<ulong> userIds, IReadOnlyList<Emoji> choices)
     {
-        public ulong UserId { get; } = userId;
+        public ulong PickedBy { get; set; }
         public TaskCompletionSource<int> Result { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public bool Accepts(ulong userId)
+        {
+            return userIds.Contains(userId);
+        }
 
         public int IndexOf(IEmoji emote)
         {

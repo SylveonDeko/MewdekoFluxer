@@ -2634,6 +2634,16 @@ public class MewdekoDb : DataConnection
     public ITable<AfkInboxBlock> AfkInboxBlocks => this.GetTable<AfkInboxBlock>();
 
     /// <summary>
+    ///     Gets the blackjack tables table: unfinished tables saved between steps.
+    /// </summary>
+    public ITable<BlackjackTableRow> BlackjackTables => this.GetTable<BlackjackTableRow>();
+
+    /// <summary>
+    ///     Gets the blackjack seats table: which table each seated member plays at.
+    /// </summary>
+    public ITable<BlackjackSeatRow> BlackjackSeats => this.GetTable<BlackjackSeatRow>();
+
+    /// <summary>
     ///     Gets the user rank card backgrounds table.
     /// </summary>
     public ITable<UserXpBackground> UserXpBackgrounds => this.GetTable<UserXpBackground>();

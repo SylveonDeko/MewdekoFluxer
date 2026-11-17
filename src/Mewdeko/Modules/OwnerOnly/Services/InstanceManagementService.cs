@@ -29,7 +29,12 @@ public class InstanceManagementService : INService, IReadyExecutor
     /// </summary>
     private static readonly TimeSpan StatusProbeTimeout = TimeSpan.FromSeconds(10);
 
+    private static readonly System.Text.RegularExpressions.Regex HostPattern = new(
+        @"^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*$",
+        System.Text.RegularExpressions.RegexOptions.Compiled);
+
     private readonly string apiKey;
+    private readonly BotCredentials creds;
     private readonly FluxerClient client;
     private readonly IDataConnectionFactory dbFactory;
     private readonly IHttpClientFactory factory;
@@ -46,7 +51,7 @@ public class InstanceManagementService : INService, IReadyExecutor
         IDataConnectionFactory dbFactory,
         IHttpClientFactory factory, FluxerClient client, ILogger<InstanceManagementService> logger)
     {
-        var creds = new BotCredentials();
+        creds = new BotCredentials();
         apiKey = creds.ApiKey;
         this.dbFactory = dbFactory;
         this.factory = factory;
@@ -113,10 +118,38 @@ public class InstanceManagementService : INService, IReadyExecutor
         }
     }
 
-    private HttpClient CreateAuthenticatedClient()
+    /// <summary>
+    ///     Checks that a host is a plain host name or IP address, with no scheme, port, path or credentials.
+    /// </summary>
+    /// <param name="host">The host to check. Null or empty is accepted and means the default.</param>
+    /// <returns>True when the host is safe to put into a URL.</returns>
+    public static bool IsValidHost(string? host)
+    {
+        if (string.IsNullOrEmpty(host))
+            return true;
+
+        if (host.Length > 253)
+            return false;
+
+        if (host.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f' or >= 'A' and <= 'F' or ':' or '.') &&
+            System.Net.IPAddress.TryParse(host, out _))
+            return true;
+
+        return HostPattern.IsMatch(host);
+    }
+
+    private HttpClient CreateAuthenticatedClient(bool asOwner = false)
     {
         var httpClient = factory.CreateClient();
         httpClient.DefaultRequestHeaders.Add("X-Api-Key", apiKey);
+        if (asOwner && creds.OwnerIds.Length > 0 && !string.IsNullOrWhiteSpace(creds.JwtSecret))
+        {
+            var token = AuthHandlers.DashJwtConstants.MintToken(creds.JwtSecret, creds.OwnerIds[0],
+                TimeSpan.FromMinutes(2));
+            httpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        }
+
         return httpClient;
     }
 
@@ -157,6 +190,9 @@ public class InstanceManagementService : INService, IReadyExecutor
 
         if (port is < 1024 or > 65535)
             throw new ArgumentOutOfRangeException(nameof(port), "Port must be between 1024 and 65535");
+
+        if (!IsValidHost(host))
+            return (false, null, "invalid_host");
 
         var resolvedHost = string.IsNullOrWhiteSpace(host) ? "localhost" : host;
 
@@ -454,7 +490,7 @@ public class InstanceManagementService : INService, IReadyExecutor
         try
         {
             var host = await ResolveHostAsync(port);
-            using var httpClient = CreateAuthenticatedClient();
+            using var httpClient = CreateAuthenticatedClient(true);
             var response =
                 await httpClient.PostAsync($"http://{host}:{port}/botapi/InstanceManagement/update", null);
 
@@ -491,7 +527,7 @@ public class InstanceManagementService : INService, IReadyExecutor
         try
         {
             var host = await ResolveHostAsync(port);
-            using var httpClient = CreateAuthenticatedClient();
+            using var httpClient = CreateAuthenticatedClient(true);
             var response =
                 await httpClient.PostAsync($"http://{host}:{port}/botapi/InstanceManagement/restart", null);
 

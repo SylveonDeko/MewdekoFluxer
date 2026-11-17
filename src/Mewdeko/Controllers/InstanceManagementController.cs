@@ -1,4 +1,6 @@
-﻿using Mewdeko.Modules.OwnerOnly.Services;
+﻿using Mewdeko.Controllers.Common.DashboardAccess;
+using Mewdeko.Modules.OwnerOnly.Services;
+using Mewdeko.Services.Impl;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,8 +12,10 @@ namespace Mewdeko.Controllers;
 [ApiController]
 [Route("botapi/[controller]")]
 [Authorize("ApiKeyPolicy")]
+[RequireBotOwner]
 public class InstanceManagementController : Controller
 {
+    private readonly BotCredentials credentials;
     private readonly InstanceManagementService instanceManagementService;
     private readonly ILogger<InstanceManagementController> logger;
 
@@ -19,25 +23,37 @@ public class InstanceManagementController : Controller
     ///     Initializes a new instance of the controller.
     /// </summary>
     /// <param name="instanceManagementService">The instancemanagementservice service.</param>
+    /// <param name="credentials">The bot credentials used to tell owners from everyone else.</param>
     /// <param name="logger">The logger instance for structured logging.</param>
     public InstanceManagementController(
         InstanceManagementService instanceManagementService,
+        BotCredentials credentials,
         ILogger<InstanceManagementController> logger)
     {
+        this.credentials = credentials;
         this.instanceManagementService = instanceManagementService;
         this.logger = logger;
     }
 
     /// <summary>
-    ///     Gets all active bot instances.
+    ///     Gets all active bot instances. A signed-in user who is not an owner gets the list without hosts.
     /// </summary>
     /// <returns>List of active bot instances.</returns>
     [HttpGet]
+    [SkipRequireBotOwner]
     public async Task<IActionResult> GetInstances()
     {
         try
         {
             var instances = await instanceManagementService.GetActiveInstancesAsync();
+            var hasAuthorization = Request.Headers.ContainsKey("Authorization");
+            var caller = await DashboardCaller.GetUserIdAsync(HttpContext);
+            if (hasAuthorization && !DashboardCaller.IsOwner(caller, credentials.IsOwner))
+            {
+                foreach (var instance in instances)
+                    instance.Host = "";
+            }
+
             return Ok(instances);
         }
         catch (Exception ex)
@@ -58,6 +74,9 @@ public class InstanceManagementController : Controller
     [HttpPost("{port}")]
     public async Task<IActionResult> AddInstance(int port, [FromQuery] string? host = null)
     {
+        if (!InstanceManagementService.IsValidHost(host))
+            return BadRequest("Invalid host");
+
         try
         {
             var result = await instanceManagementService.AddInstanceAsync(port, host);
