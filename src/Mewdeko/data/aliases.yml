@@ -5175,3 +5175,9 @@ listappealapprove:
 listappealreject:
   - listappealreject
   - globalappealreject
+run:
+  - run
+  - runcode
+pullrunimages:
+  - pullrunimages
+  - pullruns
