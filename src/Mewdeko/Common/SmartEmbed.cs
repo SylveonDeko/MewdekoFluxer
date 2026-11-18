@@ -1,3 +1,5 @@
+using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Serilog;
 
@@ -19,6 +21,9 @@ public static class SmartEmbed
     ///     null.
     /// </param>
     /// <param name="plainText">When this method returns, contains the parsed plain text, if parsing succeeds; otherwise, null.</param>
+    /// <param name="caller">The member that called this method. Filled in by the compiler.</param>
+    /// <param name="callerFile">The source file of the caller. Filled in by the compiler.</param>
+    /// <param name="callerLine">The line of the call. Filled in by the compiler.</param>
     /// <returns>
     ///     <c>true</c> if the input string is successfully parsed into Discord embeds and plain text;
     ///     otherwise, <c>false</c>.
@@ -27,12 +32,22 @@ public static class SmartEmbed
         string input,
         ulong? guildId,
         out EmbedRequest[]? embeds,
-        out string? plainText)
+        out string? plainText,
+        [CallerMemberName] string caller = "",
+        [CallerFilePath] string callerFile = "",
+        [CallerLineNumber] int callerLine = 0)
     {
         try
         {
             plainText = null;
             embeds = null;
+
+            if (string.IsNullOrEmpty(input))
+            {
+                Log.Warning("Embed text was empty for guild {GuildId}, called from {Caller} at {File}:{Line}",
+                    guildId, caller, Path.GetFileName(callerFile), callerLine);
+                return false;
+            }
 
             // Extract the first complete JSON object from the input
             var startIndex = input.IndexOf('{');
@@ -127,7 +142,8 @@ public static class SmartEmbed
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "Unable to parse embed for guild {GuildId}", guildId);
+            Log.Warning(ex, "Unable to parse embed for guild {GuildId}, called from {Caller} at {File}:{Line}",
+                guildId, caller, Path.GetFileName(callerFile), callerLine);
             embeds = null;
             plainText = null;
             return false;
