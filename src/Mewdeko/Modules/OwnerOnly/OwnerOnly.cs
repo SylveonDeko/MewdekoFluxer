@@ -13,6 +13,7 @@ using Mewdeko.Modules.OwnerOnly.Services;
 using Mewdeko.Services.Impl;
 using Mewdeko.Services.Settings;
 using Mewdeko.Services.strings;
+using Mewdeko.Services.Translations;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
@@ -43,6 +44,7 @@ namespace Mewdeko.Modules.OwnerOnly;
 /// <param name="creds">Bot credentials and configuration secrets.</param>
 /// <param name="retention">Service that purges data for servers the bot has left.</param>
 /// <param name="botHells">Service that flags servers littered with bots.</param>
+/// <param name="translations">Service that applies approved translations over the loaded strings.</param>
 [OwnerOnly]
 public class OwnerOnly(
     FluxerClient client,
@@ -62,7 +64,8 @@ public class OwnerOnly(
     ILogger<OwnerOnly> logger,
     BotCredentials creds,
     GuildDataRetentionService retention,
-    BotHellService botHells)
+    BotHellService botHells,
+    TranslationService translations)
     : MewdekoModuleBase<OwnerOnlyService>
 {
     /// <summary>
@@ -1633,7 +1636,7 @@ public class OwnerOnly(
     [Aliases]
     public async Task StringsReload()
     {
-        strings.Reload();
+        await translations.ReloadAsync(true).ConfigureAwait(false);
         await ReplyConfirmAsync(Strings.BotStringsReloaded(ctx.Guild.Id)).ConfigureAwait(false);
     }
 

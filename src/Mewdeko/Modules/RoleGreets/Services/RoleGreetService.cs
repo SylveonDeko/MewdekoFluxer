@@ -231,7 +231,7 @@ public class RoleGreetService : INService
             {
                 var webhook = new FluxerWebhookClient(greet.WebhookUrl);
                 var msgId = await SendSmartEmbedWebhookMessage(webhook, content, greet, user);
-                if (greet.DeleteTime > 0)
+                if (greet.DeleteTime > 0 && msgId != 0)
                 {
                     var msg = await channel.GetMessageAsync(msgId);
                     msg?.DeleteAfter(greet.DeleteTime);
@@ -273,6 +273,17 @@ public class RoleGreetService : INService
             if (deleteTime > 0)
                 msg.DeleteAfter(deleteTime);
         }
+        else
+        {
+            await DisableEmptyGreet(greet, user);
+        }
+    }
+
+    private async Task DisableEmptyGreet(RoleGreet greet, SocketGuildMember user)
+    {
+        await RoleGreetDisable(greet, true);
+        logger.LogInformation("RoleGreet {GreetId} disabled in {Guild} because it has nothing to send", greet.Id,
+            user.Guild);
     }
 
     private async Task<ulong> SendSmartEmbedWebhookMessage(FluxerWebhookClient webhook, string content,
@@ -285,6 +296,12 @@ public class RoleGreetService : INService
         if (!string.IsNullOrWhiteSpace(plainText) || embedData?.Length > 0)
         {
             return await webhook.SendAsync(plainText, embeds: embedData, attachments: files);
+        }
+
+        if (string.IsNullOrWhiteSpace(content) && files is null)
+        {
+            await DisableEmptyGreet(greet, user);
+            return 0;
         }
 
         return await webhook.SendAsync(content, attachments: files);
