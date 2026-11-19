@@ -119,9 +119,9 @@ public class FilterService : IEarlyBehavior, INService
     /// <param name="guild">The guild where the message was posted.</param>
     /// <param name="msg">The user message to be checked against the filters.</param>
     /// <returns>A task that resolves to true if the message was acted upon due to a filter match; otherwise, false.</returns>
-    public async Task<bool> RunBehavior(FluxerClient socketClient, SocketGuild guild, Message msg)
+    public async Task<bool> RunBehavior(FluxerClient socketClient, SocketGuild? guild, Message msg)
     {
-        return guild.GetUser(msg.Author.Id) is { } gu && !gu.RoleIds.Contains(await ass.GetStaffRole(guild.Id)) &&
+        return guild?.GetUser(msg.Author.Id) is { } gu && !gu.RoleIds.Contains(await ass.GetStaffRole(guild.Id)) &&
                !gu.GuildPermissions.Administrator && !(guild.GetChannel(msg.ChannelId) is { } exemptChannel &&
                                                        extras.IsExempt(gu, exemptChannel)) &&
                (await FilterInvites(guild, msg).ConfigureAwait(false)

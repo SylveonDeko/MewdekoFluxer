@@ -291,7 +291,7 @@ public class CommandHandler : INService
             {
                 logger.LogInformation(
                     "Executed {BehaviorType} behavior: {BehaviorName} for user: {User} in: {Guild}",
-                    beh.BehaviorType, beh.GetType().Name, $"{usrMsg.Author} | {usrMsg.Id}", $"{guild} | {guild.Id}");
+                    beh.BehaviorType, beh.GetType().Name, $"{usrMsg.Author} | {usrMsg.Id}", $"{guild} | {guild?.Id}");
             }
 
             return;
